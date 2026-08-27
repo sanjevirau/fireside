@@ -5,6 +5,11 @@
 
 #![forbid(unsafe_code)]
 
+mod codec;
+mod service;
+
+pub use service::FirestoreService;
+
 /// Generated Google API protocol types and Firestore client/server contracts.
 pub mod google {
     /// Shared Google API annotations used by the Firestore descriptor graph.

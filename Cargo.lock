@@ -303,9 +303,13 @@ version = "0.0.1"
 name = "fireside-grpc-front"
 version = "0.0.1"
 dependencies = [
+ "fireside-core-store",
+ "fireside-query-engine",
  "prost",
  "prost-types",
  "protox",
+ "tokio",
+ "tokio-stream",
  "tonic",
  "tonic-prost",
  "tonic-prost-build",

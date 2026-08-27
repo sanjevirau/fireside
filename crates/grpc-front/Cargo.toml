@@ -10,10 +10,14 @@ homepage.workspace = true
 publish = false
 
 [dependencies]
+fireside-core-store = { path = "../core-store" }
+fireside-query-engine = { path = "../query-engine" }
 prost.workspace = true
 prost-types.workspace = true
 tonic.workspace = true
 tonic-prost.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
 
 [build-dependencies]
 protox.workspace = true
