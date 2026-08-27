@@ -8,6 +8,7 @@ use std::process::ExitCode;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use fireside_core_store::{Store, StoreOptions};
 use fireside_grpc_front::FirestoreService;
+use fireside_rest_front::router as rest_router;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -83,11 +84,13 @@ async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
         }
     };
 
-    let service = FirestoreService::new(Store::new(StoreOptions::default())).into_server();
+    let store = Store::new(StoreOptions::default());
+    let service = FirestoreService::new(store.clone()).into_server();
+    let routes = tonic::service::Routes::from(rest_router(store)).add_service(service);
     eprintln!("fireside Firestore listening on {address}");
     let result = tonic::transport::Server::builder()
         .accept_http1(true)
-        .add_service(service)
+        .add_routes(routes)
         .serve(address)
         .await;
 
