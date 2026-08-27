@@ -650,6 +650,7 @@ mod tests {
             .commit(&[Write::Set {
                 key: key("items/one"),
                 fields: fields(Value::Integer(1)),
+                transforms: Vec::new(),
                 precondition: Precondition::None,
             }])
             .expect("commit should succeed");

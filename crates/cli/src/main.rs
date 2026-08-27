@@ -6,12 +6,14 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use fireside_core_store::{Store, StoreOptions};
+use fireside_core_store::{DatabaseName, DocumentKey, Precondition, Store, StoreOptions, Write};
+use fireside_export_format::ExportReader;
 use fireside_grpc_front::FirestoreService;
 use fireside_query_engine::{DatabaseEdition as QueryDatabaseEdition, IndexCatalog, QueryPolicy};
 use fireside_rest_front::router_with_query_policy as rest_router;
 
 const INDEX_CONFIG_PATH: &str = "firestore.indexes.json";
+const IMPORT_BATCH_SIZE: usize = 500;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -90,6 +92,18 @@ async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
     };
 
     let store = Store::new(StoreOptions::default());
+    if let Some(path) = &arguments.seed_from_export {
+        match seed_store_from_export(&store, path, arguments.project_id.as_deref()) {
+            Ok(count) => eprintln!(
+                "fireside imported {count} documents from {}",
+                path.display()
+            ),
+            Err(error) => {
+                eprintln!("Firestore import failed: {error}");
+                return ExitCode::FAILURE;
+            }
+        }
+    }
     let edition = match arguments.database_edition {
         DatabaseEdition::Standard => QueryDatabaseEdition::Standard,
         DatabaseEdition::Enterprise => QueryDatabaseEdition::Enterprise,
@@ -119,6 +133,43 @@ async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+fn seed_store_from_export(
+    store: &Store,
+    overall_metadata: &std::path::Path,
+    target_project: Option<&str>,
+) -> Result<u64, String> {
+    let reader = ExportReader::open(overall_metadata).map_err(|error| error.to_string())?;
+    let mut writes = Vec::with_capacity(IMPORT_BATCH_SIZE);
+    let mut count = 0_u64;
+    for document in reader {
+        let document = document.map_err(|error| error.to_string())?;
+        let key = if let Some(project_id) = target_project {
+            let database = DatabaseName::new(project_id, document.key().database().database_id())
+                .map_err(|error| error.to_string())?;
+            DocumentKey::new(database, document.key().path()).map_err(|error| error.to_string())?
+        } else {
+            document.key().clone()
+        };
+        writes.push(Write::Set {
+            key,
+            fields: document.fields().clone(),
+            transforms: Vec::new(),
+            precondition: Precondition::None,
+        });
+        count = count
+            .checked_add(1)
+            .ok_or_else(|| "import entity count overflows u64".to_owned())?;
+        if writes.len() == IMPORT_BATCH_SIZE {
+            store.commit(&writes).map_err(|error| error.to_string())?;
+            writes.clear();
+        }
+    }
+    if !writes.is_empty() {
+        store.commit(&writes).map_err(|error| error.to_string())?;
+    }
+    Ok(count)
 }
 
 fn build_query_policy(
@@ -164,6 +215,7 @@ fn normalize_arguments(arguments: impl IntoIterator<Item = OsString>) -> Vec<OsS
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fireside_core_store::Value;
 
     #[test]
     fn parses_firestore_command() {
@@ -235,5 +287,36 @@ mod tests {
     fn listen_address_accepts_hostnames() {
         let address = resolve_address("localhost", 8080).expect("localhost should resolve");
         assert_eq!(address.port(), 8080);
+    }
+
+    #[test]
+    fn startup_import_remaps_document_project_but_preserves_reference_values() {
+        const FIXTURE: &str = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../conformance/fixtures/official-export-v1.22.0/firestore_export/",
+            "firestore_export.overall_export_metadata"
+        );
+        let store = Store::default();
+        let count = seed_store_from_export(
+            &store,
+            std::path::Path::new(FIXTURE),
+            Some("demo-fireside-import-remap"),
+        )
+        .expect("official artifact should import");
+        assert_eq!(count, 4);
+        let database = DatabaseName::new("demo-fireside-import-remap", "(default)").unwrap();
+        let key = DocumentKey::new(database, "fireside_export_fixture/values").unwrap();
+        let document = store
+            .snapshot()
+            .get(&key)
+            .expect("document should be remapped");
+        let Value::Reference(reference) = &document.fields()["reference"] else {
+            panic!("reference should preserve its value type");
+        };
+        assert_eq!(
+            reference.as_ref(),
+            "projects/demo-fireside-export-oracle/databases/(default)/documents/\
+             fireside_export_fixture/reference-target"
+        );
     }
 }

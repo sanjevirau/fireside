@@ -9,10 +9,11 @@ target, not the specification.
 
 > [!IMPORTANT]
 > Phase 0 is complete and Phase 1 is under development. Fireside passes the
-> sixteen checked-in backend and control conformance cases plus its dedicated
-> strict-index case. The import/export format now round-trips through Java, but
-> endpoint/CLI wiring, the remaining Phase 1 API, disk wiring,
-> expired-listener RESET, and torture gates are not yet complete.
+> seventeen checked-in backend and control conformance cases plus its dedicated
+> strict-index case. Import/export now round-trips bidirectionally through Java
+> via the public CLI and control API, but the remaining Phase 1 API, disk
+> wiring, expired-listener RESET, multi-GB benchmark, and torture gates are not
+> yet complete.
 
 ## Why this exists
 
@@ -33,8 +34,8 @@ of scope until the conformance gates are met.
 | Target / area | Harness smoke | Firestore APIs | Browser SDK | Rules | Suite |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Production cloud | pass (15/15; control N/A) | reference target | not implemented | not implemented | not implemented |
-| Official Java emulator | pass (16/16) | comparison target; 4 known deviations | not run | not run | not run |
-| fireside | pass (16/16 + strict 1/1) | current scope 16/16 + strict 1/1 | not implemented | not implemented | not implemented |
+| Official Java emulator | pass (17/17) | comparison target; 4 known deviations | not run | not run | not run |
+| fireside | pass (17/17 + strict 1/1) | current scope 17/17 + strict 1/1 | not implemented | not implemented | not implemented |
 
 Cloud is the behavioral reference; Java is measured only for comparison. From
 Phase 2 onward this table will be generated from CI results.
@@ -69,8 +70,10 @@ npm run check --prefix conformance
 npm test --prefix conformance
 npm run test:fireside --prefix conformance
 npm run test:fireside:strict --prefix conformance
+npm run test:fireside-import --prefix conformance
 npm run test:official --prefix conformance
 npm run test:official-export-import --prefix conformance
+npm run test:fireside-export-java-import --prefix conformance
 ```
 
 The Fireside and official-emulator commands each start their target and execute

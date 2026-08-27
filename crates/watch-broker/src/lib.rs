@@ -236,6 +236,7 @@ mod tests {
             .commit(&[Write::Set {
                 key: alpha.clone(),
                 fields: BTreeMap::from([("rank".to_owned(), Value::Integer(1))]),
+                transforms: Vec::new(),
                 precondition: Precondition::None,
             }])
             .expect("seed should commit");
@@ -258,6 +259,7 @@ mod tests {
             .commit(&[Write::Set {
                 key: beta.clone(),
                 fields: BTreeMap::from([("rank".to_owned(), Value::Integer(2))]),
+                transforms: Vec::new(),
                 precondition: Precondition::None,
             }])
             .expect("insert should commit");

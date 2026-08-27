@@ -332,23 +332,18 @@ pub(crate) fn decode_write(write: proto::Write) -> Result<DecodedWrite, Status> 
                     transforms,
                     precondition,
                 }
-            } else if transforms.is_empty() {
-                if precondition == Precondition::Exists(false) {
-                    Write::Create {
-                        key: key.clone(),
-                        fields,
-                    }
-                } else {
-                    Write::Set {
-                        key: key.clone(),
-                        fields,
-                        precondition,
-                    }
+            } else if transforms.is_empty() && precondition == Precondition::Exists(false) {
+                Write::Create {
+                    key: key.clone(),
+                    fields,
                 }
             } else {
-                return Err(Status::unimplemented(
-                    "replace writes with transforms require a conformance fixture",
-                ));
+                Write::Set {
+                    key: key.clone(),
+                    fields,
+                    transforms,
+                    precondition,
+                }
             };
             (key, write)
         }

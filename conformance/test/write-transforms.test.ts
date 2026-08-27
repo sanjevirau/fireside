@@ -18,10 +18,26 @@ test("field transforms use the production commit semantics", async (context) => 
   const document = firestore.doc(
     `runs/${randomUUID()}/fireside_conformance/transforms`,
   );
+  const replacement = firestore.doc(
+    `runs/${randomUUID()}/fireside_conformance/replace-transforms`,
+  );
 
   context.after(async () => {
-    await document.delete().catch(() => undefined);
+    await Promise.all([
+      document.delete().catch(() => undefined),
+      replacement.delete().catch(() => undefined),
+    ]);
     await firestore.terminate();
+  });
+
+  await replacement.set({ counter: 10, removedByReplace: true });
+  await replacement.set({
+    counter: FieldValue.increment(2),
+    createdByReplace: true,
+  });
+  assert.deepEqual((await replacement.get()).data(), {
+    counter: 2,
+    createdByReplace: true,
   });
 
   await document.set({

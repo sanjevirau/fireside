@@ -10,8 +10,8 @@ import {
 import { createFirestore, resolveTarget } from "./target.ts";
 
 const configuration = resolveTarget(process.env);
-if (configuration.name !== "java") {
-  throw new Error("export import verification is restricted to the Java emulator");
+if (configuration.name === "cloud") {
+  throw new Error("export import verification is restricted to local emulators");
 }
 
 const firestore = createFirestore(configuration);

@@ -257,6 +257,10 @@ as empty. The core applies masks and transforms while planning the atomic MVCC
 commit, before WAL persistence or visibility. A raw v1 fixture preserves wire
 types and proves array membership equality across equivalent integer/double
 values, NaN, and signed zero.
+An update without a mask replaces the complete document before applying its
+attached transforms: an old counter of 10 followed by a replacement containing
+`increment(2)` yields 2 and removes fields absent from the replacement. This
+shape is asserted against production before being used by export seeding.
 
 `conformance/test/partition-query.test.ts` pins the stable `PartitionQuery`
 contract for the supported unshaped collection-group query ordered by
@@ -544,6 +548,14 @@ The same oracle pins these entity details:
   its entity and byte counts; they are not outer-message totals. Per-kind
   metadata is a direct protobuf, not a LevelDB log.
 
+The control export oracle requires `database` to be the full
+`projects/{project}/databases/{database}` resource; passing only `(default)` is
+`INVALID_ARGUMENT`. A successful request returns an empty JSON object and
+writes to `{export_directory}/{export_name}`, with the overall file named
+`{export_name}.overall_export_metadata`. Java startup import remaps document
+keys to its runtime `--project_id`, while reference-valued fields preserve the
+source project encoded in the artifact.
+
 Writer validation is bidirectional and byte-aware:
 
 1. seed the official Java emulator with synthetic documents;
@@ -554,11 +566,12 @@ Writer validation is bidirectional and byte-aware:
 6. diff documents, types, metadata, framing, and error behavior;
 7. repeat with fireside as the first writer.
 
-Steps 1 through 6 are automated in CI: Fireside semantically decodes and
+All seven steps are automated in CI. One direction semantically decodes and
 re-encodes the checked Java artifact, producing different entity-log bytes,
-then the official emulator imports that output and the Admin SDK asserts every
-captured value and document path. Step 7 lands with the control API and startup
-import wiring so Fireside can be the first writer through its public surface.
+then imports it back into Java. The reverse direction seeds a running Fireside
+process through the Admin SDK, exports through the public control endpoint,
+imports that artifact into Java, and asserts every captured value and document
+path. A separate process test boots Fireside with `--seed_from_export`.
 
 The suite wrapper is `firebase-export-metadata.json`, containing component
 versions and paths. Import resolves

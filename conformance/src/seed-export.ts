@@ -3,8 +3,8 @@ import { FieldValue, GeoPoint, Timestamp } from "@google-cloud/firestore";
 import { createFirestore, resolveTarget } from "./target.ts";
 
 const configuration = resolveTarget(process.env);
-if (configuration.name !== "java") {
-  throw new Error("export seeding is restricted to the isolated Java emulator");
+if (configuration.name === "cloud") {
+  throw new Error("export seeding is restricted to isolated local emulators");
 }
 
 const firestore = createFirestore(configuration);

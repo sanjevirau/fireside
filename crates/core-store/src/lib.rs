@@ -393,6 +393,8 @@ pub enum Write {
         key: DocumentKey,
         /// Complete document fields.
         fields: Fields,
+        /// Transforms evaluated after replacing the document fields.
+        transforms: Vec<FieldTransform>,
         /// Write precondition.
         precondition: Precondition,
     },
@@ -567,6 +569,18 @@ impl Snapshot {
     #[must_use]
     pub fn get(&self, key: &DocumentKey) -> Option<Arc<Document>> {
         self.documents.get(key).cloned()
+    }
+
+    /// Iterates documents from one named database in key order without
+    /// allocating a second collection.
+    pub fn iter_documents<'a>(
+        &'a self,
+        database: &'a DatabaseName,
+    ) -> impl Iterator<Item = (&'a DocumentKey, &'a Document)> + 'a {
+        self.documents
+            .iter()
+            .filter(move |(key, _)| key.database() == database)
+            .map(|(key, document)| (key, document.as_ref()))
     }
 
     /// Copies the documents belonging to one named database in key order.
@@ -867,14 +881,19 @@ fn apply_write(
         Write::Set {
             key,
             fields,
+            transforms,
             precondition,
         } => {
             let previous = documents.get(key);
             validate_precondition(key, previous, *precondition)?;
+            let mut next_fields = fields.clone();
+            for transform in transforms {
+                apply_transform(&mut next_fields, transform, commit_time, key)?;
+            }
             Ok((
                 key.clone(),
                 Some(Arc::new(Document {
-                    fields: fields.clone(),
+                    fields: next_fields,
                     create_time: previous.map_or(commit_time, |document| document.create_time),
                     update_time: commit_time,
                 })),
@@ -1200,6 +1219,7 @@ mod tests {
             .commit(&[Write::Set {
                 key: key.clone(),
                 fields: fields(Value::Integer(2)),
+                transforms: Vec::new(),
                 precondition: Precondition::None,
             }])
             .expect("update should commit");
@@ -1234,6 +1254,7 @@ mod tests {
             .commit(&[Write::Set {
                 key: alpha.clone(),
                 fields: fields(Value::Integer(2)),
+                transforms: Vec::new(),
                 precondition: Precondition::None,
             }])
             .expect("update should commit");
@@ -1339,6 +1360,7 @@ mod tests {
             .commit(&[Write::Set {
                 key: key.clone(),
                 fields: fields(Value::Integer(2)),
+                transforms: Vec::new(),
                 precondition: Precondition::UpdateTime(update_time),
             }])
             .expect("matching compare-and-set should commit");
@@ -1347,6 +1369,7 @@ mod tests {
             .commit(&[Write::Set {
                 key: key.clone(),
                 fields: fields(Value::Integer(3)),
+                transforms: Vec::new(),
                 precondition: Precondition::UpdateTime(update_time),
             }])
             .expect_err("stale compare-and-set should fail");
@@ -1366,6 +1389,7 @@ mod tests {
                 .commit(&[Write::Set {
                     key: key(&database, &format!("items/{index}")),
                     fields: fields(Value::Integer(index)),
+                    transforms: Vec::new(),
                     precondition: Precondition::None,
                 }])
                 .expect("write should commit");
@@ -1402,6 +1426,7 @@ mod tests {
             .commit(&[Write::Set {
                 key: key.clone(),
                 fields: fields(Value::String(initial)),
+                transforms: Vec::new(),
                 precondition: Precondition::None,
             }])
             .expect("initial write should commit");
@@ -1414,6 +1439,7 @@ mod tests {
                 .commit(&[Write::Set {
                     key: key.clone(),
                     fields: fields(Value::String(value)),
+                    transforms: Vec::new(),
                     precondition: Precondition::None,
                 }])
                 .expect("hot write should commit");
@@ -1508,6 +1534,39 @@ mod tests {
                         ("keep".to_owned(), Value::Boolean(true)),
                     ])),
                 ),
+            ])
+        );
+    }
+
+    #[test]
+    fn set_replaces_fields_before_applying_transforms() {
+        let store = Store::default();
+        let key = key(&database("(default)"), "items/replaced");
+        store
+            .commit(&[Write::Create {
+                key: key.clone(),
+                fields: BTreeMap::from([
+                    ("counter".to_owned(), Value::Integer(10)),
+                    ("removed".to_owned(), Value::Boolean(true)),
+                ]),
+            }])
+            .unwrap();
+        store
+            .commit(&[Write::Set {
+                key: key.clone(),
+                fields: BTreeMap::from([("created".to_owned(), Value::Boolean(true))]),
+                transforms: vec![FieldTransform {
+                    path: path(&["counter"]),
+                    operation: TransformOperation::Increment(Value::Integer(2)),
+                }],
+                precondition: Precondition::None,
+            }])
+            .unwrap();
+        assert_eq!(
+            store.snapshot().get(&key).unwrap().fields(),
+            &BTreeMap::from([
+                ("counter".to_owned(), Value::Integer(2)),
+                ("created".to_owned(), Value::Boolean(true)),
             ])
         );
     }
@@ -1663,6 +1722,7 @@ mod tests {
                 Write::Set {
                     key: other.clone(),
                     fields: fields(Value::Integer(2)),
+                    transforms: Vec::new(),
                     precondition: Precondition::None,
                 },
                 Write::Patch {

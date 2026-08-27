@@ -946,6 +946,7 @@ mod tests {
                 )
                 .expect("valid key"),
                 fields,
+                transforms: Vec::new(),
                 precondition: Precondition::None,
             });
         }
@@ -957,6 +958,7 @@ mod tests {
                 ("runId".to_owned(), string("run")),
                 ("score".to_owned(), Value::Integer(6)),
             ]),
+            transforms: Vec::new(),
             precondition: Precondition::None,
         });
         store.commit(&writes).expect("seed should commit");

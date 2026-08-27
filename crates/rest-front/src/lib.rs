@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use axum::extract::{OriginalUri, Path, Query, State};
@@ -16,6 +17,7 @@ use fireside_core_store::{
     CommitError, DatabaseName, Document, DocumentKey, FieldPath, Fields, Precondition, Store,
     Timestamp, Value, Write,
 };
+use fireside_export_format::{ExportedDocument, write_export};
 use fireside_query_engine::{
     DatabaseEdition, Direction, FieldFilter, FieldOperator, FieldPath as QueryFieldPath, Filter,
     Limit, Query as StructuredQuery, QueryPolicy, QueryScope, execute,
@@ -114,6 +116,13 @@ struct EventarcParameters {
     trigger_id: String,
 }
 
+#[derive(Deserialize)]
+struct ExportRequest {
+    database: String,
+    export_directory: PathBuf,
+    export_name: String,
+}
+
 #[derive(Debug, Default, Deserialize)]
 struct WriteParameters {
     #[serde(rename = "currentDocument.exists")]
@@ -156,6 +165,7 @@ async fn patch_document(
             Write::Set {
                 key: key.clone(),
                 fields,
+                transforms: Vec::new(),
                 precondition,
             }
         }
@@ -256,11 +266,36 @@ async fn project_operation(
             control_state(&state).rules.insert(project.to_owned(), body);
             Ok(Json(json!({})))
         }
-        (Method::POST, "export") => Err(RestError::unimplemented(
-            "export writer is not implemented yet",
-        )),
+        (Method::POST, "export") => export_database(&state, project, body).await,
         _ => Err(RestError::not_found("unknown emulator project operation")),
     }
+}
+
+async fn export_database(
+    state: &RestState,
+    project: &str,
+    body: JsonValue,
+) -> Result<Json<JsonValue>, RestError> {
+    let request: ExportRequest = serde_json::from_value(body)
+        .map_err(|error| RestError::invalid(format!("invalid export request: {error}")))?;
+    let database = database_name_from_resource(&request.database)?;
+    if database.project_id() != project {
+        return Err(RestError::invalid(
+            "export database belongs to a different project",
+        ));
+    }
+    let destination = request.export_directory.join(request.export_name);
+    let snapshot = state.store.snapshot();
+    tokio::task::spawn_blocking(move || {
+        let documents = snapshot
+            .iter_documents(&database)
+            .map(|(key, document)| ExportedDocument::new(key.clone(), document.fields().clone()));
+        write_export(destination, documents)
+    })
+    .await
+    .map_err(|error| RestError::internal(format!("export worker failed: {error}")))?
+    .map_err(|error| RestError::internal(error.to_string()))?;
+    Ok(Json(json!({})))
 }
 
 async fn clear_database(
@@ -602,6 +637,7 @@ fn decode_write(value: &JsonValue, database: &DatabaseName) -> Result<Write, Res
             Ok(Write::Set {
                 key,
                 fields,
+                transforms: Vec::new(),
                 precondition,
             })
         };
@@ -672,6 +708,17 @@ fn document_key_from_name(name: &str) -> Result<DocumentKey, RestError> {
 
 fn database_name(path: DatabasePath) -> Result<DatabaseName, RestError> {
     DatabaseName::new(path.project, path.database)
+        .map_err(|error| RestError::invalid(error.to_string()))
+}
+
+fn database_name_from_resource(name: &str) -> Result<DatabaseName, RestError> {
+    let segments = name.split('/').collect::<Vec<_>>();
+    if segments.len() != 4 || segments[0] != "projects" || segments[2] != "databases" {
+        return Err(RestError::invalid(format!(
+            "invalid database resource name: {name}"
+        )));
+    }
+    DatabaseName::new(segments[1], segments[3])
         .map_err(|error| RestError::invalid(error.to_string()))
 }
 
@@ -942,15 +989,6 @@ impl RestError {
         Self {
             status: StatusCode::INTERNAL_SERVER_ERROR,
             code: "INTERNAL",
-            message: message.into(),
-            streaming: false,
-        }
-    }
-
-    fn unimplemented(message: impl Into<String>) -> Self {
-        Self {
-            status: StatusCode::NOT_IMPLEMENTED,
-            code: "UNIMPLEMENTED",
             message: message.into(),
             streaming: false,
         }
