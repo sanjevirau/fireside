@@ -203,6 +203,71 @@ impl FirestoreService {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
+
+    fn collect_list_documents(
+        &self,
+        snapshot: &Snapshot,
+        database: &DatabaseName,
+        parent: Option<&str>,
+        request: &ListDocumentsRequest,
+        orders: &[ListOrder],
+    ) -> Result<(Vec<ListedDocument>, String), Status> {
+        let snapshot_documents = snapshot.documents(database);
+        let mut listed = BTreeMap::new();
+        for (key, document) in &snapshot_documents {
+            if direct_child_matches(key.path(), parent, &request.collection_id) {
+                listed.insert(key.clone(), Some(Arc::clone(document)));
+            }
+        }
+        if request.show_missing {
+            for (key, _) in &snapshot_documents {
+                if let Some(path) = missing_direct_child(key.path(), parent, &request.collection_id)
+                {
+                    let candidate = DocumentKey::new(database.clone(), path)
+                        .map_err(|error| Status::internal(error.to_string()))?;
+                    listed.entry(candidate).or_insert(None);
+                }
+            }
+        }
+        let mut documents = listed
+            .into_iter()
+            .map(|(key, document)| ListedDocument { key, document })
+            .filter(|listed| {
+                orders
+                    .iter()
+                    .all(|order| list_order_exists(order, listed.document.as_deref()))
+            })
+            .collect::<Vec<_>>();
+        documents.sort_by(|left, right| {
+            compare_list_documents(
+                &left.key,
+                left.document.as_deref(),
+                &right.key,
+                right.document.as_deref(),
+                orders,
+                self.query_policy.edition(),
+            )
+        });
+        if !request.page_token.is_empty() {
+            documents = documents
+                .into_iter()
+                .skip_while(|document| document.key.to_string() != request.page_token)
+                .skip(1)
+                .collect();
+        }
+        let page_size = normalize_page_size(request.page_size);
+        let has_more = documents.len() > page_size;
+        documents.truncate(page_size);
+        let next_page_token = if has_more {
+            documents
+                .last()
+                .map(|document| document.key.to_string())
+                .unwrap_or_default()
+        } else {
+            String::new()
+        };
+        Ok((documents, next_page_token))
+    }
 }
 
 impl Default for FirestoreService {
@@ -266,14 +331,16 @@ impl Firestore for FirestoreService {
     ) -> Result<Response<ListDocumentsResponse>, Status> {
         let request = request.into_inner();
         let (database, parent) = decode_parent(&request.parent)?;
-        let (token, historical) = match request.consistency_selector {
+        let (token, historical) = match request.consistency_selector.as_ref() {
             None => (Vec::new(), None),
-            Some(list_documents_request::ConsistencySelector::Transaction(token)) => (token, None),
+            Some(list_documents_request::ConsistencySelector::Transaction(token)) => {
+                (token.clone(), None)
+            }
             Some(list_documents_request::ConsistencySelector::ReadTime(read_time)) => (
                 Vec::new(),
                 Some(
                     self.store
-                        .snapshot_at_time(decode_read_time(read_time, now())?)
+                        .snapshot_at_time(decode_read_time(*read_time, now())?)
                         .map_err(snapshot_status)?,
                 ),
             ),
@@ -285,6 +352,11 @@ impl Firestore for FirestoreService {
         } else {
             self.snapshot_for_transaction(&database, &token)?
         };
+        if request.show_missing && !request.order_by.trim().is_empty() {
+            return Err(Status::invalid_argument(
+                "show_missing cannot be combined with order_by",
+            ));
+        }
         let orders = parse_list_order(&request.order_by)?;
         if request.collection_id.is_empty()
             && orders
@@ -312,52 +384,27 @@ impl Firestore for FirestoreService {
                 .validate(&query)
                 .map_err(|error| index_status(&error))?;
         }
-        let mut documents = snapshot
-            .documents(&database)
-            .into_iter()
-            .filter(|(key, _)| {
-                direct_child_matches(key.path(), parent.as_deref(), &request.collection_id)
-            })
-            .filter(|(_, document)| {
-                orders
-                    .iter()
-                    .all(|order| list_order_exists(order, document))
-            })
-            .collect::<Vec<_>>();
-        documents.sort_by(|(left_key, left), (right_key, right)| {
-            compare_list_documents(
-                left_key,
-                left,
-                right_key,
-                right,
-                &orders,
-                self.query_policy.edition(),
-            )
-        });
-        if !request.page_token.is_empty() {
-            documents = documents
-                .into_iter()
-                .skip_while(|(key, _)| key.to_string() != request.page_token)
-                .skip(1)
-                .collect();
-        }
-        let page_size = normalize_page_size(request.page_size);
-        let has_more = documents.len() > page_size;
-        documents.truncate(page_size);
-        let next_page_token = if has_more {
-            documents
-                .last()
-                .map(|(key, _)| key.to_string())
-                .unwrap_or_default()
-        } else {
-            String::new()
-        };
-        for (key, document) in &documents {
-            self.record_read(&token, key, Some(document));
+        let (documents, next_page_token) = self.collect_list_documents(
+            &snapshot,
+            &database,
+            parent.as_deref(),
+            &request,
+            &orders,
+        )?;
+        for document in &documents {
+            self.record_read(&token, &document.key, document.document.as_deref());
         }
         let documents = documents
             .into_iter()
-            .map(|(key, document)| encode_document_masked(&key, &document, request.mask.as_ref()))
+            .map(|listed| match listed.document {
+                Some(document) => {
+                    encode_document_masked(&listed.key, &document, request.mask.as_ref())
+                }
+                None => Ok(proto::Document {
+                    name: listed.key.to_string(),
+                    ..proto::Document::default()
+                }),
+            })
             .collect::<Result<Vec<_>, _>>()?;
         Ok(Response::new(ListDocumentsResponse {
             documents,
@@ -1079,6 +1126,11 @@ struct ListOrder {
     direction: QueryDirection,
 }
 
+struct ListedDocument {
+    key: DocumentKey,
+    document: Option<Arc<Document>>,
+}
+
 fn parse_list_order(order: &str) -> Result<Vec<ListOrder>, Status> {
     let mut orders = if order.trim().is_empty() {
         Vec::new()
@@ -1143,9 +1195,9 @@ fn parse_order_clause(clause: &str) -> Result<ListOrder, Status> {
 
 fn compare_list_documents(
     left_key: &DocumentKey,
-    left: &Document,
+    left: Option<&Document>,
     right_key: &DocumentKey,
-    right: &Document,
+    right: Option<&Document>,
     orders: &[ListOrder],
     edition: DatabaseEdition,
 ) -> std::cmp::Ordering {
@@ -1155,10 +1207,19 @@ fn compare_list_documents(
                 left_key.path().split('/').cmp(right_key.path().split('/'))
             }
             QueryFieldPath::Field(segments) => compare_values(
-                nested_value(left.fields(), segments)
-                    .expect("documents missing ordered fields are filtered"),
-                nested_value(right.fields(), segments)
-                    .expect("documents missing ordered fields are filtered"),
+                nested_value(
+                    left.expect("documents missing ordered fields are filtered")
+                        .fields(),
+                    segments,
+                )
+                .expect("documents missing ordered fields are filtered"),
+                nested_value(
+                    right
+                        .expect("documents missing ordered fields are filtered")
+                        .fields(),
+                    segments,
+                )
+                .expect("documents missing ordered fields are filtered"),
                 edition,
             ),
         };
@@ -1173,10 +1234,12 @@ fn compare_list_documents(
     std::cmp::Ordering::Equal
 }
 
-fn list_order_exists(order: &ListOrder, document: &Document) -> bool {
+fn list_order_exists(order: &ListOrder, document: Option<&Document>) -> bool {
     match &order.path {
         QueryFieldPath::DocumentId => true,
-        QueryFieldPath::Field(segments) => nested_value(document.fields(), segments).is_some(),
+        QueryFieldPath::Field(segments) => document
+            .and_then(|document| nested_value(document.fields(), segments))
+            .is_some(),
     }
 }
 
@@ -1194,6 +1257,20 @@ fn direct_child_matches(path: &str, parent: Option<&str>, collection_id: &str) -
         segments.len() == parent_segments.len() + 2
             && segments[parent_segments.len()] == collection_id
     }
+}
+
+fn missing_direct_child(path: &str, parent: Option<&str>, collection_id: &str) -> Option<String> {
+    let segments = path.split('/').collect::<Vec<_>>();
+    let parent_segments = parent.map_or_else(Vec::new, |path| path.split('/').collect());
+    let direct_length = parent_segments.len() + 2;
+    if segments.len() <= direct_length
+        || segments[..parent_segments.len()] != parent_segments
+        || (!collection_id.is_empty()
+            && segments.get(parent_segments.len()) != Some(&collection_id))
+    {
+        return None;
+    }
+    Some(segments[..direct_length].join("/"))
 }
 
 fn normalize_page_size(page_size: i32) -> usize {
@@ -1264,6 +1341,35 @@ mod tests {
             ]
         );
         assert!(parse_list_order("rank,,__name__").is_err());
+    }
+
+    #[test]
+    fn missing_direct_child_derives_only_the_requested_ancestor() {
+        assert_eq!(
+            missing_direct_child(
+                "runs/run/containers/missing/children/leaf",
+                Some("runs/run"),
+                "containers",
+            )
+            .as_deref(),
+            Some("runs/run/containers/missing")
+        );
+        assert_eq!(
+            missing_direct_child(
+                "runs/run/containers/existing",
+                Some("runs/run"),
+                "containers",
+            ),
+            None
+        );
+        assert_eq!(
+            missing_direct_child(
+                "runs/run/other/missing/children/leaf",
+                Some("runs/run"),
+                "containers",
+            ),
+            None
+        );
     }
 
     const DATABASE: &str = "projects/demo/databases/tenant-a";

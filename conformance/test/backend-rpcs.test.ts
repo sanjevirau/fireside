@@ -217,6 +217,116 @@ test("ListDocuments orders fields and requires a collection selector", async (co
   );
 });
 
+test("ListDocuments showMissing returns name-only ancestor placeholders", async (context) => {
+  const configuration = resolveTarget(process.env);
+  const firestore = createFirestore(configuration);
+  const rawFirestore = createV1Firestore(configuration);
+  const runId = randomUUID();
+  const database = `projects/${configuration.projectId}/databases/(default)`;
+  const parentPath = `runs/${runId}`;
+  const parent = `${database}/documents/${parentPath}`;
+  const collectionPath = `${parentPath}/containers`;
+  const existing = firestore.doc(`${collectionPath}/existing`);
+  const missingChild = firestore.doc(
+    `${collectionPath}/missing/children/leaf`,
+  );
+  const expiresAt = Timestamp.fromMillis(Date.now() + DAY_MILLISECONDS);
+  const pageOptions = configuration.host === undefined
+    ? { autoPaginate: false }
+    : {
+      autoPaginate: false,
+      otherArgs: { headers: { authorization: "Bearer owner" } },
+    };
+
+  context.after(async () => {
+    await Promise.all([
+      existing.delete().catch(() => undefined),
+      missingChild.delete().catch(() => undefined),
+    ]);
+    await Promise.all([firestore.terminate(), rawFirestore.close()]).catch(
+      () => undefined,
+    );
+  });
+
+  await Promise.all([
+    existing.set({ _fireside_expires_at: expiresAt, state: "present" }),
+    missingChild.set({ _fireside_expires_at: expiresAt, state: "child" }),
+  ]);
+
+  const [ordinary] = await rawFirestore.listDocuments(
+    { parent, collectionId: "containers", pageSize: 10 },
+    pageOptions,
+  );
+  assert.deepEqual(ordinary.map((document) => document.name), [
+    `${parent}/containers/existing`,
+  ]);
+
+  const [withMissing] = await rawFirestore.listDocuments(
+    {
+      parent,
+      collectionId: "containers",
+      pageSize: 10,
+      showMissing: true,
+    },
+    pageOptions,
+  );
+  assert.deepEqual(withMissing.map((document) => document.name), [
+    `${parent}/containers/existing`,
+    `${parent}/containers/missing`,
+  ]);
+  assert.equal(withMissing[0]?.fields?.state?.stringValue, "present");
+  const placeholder = withMissing[1];
+  assert.deepEqual(placeholder?.fields ?? {}, {});
+  assert.equal(placeholder?.createTime ?? null, null);
+  assert.equal(placeholder?.updateTime ?? null, null);
+
+  const paginatedRequest = {
+    parent,
+    collectionId: "containers",
+    pageSize: 1,
+    showMissing: true,
+  };
+  const [firstPage, , firstResponse] = await rawFirestore.listDocuments(
+    paginatedRequest,
+    pageOptions,
+  );
+  assert.deepEqual(firstPage.map((document) => document.name), [
+    `${parent}/containers/existing`,
+  ]);
+  const token = requiredPageToken(firstResponse.nextPageToken);
+  const [secondPage, , secondResponse] = await rawFirestore.listDocuments(
+    { ...paginatedRequest, pageToken: token },
+    pageOptions,
+  );
+  assert.deepEqual(secondPage.map((document) => document.name), [
+    `${parent}/containers/missing`,
+  ]);
+  if (configuration.name === "java") {
+    const trailingToken = requiredPageToken(secondResponse.nextPageToken);
+    const [trailingPage, , trailingResponse] = await rawFirestore.listDocuments(
+      { ...paginatedRequest, pageToken: trailingToken },
+      pageOptions,
+    );
+    assert.deepEqual(trailingPage, []);
+    assert.equal(trailingResponse.nextPageToken ?? "", "");
+  } else {
+    assert.equal(secondResponse.nextPageToken ?? "", "");
+  }
+
+  await assert.rejects(
+    rawFirestore.listDocuments(
+      {
+        parent,
+        collectionId: "containers",
+        orderBy: "__name__",
+        showMissing: true,
+      },
+      pageOptions,
+    ),
+    (error: unknown) => grpcCode(error) === 3,
+  );
+});
+
 test("BatchWrite reports per-write conflicts and commits independent writes", async (context) => {
   const configuration = resolveTarget(process.env);
   const firestore = createFirestore(configuration);

@@ -5,7 +5,7 @@ target names are `cloud`, `java`, and `fireside`. Cloud is the ground-truth
 target; Java is retained as a measured comparison target.
 
 The current backend cases cover SDK CRUD and listeners, field-ordered paginated
-list RPCs,
+list RPCs and name-only `showMissing` ancestor placeholders,
 non-atomic BatchWrite status ordering, queries, transactions, transforms
 (including exact mixed-numeric minimum/maximum behavior),
 historical read-time selectors, precise error codes, REST, named databases, and

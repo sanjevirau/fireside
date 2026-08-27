@@ -387,6 +387,16 @@ page boundaries. A field order without `collection_id` is rejected with
 `kind is required for all orders except __key__ ascending`. Fireside parses
 quoted field paths and shares mixed-value comparison with the query engine.
 
+`ListDocuments.show_missing` is pinned separately. When a direct document is
+absent but a deeper descendant exists beneath its path, production, Java, and
+Fireside include a name-only direct-ancestor placeholder; the ordinary request
+omits it. The placeholder has no fields, create time, or update time, and
+combining `show_missing` with `order_by` returns `INVALID_ARGUMENT` (3).
+Production and Fireside terminate paginated results with the final real page.
+Java v1.22.0 returns the same pages but adds a redundant trailing token after
+the placeholder; following that token yields an empty terminal page. This is
+tracked as part of Java's existing `ListDocuments` pagination deviation.
+
 Java v1.22.0 also returns a non-empty trailing `ListCollectionIds` page token
 after its last real item; following it yields an empty terminal page. Production
 and Fireside end the second page without that redundant request.
