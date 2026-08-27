@@ -121,5 +121,12 @@ The malformed Listen resume-token fixture records production's target-local
 `REMOVE` with status 3 and message `bad resume token`; the stream remains open
 and accepts a later target. Java v1.22.0 instead accepts the malformed token and
 forces `ADD`, `RESET`, `CURRENT`. Fireside follows production. The current
-Standard scoreboard is production 30/30 and Java/Fireside 32/32 including the
-two emulator-only control cases.
+At this malformed-token checkpoint the Standard scoreboard was production
+30/30 and Java/Fireside 32/32 including the two emulator-only control cases.
+
+The raw `CreateDocument` fixture records that production assigns a non-empty
+ID when `document_id` is omitted, applies the response mask without dropping
+masked-out stored fields, returns create/update timestamps, and rejects an
+explicit reuse of the assigned ID with `ALREADY_EXISTS` (6). Java v1.22.0 and
+Fireside match this contract. The current Standard scoreboard is production
+31/31 and Java/Fireside 33/33 including the two emulator-only control cases.

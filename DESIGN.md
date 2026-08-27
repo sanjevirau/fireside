@@ -432,6 +432,13 @@ this is a documented Java deviation. Java also requires `Bearer owner` on raw
 `BatchWrite`, after which its per-write `[ALREADY_EXISTS, OK]` result matches
 production.
 
+The raw `CreateDocument` fixture pins omitted document-ID assignment, response
+field-mask behavior, and duplicate conflict status. Production, Java v1.22.0,
+and Fireside assign a non-empty ID beneath the requested parent and collection,
+return only the requested masked field while persisting fields excluded from
+the response mask, populate both create and update times, and return
+`ALREADY_EXISTS` (6) when the assigned ID is reused explicitly.
+
 The same fixture pins `ListDocuments.order_by` field expressions. Production,
 Java, and Fireside exclude documents missing the ordered field, use an implicit
 document-name tie-break in the field direction, and preserve that order across
