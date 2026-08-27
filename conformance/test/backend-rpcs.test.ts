@@ -80,6 +80,90 @@ test("CreateDocument assigns an ID, preserves masked fields, and rejects conflic
   );
 });
 
+test("BulkWriter commits independent writes and surfaces per-write errors", async (context) => {
+  const configuration = resolveTarget(process.env);
+  const firestore = createFirestore(configuration);
+  const runId = randomUUID();
+  const collection = firestore.collection(
+    `runs/${runId}/fireside_bulk_writer`,
+  );
+  const expiresAt = Timestamp.fromMillis(Date.now() + DAY_MILLISECONDS);
+  const created = collection.doc("created");
+  const upserted = collection.doc("upserted");
+  const updated = collection.doc("updated");
+  const deleted = collection.doc("deleted");
+  const conflict = collection.doc("conflict");
+  const missing = collection.doc("missing");
+  const documents = [created, upserted, updated, deleted, conflict, missing];
+
+  context.after(async () => {
+    await Promise.all(documents.map((document) => document.delete())).catch(
+      () => undefined,
+    );
+    await firestore.terminate().catch(() => undefined);
+  });
+
+  await Promise.all([
+    updated.set({ _fireside_expires_at: expiresAt, value: "before" }),
+    deleted.set({ _fireside_expires_at: expiresAt, value: "delete me" }),
+    conflict.set({ _fireside_expires_at: expiresAt, value: "original" }),
+  ]);
+
+  const writer = firestore.bulkWriter({ throttling: false });
+  const observedErrors: Array<{ code: number; path: string }> = [];
+  const observedResults: string[] = [];
+  writer.onWriteError((error) => {
+    observedErrors.push({ code: error.code, path: error.documentRef.path });
+    return false;
+  });
+  writer.onWriteResult((document) => {
+    observedResults.push(document.path);
+  });
+
+  const operations = [
+    writer.create(created, {
+      _fireside_expires_at: expiresAt,
+      value: "created",
+    }),
+    writer.set(upserted, {
+      _fireside_expires_at: expiresAt,
+      value: "upserted",
+    }),
+    writer.update(updated, { value: "after" }),
+    writer.delete(deleted),
+    writer.create(conflict, { value: "duplicate" }),
+    writer.update(missing, { value: "not found" }),
+  ];
+  const outcomesPromise = Promise.allSettled(operations);
+  await writer.close();
+  const outcomes = await outcomesPromise;
+
+  assert.deepEqual(
+    observedErrors.sort((left, right) => left.code - right.code),
+    [
+      { code: 5, path: missing.path },
+      { code: 6, path: conflict.path },
+    ],
+  );
+  assert.deepEqual(
+    outcomes.map((outcome) => outcome.status),
+    ["fulfilled", "fulfilled", "fulfilled", "fulfilled", "rejected", "rejected"],
+  );
+  assert.equal(grpcCode(rejectionReason(outcomes[4])), 6);
+  assert.equal(grpcCode(rejectionReason(outcomes[5])), 5);
+  assert.deepEqual(
+    observedResults.sort(),
+    [created.path, deleted.path, updated.path, upserted.path].sort(),
+  );
+
+  const [createdSnapshot, upsertedSnapshot, updatedSnapshot, deletedSnapshot] =
+    await firestore.getAll(created, upserted, updated, deleted);
+  assert.equal(createdSnapshot!.get("value"), "created");
+  assert.equal(upsertedSnapshot!.get("value"), "upserted");
+  assert.equal(updatedSnapshot!.get("value"), "after");
+  assert.equal(deletedSnapshot!.exists, false);
+});
+
 test("list RPCs paginate direct children and preserve masks", async (context) => {
   const configuration = resolveTarget(process.env);
   const firestore = createFirestore(configuration);
@@ -470,6 +554,11 @@ function grpcCode(error: unknown): number | undefined {
     return undefined;
   }
   return typeof error.code === "number" ? error.code : undefined;
+}
+
+function rejectionReason(result: PromiseSettledResult<unknown> | undefined): unknown {
+  assert.equal(result?.status, "rejected");
+  return result?.status === "rejected" ? result.reason : undefined;
 }
 
 function grpcDetails(error: unknown): string | undefined {
