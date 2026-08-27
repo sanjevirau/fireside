@@ -7,6 +7,7 @@ const HOST = "127.0.0.1";
 const TEST_FILES = [
   "test/error-code-parity.test.ts",
   "test/firestore-smoke.test.ts",
+  "test/listen.test.ts",
   "test/partition-query.test.ts",
   "test/query-features.test.ts",
   "test/query-ordering.test.ts",

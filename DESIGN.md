@@ -306,6 +306,15 @@ incremental changes, opaque resume tokens, existence filters, and observed
 garbage-collection watermark. Single-target Admin SDK streams land in Phase 1;
 full browser multiplexing and reconnection land in Phase 2.
 
+`conformance/test/listen.test.ts` observes the same high-level Admin SDK
+sequence against production Cloud Firestore and Java v1.22.0: a pre-existing
+matching document is `added` in the initial ordered snapshot, a later matching
+write is `added`, an order-changing update is `modified` and reorders the view,
+and deletion is `removed`. Fireside's Phase 1 stream encodes those observations
+as target changes plus bounded document-change delivery. Resume replay,
+existence-filter mismatch recovery, and `RESET` remain unclaimed until their
+raw stream fixtures are captured.
+
 ## 6. Drop-in launcher and emulator control contract
 
 `firebase-tools` may launch the configured

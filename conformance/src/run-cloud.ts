@@ -15,6 +15,7 @@ await new Promise<void>((resolve, reject) => {
       "--test",
       "test/error-code-parity.test.ts",
       "test/firestore-smoke.test.ts",
+      "test/listen.test.ts",
       "test/partition-query.test.ts",
       "test/query-features.test.ts",
       "test/query-ordering.test.ts",
