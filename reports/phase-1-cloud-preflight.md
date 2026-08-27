@@ -136,6 +136,15 @@ The Admin SDK `BulkWriter` fixture records independent create, set, update, and
 delete success in the presence of two write-local failures. Production, Java
 v1.22.0, and Fireside preserve the four successful effects and surface only the
 duplicate create and missing update through the writer's error callback and
-operation promises as `ALREADY_EXISTS` (6) and `NOT_FOUND` (5). The current
-Standard scoreboard is production 32/32 and Java/Fireside 34/34 including the
-two emulator-only control cases.
+operation promises as `ALREADY_EXISTS` (6) and `NOT_FOUND` (5). At this
+BulkWriter checkpoint the Standard scoreboard was production 32/32 and
+Java/Fireside 34/34 including the two emulator-only control cases.
+
+The Admin SDK transaction-retry fixture creates a deterministic stale read with
+a separately begun raw transaction. Production aborts the stale SDK commit,
+runs the callback exactly twice, exposes the winning value `10` to the retry,
+and commits `11`; Fireside matches in memory and WAL/disk modes. Java v1.22.0
+runs the callback twice but supplies stale value `0` again and commits `1`, a
+Java-only deviation. The current Standard scoreboard is production 33/33 and
+Java/Fireside 35/35 including the two emulator-only control cases; 11 Java
+deviations are documented.

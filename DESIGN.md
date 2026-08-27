@@ -423,6 +423,14 @@ transactions instead of committing one; the comparison assertion records both
 observed Java outcomes, while Cloud and Fireside still require exactly one
 commit and one `ABORTED` response.
 
+The Admin SDK retry fixture begins and reads a competing raw transaction before
+the SDK transaction, then commits the raw value `10` after the SDK callback has
+read `0`. Production aborts the stale SDK commit, invokes the callback exactly
+once more with the winning value `10`, and commits `11`; Fireside matches.
+Java v1.22.0 also invokes the callback twice but its retry reads stale value `0`
+again and commits `1`, overwriting the competing value. This stale retry
+snapshot is a documented Java deviation.
+
 The raw backend fixture pins `ListDocuments` field masks and page-token chaining,
 lexicographic direct-child `ListCollectionIds`, and non-atomic `BatchWrite`
 statuses in request order. Production and Fireside return the two masked

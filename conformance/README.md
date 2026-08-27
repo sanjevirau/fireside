@@ -8,7 +8,7 @@ The current backend cases cover SDK CRUD and listeners, field-ordered paginated
 list RPCs and name-only `showMissing` ancestor placeholders,
 raw CreateDocument ID assignment and response-mask persistence, non-atomic
 BatchWrite status ordering, Admin SDK BulkWriter success/error fan-out,
-queries, transactions, transforms
+queries, transaction conflicts and automatic SDK retries, transforms
 (including exact mixed-numeric minimum/maximum behavior),
 RunQuery and RunAggregationQuery planning and analyzed explain metrics,
 historical read-time selectors, precise error codes, REST, named databases, and
