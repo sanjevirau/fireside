@@ -8,6 +8,7 @@ The current backend cases cover SDK CRUD and listeners, field-ordered paginated
 list RPCs and name-only `showMissing` ancestor placeholders,
 non-atomic BatchWrite status ordering, queries, transactions, transforms
 (including exact mixed-numeric minimum/maximum behavior),
+RunQuery planning and analyzed explain metrics,
 historical read-time selectors, precise error codes, REST, named databases, and
 ancestor-scoped collection groups, and partitioning.
 

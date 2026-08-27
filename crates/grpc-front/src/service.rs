@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use fireside_core_store::{
     CommitError, CommitResult, DatabaseName, Document, DocumentKey, FieldTransform, Snapshot,
@@ -617,16 +617,15 @@ impl Firestore for FirestoreService {
         request: Request<RunQueryRequest>,
     ) -> Result<Response<Self::RunQueryStream>, Status> {
         let request = request.into_inner();
-        if request.explain_options.is_some() {
-            return Err(Status::unimplemented(
-                "query explain metrics await a production fixture",
-            ));
-        }
+        let explain_options = request.explain_options;
         let (database, parent) = decode_parent(&request.parent)?;
         let Some(run_query_request::QueryType::StructuredQuery(structured)) = request.query_type
         else {
             return Err(Status::invalid_argument("structured query is required"));
         };
+        let explain_plan = explain_options
+            .as_ref()
+            .map(|_| query_plan_summary(&structured));
         let skipped_results = structured.offset;
         let query = decode_query(parent.as_deref(), structured)?;
         self.query_policy
@@ -659,10 +658,24 @@ impl Firestore for FirestoreService {
         } else {
             self.snapshot_for_transaction(&database, &token)?
         };
+        if explain_options
+            .as_ref()
+            .is_some_and(|options| !options.analyze)
+        {
+            return Ok(Response::new(query_plan_stream(
+                new_transaction,
+                token,
+                explain_plan.expect("explain options create a plan"),
+            )));
+        }
+        let started = Instant::now();
         let documents = execute(&snapshot, &database, &query, self.query_policy.edition())
             .map_err(|error| query_status(&error))?;
+        let execution_duration = started.elapsed();
         let read_time = Some(encode_timestamp(now()));
-        let mut responses = Vec::with_capacity(documents.len() + usize::from(new_transaction));
+        let mut responses = Vec::with_capacity(
+            documents.len() + usize::from(new_transaction) + usize::from(explain_options.is_some()),
+        );
         if new_transaction {
             responses.push(RunQueryResponse {
                 transaction: token.clone(),
@@ -681,6 +694,15 @@ impl Firestore for FirestoreService {
         if documents.is_empty() {
             responses.push(RunQueryResponse {
                 read_time,
+                ..RunQueryResponse::default()
+            });
+        }
+        if explain_options.is_some() {
+            responses.push(RunQueryResponse {
+                explain_metrics: Some(query_explain_metrics(
+                    explain_plan.expect("explain options create a plan"),
+                    Some((documents.len(), execution_duration)),
+                )),
                 ..RunQueryResponse::default()
             });
         }
@@ -1120,6 +1142,109 @@ fn rpc_status(status: &Status) -> rpc::Status {
     }
 }
 
+fn query_plan_summary(query: &proto::StructuredQuery) -> proto::PlanSummary {
+    let query_scope = if query
+        .from
+        .first()
+        .is_some_and(|selector| selector.all_descendants)
+    {
+        "Collection Group"
+    } else {
+        "Collection"
+    };
+    let mut properties = query
+        .order_by
+        .iter()
+        .filter_map(|order| {
+            let field = order.field.as_ref()?.field_path.as_str();
+            let direction = match proto::structured_query::Direction::try_from(order.direction) {
+                Ok(proto::structured_query::Direction::Descending) => "DESC",
+                _ => "ASC",
+            };
+            Some(format!("{field} {direction}"))
+        })
+        .collect::<Vec<_>>();
+    if properties
+        .iter()
+        .all(|property| !property.starts_with("__name__ "))
+    {
+        let direction = properties
+            .last()
+            .and_then(|property| property.split_whitespace().last())
+            .unwrap_or("ASC");
+        properties.push(format!("__name__ {direction}"));
+    }
+    let index = prost_types::Struct {
+        fields: BTreeMap::from([
+            ("query_scope".to_owned(), struct_string(query_scope)),
+            (
+                "properties".to_owned(),
+                struct_string(format!("({})", properties.join(", "))),
+            ),
+        ]),
+    };
+    proto::PlanSummary {
+        indexes_used: vec![index],
+    }
+}
+
+fn query_explain_metrics(
+    plan_summary: proto::PlanSummary,
+    execution: Option<(usize, Duration)>,
+) -> proto::ExplainMetrics {
+    proto::ExplainMetrics {
+        plan_summary: Some(plan_summary),
+        execution_stats: execution.map(|(results, elapsed)| {
+            let results = i64::try_from(results).unwrap_or(i64::MAX);
+            proto::ExecutionStats {
+                results_returned: results,
+                execution_duration: Some(prost_types::Duration {
+                    seconds: i64::try_from(elapsed.as_secs()).unwrap_or(i64::MAX),
+                    nanos: i32::try_from(elapsed.subsec_nanos()).unwrap_or(i32::MAX),
+                }),
+                read_operations: results.max(1),
+                debug_stats: Some(prost_types::Struct {
+                    fields: BTreeMap::from([
+                        (
+                            "execution_engine".to_owned(),
+                            struct_string("fireside-mvcc"),
+                        ),
+                        (
+                            "results_materialized".to_owned(),
+                            struct_string(results.to_string()),
+                        ),
+                    ]),
+                }),
+            }
+        }),
+    }
+}
+
+fn query_plan_stream(
+    new_transaction: bool,
+    token: Vec<u8>,
+    plan_summary: proto::PlanSummary,
+) -> ResponseStream<RunQueryResponse> {
+    let mut responses = Vec::with_capacity(1 + usize::from(new_transaction));
+    if new_transaction {
+        responses.push(RunQueryResponse {
+            transaction: token,
+            ..RunQueryResponse::default()
+        });
+    }
+    responses.push(RunQueryResponse {
+        explain_metrics: Some(query_explain_metrics(plan_summary, None)),
+        ..RunQueryResponse::default()
+    });
+    Box::pin(iter(responses.into_iter().map(Ok)))
+}
+
+fn struct_string(value: impl Into<String>) -> prost_types::Value {
+    prost_types::Value {
+        kind: Some(prost_types::value::Kind::StringValue(value.into())),
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ListOrder {
     path: QueryFieldPath,
@@ -1370,6 +1495,42 @@ mod tests {
             ),
             None
         );
+    }
+
+    #[test]
+    fn query_explain_helpers_report_the_virtual_index_and_execution() {
+        let summary = query_plan_summary(&StructuredQuery {
+            from: vec![CollectionSelector {
+                collection_id: "explain".to_owned(),
+                all_descendants: false,
+            }],
+            order_by: vec![Order {
+                field: Some(FieldReference {
+                    field_path: "score".to_owned(),
+                }),
+                direction: Direction::Descending as i32,
+            }],
+            ..StructuredQuery::default()
+        });
+        let properties = summary.indexes_used[0]
+            .fields
+            .get("properties")
+            .and_then(|value| value.kind.as_ref());
+        assert!(matches!(
+            properties,
+            Some(prost_types::value::Kind::StringValue(value))
+                if value == "(score DESC, __name__ DESC)"
+        ));
+
+        let planned = query_explain_metrics(summary.clone(), None);
+        assert!(planned.plan_summary.is_some());
+        assert!(planned.execution_stats.is_none());
+        let analyzed = query_explain_metrics(summary, Some((2, Duration::from_millis(3))));
+        let execution = analyzed.execution_stats.expect("execution stats");
+        assert_eq!(execution.results_returned, 2);
+        assert_eq!(execution.read_operations, 2);
+        assert!(execution.execution_duration.is_some());
+        assert!(execution.debug_stats.is_some());
     }
 
     const DATABASE: &str = "projects/demo/databases/tenant-a";

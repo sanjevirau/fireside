@@ -21,6 +21,7 @@ await new Promise<void>((resolve, reject) => {
       "test/listen.test.ts",
       "test/named-database.test.ts",
       "test/partition-query.test.ts",
+      "test/query-explain.test.ts",
       "test/query-features.test.ts",
       "test/query-ordering.test.ts",
       "test/rest.test.ts",
