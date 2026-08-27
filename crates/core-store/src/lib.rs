@@ -267,6 +267,12 @@ impl Revision {
     pub const fn get(self) -> u64 {
         self.0
     }
+
+    /// Reconstructs a revision decoded from an internal persistence or resume token.
+    #[must_use]
+    pub const fn from_u64(value: u64) -> Self {
+        Self(value)
+    }
 }
 
 /// Immutable stored document.
@@ -452,6 +458,44 @@ impl Store {
         }
     }
 
+    /// Reconstructs a retained historical snapshot from the bounded change log.
+    pub fn snapshot_at(&self, revision: Revision) -> Result<Snapshot, SnapshotError> {
+        let state = self.state();
+        if revision > state.revision {
+            return Err(SnapshotError::FutureRevision {
+                requested: revision,
+                current: state.revision,
+            });
+        }
+        if revision < state.change_floor {
+            return Err(SnapshotError::ResetRequired(ResetRequired {
+                requested: revision,
+                oldest_available: state.change_floor,
+            }));
+        }
+
+        let mut documents = state.documents.clone();
+        for change in state
+            .change_log
+            .iter()
+            .rev()
+            .filter(|change| change.revision > revision)
+        {
+            match &change.before {
+                Some(document) => {
+                    documents.insert(change.key.clone(), document.clone());
+                }
+                None => {
+                    documents.remove(&change.key);
+                }
+            }
+        }
+        Ok(Snapshot {
+            revision,
+            documents,
+        })
+    }
+
     /// Atomically validates and applies a sequence of writes.
     pub fn commit(&self, writes: &[Write]) -> Result<CommitResult, CommitError> {
         let mut state = self.state();
@@ -578,6 +622,36 @@ impl Display for ResetRequired {
 }
 
 impl Error for ResetRequired {}
+
+/// A historical snapshot cannot be reconstructed from current retained state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SnapshotError {
+    /// The requested revision is older than the bounded replay window.
+    ResetRequired(ResetRequired),
+    /// The token names a revision the store has not committed.
+    FutureRevision {
+        /// Requested revision.
+        requested: Revision,
+        /// Latest committed revision.
+        current: Revision,
+    },
+}
+
+impl Display for SnapshotError {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ResetRequired(error) => Display::fmt(error, formatter),
+            Self::FutureRevision { requested, current } => write!(
+                formatter,
+                "revision {} is newer than current revision {}",
+                requested.get(),
+                current.get()
+            ),
+        }
+    }
+}
+
+impl Error for SnapshotError {}
 
 /// Atomic commit failure. Frontends map these causes to oracle-tested wire
 /// status codes.
@@ -1142,6 +1216,47 @@ mod tests {
                 .fields(),
             &fields(Value::Integer(2))
         );
+    }
+
+    #[test]
+    fn retained_historical_snapshots_are_reconstructed_from_changes() {
+        let store = Store::default();
+        let database = database("(default)");
+        let alpha = key(&database, "items/alpha");
+        let beta = key(&database, "items/beta");
+        let first = store
+            .commit(&[Write::Create {
+                key: alpha.clone(),
+                fields: fields(Value::Integer(1)),
+            }])
+            .expect("create should commit");
+        store
+            .commit(&[Write::Set {
+                key: alpha.clone(),
+                fields: fields(Value::Integer(2)),
+                precondition: Precondition::None,
+            }])
+            .expect("update should commit");
+        store
+            .commit(&[Write::Create {
+                key: beta.clone(),
+                fields: fields(Value::Integer(3)),
+            }])
+            .expect("second create should commit");
+
+        let historical = store
+            .snapshot_at(first.revision)
+            .expect("first revision should be retained");
+        assert_eq!(historical.revision(), first.revision);
+        assert_eq!(
+            historical.get(&alpha).expect("alpha should exist").fields(),
+            &fields(Value::Integer(1))
+        );
+        assert!(historical.get(&beta).is_none());
+        assert!(matches!(
+            store.snapshot_at(Revision::from_u64(store.revision().get() + 1)),
+            Err(SnapshotError::FutureRevision { .. })
+        ));
     }
 
     #[test]

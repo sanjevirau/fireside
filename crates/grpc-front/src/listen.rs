@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
 
-use fireside_core_store::{DatabaseName, Revision, Store};
+use fireside_core_store::{DatabaseName, Revision, SnapshotError, Store};
 use fireside_query_engine::QueryPolicy;
 use fireside_watch_broker::{ChangeKind, TargetSpec, WatchChange, WatchDocument, WatchTarget};
 use tokio::sync::mpsc;
@@ -14,6 +14,7 @@ use crate::codec::{
 };
 use crate::google::firestore::v1::listen_request::TargetChange as RequestedTargetChange;
 use crate::google::firestore::v1::listen_response::ResponseType;
+use crate::google::firestore::v1::target::ResumeType;
 use crate::google::firestore::v1::target::TargetType;
 use crate::google::firestore::v1::target::query_target::QueryType;
 use crate::google::firestore::v1::target_change::TargetChangeType;
@@ -124,11 +125,15 @@ async fn add_target(
     database: DatabaseName,
     target: Target,
 ) -> Result<(), Status> {
-    if target.resume_type.is_some() {
-        return Err(Status::unimplemented(
-            "listen resume points await a replay fixture",
-        ));
-    }
+    let resume_revision = match target.resume_type.as_ref() {
+        Some(ResumeType::ResumeToken(token)) => Some(decode_resume_token(token)?),
+        Some(ResumeType::ReadTime(_)) => {
+            return Err(Status::unimplemented(
+                "listen read-time resume requires a production fixture",
+            ));
+        }
+        None => None,
+    };
     let id = if target.target_id == 0 {
         let assigned = *next_assigned_id;
         *next_assigned_id = next_assigned_id.saturating_add(1);
@@ -158,9 +163,21 @@ async fn add_target(
             .map_err(|error| Status::failed_precondition(error.to_string()))?;
     }
     let snapshot = store.snapshot();
-    let (watch, initial) =
-        WatchTarget::initialize(id, database, spec, query_policy.edition(), &snapshot)
+    let (watch, initial) = if let Some(revision) = resume_revision {
+        let baseline = store
+            .snapshot_at(revision)
+            .map_err(resume_snapshot_status)?;
+        let (mut watch, _) =
+            WatchTarget::initialize(id, database, spec, query_policy.edition(), &baseline)
+                .map_err(|error| query_status(&error))?;
+        let replay = watch
+            .refresh(&snapshot)
             .map_err(|error| query_status(&error))?;
+        (watch, replay)
+    } else {
+        WatchTarget::initialize(id, database, spec, query_policy.edition(), &snapshot)
+            .map_err(|error| query_status(&error))?
+    };
 
     send_target_change(sender, TargetChangeType::Add, vec![id], None, None).await?;
     for change in initial.changes {
@@ -375,6 +392,25 @@ fn resume_token(revision: Revision) -> Vec<u8> {
     let mut token = b"fireside-resume-".to_vec();
     token.extend_from_slice(&revision.get().to_be_bytes());
     token
+}
+
+fn decode_resume_token(token: &[u8]) -> Result<Revision, Status> {
+    const PREFIX: &[u8] = b"fireside-resume-";
+    let revision = token
+        .strip_prefix(PREFIX)
+        .and_then(|revision| <[u8; 8]>::try_from(revision).ok())
+        .map(u64::from_be_bytes)
+        .ok_or_else(|| Status::invalid_argument("invalid fireside resume token"))?;
+    Ok(Revision::from_u64(revision))
+}
+
+fn resume_snapshot_status(error: SnapshotError) -> Status {
+    match error {
+        SnapshotError::ResetRequired(_) => {
+            Status::failed_precondition("listen resume token has expired")
+        }
+        SnapshotError::FutureRevision { .. } => Status::invalid_argument(error.to_string()),
+    }
 }
 
 fn now() -> fireside_core_store::Timestamp {

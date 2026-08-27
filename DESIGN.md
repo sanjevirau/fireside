@@ -349,9 +349,18 @@ sequence against production Cloud Firestore and Java v1.22.0: a pre-existing
 matching document is `added` in the initial ordered snapshot, a later matching
 write is `added`, an order-changing update is `modified` and reorders the view,
 and deletion is `removed`. Fireside's Phase 1 stream encodes those observations
-as target changes plus bounded document-change delivery. Resume replay,
-existence-filter mismatch recovery, and `RESET` remain unclaimed until their
-raw stream fixtures are captured.
+as target changes plus bounded document-change delivery.
+
+The raw v1 fixture also pins valid resume behavior. Production emits
+`ADD` then `CURRENT` and delivers only documents changed after the checkpoint;
+Fireside follows it by reconstructing the checkpoint snapshot from its bounded
+change log and diffing against current state. Java v1.22.0 instead emits
+`ADD`, `RESET`, `CURRENT` and replays the complete target, including unchanged
+documents. That replay is a documented Java deviation. The raw client must set
+the `google-cloud-resource-prefix` routing header even though every Listen
+message also contains the database resource. Expired-token reset behavior,
+read-time resume, and existence-filter mismatch recovery remain unclaimed until
+their oracle fixtures are captured.
 
 ## 6. Drop-in launcher and emulator control contract
 
