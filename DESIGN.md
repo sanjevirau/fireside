@@ -540,8 +540,9 @@ The same oracle pins these entity details:
 - nested document keys contain every collection/document pair, but
   `entity_group` contains only the root pair; and
 - the overall metadata file is a LevelDB log containing a one-byte marker
-  record followed by a metadata protobuf. Per-kind metadata is a direct
-  protobuf, not a LevelDB log.
+  record followed by a metadata protobuf. Each referenced metadata entry owns
+  its entity and byte counts; they are not outer-message totals. Per-kind
+  metadata is a direct protobuf, not a LevelDB log.
 
 Writer validation is bidirectional and byte-aware:
 
