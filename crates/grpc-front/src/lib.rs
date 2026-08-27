@@ -6,6 +6,7 @@
 #![forbid(unsafe_code)]
 
 mod codec;
+mod listen;
 mod query_codec;
 mod service;
 

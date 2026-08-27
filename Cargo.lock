@@ -309,6 +309,7 @@ version = "0.0.1"
 dependencies = [
  "fireside-core-store",
  "fireside-query-engine",
+ "fireside-watch-broker",
  "prost",
  "prost-types",
  "protox",
@@ -339,6 +340,10 @@ version = "0.0.1"
 [[package]]
 name = "fireside-watch-broker"
 version = "0.0.1"
+dependencies = [
+ "fireside-core-store",
+ "fireside-query-engine",
+]
 
 [[package]]
 name = "fireside-webchannel-front"

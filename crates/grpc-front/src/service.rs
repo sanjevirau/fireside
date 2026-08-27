@@ -40,7 +40,7 @@ use crate::google::firestore::v1::{
 use crate::google::rpc;
 use crate::query_codec::{decode_aggregation, decode_query, query_status};
 
-type ResponseStream<T> = Pin<Box<dyn Stream<Item = Result<T, Status>> + Send + 'static>>;
+pub(crate) type ResponseStream<T> = Pin<Box<dyn Stream<Item = Result<T, Status>> + Send + 'static>>;
 
 /// Handwritten Firestore v1 service adapter over the MVCC store.
 #[derive(Clone)]
@@ -691,9 +691,12 @@ impl Firestore for FirestoreService {
 
     async fn listen(
         &self,
-        _request: Request<tonic::Streaming<ListenRequest>>,
+        request: Request<tonic::Streaming<ListenRequest>>,
     ) -> Result<Response<Self::ListenStream>, Status> {
-        Err(Status::unimplemented("Listen is in progress"))
+        Ok(Response::new(crate::listen::stream(
+            self.store.clone(),
+            request.into_inner(),
+        )))
     }
 
     async fn list_collection_ids(

@@ -9,8 +9,9 @@ target, not the specification.
 
 > [!IMPORTANT]
 > Phase 0 is complete and Phase 1 is under development. Fireside passes the
-> eight checked-in backend conformance cases, but the remaining Phase 1 API,
-> persistence, import/export, listener, and torture gates are not yet complete.
+> nine checked-in backend conformance cases, but the remaining Phase 1 API,
+> persistence, import/export, listener-resume, and torture gates are not yet
+> complete.
 
 ## Why this exists
 
@@ -30,13 +31,12 @@ of scope until the conformance gates are met.
 
 | Target / area | Harness smoke | Firestore APIs | Browser SDK | Rules | Suite |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Production cloud | pass (8/8) | reference target | not implemented | not implemented | not implemented |
-| Official Java emulator | pass (8/8) | comparison target | not run | not run | not run |
-| fireside | pass (8/8) | current scope 8/8 | not implemented | not implemented | not implemented |
+| Production cloud | pass (9/9) | reference target | not implemented | not implemented | not implemented |
+| Official Java emulator | pass (9/9) | comparison target | not run | not run | not run |
+| fireside | pass (9/9) | current scope 9/9 | not implemented | not implemented | not implemented |
 
-“Oracle only” means the target is exercised to validate the harness; it is not
-a compatibility claim for fireside. From Phase 2 onward this table will be
-generated from CI results.
+Cloud is the behavioral reference; Java is measured only for comparison. From
+Phase 2 onward this table will be generated from CI results.
 
 ## Repository layout
 
