@@ -7,6 +7,7 @@ import { join, resolve } from "node:path";
 const PROJECT_ID = "demo-fireside-fireside";
 const HOST = "127.0.0.1";
 const BACKEND_TEST_FILES = [
+  "test/ancestor-collection-group.test.ts",
   "test/backend-rpcs.test.ts",
   "test/error-code-parity.test.ts",
   "test/firestore-smoke.test.ts",

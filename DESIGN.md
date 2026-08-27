@@ -262,6 +262,12 @@ configuration fails startup. One shared query policy covers gRPC RunQuery,
 RunAggregationQuery, PartitionQuery, Listen targets, and REST runQuery so the
 transports cannot drift.
 
+`conformance/test/ancestor-collection-group.test.ts` pins document-ancestor
+scoping for `allDescendants` collection selectors over both gRPC and REST.
+Production and Java include direct and deeply nested matching subcollections
+below the request parent while excluding the same collection ID beneath peer
+documents; Fireside applies that prefix boundary inside the shared query engine.
+
 `conformance/test/write-transforms.test.ts` pins masked nested and top-level
 field deletion plus server timestamp, numeric increment, numeric minimum and
 maximum, array union, and array remove. Production and Java agree that all

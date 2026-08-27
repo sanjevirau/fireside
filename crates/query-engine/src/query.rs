@@ -207,6 +207,7 @@ pub enum Limit {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Query {
     scope: QueryScope,
+    ancestor: Option<String>,
     filter: Option<Filter>,
     orders: Vec<Order>,
     start: Option<Cursor>,
@@ -221,6 +222,7 @@ impl Query {
     pub const fn new(scope: QueryScope) -> Self {
         Self {
             scope,
+            ancestor: None,
             filter: None,
             orders: Vec::new(),
             start: None,
@@ -229,6 +231,21 @@ impl Query {
             limit: None,
             projection: None,
         }
+    }
+
+    /// Restricts a collection-group query to descendants of one document path.
+    pub fn under_ancestor(mut self, path: impl Into<String>) -> Result<Self, QueryError> {
+        let path = path.into();
+        let segments = split_path(&path);
+        if !matches!(self.scope, QueryScope::CollectionGroup(_))
+            || segments.is_empty()
+            || !segments.len().is_multiple_of(2)
+            || segments.join("/") != path
+        {
+            return Err(QueryError::InvalidScope(path));
+        }
+        self.ancestor = Some(path);
+        Ok(self)
     }
 
     #[must_use]
@@ -360,7 +377,7 @@ pub fn execute(
     let mut documents = snapshot
         .documents(database)
         .into_iter()
-        .filter(|(key, _)| scope_matches(&query.scope, key))
+        .filter(|(key, _)| scope_matches(&query.scope, query.ancestor.as_deref(), key))
         .filter(|(key, document)| {
             query
                 .filter
@@ -455,6 +472,7 @@ pub fn partition(
 
 fn supported_partition_query(query: &Query) -> bool {
     matches!(query.scope, QueryScope::CollectionGroup(_))
+        && query.ancestor.is_none()
         && query.filter.is_none()
         && query.orders
             == [Order {
@@ -549,7 +567,7 @@ fn first_inequality_field(filter: &Filter) -> Option<FieldPath> {
     }
 }
 
-fn scope_matches(scope: &QueryScope, key: &DocumentKey) -> bool {
+fn scope_matches(scope: &QueryScope, ancestor: Option<&str>, key: &DocumentKey) -> bool {
     let document_segments = split_path(key.path());
     match scope {
         QueryScope::Collection(path) => {
@@ -557,9 +575,17 @@ fn scope_matches(scope: &QueryScope, key: &DocumentKey) -> bool {
             document_segments.len() == collection_segments.len() + 1
                 && document_segments.starts_with(&collection_segments)
         }
-        QueryScope::CollectionGroup(collection_id) => document_segments
-            .get(document_segments.len().saturating_sub(2))
-            .is_some_and(|segment| *segment == collection_id),
+        QueryScope::CollectionGroup(collection_id) => {
+            let collection_matches = document_segments
+                .get(document_segments.len().saturating_sub(2))
+                .is_some_and(|segment| *segment == collection_id);
+            let ancestor_matches = ancestor.is_none_or(|ancestor| {
+                let ancestor_segments = split_path(ancestor);
+                document_segments.len() >= ancestor_segments.len() + 2
+                    && document_segments.starts_with(&ancestor_segments)
+            });
+            collection_matches && ancestor_matches
+        }
     }
 }
 
@@ -1171,6 +1197,16 @@ mod tests {
         assert_eq!(
             ids(&database, &snapshot, &group),
             ["peer", "a", "b", "c", "d", "e"]
+        );
+
+        let ancestor_group = Query::new(
+            QueryScope::collection_group("fireside_conformance").expect("valid collection group"),
+        )
+        .under_ancestor("runs/run")
+        .expect("valid document ancestor");
+        assert_eq!(
+            ids(&database, &snapshot, &ancestor_group),
+            ["a", "b", "c", "d", "e"]
         );
 
         let documents = execute(

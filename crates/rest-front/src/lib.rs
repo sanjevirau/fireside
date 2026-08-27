@@ -506,11 +506,6 @@ fn decode_query(
         .and_then(JsonValue::as_bool)
         .unwrap_or(false);
     let scope = if all_descendants {
-        if parent.is_some() {
-            return Err(RestError::invalid(
-                "ancestor collection-group queries are not implemented",
-            ));
-        }
         QueryScope::collection_group(collection)
     } else {
         QueryScope::collection(parent.map_or_else(
@@ -520,6 +515,11 @@ fn decode_query(
     }
     .map_err(|error| RestError::invalid(error.to_string()))?;
     let mut query = StructuredQuery::new(scope);
+    if all_descendants && let Some(parent) = parent {
+        query = query
+            .under_ancestor(parent)
+            .map_err(|error| RestError::invalid(error.to_string()))?;
+    }
     if let Some(filter) = structured.get("where") {
         query = query.filter(decode_filter(filter)?);
     }

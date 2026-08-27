@@ -37,11 +37,6 @@ pub(crate) fn decode_query(
         ));
     };
     let scope = if selector.all_descendants {
-        if parent.is_some() {
-            return Err(Status::unimplemented(
-                "ancestor-scoped collection-group queries are not implemented",
-            ));
-        }
         QueryScope::collection_group(selector.collection_id.clone())
     } else {
         let path = parent.map_or_else(
@@ -53,6 +48,13 @@ pub(crate) fn decode_query(
     .map_err(|error| query_status(&error))?;
 
     let mut query = Query::new(scope);
+    if selector.all_descendants
+        && let Some(parent) = parent
+    {
+        query = query
+            .under_ancestor(parent)
+            .map_err(|error| query_status(&error))?;
+    }
     if let Some(filter) = structured.r#where {
         query = query.filter(decode_filter(filter)?);
     }

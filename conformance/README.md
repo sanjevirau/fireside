@@ -8,7 +8,7 @@ The current backend cases cover SDK CRUD and listeners, paginated list RPCs,
 non-atomic BatchWrite status ordering, queries, transactions, transforms
 (including exact mixed-numeric minimum/maximum behavior),
 historical read-time selectors, precise error codes, REST, named databases, and
-partitioning.
+ancestor-scoped collection groups, and partitioning.
 
 ```sh
 npm ci
