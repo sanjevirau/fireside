@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { resolveTarget } from "../src/target.ts";
+import { CLOUD_PROJECT_ID, resolveTarget } from "../src/target.ts";
 
 test("resolves an emulator target only with an explicit host", () => {
   assert.deepEqual(
@@ -29,7 +29,7 @@ test("refuses a cloud project without an exact independent allowlist", () => {
       resolveTarget({
         CONFORMANCE_TARGET: "cloud",
         CONFORMANCE_CLOUD_PROJECT: "unexpected-project",
-        CONFORMANCE_CLOUD_ALLOWLIST: "dedicated-conformance-project",
+        CONFORMANCE_CLOUD_ALLOWLIST: CLOUD_PROJECT_ID,
       }),
     /must exactly match/,
   );
@@ -37,13 +37,25 @@ test("refuses a cloud project without an exact independent allowlist", () => {
   assert.deepEqual(
     resolveTarget({
       CONFORMANCE_TARGET: "cloud",
-      CONFORMANCE_CLOUD_PROJECT: "dedicated-conformance-project",
-      CONFORMANCE_CLOUD_ALLOWLIST: "dedicated-conformance-project",
+      CONFORMANCE_CLOUD_PROJECT: CLOUD_PROJECT_ID,
+      CONFORMANCE_CLOUD_ALLOWLIST: CLOUD_PROJECT_ID,
     }),
     {
       name: "cloud",
-      projectId: "dedicated-conformance-project",
+      projectId: CLOUD_PROJECT_ID,
     },
+  );
+});
+
+test("refuses a different cloud project even when duplicate inputs match", () => {
+  assert.throws(
+    () =>
+      resolveTarget({
+        CONFORMANCE_TARGET: "cloud",
+        CONFORMANCE_CLOUD_PROJECT: "other-dedicated-project",
+        CONFORMANCE_CLOUD_ALLOWLIST: "other-dedicated-project",
+      }),
+    /only allows cloud project fireside-conformance/,
   );
 });
 

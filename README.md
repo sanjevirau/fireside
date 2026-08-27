@@ -27,9 +27,9 @@ of scope until the conformance gates are met.
 
 ## Current compatibility scoreboard
 
-| Target / area | Phase 0 harness | Firestore APIs | Browser SDK | Rules | Suite |
+| Target / area | Harness smoke | Firestore APIs | Browser SDK | Rules | Suite |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Production cloud | not run | not implemented | not implemented | not implemented | not implemented |
+| Production cloud | pass (1/1) | oracle only | not implemented | not implemented | not implemented |
 | Official Java emulator | pass (1/1) | oracle only | not run | not run | not run |
 | fireside | harness only | not implemented | not implemented | not implemented | not implemented |
 

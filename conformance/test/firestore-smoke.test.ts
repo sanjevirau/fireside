@@ -1,14 +1,17 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import test from "node:test";
+
+import { Timestamp } from "@google-cloud/firestore";
 
 import { createFirestore, resolveTarget } from "../src/target.ts";
 
-test("official Java emulator accepts an SDK write/read/delete round trip", async (context) => {
+test("target accepts an SDK write/read/delete round trip", async (context) => {
   const configuration = resolveTarget(process.env);
-  assert.equal(configuration.name, "java");
-
   const firestore = createFirestore(configuration);
-  const document = firestore.doc("phase0/smoke");
+  const document = firestore.doc(
+    `fireside_conformance/smoke-${randomUUID()}`,
+  );
 
   context.after(async () => {
     await document.delete().catch(() => undefined);
@@ -16,7 +19,9 @@ test("official Java emulator accepts an SDK write/read/delete round trip", async
   });
 
   const expected = {
-    message: "harness reaches the official emulator",
+    _fireside_expires_at: Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000),
+    message: "harness reaches the selected target",
+    target: configuration.name,
     unicode: "fireside 🔥",
     value: 42,
   };

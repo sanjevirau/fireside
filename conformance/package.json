@@ -9,7 +9,8 @@
   "scripts": {
     "check": "tsc --noEmit",
     "test": "node --import tsx --test test/target.test.ts",
-    "test:smoke": "node --import tsx --test test/official-smoke.test.ts",
+    "test:smoke": "node --import tsx --test test/firestore-smoke.test.ts",
+    "test:cloud": "node --import tsx src/run-cloud.ts",
     "test:official": "node --import tsx src/run-official.ts"
   },
   "devDependencies": {

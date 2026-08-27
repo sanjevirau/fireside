@@ -1,6 +1,7 @@
 import { Firestore } from "@google-cloud/firestore";
 
 export const TARGET_NAMES = ["cloud", "java", "fireside"] as const;
+export const CLOUD_PROJECT_ID = "fireside-conformance";
 
 export type TargetName = (typeof TARGET_NAMES)[number];
 
@@ -72,6 +73,12 @@ function resolveCloudTarget(
   if (allowlistedProject === undefined || projectId !== allowlistedProject) {
     throw new Error(
       "cloud project must exactly match CONFORMANCE_CLOUD_ALLOWLIST",
+    );
+  }
+
+  if (projectId !== CLOUD_PROJECT_ID) {
+    throw new Error(
+      `this checkout only allows cloud project ${CLOUD_PROJECT_ID}`,
     );
   }
 
