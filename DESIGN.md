@@ -120,6 +120,15 @@ including query evaluation, rules data access, transactions, export, and the
 initial state of a listener. The append-only logical change stream feeds watch
 targets and triggers.
 
+The in-memory representation uses persistent immutable map roots. A snapshot
+retains its exact root; a commit derives a new root with structural sharing.
+Intermediate roots that are not referenced by an active snapshot are reclaimed
+by reference counting, including during repeated writes to one hot document.
+This avoids retaining one global version node per write merely because an old
+snapshot exists. The listener replay log remains separately and explicitly
+bounded; a resume point older than its floor receives `RESET` rather than
+causing unbounded retention.
+
 Transactions include read-only and read-write modes. Read-write transactions
 track the read set, validate it atomically at commit, return the production
 conflict status, and support SDK retry behavior. Transforms and preconditions
