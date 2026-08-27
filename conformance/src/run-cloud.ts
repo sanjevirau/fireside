@@ -9,7 +9,13 @@ if (process.env.FIRESTORE_EMULATOR_HOST !== undefined) {
 await new Promise<void>((resolve, reject) => {
   const child = spawn(
     process.execPath,
-    ["--import", "tsx", "--test", "test/firestore-smoke.test.ts"],
+    [
+      "--import",
+      "tsx",
+      "--test",
+      "test/firestore-smoke.test.ts",
+      "test/query-ordering.test.ts",
+    ],
     {
       cwd: process.cwd(),
       env: {

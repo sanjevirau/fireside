@@ -1,4 +1,5 @@
-import { Firestore } from "@google-cloud/firestore";
+import FirestorePackage, { Firestore } from "@google-cloud/firestore";
+import { credentials } from "@grpc/grpc-js";
 
 export const TARGET_NAMES = ["cloud", "java", "fireside"] as const;
 export const CLOUD_PROJECT_ID = "fireside-conformance";
@@ -43,6 +44,24 @@ export function createFirestore(
     projectId: configuration.projectId,
     host: configuration.host,
     ssl: false,
+  });
+}
+
+export function createV1Firestore(
+  configuration: TargetConfiguration,
+): InstanceType<typeof FirestorePackage.v1.FirestoreClient> {
+  if (configuration.host === undefined) {
+    return new FirestorePackage.v1.FirestoreClient({
+      projectId: configuration.projectId,
+    });
+  }
+
+  const endpoint = new URL(`http://${configuration.host}`);
+  return new FirestorePackage.v1.FirestoreClient({
+    apiEndpoint: endpoint.hostname,
+    port: Number(endpoint.port),
+    projectId: configuration.projectId,
+    sslCreds: credentials.createInsecure(),
   });
 }
 

@@ -118,6 +118,8 @@ pub enum Value {
     Array(Vec<Self>),
     /// A map in deterministic key order.
     Map(BTreeMap<String, Self>),
+    /// A vector embedding. Its query order is between arrays and maps.
+    Vector(Vec<f64>),
 }
 
 /// A project and database pair.

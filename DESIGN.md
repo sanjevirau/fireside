@@ -202,6 +202,17 @@ Firestore value types and the within-type ordering rules. Supported filters are
 - `FieldPath.documentId()`;
 - server timestamp, increment, array union, array remove, and delete transforms.
 
+The production ordering oracle includes null, booleans, interleaved int64 and
+double values (NaN, infinities, signed zero, and integers beyond double's exact
+range), timestamps, UTF-8 strings, bytes, references, geographic points,
+arrays, vector embeddings, and maps. Vector support was added to the living
+spec after production documentation and the v9 Admin SDK exposed it; vectors
+sort after arrays and before maps, by dimension and then element values. The
+same oracle pins the Standard-edition 1,500-byte indexed string prefix and the
+implicit document-name tie-break. These contracts live in
+`conformance/test/query-ordering.test.ts` and currently agree between Cloud and
+Java.
+
 Optional `--strict-indexes` validates queries against
 `firestore.indexes.json` as production enforces composite indexes. Because the
 official emulator does not enforce these indexes, cloud is mandatory for this

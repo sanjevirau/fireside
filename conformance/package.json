@@ -9,12 +9,14 @@
   "scripts": {
     "check": "tsc --noEmit",
     "test": "node --import tsx --test test/target.test.ts",
+    "test:firestore": "node --import tsx --test test/firestore-smoke.test.ts test/query-ordering.test.ts",
     "test:smoke": "node --import tsx --test test/firestore-smoke.test.ts",
     "test:cloud": "node --import tsx src/run-cloud.ts",
     "test:official": "node --import tsx src/run-official.ts"
   },
   "devDependencies": {
     "@google-cloud/firestore": "9.0.0",
+    "@grpc/grpc-js": "1.14.4",
     "@types/node": "26.4.0",
     "firebase-tools": "15.28.1",
     "tsx": "4.23.12",

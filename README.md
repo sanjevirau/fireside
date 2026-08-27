@@ -8,8 +8,9 @@ differential conformance harness. The official Java emulator is a comparison
 target, not the specification.
 
 > [!IMPORTANT]
-> This project is in Phase 0. It is not yet a usable Firestore emulator and no
-> compatibility claim is made beyond the checked-in harness itself.
+> Phase 0 is complete and Phase 1 is under development. This is not yet a
+> usable Firestore emulator, and no fireside compatibility claim is made beyond
+> the checked-in core invariants.
 
 ## Why this exists
 
@@ -29,8 +30,8 @@ of scope until the conformance gates are met.
 
 | Target / area | Harness smoke | Firestore APIs | Browser SDK | Rules | Suite |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Production cloud | pass (1/1) | oracle only | not implemented | not implemented | not implemented |
-| Official Java emulator | pass (1/1) | oracle only | not run | not run | not run |
+| Production cloud | pass (3/3) | oracle only | not implemented | not implemented | not implemented |
+| Official Java emulator | pass (3/3) | oracle only | not run | not run | not run |
 | fireside | harness only | not implemented | not implemented | not implemented | not implemented |
 
 “Oracle only” means the target is exercised to validate the harness; it is not
@@ -46,7 +47,7 @@ generated from CI results.
 
 The latest completed report is [Phase 0](reports/phase-0-gate.md).
 
-## Phase 0 development
+## Development
 
 Prerequisites are stable Rust, Node.js 20 or later, and Java 21 or later.
 
