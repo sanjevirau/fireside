@@ -20,6 +20,9 @@ use crate::google::firestore::v1::write::Operation;
 const PROJECTS: &str = "projects";
 const DATABASES: &str = "databases";
 const DOCUMENTS: &str = "documents";
+const RESERVED_TYPE_FIELD: &str = "__type__";
+const VECTOR_TYPE: &str = "__vector__";
+const VECTOR_VALUES_FIELD: &str = "value";
 
 pub(crate) struct DecodedWrite {
     pub(crate) write: Write,
@@ -201,7 +204,7 @@ pub(crate) fn decode_value(value: proto::Value) -> Result<Value, Status> {
             .map(decode_value)
             .collect::<Result<Vec<_>, _>>()
             .map(Value::Array),
-        ValueType::MapValue(value) => decode_fields(value.fields).map(Value::Map),
+        ValueType::MapValue(value) => decode_map_value(value.fields),
         ValueType::FieldReferenceValue(_)
         | ValueType::VariableReferenceValue(_)
         | ValueType::FunctionValue(_)
@@ -237,15 +240,60 @@ pub(crate) fn encode_value(value: &Value) -> Result<proto::Value, Status> {
         Value::Map(fields) => ValueType::MapValue(proto::MapValue {
             fields: encode_fields(fields)?,
         }),
-        Value::Vector(_) => {
-            return Err(Status::unimplemented(
-                "vector wire encoding has not yet been pinned by conformance",
-            ));
-        }
+        Value::Vector(values) => ValueType::MapValue(proto::MapValue {
+            fields: HashMap::from([
+                (
+                    RESERVED_TYPE_FIELD.to_owned(),
+                    proto::Value {
+                        value_type: Some(ValueType::StringValue(VECTOR_TYPE.to_owned())),
+                    },
+                ),
+                (
+                    VECTOR_VALUES_FIELD.to_owned(),
+                    proto::Value {
+                        value_type: Some(ValueType::ArrayValue(proto::ArrayValue {
+                            values: values
+                                .iter()
+                                .map(|value| proto::Value {
+                                    value_type: Some(ValueType::DoubleValue(*value)),
+                                })
+                                .collect(),
+                        })),
+                    },
+                ),
+            ]),
+        }),
     };
     Ok(proto::Value {
         value_type: Some(value_type),
     })
+}
+
+fn decode_map_value(fields: HashMap<String, proto::Value>) -> Result<Value, Status> {
+    let fields = decode_fields(fields)?;
+    if !matches!(
+        fields.get(RESERVED_TYPE_FIELD),
+        Some(Value::String(value)) if value.as_ref() == VECTOR_TYPE
+    ) {
+        return Ok(Value::Map(fields));
+    }
+
+    let values = fields
+        .get(VECTOR_VALUES_FIELD)
+        .ok_or_else(|| Status::invalid_argument("vector value array is missing"))?;
+    let Value::Array(values) = values else {
+        return Err(Status::invalid_argument("vector value must be an array"));
+    };
+    values
+        .iter()
+        .map(|value| match value {
+            Value::Double(value) => Ok(*value),
+            _ => Err(Status::invalid_argument(
+                "vector components must be double values",
+            )),
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .map(Value::Vector)
 }
 
 pub(crate) fn decode_timestamp(value: ProtoTimestamp) -> Result<Timestamp, Status> {
@@ -459,12 +507,22 @@ mod tests {
                 "nested".to_owned(),
                 Value::Array(vec![Value::Null, Value::Boolean(true)]),
             )])),
+            Value::Vector(vec![9.0, -0.0, f64::NAN]),
         ];
         for value in values {
             let decoded = decode_value(encode_value(&value).expect("value should encode"))
                 .expect("value should decode");
             if matches!(value, Value::Double(number) if number.is_nan()) {
                 assert!(matches!(decoded, Value::Double(number) if number.is_nan()));
+            } else if matches!(&value, Value::Vector(values) if values.iter().any(|value| value.is_nan()))
+            {
+                let Value::Vector(decoded) = decoded else {
+                    panic!("expected vector value");
+                };
+                assert_eq!(decoded.len(), 3);
+                assert_eq!(decoded[0].to_bits(), 9.0_f64.to_bits());
+                assert_eq!(decoded[1].to_bits(), (-0.0_f64).to_bits());
+                assert!(decoded[2].is_nan());
             } else {
                 assert_eq!(decoded, value);
             }
