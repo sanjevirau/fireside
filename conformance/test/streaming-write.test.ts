@@ -73,6 +73,50 @@ test("streaming Write performs a tokened handshake and atomic write", async (con
 
   const stored = await firestore.doc(`runs/${documentId}`).get();
   assert.equal(stored.get("source"), "streaming-write");
+
+  stream.end();
+  const resumed = rawFirestore.write();
+  const resumedResponses = responseQueue(resumed);
+  resumed.write({
+    database: `projects/${configuration.projectId}/databases/(default)`,
+    streamId: handshake.streamId,
+    streamToken: applied.streamToken,
+  });
+  await assert.rejects(
+    resumedResponses.next(),
+    (error: unknown) =>
+      grpcCode(error) === 10 &&
+      grpcDetails(error) === "resuming a stream not supported",
+  );
+  resumed.end();
+
+  const ignoredId = rawFirestore.write();
+  const ignoredIdResponses = responseQueue(ignoredId);
+  ignoredId.write({
+    database: `projects/${configuration.projectId}/databases/(default)`,
+    streamId: "production-ignores-this-without-a-token",
+  });
+  const freshHandshake = await ignoredIdResponses.next();
+  assert.notEqual(freshHandshake.streamId, undefined);
+  assert.notEqual(freshHandshake.streamId, "");
+  assert.ok(byteLength(freshHandshake.streamToken) > 0);
+  assert.equal(freshHandshake.writeResults?.length ?? 0, 0);
+  assert.equal(freshHandshake.commitTime ?? null, null);
+  ignoredId.end();
+
+  const tokenOnly = rawFirestore.write();
+  const tokenOnlyResponses = responseQueue(tokenOnly);
+  tokenOnly.write({
+    database: `projects/${configuration.projectId}/databases/(default)`,
+    streamToken: applied.streamToken,
+  });
+  await assert.rejects(
+    tokenOnlyResponses.next(),
+    (error: unknown) =>
+      grpcCode(error) === 10 &&
+      grpcDetails(error) === "resuming a stream not supported",
+  );
+  tokenOnly.end();
 });
 
 function responseQueue(stream: WriteStream): {
@@ -134,6 +178,14 @@ function grpcCode(error: unknown): number | undefined {
   }
   const { code } = error as Error & { readonly code?: unknown };
   return typeof code === "number" ? code : undefined;
+}
+
+function grpcDetails(error: unknown): string | undefined {
+  if (!(error instanceof Error) || !("details" in error)) {
+    return undefined;
+  }
+  const { details } = error as Error & { readonly details?: unknown };
+  return typeof details === "string" ? details : undefined;
 }
 
 function byteLength(value: string | Uint8Array | null | undefined): number {

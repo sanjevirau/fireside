@@ -391,7 +391,13 @@ token with no write results or commit time; a subsequent request may omit the
 database, presents that ID and token, and returns a new token, one write result,
 and a commit time. Java v1.22.0 instead closes the initial database-only
 handshake with `UNKNOWN` (2). This is a documented Java deviation; Fireside
-follows production.
+follows production. A subsequent connection that supplies the returned stream
+ID and token is rejected by production with `ABORTED` (10) and the exact detail
+`resuming a stream not supported`; a token without an ID is rejected the same
+way. Fireside preserves that current production limitation instead of inventing
+replay semantics. Production ignores a first request's non-empty stream ID when
+its stream token is empty and performs a new handshake, which the same fixture
+also pins.
 
 ### 5.3 Watch semantics
 

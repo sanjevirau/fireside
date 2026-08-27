@@ -44,10 +44,8 @@ async fn run_inner(
             "streaming Write handshake cannot contain writes",
         ));
     }
-    if !first.stream_id.is_empty() || !first.stream_token.is_empty() {
-        return Err(Status::unimplemented(
-            "streaming Write resume awaits a production replay fixture",
-        ));
+    if !first.stream_token.is_empty() {
+        return Err(Status::aborted("resuming a stream not supported"));
     }
 
     let stream_id = format!("fireside-write-{}", service.next_stream_id());
