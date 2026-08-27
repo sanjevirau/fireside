@@ -15,12 +15,19 @@ use fireside_core_store::{
     CommitError, DatabaseName, Document, DocumentKey, FieldPath, Fields, Precondition, Store,
     Timestamp, Value, Write,
 };
+use fireside_query_engine::{
+    DatabaseEdition, Direction, FieldFilter, FieldOperator, FieldPath as QueryFieldPath, Filter,
+    Limit, Query as StructuredQuery, QueryScope, execute,
+};
 use serde::Deserialize;
 use serde_json::{Map, Value as JsonValue, json};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
 const DOCUMENT_ROUTE: &str = "/v1/projects/{project}/databases/{database}/documents/{*document}";
+const COMMIT_ROUTE: &str = "/v1/projects/{project}/databases/{database}/documents:commit";
+const BATCH_GET_ROUTE: &str = "/v1/projects/{project}/databases/{database}/documents:batchGet";
+const RUN_QUERY_ROUTE: &str = "/v1/projects/{project}/databases/{database}/documents:runQuery";
 
 /// Creates the HTTP/1 router that shares the Firestore store with gRPC.
 pub fn router(store: Store) -> Router {
@@ -29,8 +36,12 @@ pub fn router(store: Store) -> Router {
             DOCUMENT_ROUTE,
             get(get_document)
                 .patch(patch_document)
-                .delete(delete_document),
+                .delete(delete_document)
+                .post(run_query_at_parent),
         )
+        .route(COMMIT_ROUTE, axum::routing::post(commit))
+        .route(BATCH_GET_ROUTE, axum::routing::post(batch_get))
+        .route(RUN_QUERY_ROUTE, axum::routing::post(run_query_at_root))
         .with_state(RestState { store })
 }
 
@@ -44,6 +55,12 @@ struct DocumentPath {
     project: String,
     database: String,
     document: String,
+}
+
+#[derive(Deserialize)]
+struct DatabasePath {
+    project: String,
+    database: String,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -132,10 +149,381 @@ async fn delete_document(
     Ok(Json(json!({})))
 }
 
+async fn commit(
+    State(state): State<RestState>,
+    Path(path): Path<DatabasePath>,
+    Json(body): Json<JsonValue>,
+) -> Result<Json<JsonValue>, RestError> {
+    let database = database_name(path)?;
+    let writes = body
+        .get("writes")
+        .and_then(JsonValue::as_array)
+        .ok_or_else(|| RestError::invalid("commit writes must be an array"))?
+        .iter()
+        .map(|write| decode_write(write, &database))
+        .collect::<Result<Vec<_>, _>>()?;
+    let result = state
+        .store
+        .commit(&writes)
+        .map_err(|error| RestError::commit(&error))?;
+    let snapshot = state.store.snapshot();
+    let write_results = writes
+        .iter()
+        .map(|write| {
+            snapshot.get(write_key(write)).map_or_else(
+                || Ok(json!({})),
+                |document| {
+                    Ok(json!({
+                        "updateTime": format_timestamp(document.update_time())?
+                    }))
+                },
+            )
+        })
+        .collect::<Result<Vec<_>, RestError>>()?;
+    Ok(Json(json!({
+        "writeResults": write_results,
+        "commitTime": format_timestamp(result.commit_time)?,
+    })))
+}
+
+async fn batch_get(
+    State(state): State<RestState>,
+    Path(path): Path<DatabasePath>,
+    Json(body): Json<JsonValue>,
+) -> Result<Json<JsonValue>, RestError> {
+    let database = database_name(path)?;
+    let names = body
+        .get("documents")
+        .and_then(JsonValue::as_array)
+        .ok_or_else(|| RestError::invalid("batchGet documents must be an array"))?;
+    let snapshot = state.store.snapshot();
+    let read_time = format_timestamp(now_timestamp())?;
+    let mut responses = Vec::with_capacity(names.len());
+    for name in names {
+        let name = name
+            .as_str()
+            .ok_or_else(|| RestError::invalid("batchGet document name must be a string"))?;
+        let key = document_key_from_name(name)?;
+        if key.database() != &database {
+            return Err(RestError::invalid(
+                "batchGet document belongs to a different database",
+            ));
+        }
+        let response = if let Some(document) = snapshot.get(&key) {
+            json!({
+                "found": encode_document(&key, &document)?,
+                "readTime": read_time,
+            })
+        } else {
+            json!({ "missing": name, "readTime": read_time })
+        };
+        responses.push(response);
+    }
+    Ok(Json(JsonValue::Array(responses)))
+}
+
+async fn run_query_at_root(
+    State(state): State<RestState>,
+    Path(path): Path<DatabasePath>,
+    Json(body): Json<JsonValue>,
+) -> Result<Json<JsonValue>, RestError> {
+    run_query(&state, &database_name(path)?, None, &body)
+}
+
+async fn run_query_at_parent(
+    State(state): State<RestState>,
+    Path(path): Path<DocumentPath>,
+    Json(body): Json<JsonValue>,
+) -> Result<Json<JsonValue>, RestError> {
+    let Some(parent) = path.document.strip_suffix(":runQuery") else {
+        return Err(RestError::not_found("unknown REST document operation"));
+    };
+    validate_parent(parent)?;
+    let database = DatabaseName::new(path.project, path.database)
+        .map_err(|error| RestError::invalid(error.to_string()))?;
+    run_query(&state, &database, Some(parent), &body)
+}
+
+fn run_query(
+    state: &RestState,
+    database: &DatabaseName,
+    parent: Option<&str>,
+    body: &JsonValue,
+) -> Result<Json<JsonValue>, RestError> {
+    let structured = body
+        .get("structuredQuery")
+        .and_then(JsonValue::as_object)
+        .ok_or_else(|| RestError::invalid("structuredQuery is required"))?;
+    let query = decode_query(structured, parent)?;
+    let documents = execute(
+        &state.store.snapshot(),
+        database,
+        &query,
+        DatabaseEdition::Standard,
+    )
+    .map_err(|error| RestError::invalid(error.to_string()))?;
+    let read_time = format_timestamp(now_timestamp())?;
+    let mut responses = documents
+        .iter()
+        .map(|document| {
+            Ok(json!({
+                "document": {
+                    "name": document.key().to_string(),
+                    "fields": encode_fields(document.fields())?,
+                    "createTime": format_timestamp(document.document().create_time())?,
+                    "updateTime": format_timestamp(document.document().update_time())?,
+                },
+                "readTime": read_time,
+            }))
+        })
+        .collect::<Result<Vec<_>, RestError>>()?;
+    if responses.is_empty() {
+        responses.push(json!({ "readTime": read_time }));
+    }
+    Ok(Json(JsonValue::Array(responses)))
+}
+
+fn decode_query(
+    structured: &Map<String, JsonValue>,
+    parent: Option<&str>,
+) -> Result<StructuredQuery, RestError> {
+    let from = structured
+        .get("from")
+        .and_then(JsonValue::as_array)
+        .ok_or_else(|| RestError::invalid("query from must be an array"))?;
+    let [selector] = from.as_slice() else {
+        return Err(RestError::invalid(
+            "query requires exactly one collection selector",
+        ));
+    };
+    let selector = selector
+        .as_object()
+        .ok_or_else(|| RestError::invalid("collection selector must be an object"))?;
+    let collection = selector
+        .get("collectionId")
+        .and_then(JsonValue::as_str)
+        .ok_or_else(|| RestError::invalid("collectionId is required"))?;
+    let all_descendants = selector
+        .get("allDescendants")
+        .and_then(JsonValue::as_bool)
+        .unwrap_or(false);
+    let scope = if all_descendants {
+        if parent.is_some() {
+            return Err(RestError::invalid(
+                "ancestor collection-group queries are not implemented",
+            ));
+        }
+        QueryScope::collection_group(collection)
+    } else {
+        QueryScope::collection(parent.map_or_else(
+            || collection.to_owned(),
+            |parent| format!("{parent}/{collection}"),
+        ))
+    }
+    .map_err(|error| RestError::invalid(error.to_string()))?;
+    let mut query = StructuredQuery::new(scope);
+    if let Some(filter) = structured.get("where") {
+        query = query.filter(decode_filter(filter)?);
+    }
+    if let Some(orders) = structured.get("orderBy").and_then(JsonValue::as_array) {
+        for order in orders {
+            let order = order
+                .as_object()
+                .ok_or_else(|| RestError::invalid("orderBy entry must be an object"))?;
+            let field = order
+                .get("field")
+                .and_then(JsonValue::as_object)
+                .and_then(|field| field.get("fieldPath"))
+                .and_then(JsonValue::as_str)
+                .ok_or_else(|| RestError::invalid("orderBy fieldPath is required"))?;
+            let direction = match order
+                .get("direction")
+                .and_then(JsonValue::as_str)
+                .unwrap_or("ASCENDING")
+            {
+                "ASCENDING" => Direction::Ascending,
+                "DESCENDING" => Direction::Descending,
+                _ => return Err(RestError::invalid("invalid orderBy direction")),
+            };
+            query = query.order_by(decode_query_field(field)?, direction);
+        }
+    }
+    if let Some(offset) = structured.get("offset").and_then(JsonValue::as_u64) {
+        query = query.offset(
+            usize::try_from(offset).map_err(|_| RestError::invalid("query offset is too large"))?,
+        );
+    }
+    if let Some(limit) = structured.get("limit").and_then(JsonValue::as_u64) {
+        query = query.limit(Limit::First(
+            usize::try_from(limit).map_err(|_| RestError::invalid("query limit is too large"))?,
+        ));
+    }
+    Ok(query)
+}
+
+fn decode_filter(value: &JsonValue) -> Result<Filter, RestError> {
+    let filter = value
+        .get("fieldFilter")
+        .and_then(JsonValue::as_object)
+        .ok_or_else(|| RestError::invalid("only fieldFilter is currently supported over REST"))?;
+    let field = filter
+        .get("field")
+        .and_then(JsonValue::as_object)
+        .and_then(|field| field.get("fieldPath"))
+        .and_then(JsonValue::as_str)
+        .ok_or_else(|| RestError::invalid("fieldFilter fieldPath is required"))?;
+    let operator = match filter.get("op").and_then(JsonValue::as_str) {
+        Some("EQUAL") => FieldOperator::Equal,
+        Some("LESS_THAN") => FieldOperator::LessThan,
+        Some("LESS_THAN_OR_EQUAL") => FieldOperator::LessThanOrEqual,
+        Some("GREATER_THAN") => FieldOperator::GreaterThan,
+        Some("GREATER_THAN_OR_EQUAL") => FieldOperator::GreaterThanOrEqual,
+        Some("NOT_EQUAL") => FieldOperator::NotEqual,
+        Some("IN") => FieldOperator::In,
+        Some("NOT_IN") => FieldOperator::NotIn,
+        Some("ARRAY_CONTAINS") => FieldOperator::ArrayContains,
+        Some("ARRAY_CONTAINS_ANY") => FieldOperator::ArrayContainsAny,
+        _ => return Err(RestError::invalid("invalid fieldFilter operator")),
+    };
+    let value = filter
+        .get("value")
+        .ok_or_else(|| RestError::invalid("fieldFilter value is required"))?;
+    Ok(Filter::Field(FieldFilter {
+        path: decode_query_field(field)?,
+        operator,
+        value: decode_value(value)?,
+    }))
+}
+
+fn decode_query_field(path: &str) -> Result<QueryFieldPath, RestError> {
+    QueryFieldPath::parse_wire(path).map_err(|error| RestError::invalid(error.to_string()))
+}
+
+fn validate_parent(parent: &str) -> Result<(), RestError> {
+    let segments = parent.split('/').collect::<Vec<_>>();
+    if parent.is_empty()
+        || segments.len() % 2 != 0
+        || segments.iter().any(|segment| segment.is_empty())
+    {
+        return Err(RestError::invalid(
+            "runQuery parent must be a document path",
+        ));
+    }
+    Ok(())
+}
+
+fn decode_write(value: &JsonValue, database: &DatabaseName) -> Result<Write, RestError> {
+    let object = value
+        .as_object()
+        .ok_or_else(|| RestError::invalid("commit write must be an object"))?;
+    let precondition = decode_json_precondition(object.get("currentDocument"))?;
+    if let Some(update) = object.get("update").and_then(JsonValue::as_object) {
+        let name = update
+            .get("name")
+            .and_then(JsonValue::as_str)
+            .ok_or_else(|| RestError::invalid("update document name is required"))?;
+        let key = document_key_from_name(name)?;
+        if key.database() != database {
+            return Err(RestError::invalid(
+                "commit write belongs to a different database",
+            ));
+        }
+        let fields = decode_document_fields(&JsonValue::Object(update.clone()))?;
+        let mask = object
+            .get("updateMask")
+            .and_then(JsonValue::as_object)
+            .and_then(|mask| mask.get("fieldPaths"))
+            .and_then(JsonValue::as_array);
+        return if let Some(mask) = mask {
+            Ok(Write::Patch {
+                key,
+                fields,
+                update_mask: mask
+                    .iter()
+                    .map(|path| {
+                        path.as_str()
+                            .ok_or_else(|| RestError::invalid("field path must be a string"))
+                            .and_then(decode_field_path)
+                    })
+                    .collect::<Result<Vec<_>, _>>()?,
+                transforms: Vec::new(),
+                precondition,
+            })
+        } else {
+            Ok(Write::Set {
+                key,
+                fields,
+                precondition,
+            })
+        };
+    }
+    if let Some(name) = object.get("delete").and_then(JsonValue::as_str) {
+        let key = document_key_from_name(name)?;
+        if key.database() != database {
+            return Err(RestError::invalid(
+                "commit delete belongs to a different database",
+            ));
+        }
+        return Ok(Write::Delete { key, precondition });
+    }
+    Err(RestError::invalid("unsupported commit write operation"))
+}
+
+fn decode_json_precondition(value: Option<&JsonValue>) -> Result<Precondition, RestError> {
+    let Some(value) = value else {
+        return Ok(Precondition::None);
+    };
+    let object = value
+        .as_object()
+        .ok_or_else(|| RestError::invalid("currentDocument must be an object"))?;
+    match (object.get("exists"), object.get("updateTime")) {
+        (Some(exists), None) => exists
+            .as_bool()
+            .map(Precondition::Exists)
+            .ok_or_else(|| RestError::invalid("currentDocument.exists must be boolean")),
+        (None, Some(update_time)) => parse_timestamp(update_time).map(Precondition::UpdateTime),
+        (None, None) => Ok(Precondition::None),
+        (Some(_), Some(_)) => Err(RestError::invalid(
+            "only one currentDocument precondition may be specified",
+        )),
+    }
+}
+
+fn write_key(write: &Write) -> &DocumentKey {
+    match write {
+        Write::Create { key, .. }
+        | Write::Set { key, .. }
+        | Write::Patch { key, .. }
+        | Write::Delete { key, .. } => key,
+    }
+}
+
 fn document_key(path: DocumentPath) -> Result<DocumentKey, RestError> {
     let database = DatabaseName::new(path.project, path.database)
         .map_err(|error| RestError::invalid(error.to_string()))?;
     DocumentKey::new(database, path.document).map_err(|error| RestError::invalid(error.to_string()))
+}
+
+fn document_key_from_name(name: &str) -> Result<DocumentKey, RestError> {
+    let segments = name.split('/').collect::<Vec<_>>();
+    if segments.len() < 7
+        || segments[0] != "projects"
+        || segments[2] != "databases"
+        || segments[4] != "documents"
+    {
+        return Err(RestError::invalid(format!(
+            "invalid document resource name: {name}"
+        )));
+    }
+    let database = DatabaseName::new(segments[1], segments[3])
+        .map_err(|error| RestError::invalid(error.to_string()))?;
+    DocumentKey::new(database, segments[5..].join("/"))
+        .map_err(|error| RestError::invalid(error.to_string()))
+}
+
+fn database_name(path: DatabasePath) -> Result<DatabaseName, RestError> {
+    DatabaseName::new(path.project, path.database)
+        .map_err(|error| RestError::invalid(error.to_string()))
 }
 
 fn decode_document_fields(document: &JsonValue) -> Result<Fields, RestError> {
@@ -317,6 +705,19 @@ fn parse_timestamp(value: &JsonValue) -> Result<Timestamp, RestError> {
         .map_err(|error| RestError::invalid(format!("invalid timestampValue: {error}")))?;
     Timestamp::new(parsed.unix_timestamp(), parsed.nanosecond())
         .map_err(|error| RestError::invalid(error.to_string()))
+}
+
+fn now_timestamp() -> Timestamp {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let duration = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
+    Timestamp::new(
+        i64::try_from(duration.as_secs()).unwrap_or(i64::MAX),
+        duration.subsec_nanos(),
+    )
+    .expect("system time is a valid timestamp")
 }
 
 fn format_timestamp(value: Timestamp) -> Result<String, RestError> {
