@@ -17,6 +17,10 @@ interface ObservedListenResponse {
     readonly document?: { readonly name?: string | null } | null;
   } | null;
   readonly targetChange?: {
+    readonly cause?: {
+      readonly code?: number | string | null;
+      readonly message?: string | null;
+    } | null;
     readonly resumeToken?: string | Uint8Array | null;
     readonly targetChangeType?: number | string | null;
     readonly targetIds?: readonly number[] | null;
@@ -57,6 +61,54 @@ interface ObservedSnapshot {
   }>;
   readonly ids: readonly string[];
 }
+
+test("raw Listen removes a malformed-token target without closing the stream", async (context) => {
+  const configuration = resolveTarget(process.env);
+  const rawFirestore = createV1Firestore(configuration);
+  const runId = randomUUID();
+  const database = `projects/${configuration.projectId}/databases/(default)`;
+  const stream = rawFirestore.listen({
+    otherArgs: { headers: { "google-cloud-resource-prefix": database } },
+  });
+  const responses = rawResponseQueue(stream);
+  const query = {
+    parent: `${database}/documents/runs/${runId}`,
+    structuredQuery: { from: [{ collectionId: "fireside_conformance" }] },
+  } as const;
+
+  context.after(async () => {
+    stream.end();
+    await rawFirestore.close();
+  });
+
+  stream.write({
+    database,
+    addTarget: {
+      query,
+      targetId: 23,
+      resumeToken: Uint8Array.from([1, 2, 3]),
+    },
+  });
+  if (configuration.name === "java") {
+    const accepted = await readCheckpoint(responses);
+    assert.deepEqual(accepted.documentIds, []);
+    assert.deepEqual(accepted.targetChangeTypes, ["ADD", "RESET", "CURRENT"]);
+  } else {
+    const rejected = await responses.next();
+    assert.deepEqual(rejected.targetChange?.targetIds, [23]);
+    assert.equal(
+      targetChangeType(rejected.targetChange?.targetChangeType),
+      "REMOVE",
+    );
+    assert.equal(Number(rejected.targetChange?.cause?.code), 3);
+    assert.equal(rejected.targetChange?.cause?.message, "bad resume token");
+  }
+
+  stream.write({ database, addTarget: { query, targetId: 29 } });
+  const recovered = await readCheckpoint(responses);
+  assert.deepEqual(recovered.documentIds, []);
+  assert.deepEqual(recovered.targetChangeTypes, ["ADD", "CURRENT"]);
+});
 
 test("query listeners deliver an initial snapshot and ordered changes", async (context) => {
   const configuration = resolveTarget(process.env);
