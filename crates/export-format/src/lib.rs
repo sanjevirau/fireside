@@ -6,6 +6,8 @@
 
 #![forbid(unsafe_code)]
 
+mod entity;
 mod leveldb_log;
 
+pub use entity::{EntityError, ExportedDocument, decode_entity, encode_entity};
 pub use leveldb_log::{LevelDbLogReader, LevelDbLogWriter, LogError, LogOptions};

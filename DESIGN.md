@@ -526,6 +526,23 @@ payload. Reassembling the three logical records and writing them with those
 observed rules reproduces `output-0` byte-for-byte. The fixture and its isolated
 capture utility live under `conformance/fixtures` and `conformance/src`.
 
+The same oracle pins these entity details:
+
+- a document key uses `Path.Element` groups whose collection/name fields are
+  2 and 4, while a reference value uses a distinct `PathElement` group whose
+  collection/name fields are 15 and 17;
+- null is a raw property with an empty `PropertyValue`, while an empty array is
+  an indexed property with meaning 24 (`EMPTY_LIST`);
+- bytes, timestamps, geographic points, and nested map entities use meanings
+  14, 7, 9, and 19 respectively;
+- a vector is a meaning-19 nested entity containing repeated double properties
+  named `__vector__`;
+- nested document keys contain every collection/document pair, but
+  `entity_group` contains only the root pair; and
+- the overall metadata file is a LevelDB log containing a one-byte marker
+  record followed by a metadata protobuf. Per-kind metadata is a direct
+  protobuf, not a LevelDB log.
+
 Writer validation is bidirectional and byte-aware:
 
 1. seed the official Java emulator with synthetic documents;
