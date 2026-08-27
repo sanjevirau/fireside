@@ -12,6 +12,74 @@ import {
 
 const DAY_MILLISECONDS = 24 * 60 * 60 * 1_000;
 
+test("CreateDocument assigns an ID, preserves masked fields, and rejects conflicts", async (context) => {
+  const configuration = resolveTarget(process.env);
+  const firestore = createFirestore(configuration);
+  const rawFirestore = createV1Firestore(configuration);
+  const runId = randomUUID();
+  const database = `projects/${configuration.projectId}/databases/(default)`;
+  const parentPath = `runs/${runId}`;
+  const parent = `${database}/documents/${parentPath}`;
+  const collectionId = "fireside_conformance";
+  const expiresAt = Timestamp.fromMillis(Date.now() + DAY_MILLISECONDS);
+  const callOptions = configuration.host === undefined
+    ? {}
+    : { otherArgs: { headers: { authorization: "Bearer owner" } } };
+  let createdPath: string | undefined;
+
+  context.after(async () => {
+    if (createdPath !== undefined) {
+      await firestore.doc(createdPath).delete().catch(() => undefined);
+    }
+    await Promise.all([firestore.terminate(), rawFirestore.close()]).catch(
+      () => undefined,
+    );
+  });
+
+  const request = {
+    parent,
+    collectionId,
+    document: {
+      fields: {
+        _fireside_expires_at: {
+          timestampValue: {
+            seconds: Math.floor(expiresAt.toMillis() / 1_000),
+            nanos: 0,
+          },
+        },
+        hidden: { stringValue: "persisted" },
+        visible: { stringValue: "returned" },
+      },
+    },
+    mask: { fieldPaths: ["visible"] },
+  };
+  const [created] = await rawFirestore.createDocument(request, callOptions);
+  assert.ok(created.name?.startsWith(`${parent}/${collectionId}/`));
+  const documentId = created.name?.slice(created.name.lastIndexOf("/") + 1);
+  assert.ok(documentId);
+  createdPath = `${parentPath}/${collectionId}/${documentId}`;
+  assert.deepEqual(Object.keys(created.fields ?? {}), ["visible"]);
+  assert.equal(created.createTime !== null, true);
+  assert.equal(created.updateTime !== null, true);
+
+  const stored = await firestore.doc(createdPath).get();
+  assert.equal(stored.get("visible"), "returned");
+  assert.equal(stored.get("hidden"), "persisted");
+
+  await assert.rejects(
+    rawFirestore.createDocument(
+      {
+        parent,
+        collectionId,
+        documentId,
+        document: request.document,
+      },
+      callOptions,
+    ),
+    (error: unknown) => grpcCode(error) === 6,
+  );
+});
+
 test("list RPCs paginate direct children and preserve masks", async (context) => {
   const configuration = resolveTarget(process.env);
   const firestore = createFirestore(configuration);
