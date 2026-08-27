@@ -361,6 +361,9 @@ selectors are also pinned: sub-microsecond precision and future timestamps are
 `FAILED_PRECONDITION` (9). Java agrees on the first two but treats the old
 snapshot as an empty database and returns `NOT_FOUND` (5) for the requested
 document; this is a documented Java deviation.
+Commit timestamps are strictly increasing and microsecond-aligned even when the
+host clock exposes nanoseconds, matching the production timestamps accepted by
+the same fixture.
 
 `conformance/test/streaming-write.test.ts` pins the production streaming Write
 handshake: the first database-only request returns a non-empty stream ID and

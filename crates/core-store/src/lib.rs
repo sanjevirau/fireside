@@ -54,11 +54,12 @@ impl Timestamp {
         self.nanos
     }
 
-    fn saturating_next(self) -> Self {
-        if self.nanos < 999_999_999 {
+    fn saturating_next_microsecond(self) -> Self {
+        let microseconds = self.nanos / 1_000;
+        if microseconds < 999_999 {
             return Self {
                 seconds: self.seconds,
-                nanos: self.nanos + 1,
+                nanos: (microseconds + 1) * 1_000,
             };
         }
 
@@ -899,12 +900,12 @@ impl State {
         let seconds = i64::try_from(elapsed.as_secs()).unwrap_or(i64::MAX);
         let observed = Timestamp {
             seconds,
-            nanos: elapsed.subsec_nanos(),
+            nanos: elapsed.subsec_micros() * 1_000,
         };
         if observed > self.last_commit_time {
             observed
         } else {
-            self.last_commit_time.saturating_next()
+            self.last_commit_time.saturating_next_microsecond()
         }
     }
 
@@ -1366,6 +1367,34 @@ mod tests {
             &fields(Value::String(Arc::from("second")))
         );
         assert!(store.snapshot().get(&key).is_none());
+    }
+
+    #[test]
+    fn commit_timestamps_are_strictly_increasing_and_microsecond_aligned() {
+        let store = Store::default();
+        let key = key(&database("(default)"), "items/commit-clock");
+        let first = store
+            .commit(&[Write::Set {
+                key: key.clone(),
+                fields: fields(Value::Integer(1)),
+                transforms: Vec::new(),
+                precondition: Precondition::None,
+            }])
+            .unwrap()
+            .commit_time;
+        let second = store
+            .commit(&[Write::Set {
+                key,
+                fields: fields(Value::Integer(2)),
+                transforms: Vec::new(),
+                precondition: Precondition::None,
+            }])
+            .unwrap()
+            .commit_time;
+
+        assert_eq!(first.nanos() % 1_000, 0);
+        assert_eq!(second.nanos() % 1_000, 0);
+        assert!(second > first);
     }
 
     #[test]
