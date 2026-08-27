@@ -309,6 +309,68 @@ pub enum Precondition {
     UpdateTime(Timestamp),
 }
 
+/// A validated path to a document field, represented as unescaped segments.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct FieldPath(Vec<String>);
+
+impl FieldPath {
+    /// Creates a non-empty field path without empty segments.
+    pub fn new(
+        segments: impl IntoIterator<Item = impl Into<String>>,
+    ) -> Result<Self, FieldPathError> {
+        let segments = segments.into_iter().map(Into::into).collect::<Vec<_>>();
+        if segments.is_empty() || segments.iter().any(String::is_empty) {
+            return Err(FieldPathError);
+        }
+        Ok(Self(segments))
+    }
+
+    /// Creates a one-segment field path.
+    pub fn top(segment: impl Into<String>) -> Result<Self, FieldPathError> {
+        Self::new([segment])
+    }
+
+    /// Unescaped path segments.
+    #[must_use]
+    pub fn segments(&self) -> &[String] {
+        &self.0
+    }
+}
+
+/// A field path was empty or contained an empty segment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FieldPathError;
+
+impl Display for FieldPathError {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        formatter.write_str("field path must contain only non-empty segments")
+    }
+}
+
+impl Error for FieldPathError {}
+
+/// One server-side field transform attached to a document write.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FieldTransform {
+    /// Destination field.
+    pub path: FieldPath,
+    /// Transform operation.
+    pub operation: TransformOperation,
+}
+
+/// Production field-transform operations used by Firestore writes.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TransformOperation {
+    /// Replace the field with the write's shared server timestamp.
+    ServerTimestamp,
+    /// Add a numeric operand, or replace a missing/non-numeric field with it.
+    Increment(Value),
+    /// Append values not already present under Firestore value equality.
+    ArrayUnion(Vec<Value>),
+    /// Remove every occurrence of the supplied values.
+    ArrayRemove(Vec<Value>),
+}
+
 /// One atomic mutation in a commit.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Write {
@@ -325,6 +387,19 @@ pub enum Write {
         key: DocumentKey,
         /// Complete document fields.
         fields: Fields,
+        /// Write precondition.
+        precondition: Precondition,
+    },
+    /// Apply an update mask followed by server-side transforms.
+    Patch {
+        /// Document key.
+        key: DocumentKey,
+        /// Structured source fields referenced by `update_mask`.
+        fields: Fields,
+        /// Paths present in `fields` are assigned; absent paths are deleted.
+        update_mask: Vec<FieldPath>,
+        /// Transforms evaluated after the masked field updates.
+        transforms: Vec<FieldTransform>,
         /// Write precondition.
         precondition: Precondition,
     },
@@ -526,6 +601,13 @@ pub enum CommitError {
         /// Actual update time, or none for a missing document.
         actual: Option<Timestamp>,
     },
+    /// An increment transform supplied a non-numeric operand.
+    InvalidIncrementOperand {
+        /// Target document.
+        key: DocumentKey,
+        /// Target field.
+        field: FieldPath,
+    },
     /// The internal revision counter cannot advance further.
     RevisionExhausted,
 }
@@ -547,6 +629,11 @@ impl Display for CommitError {
             } => write!(
                 formatter,
                 "update-time precondition for {key} expected {expected:?}, found {actual:?}"
+            ),
+            Self::InvalidIncrementOperand { key, field } => write!(
+                formatter,
+                "increment transform for {key} field {:?} requires a numeric operand",
+                field.segments()
             ),
             Self::RevisionExhausted => formatter.write_str("store revision exhausted"),
         }
@@ -719,11 +806,251 @@ fn apply_write(
                 })),
             ))
         }
+        Write::Patch {
+            key,
+            fields,
+            update_mask,
+            transforms,
+            precondition,
+        } => {
+            let previous = documents.get(key);
+            validate_precondition(key, previous, *precondition)?;
+            let mut next_fields = previous
+                .map(|document| document.fields.clone())
+                .unwrap_or_default();
+
+            for path in update_mask {
+                if let Some(value) = nested_value(fields, path.segments()) {
+                    set_nested_value(&mut next_fields, path.segments(), value.clone());
+                } else {
+                    delete_nested_value(&mut next_fields, path.segments());
+                }
+            }
+            for transform in transforms {
+                apply_transform(&mut next_fields, transform, commit_time, key)?;
+            }
+
+            Ok((
+                key.clone(),
+                Some(Arc::new(Document {
+                    fields: next_fields,
+                    create_time: previous.map_or(commit_time, |document| document.create_time),
+                    update_time: commit_time,
+                })),
+            ))
+        }
         Write::Delete { key, precondition } => {
             validate_precondition(key, documents.get(key), *precondition)?;
             Ok((key.clone(), None))
         }
     }
+}
+
+fn nested_value<'a>(fields: &'a Fields, segments: &[String]) -> Option<&'a Value> {
+    let (first, rest) = segments.split_first()?;
+    let mut value = fields.get(first)?;
+    for segment in rest {
+        value = match value {
+            Value::Map(map) => map.get(segment)?,
+            _ => return None,
+        };
+    }
+    Some(value)
+}
+
+fn set_nested_value(fields: &mut Fields, segments: &[String], value: Value) {
+    let (first, rest) = segments
+        .split_first()
+        .expect("validated field paths are non-empty");
+    if rest.is_empty() {
+        fields.insert(first.clone(), value);
+        return;
+    }
+
+    let entry = fields
+        .entry(first.clone())
+        .or_insert_with(|| Value::Map(BTreeMap::new()));
+    if !matches!(entry, Value::Map(_)) {
+        *entry = Value::Map(BTreeMap::new());
+    }
+    let Value::Map(map) = entry else {
+        unreachable!("entry was normalized to a map")
+    };
+    set_nested_map_value(map, rest, value);
+}
+
+fn set_nested_map_value(map: &mut BTreeMap<String, Value>, segments: &[String], value: Value) {
+    let (first, rest) = segments
+        .split_first()
+        .expect("validated field paths are non-empty");
+    if rest.is_empty() {
+        map.insert(first.clone(), value);
+        return;
+    }
+
+    let entry = map
+        .entry(first.clone())
+        .or_insert_with(|| Value::Map(BTreeMap::new()));
+    if !matches!(entry, Value::Map(_)) {
+        *entry = Value::Map(BTreeMap::new());
+    }
+    let Value::Map(child) = entry else {
+        unreachable!("entry was normalized to a map")
+    };
+    set_nested_map_value(child, rest, value);
+}
+
+fn delete_nested_value(fields: &mut Fields, segments: &[String]) {
+    let (first, rest) = segments
+        .split_first()
+        .expect("validated field paths are non-empty");
+    if rest.is_empty() {
+        fields.remove(first);
+        return;
+    }
+    if let Some(Value::Map(map)) = fields.get_mut(first) {
+        delete_nested_map_value(map, rest);
+    }
+}
+
+fn delete_nested_map_value(map: &mut BTreeMap<String, Value>, segments: &[String]) {
+    let (first, rest) = segments
+        .split_first()
+        .expect("validated field paths are non-empty");
+    if rest.is_empty() {
+        map.remove(first);
+        return;
+    }
+    if let Some(Value::Map(child)) = map.get_mut(first) {
+        delete_nested_map_value(child, rest);
+    }
+}
+
+fn apply_transform(
+    fields: &mut Fields,
+    transform: &FieldTransform,
+    transform_time: Timestamp,
+    key: &DocumentKey,
+) -> Result<(), CommitError> {
+    let next = match &transform.operation {
+        TransformOperation::ServerTimestamp => Value::Timestamp(transform_time),
+        TransformOperation::Increment(operand) => {
+            if !matches!(operand, Value::Integer(_) | Value::Double(_)) {
+                return Err(CommitError::InvalidIncrementOperand {
+                    key: key.clone(),
+                    field: transform.path.clone(),
+                });
+            }
+            increment_value(nested_value(fields, transform.path.segments()), operand)
+        }
+        TransformOperation::ArrayUnion(elements) => {
+            let mut result = match nested_value(fields, transform.path.segments()) {
+                Some(Value::Array(values)) => values.clone(),
+                _ => Vec::new(),
+            };
+            for element in elements {
+                if !result
+                    .iter()
+                    .any(|existing| values_equal(existing, element))
+                {
+                    result.push(element.clone());
+                }
+            }
+            Value::Array(result)
+        }
+        TransformOperation::ArrayRemove(elements) => {
+            let mut result = match nested_value(fields, transform.path.segments()) {
+                Some(Value::Array(values)) => values.clone(),
+                _ => Vec::new(),
+            };
+            result.retain(|existing| {
+                !elements
+                    .iter()
+                    .any(|element| values_equal(existing, element))
+            });
+            Value::Array(result)
+        }
+    };
+    set_nested_value(fields, transform.path.segments(), next);
+    Ok(())
+}
+
+#[allow(clippy::cast_precision_loss)]
+fn increment_value(current: Option<&Value>, operand: &Value) -> Value {
+    match (current, operand) {
+        (Some(Value::Integer(left)), Value::Integer(right)) => {
+            Value::Integer(left.saturating_add(*right))
+        }
+        (Some(Value::Integer(left)), Value::Double(right)) => Value::Double(*left as f64 + right),
+        (Some(Value::Double(left)), Value::Integer(right)) => Value::Double(left + *right as f64),
+        (Some(Value::Double(left)), Value::Double(right)) => Value::Double(left + right),
+        (_, operand) => operand.clone(),
+    }
+}
+
+#[allow(clippy::match_same_arms)]
+fn values_equal(left: &Value, right: &Value) -> bool {
+    match (left, right) {
+        (Value::Null, Value::Null) => true,
+        (Value::Boolean(left), Value::Boolean(right)) => left == right,
+        (Value::Integer(left), Value::Integer(right)) => left == right,
+        (Value::Double(left), Value::Double(right)) => doubles_equal(*left, *right),
+        (Value::Integer(left), Value::Double(right))
+        | (Value::Double(right), Value::Integer(left)) => integer_double_equal(*left, *right),
+        (Value::Timestamp(left), Value::Timestamp(right)) => left == right,
+        (Value::String(left), Value::String(right)) => left == right,
+        (Value::Bytes(left), Value::Bytes(right)) => left == right,
+        (Value::Reference(left), Value::Reference(right)) => left == right,
+        (
+            Value::GeoPoint {
+                latitude: left_latitude,
+                longitude: left_longitude,
+            },
+            Value::GeoPoint {
+                latitude: right_latitude,
+                longitude: right_longitude,
+            },
+        ) => {
+            doubles_equal(*left_latitude, *right_latitude)
+                && doubles_equal(*left_longitude, *right_longitude)
+        }
+        (Value::Array(left), Value::Array(right)) => {
+            left.len() == right.len()
+                && left
+                    .iter()
+                    .zip(right)
+                    .all(|(left, right)| values_equal(left, right))
+        }
+        (Value::Map(left), Value::Map(right)) => {
+            left.len() == right.len()
+                && left.iter().zip(right).all(
+                    |((left_key, left_value), (right_key, right_value))| {
+                        left_key == right_key && values_equal(left_value, right_value)
+                    },
+                )
+        }
+        (Value::Vector(left), Value::Vector(right)) => {
+            left.len() == right.len()
+                && left
+                    .iter()
+                    .zip(right)
+                    .all(|(left, right)| doubles_equal(*left, *right))
+        }
+        _ => false,
+    }
+}
+
+#[allow(clippy::float_cmp)]
+fn doubles_equal(left: f64, right: f64) -> bool {
+    left == right || (left.is_nan() && right.is_nan())
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn integer_double_equal(integer: i64, double: f64) -> bool {
+    if !double.is_finite() || double < -2_f64.powi(63) || double >= 2_f64.powi(63) {
+        return false;
+    }
+    double.fract() == 0.0 && integer == double as i64
 }
 
 fn validate_precondition(
@@ -777,6 +1104,10 @@ mod tests {
 
     fn fields(value: Value) -> Fields {
         BTreeMap::from([("value".to_owned(), value)])
+    }
+
+    fn path(segments: &[&str]) -> FieldPath {
+        FieldPath::new(segments.iter().copied()).expect("field path should be valid")
     }
 
     #[test]
@@ -1001,5 +1332,261 @@ mod tests {
                 nanos: 1_000_000_000
             })
         );
+    }
+
+    #[test]
+    fn patch_masks_delete_fields_and_preserve_unmasked_fields() {
+        let store = Store::default();
+        let key = key(&database("(default)"), "items/patched");
+        store
+            .commit(&[Write::Create {
+                key: key.clone(),
+                fields: BTreeMap::from([
+                    ("keep".to_owned(), Value::Boolean(true)),
+                    (
+                        "nested".to_owned(),
+                        Value::Map(BTreeMap::from([
+                            ("keep".to_owned(), Value::Boolean(true)),
+                            ("remove".to_owned(), Value::Boolean(true)),
+                        ])),
+                    ),
+                    ("remove".to_owned(), Value::Boolean(true)),
+                ]),
+            }])
+            .expect("seed should commit");
+        let create_time = store
+            .snapshot()
+            .get(&key)
+            .expect("seed should exist")
+            .create_time();
+
+        store
+            .commit(&[Write::Patch {
+                key: key.clone(),
+                fields: BTreeMap::from([(
+                    "nested".to_owned(),
+                    Value::Map(BTreeMap::from([("added".to_owned(), Value::Integer(7))])),
+                )]),
+                update_mask: vec![
+                    path(&["nested", "added"]),
+                    path(&["nested", "remove"]),
+                    path(&["remove"]),
+                ],
+                transforms: Vec::new(),
+                precondition: Precondition::Exists(true),
+            }])
+            .expect("patch should commit");
+
+        let document = store
+            .snapshot()
+            .get(&key)
+            .expect("patched document should exist");
+        assert_eq!(document.create_time(), create_time);
+        assert_eq!(
+            document.fields(),
+            &BTreeMap::from([
+                ("keep".to_owned(), Value::Boolean(true)),
+                (
+                    "nested".to_owned(),
+                    Value::Map(BTreeMap::from([
+                        ("added".to_owned(), Value::Integer(7)),
+                        ("keep".to_owned(), Value::Boolean(true)),
+                    ])),
+                ),
+            ])
+        );
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn field_transforms_match_the_cloud_fixture() {
+        let store = Store::default();
+        let key = key(&database("(default)"), "items/transformed");
+        store
+            .commit(&[Write::Create {
+                key: key.clone(),
+                fields: BTreeMap::from([
+                    ("counter".to_owned(), Value::Integer(1)),
+                    ("nonNumber".to_owned(), Value::String(Arc::from("replace"))),
+                    (
+                        "scalarArray".to_owned(),
+                        Value::String(Arc::from("replace")),
+                    ),
+                    (
+                        "tags".to_owned(),
+                        Value::Array(vec![Value::String(Arc::from("a")), Value::Integer(1)]),
+                    ),
+                ]),
+            }])
+            .expect("seed should commit");
+
+        let first = store
+            .commit(&[Write::Patch {
+                key: key.clone(),
+                fields: Fields::new(),
+                update_mask: Vec::new(),
+                transforms: vec![
+                    FieldTransform {
+                        path: path(&["counter"]),
+                        operation: TransformOperation::Increment(Value::Double(2.5)),
+                    },
+                    FieldTransform {
+                        path: path(&["tags"]),
+                        operation: TransformOperation::ArrayUnion(vec![
+                            Value::String(Arc::from("b")),
+                            Value::Integer(1),
+                            Value::String(Arc::from("b")),
+                        ]),
+                    },
+                    FieldTransform {
+                        path: path(&["updatedAt"]),
+                        operation: TransformOperation::ServerTimestamp,
+                    },
+                    FieldTransform {
+                        path: path(&["updatedAtAgain"]),
+                        operation: TransformOperation::ServerTimestamp,
+                    },
+                ],
+                precondition: Precondition::Exists(true),
+            }])
+            .expect("first transforms should commit");
+        let first_document = store
+            .snapshot()
+            .get(&key)
+            .expect("transformed document should exist");
+        assert_eq!(
+            first_document.fields().get("counter"),
+            Some(&Value::Double(3.5))
+        );
+        assert_eq!(
+            first_document.fields().get("tags"),
+            Some(&Value::Array(vec![
+                Value::String(Arc::from("a")),
+                Value::Integer(1),
+                Value::String(Arc::from("b")),
+            ]))
+        );
+        assert_eq!(
+            first_document.fields().get("updatedAt"),
+            Some(&Value::Timestamp(first.commit_time))
+        );
+        assert_eq!(
+            first_document.fields().get("updatedAt"),
+            first_document.fields().get("updatedAtAgain")
+        );
+
+        store
+            .commit(&[Write::Patch {
+                key: key.clone(),
+                fields: Fields::new(),
+                update_mask: Vec::new(),
+                transforms: vec![
+                    FieldTransform {
+                        path: path(&["missingCounter"]),
+                        operation: TransformOperation::Increment(Value::Integer(3)),
+                    },
+                    FieldTransform {
+                        path: path(&["nonNumber"]),
+                        operation: TransformOperation::Increment(Value::Integer(4)),
+                    },
+                    FieldTransform {
+                        path: path(&["scalarArray"]),
+                        operation: TransformOperation::ArrayUnion(vec![
+                            Value::String(Arc::from("x")),
+                            Value::String(Arc::from("x")),
+                        ]),
+                    },
+                    FieldTransform {
+                        path: path(&["tags"]),
+                        operation: TransformOperation::ArrayRemove(vec![
+                            Value::String(Arc::from("a")),
+                            Value::Integer(1),
+                        ]),
+                    },
+                ],
+                precondition: Precondition::Exists(true),
+            }])
+            .expect("second transforms should commit");
+        let second_document = store
+            .snapshot()
+            .get(&key)
+            .expect("transformed document should exist");
+        assert_eq!(
+            second_document.fields().get("missingCounter"),
+            Some(&Value::Integer(3))
+        );
+        assert_eq!(
+            second_document.fields().get("nonNumber"),
+            Some(&Value::Integer(4))
+        );
+        assert_eq!(
+            second_document.fields().get("scalarArray"),
+            Some(&Value::Array(vec![Value::String(Arc::from("x"))]))
+        );
+        assert_eq!(
+            second_document.fields().get("tags"),
+            Some(&Value::Array(vec![Value::String(Arc::from("b"))]))
+        );
+    }
+
+    #[test]
+    fn invalid_transform_keeps_the_entire_commit_atomic() {
+        let store = Store::default();
+        let database = database("(default)");
+        let transformed = key(&database, "items/transformed");
+        let other = key(&database, "items/other");
+        store
+            .commit(&[Write::Create {
+                key: transformed.clone(),
+                fields: fields(Value::Integer(1)),
+            }])
+            .expect("seed should commit");
+        let revision = store.revision();
+
+        let error = store
+            .commit(&[
+                Write::Set {
+                    key: other.clone(),
+                    fields: fields(Value::Integer(2)),
+                    precondition: Precondition::None,
+                },
+                Write::Patch {
+                    key: transformed.clone(),
+                    fields: Fields::new(),
+                    update_mask: Vec::new(),
+                    transforms: vec![FieldTransform {
+                        path: path(&["value"]),
+                        operation: TransformOperation::Increment(Value::String(Arc::from(
+                            "invalid",
+                        ))),
+                    }],
+                    precondition: Precondition::Exists(true),
+                },
+            ])
+            .expect_err("invalid transform should reject the commit");
+
+        assert_eq!(
+            error,
+            CommitError::InvalidIncrementOperand {
+                key: transformed,
+                field: path(&["value"]),
+            }
+        );
+        assert_eq!(store.revision(), revision);
+        assert!(store.snapshot().get(&other).is_none());
+    }
+
+    #[test]
+    fn array_transform_equality_encodes_the_raw_v1_oracle() {
+        assert!(values_equal(&Value::Integer(1), &Value::Double(1.0)));
+        assert!(values_equal(
+            &Value::Double(f64::NAN),
+            &Value::Double(f64::NAN)
+        ));
+        assert!(values_equal(&Value::Double(-0.0), &Value::Double(0.0)));
+        assert!(!values_equal(
+            &Value::Integer(9_007_199_254_740_993),
+            &Value::Double(9_007_199_254_740_992.0)
+        ));
     }
 }

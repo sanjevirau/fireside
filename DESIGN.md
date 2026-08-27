@@ -224,6 +224,17 @@ not enforce indexes; `--strict-indexes` parses `firestore.indexes.json`, models
 automatic collection indexes and explicit collection-group field overrides,
 and rejects a missing required index before query execution.
 
+`conformance/test/write-transforms.test.ts` pins masked nested and top-level
+field deletion plus server timestamp, numeric increment, array union, and array
+remove. Production and Java agree that all server-timestamp transforms in one
+write share a value, while the document update time equals the SDK write time
+and the transform timestamp does not exceed it. Increment replaces missing or
+non-numeric fields with its operand; array union/removal treat a non-array base
+as empty. The core applies masks and transforms while planning the atomic MVCC
+commit, before WAL persistence or visibility. A raw v1 fixture preserves wire
+types and proves array membership equality across equivalent integer/double
+values, NaN, and signed zero.
+
 Optional `--strict-indexes` validates queries against
 `firestore.indexes.json` as production enforces composite indexes. Because the
 official emulator does not enforce these indexes, cloud is mandatory for this

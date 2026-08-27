@@ -60,11 +60,20 @@ random ID in the `fireside_conformance` collection group and was deleted by the
 test; active TTL remains the fallback. This establishes harness connectivity
 only and is not a fireside compatibility result.
 
-## Query oracle expansion
+## Phase 1 oracle expansion
 
-The shared harness is now 4/4 on both production and Java. In addition to the
+The shared harness is now 6/6 on both production and Java. In addition to the
 connectivity case it covers mixed value ordering, exact int64/double ordering,
 all Phase 1 filter operators, cursor boundaries, projections, collection
 groups, document IDs, and count/sum/average. Production's missing-index status
 and Java's permissive result for the same equality-plus-order query are both
-asserted explicitly. No fireside compatibility result is claimed yet.
+asserted explicitly.
+
+The write-transform case covers server timestamps, increment, array union,
+array remove, and field deletion. It records that transforms in one write share
+one server timestamp, while the document update time equals the SDK write time
+and may be later than the transform timestamp. The same fixture covers numeric
+increment on numeric, missing, and non-numeric fields plus array transforms on
+arrays and non-arrays. A raw v1 case additionally proves that array transforms
+normalize NaN, signed zero, and equivalent integer/double values for membership
+and removal. No fireside compatibility result is claimed yet.

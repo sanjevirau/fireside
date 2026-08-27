@@ -16,6 +16,7 @@ await new Promise<void>((resolve, reject) => {
       "test/firestore-smoke.test.ts",
       "test/query-features.test.ts",
       "test/query-ordering.test.ts",
+      "test/write-transforms.test.ts",
     ],
     {
       cwd: process.cwd(),
