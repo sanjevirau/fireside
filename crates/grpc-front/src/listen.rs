@@ -4,6 +4,7 @@ use std::time::Duration;
 use fireside_core_store::{DatabaseName, Revision, SnapshotError, Store};
 use fireside_query_engine::QueryPolicy;
 use fireside_watch_broker::{ChangeKind, TargetSpec, WatchChange, WatchDocument, WatchTarget};
+use md5::{Digest as _, Md5};
 use tokio::sync::mpsc;
 use tokio::time::{MissedTickBehavior, interval};
 use tokio_stream::wrappers::ReceiverStream;
@@ -19,8 +20,8 @@ use crate::google::firestore::v1::target::TargetType;
 use crate::google::firestore::v1::target::query_target::QueryType;
 use crate::google::firestore::v1::target_change::TargetChangeType;
 use crate::google::firestore::v1::{
-    DocumentChange, DocumentDelete, DocumentRemove, ListenRequest, ListenResponse, Target,
-    TargetChange,
+    BitSequence, BloomFilter, DocumentChange, DocumentDelete, DocumentRemove, ExistenceFilter,
+    ListenRequest, ListenResponse, Target, TargetChange,
 };
 use crate::google::rpc;
 use crate::query_codec::{decode_query, query_status};
@@ -125,6 +126,7 @@ async fn add_target(
     database: DatabaseName,
     target: Target,
 ) -> Result<(), Status> {
+    let expected_count = target.expected_count.filter(|count| *count > 0);
     let resume_revision = match target.resume_type.as_ref() {
         Some(ResumeType::ResumeToken(token)) => Some(decode_resume_token(token)?),
         Some(ResumeType::ReadTime(_)) => {
@@ -163,25 +165,35 @@ async fn add_target(
             .map_err(|error| Status::failed_precondition(error.to_string()))?;
     }
     let snapshot = store.snapshot();
-    let (watch, initial) = if let Some(revision) = resume_revision {
+    let (watch, initial, send_filter) = if let Some(revision) = resume_revision {
         let baseline = store
             .snapshot_at(revision)
             .map_err(resume_snapshot_status)?;
         let (mut watch, _) =
             WatchTarget::initialize(id, database, spec, query_policy.edition(), &baseline)
                 .map_err(|error| query_status(&error))?;
+        let baseline_count = i32::try_from(watch.document_keys().count()).unwrap_or(i32::MAX);
         let replay = watch
             .refresh(&snapshot)
             .map_err(|error| query_status(&error))?;
-        (watch, replay)
+        (
+            watch,
+            replay,
+            expected_count.is_some_and(|expected| expected != baseline_count),
+        )
     } else {
-        WatchTarget::initialize(id, database, spec, query_policy.edition(), &snapshot)
-            .map_err(|error| query_status(&error))?
+        let (watch, initial) =
+            WatchTarget::initialize(id, database, spec, query_policy.edition(), &snapshot)
+                .map_err(|error| query_status(&error))?;
+        (watch, initial, false)
     };
 
     send_target_change(sender, TargetChangeType::Add, vec![id], None, None).await?;
     for change in initial.changes {
         send_document_change(sender, id, change).await?;
+    }
+    if send_filter {
+        send_existence_filter(sender, id, &watch).await?;
     }
     let read_time = now();
     send_target_change(
@@ -320,6 +332,81 @@ async fn send_document_change(
     .await
 }
 
+async fn send_existence_filter(
+    sender: &mpsc::Sender<Result<ListenResponse, Status>>,
+    target_id: i32,
+    target: &WatchTarget,
+) -> Result<(), Status> {
+    let names = target
+        .document_keys()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    let count = i32::try_from(names.len()).unwrap_or(i32::MAX);
+    send(
+        sender,
+        ListenResponse {
+            response_type: Some(ResponseType::Filter(ExistenceFilter {
+                target_id,
+                count,
+                unchanged_names: Some(unchanged_names_bloom_filter(&names)?),
+            })),
+        },
+    )
+    .await
+}
+
+fn unchanged_names_bloom_filter(names: &[String]) -> Result<BloomFilter, Status> {
+    if names.is_empty() {
+        return Ok(BloomFilter {
+            bits: Some(BitSequence {
+                bitmap: Vec::new(),
+                padding: 0,
+            }),
+            hash_count: 0,
+        });
+    }
+
+    let bit_count = names
+        .len()
+        .checked_mul(24)
+        .and_then(|bits| bits.checked_add(5))
+        .ok_or_else(|| Status::resource_exhausted("existence-filter bloom size overflow"))?;
+    let byte_count = bit_count.div_ceil(8);
+    let bit_count_u64 = u64::try_from(bit_count)
+        .map_err(|_| Status::resource_exhausted("existence-filter bloom size overflow"))?;
+    let count = u128::try_from(names.len()).unwrap_or(u128::MAX);
+    let hashes = ((u128::try_from(bit_count).unwrap_or(u128::MAX) * 693 + count * 500)
+        / (count * 1_000))
+        .max(1);
+    let hash_count = i32::try_from(hashes).unwrap_or(i32::MAX);
+    let mut bitmap = vec![0_u8; byte_count];
+
+    for name in names {
+        let digest = Md5::digest(name.as_bytes());
+        let first = u64::from_le_bytes(
+            digest[..8]
+                .try_into()
+                .expect("MD5 has a fixed 16-byte output"),
+        );
+        let second = u64::from_le_bytes(
+            digest[8..]
+                .try_into()
+                .expect("MD5 has a fixed 16-byte output"),
+        );
+        for index in 0..u64::try_from(hash_count).unwrap_or(u64::MAX) {
+            let bit = first.wrapping_add(index.wrapping_mul(second)) % bit_count_u64;
+            let byte = usize::try_from(bit / 8).expect("bit index fits allocated bitmap");
+            bitmap[byte] |= 1 << (bit % 8);
+        }
+    }
+
+    let padding = i32::try_from(byte_count * 8 - bit_count).expect("padding is at most seven");
+    Ok(BloomFilter {
+        bits: Some(BitSequence { bitmap, padding }),
+        hash_count,
+    })
+}
+
 fn encode_watch_document(
     document: &WatchDocument,
 ) -> Result<crate::google::firestore::v1::Document, Status> {
@@ -424,4 +511,29 @@ fn now() -> fireside_core_store::Timestamp {
         duration.subsec_nanos(),
     )
     .expect("system time is a valid timestamp")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bloom_dimensions_match_the_cloud_existence_filter_fixture() {
+        let one = unchanged_names_bloom_filter(&["documents/alpha".to_owned()])
+            .expect("one-name filter should build");
+        let one_bits = one.bits.expect("filter bits should exist");
+        assert_eq!(one_bits.bitmap.len(), 4);
+        assert_eq!(one_bits.padding, 3);
+        assert_eq!(one.hash_count, 20);
+
+        let two = unchanged_names_bloom_filter(&[
+            "documents/alpha".to_owned(),
+            "documents/beta".to_owned(),
+        ])
+        .expect("two-name filter should build");
+        let two_bits = two.bits.expect("filter bits should exist");
+        assert_eq!(two_bits.bitmap.len(), 7);
+        assert_eq!(two_bits.padding, 3);
+        assert_eq!(two.hash_count, 18);
+    }
 }

@@ -11,7 +11,7 @@ target, not the specification.
 > Phase 0 is complete and Phase 1 is under development. Fireside passes the
 > sixteen checked-in backend and control conformance cases plus its dedicated
 > strict-index case, but the remaining Phase 1 API, disk wiring, import/export,
-> listener reset/existence-filter, and torture gates are not yet complete.
+> expired-listener RESET, and torture gates are not yet complete.
 
 ## Why this exists
 

@@ -358,9 +358,18 @@ change log and diffing against current state. Java v1.22.0 instead emits
 `ADD`, `RESET`, `CURRENT` and replays the complete target, including unchanged
 documents. That replay is a documented Java deviation. The raw client must set
 the `google-cloud-resource-prefix` routing header even though every Listen
-message also contains the database resource. Expired-token reset behavior,
-read-time resume, and existence-filter mismatch recovery remain unclaimed until
-their oracle fixtures are captured.
+message also contains the database resource.
+
+When a resumed target supplies an incorrect positive `expected_count`,
+production sends an existence filter before `CURRENT`. The fixture pins target
+ID 7, the actual count, and an `unchanged_names` bloom filter that contains all
+current resource names and excludes a known-missing name. For one name the
+observed filter has 29 usable bits and 20 MD5-derived hashes; for two names it
+has 53 bits and 18 hashes. Fireside follows the vendored protocol's little-endian
+128-bit MD5 split and double-hash construction. Java's full-target RESET path
+does not send the filter, part of the same documented resume deviation.
+Expired-token reset behavior and read-time resume remain unclaimed until their
+oracle fixtures are captured.
 
 ## 6. Drop-in launcher and emulator control contract
 

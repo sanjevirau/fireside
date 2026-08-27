@@ -135,6 +135,11 @@ impl WatchTarget {
         self.revision
     }
 
+    /// Current target document keys in stable resource-name order.
+    pub fn document_keys(&self) -> impl Iterator<Item = &DocumentKey> {
+        self.documents.keys()
+    }
+
     /// Re-evaluates the target and returns only transitions from its prior view.
     pub fn refresh(&mut self, snapshot: &Snapshot) -> Result<ChangeBatch, QueryError> {
         let next = evaluate(snapshot, &self.database, &self.spec, self.edition)?;

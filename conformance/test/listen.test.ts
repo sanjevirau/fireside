@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import test from "node:test";
 
 import type { DocumentChange, QuerySnapshot } from "@google-cloud/firestore";
@@ -21,10 +21,30 @@ interface ObservedListenResponse {
     readonly targetChangeType?: number | string | null;
     readonly targetIds?: readonly number[] | null;
   } | null;
+  readonly filter?: {
+    readonly count?: number | null;
+    readonly targetId?: number | null;
+    readonly unchangedNames?: {
+      readonly bits?: {
+        readonly bitmap?: string | Uint8Array | null;
+        readonly padding?: number | null;
+      } | null;
+      readonly hashCount?: number | null;
+    } | null;
+  } | null;
 }
 
 interface ListenCheckpoint {
   readonly documentIds: readonly string[];
+  readonly filters: ReadonlyArray<{
+    readonly count: number;
+    readonly bitmap: Uint8Array;
+    readonly hasUnchangedNames: boolean;
+    readonly hashCount: number;
+    readonly bitmapBytes: number;
+    readonly padding: number;
+    readonly targetId: number;
+  }>;
   readonly resumeToken: string | Uint8Array;
   readonly targetChangeTypes: readonly string[];
 }
@@ -133,13 +153,60 @@ test("raw Listen resumes after a CURRENT checkpoint without replaying prior docu
   assert.deepEqual(initial.targetChangeTypes, ["ADD", "CURRENT"]);
   initialStream.end();
 
+  const mismatchStream = rawFirestore.listen(listenOptions);
+  streams.push(mismatchStream);
+  const mismatchResponses = rawResponseQueue(mismatchStream);
+  mismatchStream.write({
+    database,
+    addTarget: {
+      ...addTarget,
+      expectedCount: { value: 99 },
+      resumeToken: initial.resumeToken,
+    },
+  });
+  const mismatch = await readCheckpoint(mismatchResponses);
+  assert.deepEqual(
+    mismatch.documentIds,
+    configuration.name === "java" ? ["alpha"] : [],
+  );
+  assert.deepEqual(
+    filterMetadata(mismatch.filters),
+    configuration.name === "java"
+      ? []
+      : [{
+        bitmapBytes: 4,
+        count: 1,
+        hasUnchangedNames: true,
+        hashCount: 20,
+        padding: 3,
+        targetId: 7,
+      }],
+  );
+  assert.deepEqual(
+    mismatch.targetChangeTypes,
+    configuration.name === "java"
+      ? ["ADD", "RESET", "CURRENT"]
+      : ["ADD", "CURRENT"],
+  );
+  if (configuration.name !== "java") {
+    assert.equal(
+      bloomMightContain(mismatch.filters[0], `${database}/documents/${alpha.path}`),
+      true,
+    );
+  }
+  mismatchStream.end();
+
   await beta.set({ rank: 2 });
   const resumedStream = rawFirestore.listen(listenOptions);
   streams.push(resumedStream);
   const resumedResponses = rawResponseQueue(resumedStream);
   resumedStream.write({
     database,
-    addTarget: { ...addTarget, resumeToken: initial.resumeToken },
+    addTarget: {
+      ...addTarget,
+      expectedCount: { value: 99 },
+      resumeToken: initial.resumeToken,
+    },
   });
   const resumed = await readCheckpoint(resumedResponses);
   assert.deepEqual(
@@ -147,11 +214,39 @@ test("raw Listen resumes after a CURRENT checkpoint without replaying prior docu
     configuration.name === "java" ? ["alpha", "beta"] : ["beta"],
   );
   assert.deepEqual(
+    filterMetadata(resumed.filters),
+    configuration.name === "java"
+      ? []
+      : [{
+        bitmapBytes: 7,
+        count: 2,
+        hasUnchangedNames: true,
+        hashCount: 18,
+        padding: 3,
+        targetId: 7,
+      }],
+  );
+  assert.deepEqual(
     resumed.targetChangeTypes,
     configuration.name === "java"
       ? ["ADD", "RESET", "CURRENT"]
       : ["ADD", "CURRENT"],
   );
+  if (configuration.name !== "java") {
+    const filter = resumed.filters[0];
+    assert.equal(
+      bloomMightContain(filter, `${database}/documents/${alpha.path}`),
+      true,
+    );
+    assert.equal(
+      bloomMightContain(filter, `${database}/documents/${beta.path}`),
+      true,
+    );
+    assert.equal(
+      bloomMightContain(filter, `${database}/documents/${collection.path}/missing`),
+      false,
+    );
+  }
 });
 
 function snapshotQueue(): {
@@ -276,10 +371,24 @@ async function readCheckpoint(
   queue: ReturnType<typeof rawResponseQueue>,
 ): Promise<ListenCheckpoint> {
   const documentIds: string[] = [];
+  const filters: ListenCheckpoint["filters"][number][] = [];
   const targetChangeTypes: string[] = [];
   let seenCurrent = false;
   for (let index = 0; index < 32; index += 1) {
     const response = await queue.next();
+    const filter = response.filter;
+    if (filter !== undefined && filter !== null) {
+      filters.push({
+        bitmap: bytes(filter.unchangedNames?.bits?.bitmap ?? ""),
+        bitmapBytes: byteLength(filter.unchangedNames?.bits?.bitmap ?? ""),
+        count: filter.count ?? 0,
+        hasUnchangedNames: filter.unchangedNames !== undefined &&
+          filter.unchangedNames !== null,
+        hashCount: filter.unchangedNames?.hashCount ?? 0,
+        padding: filter.unchangedNames?.bits?.padding ?? 0,
+        targetId: filter.targetId ?? 0,
+      });
+    }
     const name = response.documentChange?.document?.name;
     if (name !== undefined && name !== null) {
       documentIds.push(name.slice(name.lastIndexOf("/") + 1));
@@ -297,7 +406,7 @@ async function readCheckpoint(
     }
     const token = targetChange.resumeToken;
     if (seenCurrent && token !== undefined && token !== null && byteLength(token) > 0) {
-      return { documentIds, resumeToken: token, targetChangeTypes };
+      return { documentIds, filters, resumeToken: token, targetChangeTypes };
     }
   }
   throw new Error("Listen produced no CURRENT checkpoint");
@@ -313,4 +422,41 @@ function targetChangeType(value: number | string | null | undefined): string {
 
 function byteLength(value: string | Uint8Array): number {
   return typeof value === "string" ? Buffer.from(value, "base64").byteLength : value.byteLength;
+}
+
+function bytes(value: string | Uint8Array): Uint8Array {
+  return typeof value === "string" ? Buffer.from(value, "base64") : value;
+}
+
+function filterMetadata(filters: ListenCheckpoint["filters"]): ReadonlyArray<{
+  readonly bitmapBytes: number;
+  readonly count: number;
+  readonly hasUnchangedNames: boolean;
+  readonly hashCount: number;
+  readonly padding: number;
+  readonly targetId: number;
+}> {
+  return filters.map(({ bitmap: _bitmap, ...metadata }) => metadata);
+}
+
+function bloomMightContain(
+  filter: ListenCheckpoint["filters"][number] | undefined,
+  value: string,
+): boolean {
+  if (filter === undefined) {
+    throw new Error("existence filter is missing");
+  }
+  const bitmap = Buffer.from(filter.bitmap);
+  const bitCount = BigInt(bitmap.byteLength * 8 - filter.padding);
+  const digest = createHash("md5").update(value, "utf8").digest();
+  const first = digest.readBigUInt64LE(0);
+  const second = digest.readBigUInt64LE(8);
+  for (let index = 0n; index < BigInt(filter.hashCount); index += 1n) {
+    const hash = BigInt.asUintN(64, first + index * second);
+    const bit = Number(hash % bitCount);
+    if ((bitmap[Math.floor(bit / 8)]! & (1 << (bit % 8))) === 0) {
+      return false;
+    }
+  }
+  return true;
 }
