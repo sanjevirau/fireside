@@ -11,9 +11,11 @@ non-atomic BatchWrite status ordering, queries, transactions, transforms
 RunQuery and RunAggregationQuery planning and analyzed explain metrics,
 historical read-time selectors, precise error codes, REST, named databases, and
 ancestor-scoped collection groups, partitioning, and nearest-vector queries
-over both gRPC and REST. It also pins the Standard-edition `ExecutePipeline`
-gate and runs the initial collection/filter/sort/offset/limit/select pipeline
-fixture against a separately allowlisted Enterprise database.
+over both gRPC and REST. Listen coverage includes target-local malformed-token
+failure without stream teardown. The harness also pins the Standard-edition
+`ExecutePipeline` gate and runs the initial
+collection/filter/sort/offset/limit/select pipeline fixture against a
+separately allowlisted Enterprise database.
 
 ```sh
 npm ci

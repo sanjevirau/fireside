@@ -149,7 +149,6 @@ async fn add_target(
     target: Target,
 ) -> Result<(), Status> {
     let expected_count = target.expected_count.filter(|count| *count > 0);
-    let resume_point = decode_resume_point(&target)?;
     let id = assign_target_id(target.target_id, next_assigned_id);
     if id <= 0 {
         return Err(Status::invalid_argument(
@@ -166,6 +165,14 @@ async fn add_target(
         .await?;
         return Ok(());
     }
+    let resume_point = match decode_resume_point(&target) {
+        Ok(resume_point) => resume_point,
+        Err(_) if matches!(target.resume_type, Some(ResumeType::ResumeToken(_))) => {
+            send_target_error(sender, id, Code::InvalidArgument, "bad resume token").await?;
+            return Ok(());
+        }
+        Err(error) => return Err(error),
+    };
     let spec = decode_target_spec(&database, target.target_type)?;
     if let TargetSpec::Query(query) = &spec {
         query_policy

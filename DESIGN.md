@@ -522,9 +522,17 @@ back to the complete current target, sends an existence filter whose
 `unchanged_names` contains an empty bit sequence and zero hashes, then reaches
 `CURRENT`. Fireside follows that observed fallback. Java sends `ADD`, `RESET`,
 the complete target, then `CURRENT`, extending its documented resume-path
-deviation. Expired opaque-token behavior remains unclaimed until its oracle
-fixture is captured; the old-`read_time` result is not assumed to establish the
-opaque-token contract.
+deviation.
+
+A malformed three-byte opaque resume token has a separate production contract:
+the server sends a target-local `REMOVE` for the requested ID with status 3
+(`INVALID_ARGUMENT`) and exact message `bad resume token`, while keeping the
+Listen stream open for a subsequent valid target. Fireside matches that target
+error. Java v1.22.0 instead accepts the garbage token and emits `ADD`, `RESET`,
+then `CURRENT`, a tenth documented Java deviation. Truly expired opaque-token
+behavior remains unclaimed until its oracle fixture is captured; neither the
+malformed-token result nor the old-`read_time` result is assumed to establish
+the expiry contract.
 
 ## 6. Drop-in launcher and emulator control contract
 

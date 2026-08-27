@@ -94,12 +94,12 @@ only and is not a fireside compatibility result.
 
 ## Phase 1 oracle expansion
 
-The shared harness is now 7/7 on both production and Java. In addition to the
-connectivity case it covers mixed value ordering, exact int64/double ordering,
-all Phase 1 filter operators, cursor boundaries, projections, collection
-groups, document IDs, and count/sum/average. Production's missing-index status
-and Java's permissive result for the same equality-plus-order query are both
-asserted explicitly.
+An early shared harness checkpoint reached 7/7 on both production and Java. In
+addition to the connectivity case it covered mixed value ordering, exact
+int64/double ordering, all Phase 1 filter operators, cursor boundaries,
+projections, collection groups, document IDs, and count/sum/average.
+Production's missing-index status and Java's permissive result for the same
+equality-plus-order query are both asserted explicitly.
 
 The write-transform case covers server timestamps, increment, array union,
 array remove, and field deletion. It records that transforms in one write share
@@ -114,5 +114,12 @@ The raw `PartitionQuery` case verifies that production returns at most the
 requested number of ordered, unique document-reference cursors and that the
 resulting query partitions cover every source document exactly once. The
 official Java emulator returns gRPC status 12 (`UNIMPLEMENTED`) for this method;
-the harness asserts and records that Java-only deviation. No fireside
-compatibility result is claimed yet.
+the harness asserts and records that Java-only deviation. Fireside returns
+deterministic evenly spaced cursors within production's valid bound.
+
+The malformed Listen resume-token fixture records production's target-local
+`REMOVE` with status 3 and message `bad resume token`; the stream remains open
+and accepts a later target. Java v1.22.0 instead accepts the malformed token and
+forces `ADD`, `RESET`, `CURRENT`. Fireside follows production. The current
+Standard scoreboard is production 30/30 and Java/Fireside 32/32 including the
+two emulator-only control cases.
