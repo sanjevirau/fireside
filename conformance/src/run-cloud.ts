@@ -19,6 +19,7 @@ await new Promise<void>((resolve, reject) => {
       "test/partition-query.test.ts",
       "test/query-features.test.ts",
       "test/query-ordering.test.ts",
+      "test/streaming-write.test.ts",
       "test/write-transforms.test.ts",
     ],
     {

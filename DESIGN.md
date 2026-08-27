@@ -298,6 +298,14 @@ Firestore and Java v1.22.0: missing update is 5, duplicate create is 6, stale
 update-time compare-and-set is 9, and one of two concurrent transactions that
 read then update the same document is aborted with 10.
 
+`conformance/test/streaming-write.test.ts` pins the production streaming Write
+handshake: the first database-only request returns a non-empty stream ID and
+token with no write results or commit time; a subsequent request may omit the
+database, presents that ID and token, and returns a new token, one write result,
+and a commit time. Java v1.22.0 instead closes the initial database-only
+handshake with `UNKNOWN` (2). This is a documented Java deviation; Fireside
+follows production.
+
 ### 5.3 Watch semantics
 
 The broker supports multiple targets on one Listen stream, initial snapshot and
