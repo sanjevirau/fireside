@@ -12,6 +12,18 @@ use std::collections::BTreeMap;
 
 use fireside_core_store::Value;
 
+mod indexes;
+mod query;
+
+pub use indexes::{
+    IndexCatalog, IndexConfigError, IndexDirection, IndexMode, IndexRequirement,
+    IndexRequirementField, IndexScope,
+};
+pub use query::{
+    Aggregation, Cursor, Direction, FieldFilter, FieldOperator, FieldPath, Filter, Limit, Order,
+    Query, QueryDocument, QueryError, QueryScope, aggregate, execute,
+};
+
 const STANDARD_INDEXED_VALUE_BYTES: usize = 1_500;
 
 /// Firestore database edition behaviors that affect query evaluation.

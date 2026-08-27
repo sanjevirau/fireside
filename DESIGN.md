@@ -213,6 +213,17 @@ implicit document-name tie-break. These contracts live in
 `conformance/test/query-ordering.test.ts` and currently agree between Cloud and
 Java.
 
+`conformance/test/query-features.test.ts` pins every listed field operator,
+implicit inequality ordering, descending document-name tie-breaking, all four
+cursor boundaries, limit/limit-to-last/offset, projections, document-ID
+filters, collection-group results, and count/sum/average. It also preserves an
+observed index deviation: a collection query combining equality on `group`
+with ordering on `score` returns status 9 (`FAILED_PRECONDITION`) in production
+without its manual index, while Java executes it. In default mode fireside does
+not enforce indexes; `--strict-indexes` parses `firestore.indexes.json`, models
+automatic collection indexes and explicit collection-group field overrides,
+and rejects a missing required index before query execution.
+
 Optional `--strict-indexes` validates queries against
 `firestore.indexes.json` as production enforces composite indexes. Because the
 official emulator does not enforce these indexes, cloud is mandatory for this

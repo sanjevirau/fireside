@@ -28,6 +28,17 @@ Both databases apply TTL to
 `fireside_conformance._fireside_expires_at`. Tests also delete their own data
 immediately; TTL is a crash/interruption backstop.
 
+## Conformance indexes
+
+The first collection-group query was intentionally run before its index was
+present. Production returned gRPC status 9 (`FAILED_PRECONDITION`) with a
+single-field collection-group index requirement; the Java emulator did not
+enforce that requirement. The exact `runId` field override subsequently
+provisioned in the dedicated project is checked in at
+`conformance/firestore.indexes.json`. It preserves the inherited collection
+indexes and adds only the ascending collection-group index needed to isolate
+parallel conformance runs.
+
 ## Safety boundary
 
 The harness hardcodes `fireside-conformance` as the only cloud target accepted
@@ -48,3 +59,12 @@ The client was `@google-cloud/firestore@9.0.0`. The production document used a
 random ID in the `fireside_conformance` collection group and was deleted by the
 test; active TTL remains the fallback. This establishes harness connectivity
 only and is not a fireside compatibility result.
+
+## Query oracle expansion
+
+The shared harness is now 4/4 on both production and Java. In addition to the
+connectivity case it covers mixed value ordering, exact int64/double ordering,
+all Phase 1 filter operators, cursor boundaries, projections, collection
+groups, document IDs, and count/sum/average. Production's missing-index status
+and Java's permissive result for the same equality-plus-order query are both
+asserted explicitly. No fireside compatibility result is claimed yet.
