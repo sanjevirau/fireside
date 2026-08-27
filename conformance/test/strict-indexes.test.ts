@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
 
-import type { Query } from "@google-cloud/firestore";
+import { FieldValue, type Query } from "@google-cloud/firestore";
 
 import { createFirestore, resolveTarget } from "../src/target.ts";
 
@@ -75,6 +75,53 @@ test("strict indexes enforce the production missing-index contract", async (cont
   assert.equal(errors.length, 1);
   assert.equal(errors[0]?.error?.code, 400);
   assert.equal(errors[0]?.error?.status, "FAILED_PRECONDITION");
+});
+
+test("strict indexes require an explicit vector configuration", async (context) => {
+  const configuration = resolveTarget(process.env);
+  assert.equal(configuration.name, "fireside");
+  assert.equal(process.env.CONFORMANCE_STRICT_INDEXES, "1");
+
+  const firestore = createFirestore(configuration);
+  const runId = randomUUID();
+  const indexed = firestore.collection(
+    `runs/${runId}/fireside_vector_conformance`,
+  );
+  const missing = firestore.collection(`runs/${runId}/strict_vector_missing`);
+  const documents = [indexed.doc("indexed"), missing.doc("missing")];
+  context.after(async () => {
+    await Promise.all(documents.map(async (document) => document.delete()));
+    await firestore.terminate();
+  });
+
+  await Promise.all(documents.map(async (document) => document.set({
+    embedding: FieldValue.vector([1, 0, 0]),
+  })));
+  const snapshot = await indexed.findNearest({
+    vectorField: "embedding",
+    queryVector: [0, 0, 0],
+    limit: 1,
+    distanceMeasure: "EUCLIDEAN",
+  }).get();
+  assert.deepEqual(snapshot.docs.map((document) => document.id), ["indexed"]);
+  await assert.rejects(
+    indexed.findNearest({
+      vectorField: "embedding",
+      queryVector: [0, 0],
+      limit: 1,
+      distanceMeasure: "EUCLIDEAN",
+    }).get(),
+    (error: unknown) => hasGrpcCode(error, 9),
+  );
+  await assert.rejects(
+    missing.findNearest({
+      vectorField: "embedding",
+      queryVector: [0, 0, 0],
+      limit: 1,
+      distanceMeasure: "EUCLIDEAN",
+    }).get(),
+    (error: unknown) => hasGrpcCode(error, 9),
+  );
 });
 
 async function queryIds(query: Query): Promise<string[]> {

@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 
 use fireside_query_engine::{
-    Aggregation, Direction, FieldFilter, FieldOperator, FieldPath, Filter, Limit, Query, QueryScope,
+    Aggregation, Direction, DistanceMeasure, FieldFilter, FieldOperator, FieldPath, Filter, Limit,
+    Query, QueryScope,
 };
 use tonic::Status;
 
@@ -11,10 +12,13 @@ use crate::google::firestore::v1::structured_aggregation_query::aggregation::Ope
 use crate::google::firestore::v1::structured_query::composite_filter::Operator as CompositeOperator;
 use crate::google::firestore::v1::structured_query::field_filter::Operator as ProtoFieldOperator;
 use crate::google::firestore::v1::structured_query::filter::FilterType;
+use crate::google::firestore::v1::structured_query::find_nearest::DistanceMeasure as ProtoDistanceMeasure;
 use crate::google::firestore::v1::structured_query::unary_filter::{
     OperandType, Operator as UnaryOperator,
 };
-use crate::google::firestore::v1::structured_query::{Direction as ProtoDirection, FieldReference};
+use crate::google::firestore::v1::structured_query::{
+    Direction as ProtoDirection, FieldReference, FindNearest,
+};
 use crate::google::firestore::v1::{StructuredAggregationQuery, StructuredQuery};
 
 pub(crate) struct DecodedAggregation {
@@ -24,13 +28,9 @@ pub(crate) struct DecodedAggregation {
 
 pub(crate) fn decode_query(
     parent: Option<&str>,
-    structured: StructuredQuery,
+    mut structured: StructuredQuery,
 ) -> Result<Query, Status> {
-    if structured.find_nearest.is_some() {
-        return Err(Status::unimplemented(
-            "vector nearest-neighbor queries await a wire fixture",
-        ));
-    }
+    let nearest = structured.find_nearest.take();
     let [selector] = structured.from.as_slice() else {
         return Err(Status::invalid_argument(
             "structured query requires exactly one collection selector",
@@ -110,7 +110,49 @@ pub(crate) fn decode_query(
                 .collect::<Result<Vec<_>, _>>()?,
         );
     }
-    Ok(query)
+    match nearest {
+        Some(nearest) => decode_nearest(query, nearest),
+        None => Ok(query),
+    }
+}
+
+fn decode_nearest(query: Query, nearest: FindNearest) -> Result<Query, Status> {
+    let vector_field = decode_field_reference(nearest.vector_field)?;
+    let query_vector = nearest
+        .query_vector
+        .ok_or_else(|| Status::invalid_argument("query vector is required"))?;
+    let fireside_core_store::Value::Vector(query_vector) = decode_value(query_vector)? else {
+        return Err(Status::invalid_argument(
+            "query vector must be a vector value",
+        ));
+    };
+    let distance_measure = match ProtoDistanceMeasure::try_from(nearest.distance_measure) {
+        Ok(ProtoDistanceMeasure::Euclidean) => DistanceMeasure::Euclidean,
+        Ok(ProtoDistanceMeasure::Cosine) => DistanceMeasure::Cosine,
+        Ok(ProtoDistanceMeasure::DotProduct) => DistanceMeasure::DotProduct,
+        Ok(ProtoDistanceMeasure::Unspecified) | Err(_) => {
+            return Err(Status::invalid_argument("distance measure is required"));
+        }
+    };
+    let limit = nearest
+        .limit
+        .ok_or_else(|| Status::invalid_argument("vector query limit is required"))?;
+    let limit = usize::try_from(limit)
+        .map_err(|_| Status::invalid_argument("vector query limit must be positive"))?;
+    let distance_result_field = (!nearest.distance_result_field.is_empty())
+        .then(|| FieldPath::parse_wire(&nearest.distance_result_field))
+        .transpose()
+        .map_err(|error| query_status(&error))?;
+    query
+        .find_nearest(
+            vector_field,
+            query_vector,
+            distance_measure,
+            limit,
+            distance_result_field,
+            nearest.distance_threshold,
+        )
+        .map_err(|error| query_status(&error))
 }
 
 pub(crate) fn decode_aggregation(
@@ -275,7 +317,8 @@ pub(crate) fn query_status(error: &fireside_query_engine::QueryError) -> Status 
 mod tests {
     use super::*;
     use crate::google::firestore::v1::structured_query::{
-        CollectionSelector, Direction as ProtoDirection, FieldReference, Order, Projection,
+        CollectionSelector, Direction as ProtoDirection, FieldReference, FindNearest, Order,
+        Projection,
     };
 
     #[test]
@@ -321,5 +364,36 @@ mod tests {
         )
         .expect_err("negative offset should fail");
         assert_eq!(error.code(), tonic::Code::InvalidArgument);
+    }
+
+    #[test]
+    fn decodes_vector_nearest_stage() {
+        let query = decode_query(
+            None,
+            StructuredQuery {
+                from: vec![CollectionSelector {
+                    collection_id: "vectors".to_owned(),
+                    all_descendants: false,
+                }],
+                find_nearest: Some(FindNearest {
+                    vector_field: Some(FieldReference {
+                        field_path: "embedding".to_owned(),
+                    }),
+                    query_vector: Some(
+                        crate::codec::encode_value(&fireside_core_store::Value::Vector(vec![
+                            1.0, 0.0,
+                        ]))
+                        .expect("vector should encode"),
+                    ),
+                    distance_measure: ProtoDistanceMeasure::Cosine as i32,
+                    limit: Some(10),
+                    distance_result_field: "distance".to_owned(),
+                    distance_threshold: Some(0.5),
+                }),
+                ..StructuredQuery::default()
+            },
+        )
+        .expect("nearest query should decode");
+        assert!(format!("{query:?}").contains("distance_result_field"));
     }
 }

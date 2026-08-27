@@ -25,7 +25,7 @@ pub enum IndexDirection {
 pub enum IndexMode {
     Ordered(IndexDirection),
     ArrayContains,
-    Vector,
+    Vector(usize),
 }
 
 /// One field in a missing index requirement.
@@ -167,17 +167,15 @@ struct SingleFieldIndex {
 struct FieldUsage {
     path: String,
     equality: bool,
-    array: bool,
     inequality: bool,
     order: Option<IndexDirection>,
+    special_modes: BTreeSet<IndexMode>,
 }
 
 impl FieldUsage {
     fn single_field_modes(&self) -> Vec<IndexMode> {
         let mut modes = Vec::new();
-        if self.array {
-            modes.push(IndexMode::ArrayContains);
-        }
+        modes.extend(self.special_modes.iter().copied());
         if let Some(order) = self.order {
             modes.push(IndexMode::Ordered(order));
         } else if self.inequality || self.equality {
@@ -202,6 +200,17 @@ fn collect_usages(query: &Query) -> BTreeMap<String, FieldUsage> {
         });
         usage.order = Some(order.direction.into());
     }
+    if let Some(nearest) = query.nearest_ref()
+        && let Some(path) = nearest.vector_field.config_name()
+    {
+        let usage = usages.entry(path.clone()).or_insert_with(|| FieldUsage {
+            path,
+            ..FieldUsage::default()
+        });
+        usage
+            .special_modes
+            .insert(IndexMode::Vector(nearest.query_vector.len()));
+    }
     usages
 }
 
@@ -218,7 +227,7 @@ fn collect_filter_usages(filter: &Filter, usages: &mut BTreeMap<String, FieldUsa
             match filter.operator {
                 FieldOperator::Equal | FieldOperator::In => usage.equality = true,
                 FieldOperator::ArrayContains | FieldOperator::ArrayContainsAny => {
-                    usage.array = true;
+                    usage.special_modes.insert(IndexMode::ArrayContains);
                 }
                 FieldOperator::LessThan
                 | FieldOperator::LessThanOrEqual
@@ -241,6 +250,12 @@ fn manual_requirement(
     scope: IndexScope,
     usages: &BTreeMap<String, FieldUsage>,
 ) -> Option<IndexRequirement> {
+    let vector = usages.values().find_map(|usage| {
+        usage.special_modes.iter().find_map(|mode| match mode {
+            IndexMode::Vector(dimension) => Some((usage, *dimension)),
+            IndexMode::Ordered(_) | IndexMode::ArrayContains => None,
+        })
+    });
     let equality = usages
         .values()
         .filter(|usage| usage.equality && !usage.inequality && usage.order.is_none())
@@ -249,14 +264,18 @@ fn manual_requirement(
         .values()
         .filter(|usage| usage.inequality || usage.order.is_some())
         .collect::<Vec<_>>();
-    let requires_manual = range_or_order.len() > 1
+    let requires_manual = vector.is_some()
+        || range_or_order.len() > 1
         || (!equality.is_empty() && range_or_order.iter().any(|usage| !usage.equality));
     if !requires_manual {
         return None;
     }
 
     let mut fields = Vec::new();
-    for usage in usages.values().filter(|usage| usage.array) {
+    for usage in usages
+        .values()
+        .filter(|usage| usage.special_modes.contains(&IndexMode::ArrayContains))
+    {
         fields.push(IndexRequirementField {
             field_path: usage.path.clone(),
             mode: IndexMode::ArrayContains,
@@ -277,7 +296,15 @@ fn manual_requirement(
             mode: IndexMode::Ordered(usage.order.unwrap_or(IndexDirection::Ascending)),
         });
     }
-    (fields.len() > 1).then(|| IndexRequirement {
+    if let Some((vector, dimension)) = vector
+        && fields.iter().all(|field| field.field_path != vector.path)
+    {
+        fields.push(IndexRequirementField {
+            field_path: vector.path.clone(),
+            mode: IndexMode::Vector(dimension),
+        });
+    }
+    requires_manual.then(|| IndexRequirement {
         collection_group: collection_group.to_owned(),
         query_scope: scope,
         fields,
@@ -378,7 +405,7 @@ struct RawIndexField {
     #[serde(alias = "mode")]
     order: Option<RawDirection>,
     array_config: Option<RawArrayConfig>,
-    vector_config: Option<serde_json::Value>,
+    vector_config: Option<RawVectorConfig>,
 }
 
 impl RawIndexField {
@@ -394,7 +421,7 @@ struct RawIndexMode {
     query_scope: RawScope,
     order: Option<RawDirection>,
     array_config: Option<RawArrayConfig>,
-    vector_config: Option<serde_json::Value>,
+    vector_config: Option<RawVectorConfig>,
 }
 
 impl RawIndexMode {
@@ -406,17 +433,29 @@ impl RawIndexMode {
 fn raw_mode(
     order: Option<RawDirection>,
     array_config: Option<RawArrayConfig>,
-    vector_config: Option<&serde_json::Value>,
+    vector_config: Option<&RawVectorConfig>,
 ) -> Result<IndexMode, IndexConfigError> {
     match (order, array_config, vector_config) {
         (Some(order), None, None) => Ok(IndexMode::Ordered(order.into())),
         (None, Some(RawArrayConfig::Contains), None) => Ok(IndexMode::ArrayContains),
-        (None, None, Some(_)) => Ok(IndexMode::Vector),
+        (None, None, Some(config)) if config.dimension > 0 => {
+            Ok(IndexMode::Vector(config.dimension))
+        }
         _ => Err(IndexConfigError::InvalidDefinition(
             "an index field must define exactly one mode".to_owned(),
         )),
     }
 }
+
+#[derive(Debug, Deserialize)]
+struct RawVectorConfig {
+    dimension: usize,
+    #[serde(rename = "flat")]
+    _flat: RawFlatVectorConfig,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawFlatVectorConfig {}
 
 #[derive(Debug, Default, Clone, Copy, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -483,6 +522,13 @@ mod tests {
             { "fieldPath": "group", "order": "ASCENDING" },
             { "fieldPath": "score", "order": "ASCENDING" }
           ]
+        },
+        {
+          "collectionGroup": "vectors",
+          "queryScope": "COLLECTION",
+          "fields": [
+            { "fieldPath": "embedding", "vectorConfig": { "dimension": 3, "flat": {} } }
+          ]
         }
       ],
       "fieldOverrides": [
@@ -507,6 +553,38 @@ mod tests {
             operator: FieldOperator::Equal,
             value: Value::String(Arc::from("value")),
         })
+    }
+
+    fn vector_query(collection: &str) -> Query {
+        Query::new(
+            StructuredQueryScope::collection(format!("runs/run/{collection}"))
+                .expect("valid scope"),
+        )
+        .find_nearest(
+            field("embedding"),
+            vec![0.0, 0.0, 0.0],
+            crate::DistanceMeasure::Euclidean,
+            3,
+            None,
+            None,
+        )
+        .expect("valid vector query")
+    }
+
+    #[test]
+    fn vector_indexes_are_always_explicit() {
+        let catalog = IndexCatalog::from_json(INDEXES).expect("catalog should parse");
+        catalog
+            .validate(&vector_query("vectors"))
+            .expect("declared vector index should match");
+        assert!(matches!(
+            catalog.validate(&vector_query("missing_vectors")),
+            Err(IndexConfigError::Missing(IndexRequirement { fields, .. }))
+                if fields == [IndexRequirementField {
+                    field_path: "embedding".to_owned(),
+                    mode: IndexMode::Vector(3),
+                }]
+        ));
     }
 
     #[test]

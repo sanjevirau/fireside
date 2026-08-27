@@ -21,8 +21,9 @@ pub use indexes::{
     IndexRequirementField, IndexScope,
 };
 pub use query::{
-    Aggregation, Cursor, Direction, FieldFilter, FieldOperator, FieldPath, Filter, Limit, Order,
-    PartitionCursor, Query, QueryDocument, QueryError, QueryScope, aggregate, execute, partition,
+    Aggregation, Cursor, Direction, DistanceMeasure, FieldFilter, FieldOperator, FieldPath, Filter,
+    Limit, Nearest, Order, PartitionCursor, Query, QueryDocument, QueryError, QueryScope,
+    aggregate, execute, partition,
 };
 
 const STANDARD_INDEXED_VALUE_BYTES: usize = 1_500;

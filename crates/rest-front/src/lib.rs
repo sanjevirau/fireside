@@ -19,8 +19,9 @@ use fireside_core_store::{
 };
 use fireside_export_format::{ExportedDocument, write_export};
 use fireside_query_engine::{
-    DatabaseEdition, Direction, FieldFilter, FieldOperator, FieldPath as QueryFieldPath, Filter,
-    Limit, Query as StructuredQuery, QueryPolicy, QueryScope, execute,
+    DatabaseEdition, Direction, DistanceMeasure, FieldFilter, FieldOperator,
+    FieldPath as QueryFieldPath, Filter, Limit, Query as StructuredQuery, QueryPolicy, QueryScope,
+    execute,
 };
 use serde::Deserialize;
 use serde_json::{Map, Value as JsonValue, json};
@@ -556,7 +557,70 @@ fn decode_query(
             usize::try_from(limit).map_err(|_| RestError::invalid("query limit is too large"))?,
         ));
     }
+    if let Some(nearest) = structured.get("findNearest") {
+        query = decode_nearest(query, nearest)?;
+    }
     Ok(query)
+}
+
+fn decode_nearest(query: StructuredQuery, value: &JsonValue) -> Result<StructuredQuery, RestError> {
+    let nearest = value
+        .as_object()
+        .ok_or_else(|| RestError::invalid("findNearest must be an object"))?;
+    let vector_field = nearest
+        .get("vectorField")
+        .and_then(JsonValue::as_object)
+        .and_then(|field| field.get("fieldPath"))
+        .and_then(JsonValue::as_str)
+        .ok_or_else(|| RestError::invalid("findNearest vectorField is required"))?;
+    let query_vector = nearest
+        .get("queryVector")
+        .ok_or_else(|| RestError::invalid("findNearest queryVector is required"))?;
+    let Value::Vector(query_vector) = decode_value(query_vector)? else {
+        return Err(RestError::invalid(
+            "findNearest queryVector must be a vector value",
+        ));
+    };
+    let distance_measure = match nearest.get("distanceMeasure").and_then(JsonValue::as_str) {
+        Some("EUCLIDEAN") => DistanceMeasure::Euclidean,
+        Some("COSINE") => DistanceMeasure::Cosine,
+        Some("DOT_PRODUCT") => DistanceMeasure::DotProduct,
+        _ => {
+            return Err(RestError::invalid(
+                "findNearest distanceMeasure is required",
+            ));
+        }
+    };
+    let limit = nearest
+        .get("limit")
+        .and_then(JsonValue::as_u64)
+        .ok_or_else(|| RestError::invalid("findNearest limit is required"))?;
+    let limit =
+        usize::try_from(limit).map_err(|_| RestError::invalid("findNearest limit is too large"))?;
+    let distance_result_field = nearest
+        .get("distanceResultField")
+        .and_then(JsonValue::as_str)
+        .filter(|field| !field.is_empty())
+        .map(decode_query_field)
+        .transpose()?;
+    let distance_threshold = nearest
+        .get("distanceThreshold")
+        .map(|threshold| {
+            threshold
+                .as_f64()
+                .ok_or_else(|| RestError::invalid("findNearest distanceThreshold must be a number"))
+        })
+        .transpose()?;
+    query
+        .find_nearest(
+            decode_query_field(vector_field)?,
+            query_vector,
+            distance_measure,
+            limit,
+            distance_result_field,
+            distance_threshold,
+        )
+        .map_err(|error| RestError::invalid(error.to_string()))
 }
 
 fn decode_filter(value: &JsonValue) -> Result<Filter, RestError> {

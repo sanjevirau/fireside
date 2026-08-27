@@ -247,6 +247,25 @@ implicit document-name tie-break. These contracts live in
 `conformance/test/query-ordering.test.ts` and currently agree between Cloud and
 Java.
 
+`conformance/test/vector-query.test.ts` pins nearest-vector execution through
+the Admin SDK's gRPC transport and a raw REST `runQuery`. Production, Java
+v1.22.0, and Fireside agree that Euclidean and cosine distances sort ascending,
+dot products sort descending, the nearest limit is applied after distance
+ordering, and the optional distance-result field contains the computed double.
+They also agree that missing vectors and vectors with the wrong dimension are
+excluded. Thresholds are inclusive: Euclidean and cosine retain distances less
+than or equal to the threshold, while dot product retains scores greater than
+or equal to it. The production fixture uses the checked-in three-dimensional
+flat vector index. A production probe before that index became ready returned
+status 9 (`FAILED_PRECONDITION`), while Java executed the same query without an
+index; Fireside's strict mode requires the explicit `vectorConfig`, preserving
+this instance of the existing Java index-enforcement deviation. The configured
+dimension is part of the index identity: production returns status 9 and asks
+for a separate index when a two-dimensional query targets the three-dimensional
+index, Java instead evaluates the two-dimensional document, and Fireside
+matches production in strict mode while retaining Java's permissive behavior in
+default mode.
+
 `conformance/test/query-features.test.ts` pins every listed field operator,
 implicit inequality ordering, descending document-name tie-breaking, all four
 cursor boundaries, limit/limit-to-last/offset, projections, document-ID

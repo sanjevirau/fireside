@@ -29,6 +29,9 @@ Both databases apply TTL to `_fireside_expires_at` in the
 Tests also delete their own data immediately; TTL is a crash/interruption
 backstop.
 
+The later nearest-vector fixture added the same TTL backstop for the
+`fireside_vector_conformance` collection group in `(default)`.
+
 ## Conformance indexes
 
 The first collection-group query was intentionally run before its index was
@@ -46,6 +49,12 @@ returned no partition points; after activation, the same 256-document request
 returned usable splits. Exact cursor placement is intentionally not asserted:
 successive production probes returned one, two, and three valid points as the
 physical index layout changed.
+
+The nearest-vector fixture has a three-dimensional flat collection-scope index
+on `fireside_vector_conformance.embedding`, also recorded in the checked-in
+index file. Production returned status 9 while the index was provisioning and
+executed the identical query after it reached `READY`; Java executed it without
+an index.
 
 ## Safety boundary
 

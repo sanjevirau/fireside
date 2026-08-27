@@ -203,6 +203,28 @@ pub enum Limit {
     Last(usize),
 }
 
+/// Distance calculation used by a nearest-neighbor vector query.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DistanceMeasure {
+    /// Euclidean L2 distance; smaller values are more similar.
+    Euclidean,
+    /// Cosine distance (`1 - cosine_similarity`); smaller values are more similar.
+    Cosine,
+    /// Raw dot product; larger values are more similar.
+    DotProduct,
+}
+
+/// Vector nearest-neighbor stage applied after scope and filters.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Nearest {
+    pub(crate) vector_field: FieldPath,
+    pub(crate) query_vector: Vec<f64>,
+    pub(crate) distance_measure: DistanceMeasure,
+    pub(crate) limit: usize,
+    pub(crate) distance_result_field: Option<FieldPath>,
+    pub(crate) distance_threshold: Option<f64>,
+}
+
 /// An executable structured query.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Query {
@@ -215,6 +237,7 @@ pub struct Query {
     offset: usize,
     limit: Option<Limit>,
     projection: Option<Vec<FieldPath>>,
+    nearest: Option<Nearest>,
 }
 
 impl Query {
@@ -230,6 +253,7 @@ impl Query {
             offset: 0,
             limit: None,
             projection: None,
+            nearest: None,
         }
     }
 
@@ -314,6 +338,40 @@ impl Query {
         self
     }
 
+    /// Adds a production-style vector nearest-neighbor stage.
+    pub fn find_nearest(
+        mut self,
+        vector_field: FieldPath,
+        query_vector: Vec<f64>,
+        distance_measure: DistanceMeasure,
+        limit: usize,
+        distance_result_field: Option<FieldPath>,
+        distance_threshold: Option<f64>,
+    ) -> Result<Self, QueryError> {
+        if matches!(vector_field, FieldPath::DocumentId)
+            || distance_result_field
+                .as_ref()
+                .is_some_and(|field| matches!(field, FieldPath::DocumentId))
+        {
+            return Err(QueryError::InvalidVectorField);
+        }
+        if query_vector.is_empty() || query_vector.len() > 2_048 {
+            return Err(QueryError::InvalidQueryVectorDimension);
+        }
+        if limit == 0 || limit > 1_000 {
+            return Err(QueryError::InvalidVectorLimit);
+        }
+        self.nearest = Some(Nearest {
+            vector_field,
+            query_vector,
+            distance_measure,
+            limit,
+            distance_result_field,
+            distance_threshold,
+        });
+        Ok(self)
+    }
+
     pub(crate) const fn scope_ref(&self) -> &QueryScope {
         &self.scope
     }
@@ -324,6 +382,10 @@ impl Query {
 
     pub(crate) fn orders_ref(&self) -> &[Order] {
         &self.orders
+    }
+
+    pub(crate) const fn nearest_ref(&self) -> Option<&Nearest> {
+        self.nearest.as_ref()
     }
 }
 
@@ -370,6 +432,9 @@ pub fn execute(
     query: &Query,
     edition: DatabaseEdition,
 ) -> Result<Vec<QueryDocument>, QueryError> {
+    if let Some(nearest) = &query.nearest {
+        return execute_nearest(snapshot, database, query, nearest, edition);
+    }
     let orders = normalized_orders(query);
     validate_cursor(query.start.as_ref(), &orders)?;
     validate_cursor(query.end.as_ref(), &orders)?;
@@ -428,6 +493,148 @@ pub fn execute(
         .collect())
 }
 
+fn execute_nearest(
+    snapshot: &Snapshot,
+    database: &DatabaseName,
+    query: &Query,
+    nearest: &Nearest,
+    edition: DatabaseEdition,
+) -> Result<Vec<QueryDocument>, QueryError> {
+    if query.start.is_some() || query.end.is_some() || matches!(query.limit, Some(Limit::Last(_))) {
+        return Err(QueryError::UnsupportedVectorShape);
+    }
+    let mut candidates = snapshot
+        .documents(database)
+        .into_iter()
+        .filter(|(key, _)| scope_matches(&query.scope, query.ancestor.as_deref(), key))
+        .filter(|(key, document)| {
+            query
+                .filter
+                .as_ref()
+                .is_none_or(|filter| filter_matches(filter, key, document, edition))
+        })
+        .filter_map(|(key, document)| {
+            let distance = vector_distance(document.fields(), nearest)?;
+            threshold_matches(distance, nearest).then_some((key, document, distance))
+        })
+        .collect::<Vec<_>>();
+    candidates.sort_by(|(left_key, _, left), (right_key, _, right)| {
+        let ordering = left.total_cmp(right);
+        let ordering = if nearest.distance_measure == DistanceMeasure::DotProduct {
+            ordering.reverse()
+        } else {
+            ordering
+        };
+        ordering.then_with(|| left_key.path().split('/').cmp(right_key.path().split('/')))
+    });
+    let limit = query.limit.map_or(nearest.limit, |limit| match limit {
+        Limit::First(limit) | Limit::Last(limit) => limit.min(nearest.limit),
+    });
+    Ok(candidates
+        .into_iter()
+        .skip(query.offset)
+        .take(limit)
+        .map(|(key, document, distance)| QueryDocument {
+            projected_fields: projected_nearest_fields(
+                document.fields(),
+                query.projection.as_deref(),
+                nearest.distance_result_field.as_ref(),
+                distance,
+            ),
+            key,
+            document,
+        })
+        .collect())
+}
+
+fn vector_distance(fields: &Fields, nearest: &Nearest) -> Option<f64> {
+    let FieldPath::Field(segments) = &nearest.vector_field else {
+        return None;
+    };
+    let Value::Vector(vector) = nested_value(fields, segments)? else {
+        return None;
+    };
+    if vector.len() != nearest.query_vector.len() {
+        return None;
+    }
+    let distance = match nearest.distance_measure {
+        DistanceMeasure::Euclidean => vector
+            .iter()
+            .zip(&nearest.query_vector)
+            .fold(0_f64, |norm, (left, right)| norm.hypot(left - right)),
+        DistanceMeasure::DotProduct => vector
+            .iter()
+            .zip(&nearest.query_vector)
+            .map(|(left, right)| left * right)
+            .sum(),
+        DistanceMeasure::Cosine => {
+            let (dot, left_norm, right_norm) = vector.iter().zip(&nearest.query_vector).fold(
+                (0.0, 0.0, 0.0),
+                |(dot, left_norm, right_norm), (left, right)| {
+                    (
+                        dot + left * right,
+                        left_norm + left * left,
+                        right_norm + right * right,
+                    )
+                },
+            );
+            let denominator = (left_norm * right_norm).sqrt();
+            if denominator == 0.0 {
+                return None;
+            }
+            1.0 - dot / denominator
+        }
+    };
+    distance.is_finite().then_some(distance)
+}
+
+fn threshold_matches(distance: f64, nearest: &Nearest) -> bool {
+    nearest.distance_threshold.is_none_or(|threshold| {
+        if nearest.distance_measure == DistanceMeasure::DotProduct {
+            distance >= threshold
+        } else {
+            distance <= threshold
+        }
+    })
+}
+
+fn projected_nearest_fields(
+    fields: &Fields,
+    projection: Option<&[FieldPath]>,
+    result_field: Option<&FieldPath>,
+    distance: f64,
+) -> Option<Fields> {
+    if projection.is_none() && result_field.is_none() {
+        return None;
+    }
+    let mut result =
+        projection.map_or_else(|| fields.clone(), |projection| project(fields, projection));
+    if let Some(FieldPath::Field(segments)) = result_field {
+        insert_nested_value(&mut result, segments, Value::Double(distance));
+    }
+    Some(result)
+}
+
+fn insert_nested_value(fields: &mut Fields, segments: &[String], value: Value) {
+    let Some((first, rest)) = segments.split_first() else {
+        return;
+    };
+    if rest.is_empty() {
+        fields.insert(first.clone(), value);
+        return;
+    }
+    let nested = fields
+        .entry(first.clone())
+        .or_insert_with(|| Value::Map(Fields::new()));
+    if !matches!(nested, Value::Map(_)) {
+        *nested = Value::Map(Fields::new());
+    }
+    let Value::Map(nested) = nested else {
+        unreachable!("nested field was replaced with a map")
+    };
+    insert_nested_value(nested, rest, value);
+}
+
 /// Produces deterministic split points for a supported collection-group query.
 ///
 /// Production may return fewer points because placement follows its physical
@@ -484,6 +691,7 @@ fn supported_partition_query(query: &Query) -> bool {
         && query.offset == 0
         && query.limit.is_none()
         && query.projection.is_none()
+        && query.nearest.is_none()
 }
 
 /// Aggregation requested after query filtering, ordering, cursors, offset, and
@@ -889,6 +1097,10 @@ pub enum QueryError {
     CursorTooLong,
     InvalidPartitionCount,
     UnsupportedPartitionQuery,
+    InvalidVectorField,
+    InvalidQueryVectorDimension,
+    InvalidVectorLimit,
+    UnsupportedVectorShape,
 }
 
 impl Display for QueryError {
@@ -905,6 +1117,18 @@ impl Display for QueryError {
             Self::UnsupportedPartitionQuery => formatter.write_str(
                 "partition queries require an unshaped collection-group query ordered by document name ascending",
             ),
+            Self::InvalidVectorField => {
+                formatter.write_str("vector fields must be document field paths")
+            }
+            Self::InvalidQueryVectorDimension => {
+                formatter.write_str("query vectors require between 1 and 2048 dimensions")
+            }
+            Self::InvalidVectorLimit => {
+                formatter.write_str("vector query limits require a value between 1 and 1000")
+            }
+            Self::UnsupportedVectorShape => {
+                formatter.write_str("vector queries do not support cursors or limit-to-last")
+            }
         }
     }
 }
@@ -998,6 +1222,29 @@ mod tests {
         )
     }
 
+    fn vector_snapshot() -> (DatabaseName, Snapshot) {
+        let database = database();
+        let store = Store::default();
+        let cases = [
+            ("a", vec![1.0, 0.0, 0.0]),
+            ("b", vec![0.5, 2.0, 0.0]),
+            ("c", vec![-2.0, 0.0, 0.0]),
+            ("mismatch", vec![1.0, 0.0]),
+        ];
+        let writes = cases.map(|(id, embedding)| Write::Set {
+            key: DocumentKey::new(
+                database.clone(),
+                format!("runs/run/fireside_vector_conformance/{id}"),
+            )
+            .expect("valid key"),
+            fields: BTreeMap::from([("embedding".to_owned(), Value::Vector(embedding))]),
+            transforms: Vec::new(),
+            precondition: Precondition::None,
+        });
+        store.commit(&writes).expect("seed should commit");
+        (database, store.snapshot())
+    }
+
     fn ids(database: &DatabaseName, snapshot: &Snapshot, query: &Query) -> Vec<String> {
         execute(snapshot, database, query, DatabaseEdition::Standard)
             .expect("query should execute")
@@ -1012,6 +1259,42 @@ mod tests {
                     .to_owned()
             })
             .collect()
+    }
+
+    #[test]
+    fn nearest_vectors_apply_all_distance_measures_and_thresholds() {
+        let (database, snapshot) = vector_snapshot();
+        let scope = || {
+            QueryScope::collection("runs/run/fireside_vector_conformance")
+                .expect("valid collection scope")
+        };
+        let nearest = |measure, vector, threshold| {
+            Query::new(scope())
+                .find_nearest(
+                    field("embedding"),
+                    vector,
+                    measure,
+                    3,
+                    Some(field("distance")),
+                    threshold,
+                )
+                .expect("valid nearest query")
+        };
+
+        let euclidean = nearest(DistanceMeasure::Euclidean, vec![0.0, 0.0, 0.0], None);
+        assert_eq!(ids(&database, &snapshot, &euclidean), ["a", "c", "b"]);
+        let results = execute(&snapshot, &database, &euclidean, DatabaseEdition::Standard)
+            .expect("query should execute");
+        assert!(matches!(
+            results[0].fields().get("distance"),
+            Some(Value::Double(1.0))
+        ));
+
+        let cosine = nearest(DistanceMeasure::Cosine, vec![1.0, 0.0, 0.0], None);
+        assert_eq!(ids(&database, &snapshot, &cosine), ["a", "b", "c"]);
+
+        let dot = nearest(DistanceMeasure::DotProduct, vec![1.0, 0.0, 0.0], Some(0.5));
+        assert_eq!(ids(&database, &snapshot, &dot), ["a", "b"]);
     }
 
     #[test]

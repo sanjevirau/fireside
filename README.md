@@ -9,8 +9,8 @@ target, not the specification.
 
 > [!IMPORTANT]
 > Phase 0 is complete and Phase 1 is under development. Fireside passes the
-> twenty-nine checked-in backend and control conformance cases plus its dedicated
-> strict-index case. Import/export now round-trips bidirectionally through Java
+> thirty checked-in backend and control conformance cases plus its two dedicated
+> strict-index cases. Import/export now round-trips bidirectionally through Java
 > via the public CLI and control API, and full backend conformance also runs in
 > crash-safe disk mode. The remaining Phase 1 API, expired-token RESET,
 > multi-GB benchmark, and torture gates are not yet complete.
@@ -34,9 +34,9 @@ of scope until the conformance gates are met.
 
 | Target / area | Harness smoke | Firestore APIs | Browser SDK | Rules | Suite |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Production cloud | pass (27/27; control N/A) | reference target | not implemented | not implemented | not implemented |
-| Official Java emulator | pass (29/29) | comparison target; 8 known deviations | not run | not run | not run |
-| fireside | pass (29/29 + strict 1/1) | current scope 29/29 + strict 1/1 | not implemented | not implemented | not implemented |
+| Production cloud | pass (28/28; control N/A) | reference target | not implemented | not implemented | not implemented |
+| Official Java emulator | pass (30/30) | comparison target; 8 known deviations | not run | not run | not run |
+| fireside | pass (30/30 + strict 2/2) | current scope 30/30 + strict 2/2 | not implemented | not implemented | not implemented |
 
 Cloud is the behavioral reference; Java is measured only for comparison. From
 Phase 2 onward this table will be generated from CI results.

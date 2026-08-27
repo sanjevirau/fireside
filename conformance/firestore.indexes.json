@@ -7,6 +7,16 @@
         { "fieldPath": "group", "order": "ASCENDING" },
         { "fieldPath": "score", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "fireside_vector_conformance",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "embedding",
+          "vectorConfig": { "dimension": 3, "flat": {} }
+        }
+      ]
     }
   ],
   "fieldOverrides": [

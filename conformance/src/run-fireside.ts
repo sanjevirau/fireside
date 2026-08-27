@@ -20,6 +20,7 @@ const BACKEND_TEST_FILES = [
   "test/query-ordering.test.ts",
   "test/rest.test.ts",
   "test/streaming-write.test.ts",
+  "test/vector-query.test.ts",
   "test/write-transforms.test.ts",
 ] as const;
 const strictIndexes = process.argv.includes("--strict-indexes");
