@@ -12,14 +12,19 @@ RunQuery and RunAggregationQuery planning and analyzed explain metrics,
 historical read-time selectors, precise error codes, REST, named databases, and
 ancestor-scoped collection groups, partitioning, and nearest-vector queries
 over both gRPC and REST. It also pins the Standard-edition `ExecutePipeline`
-gate; Enterprise pipeline stages require a separate Enterprise cloud oracle.
+gate and runs the initial collection/filter/sort/offset/limit/select pipeline
+fixture against a separately allowlisted Enterprise database.
 
 ```sh
 npm ci
 npm run check
 npm test
+npm run test:cloud:enterprise
 npm run test:official
+npm run test:official:enterprise
 npm run test:fireside
+npm run test:fireside:enterprise
+npm run test:fireside:enterprise:disk
 npm run test:fireside:strict
 npm run test:fireside-import
 npm run test:official-export-import
@@ -40,7 +45,11 @@ running Fireside control API and imports its output into Java.
 The `cloud` target has a hard safety interlock: both
 `CONFORMANCE_CLOUD_PROJECT` and `CONFORMANCE_CLOUD_ALLOWLIST` must be exactly
 `fireside-conformance`. Any other project is rejected before an SDK client is
-created.
+created. `npm run test:cloud:enterprise` adds a second exact interlock requiring
+database ID `fireside-enterprise-conformance`; it runs only the Enterprise
+pipeline fixture. Cloud execution is intentionally absent from public CI
+because it requires maintainer Application Default Credentials and incurs
+billable production operations.
 
 The vector fixture requires a three-dimensional flat vector index in that
 dedicated project's `(default)` database. The exact configuration is checked in
@@ -63,3 +72,8 @@ gcloud firestore fields ttls update _fireside_expires_at \
 
 Each test also deletes its randomly scoped documents immediately; TTL is only
 the interruption backstop.
+
+The Enterprise pipeline fixture uses the dedicated
+`fireside-enterprise-conformance` Native-mode Enterprise database. Its
+`fireside_pipeline_conformance._fireside_expires_at` TTL policy is active, and
+the fixture also deletes every random run immediately.

@@ -23,16 +23,19 @@ report and makes no compatibility claim.
 | --- | --- | --- | --- | --- |
 | `(default)` | Firestore Native | Standard | `nam5` | active |
 | `fireside-conformance` | Firestore Native | Standard | `nam5` | active |
+| `fireside-enterprise-conformance` | Firestore Native | Enterprise | `nam5` | active |
 
-Both databases apply TTL to `_fireside_expires_at` in the
+The Standard databases apply TTL to `_fireside_expires_at` in the
 `fireside_conformance` and `fireside_partition_conformance` collection groups.
 Tests also delete their own data immediately; TTL is a crash/interruption
 backstop.
 
-No Enterprise-edition database is provisioned. Production confirms that
-`ExecutePipeline` rejects Standard databases with status 9; Enterprise pipeline
-semantics remain outside the authorized cloud target until the maintainer
-approves creating a dedicated Enterprise database.
+The maintainer explicitly approved creating the dedicated Enterprise database
+on 2026-08-27. It has Firestore Native data access enabled, MongoDB-compatible
+data access and realtime updates disabled, and no free-tier flag. Its active
+TTL policy covers `_fireside_expires_at` in the
+`fireside_pipeline_conformance` collection group. The Enterprise cloud runner
+rejects every database ID except `fireside-enterprise-conformance`.
 
 The later nearest-vector fixture added the same TTL backstop for the
 `fireside_vector_conformance` collection group in `(default)`.
@@ -60,6 +63,13 @@ on `fireside_vector_conformance.embedding`, also recorded in the checked-in
 index file. Production returned status 9 while the index was provisioning and
 executed the identical query after it reached `READY`; Java executed it without
 an index.
+
+The initial Enterprise pipeline fixture passed 1/1 against production, Java
+v1.22.0 in Enterprise mode, and Fireside in Enterprise mode. It covers a
+collection source, greater-than filtering, ascending/descending sorting,
+offset, limit, field projection, implicit full-document metadata, and explicit
+selection of document name/create/update metadata. This is a scoped Phase 1
+oracle result, not the Phase 1 gate.
 
 ## Safety boundary
 

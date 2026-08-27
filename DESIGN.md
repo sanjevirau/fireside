@@ -341,10 +341,22 @@ the newer `ExecutePipeline` RPC. Production rejects any pipeline on a Standard
 database with status 9 (`FAILED_PRECONDITION`) and the structured reason
 `PIPELINE_REQUIRES_ENTERPRISE_EDITION`. Java v1.22.0 rejects the same request
 with status 3 (`INVALID_ARGUMENT`), a documented Java deviation. Fireside
-matches the production status in Standard mode. Enterprise stage semantics are
-unclaimed until the dedicated conformance project has an explicitly authorized
-Enterprise database; the handler remains `UNIMPLEMENTED` in Enterprise mode
-rather than guessing those semantics.
+matches the production status in Standard mode.
+
+The explicitly authorized production database
+`fireside-enterprise-conformance` is the only Enterprise cloud target admitted
+by the harness. `conformance/test/pipeline.test.ts` executes the same case
+against that database, Java v1.22.0 started with Enterprise edition, and
+Fireside started with `--database-edition enterprise`. All three pass the
+initial 1/1 fixture. The evidenced implementation covers a collection source,
+`greater_than` where expression, ascending and descending field sort, offset,
+limit, and direct-field select. With no select stage, results include all
+stored fields plus document name, create time, and update time. A select stage
+omits all three metadata values unless it explicitly selects `__name__`,
+`__create_time__`, or `__update_time__`; those reserved selections populate
+the `Document` metadata and do not appear in its field map. Other sources,
+stages, expressions, computed or aliased selections, options, and consistency
+selectors fail explicitly as unsupported until their own oracle fixtures exist.
 
 Optional `--strict-indexes` validates queries against
 `firestore.indexes.json` as production enforces composite indexes. Because the

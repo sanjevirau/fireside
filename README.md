@@ -9,11 +9,12 @@ target, not the specification.
 
 > [!IMPORTANT]
 > Phase 0 is complete and Phase 1 is under development. Fireside passes the
-> thirty-one checked-in backend and control conformance cases plus its two dedicated
-> strict-index cases. Import/export now round-trips bidirectionally through Java
-> via the public CLI and control API, and full backend conformance also runs in
-> crash-safe disk mode. The remaining Phase 1 API, expired-token RESET,
-> multi-GB benchmark, and torture gates are not yet complete.
+> thirty-one checked-in Standard-edition backend and control conformance cases,
+> its two dedicated strict-index cases, and the first Enterprise pipeline case.
+> Import/export now round-trips bidirectionally through Java via the public CLI
+> and control API, and full backend conformance also runs in crash-safe disk
+> mode. The remaining Phase 1 API, expired-token RESET, multi-GB benchmark, and
+> torture gates are not yet complete.
 
 ## Why this exists
 
@@ -34,9 +35,9 @@ of scope until the conformance gates are met.
 
 | Target / area | Harness smoke | Firestore APIs | Browser SDK | Rules | Suite |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Production cloud | pass (29/29; control N/A) | reference target | not implemented | not implemented | not implemented |
-| Official Java emulator | pass (31/31) | comparison target; 9 known deviations | not run | not run | not run |
-| fireside | pass (31/31 + strict 2/2) | current scope 31/31 + strict 2/2 | not implemented | not implemented | not implemented |
+| Production cloud | pass (Standard 29/29; Enterprise 1/1; control N/A) | reference target | not implemented | not implemented | not implemented |
+| Official Java emulator | pass (Standard 31/31; Enterprise 1/1) | comparison target; 9 known deviations | not run | not run | not run |
+| fireside | pass (Standard 31/31 + strict 2/2; Enterprise 1/1) | current measured scope | not implemented | not implemented | not implemented |
 
 Cloud is the behavioral reference; Java is measured only for comparison. From
 Phase 2 onward this table will be generated from CI results.
@@ -72,9 +73,12 @@ npm test --prefix conformance
 npm run test:fireside --prefix conformance
 npm run test:fireside:disk --prefix conformance
 npm run test:fireside:strict --prefix conformance
+npm run test:fireside:enterprise --prefix conformance
+npm run test:fireside:enterprise:disk --prefix conformance
 npm run test:fireside-disk-recovery --prefix conformance
 npm run test:fireside-import --prefix conformance
 npm run test:official --prefix conformance
+npm run test:official:enterprise --prefix conformance
 npm run test:official-export-import --prefix conformance
 npm run test:fireside-export-java-import --prefix conformance
 ```

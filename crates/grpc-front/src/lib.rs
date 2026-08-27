@@ -7,6 +7,7 @@
 
 mod codec;
 mod listen;
+mod pipeline;
 mod query_codec;
 mod service;
 mod write_stream;

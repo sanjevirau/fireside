@@ -23,6 +23,7 @@ use crate::codec::{
 };
 use crate::google::firestore::v1::batch_get_documents_request;
 use crate::google::firestore::v1::batch_get_documents_response;
+use crate::google::firestore::v1::execute_pipeline_request;
 use crate::google::firestore::v1::firestore_server::{Firestore, FirestoreServer};
 use crate::google::firestore::v1::get_document_request;
 use crate::google::firestore::v1::list_collection_ids_request;
@@ -43,6 +44,7 @@ use crate::google::firestore::v1::{
     TransactionOptions, UpdateDocumentRequest, WriteRequest, WriteResponse, WriteResult,
 };
 use crate::google::rpc;
+use crate::pipeline::{decode_pipeline, encode_pipeline_document};
 use crate::query_codec::{decode_aggregation, decode_query, query_status};
 
 pub(crate) type ResponseStream<T> = Pin<Box<dyn Stream<Item = Result<T, Status>> + Send + 'static>>;
@@ -713,16 +715,52 @@ impl Firestore for FirestoreService {
 
     async fn execute_pipeline(
         &self,
-        _request: Request<ExecutePipelineRequest>,
+        request: Request<ExecutePipelineRequest>,
     ) -> Result<Response<Self::ExecutePipelineStream>, Status> {
         if self.query_policy.edition() == DatabaseEdition::Standard {
             return Err(Status::failed_precondition(
                 "Pipeline Operations are only available for Firestore databases in Enterprise edition.\n\nPlease switch to an Enterprise edition database to take advantage of such functionality.",
             ));
         }
-        Err(Status::unimplemented(
-            "ExecutePipeline requires production fixtures",
-        ))
+        let request = request.into_inner();
+        let database = decode_database_name(&request.database)?;
+        if request.consistency_selector.is_some() {
+            return Err(Status::unimplemented(
+                "pipeline consistency selectors are not supported yet",
+            ));
+        }
+        if request.auto_commit_transaction {
+            return Err(Status::invalid_argument(
+                "auto_commit_transaction requires a transaction selector",
+            ));
+        }
+        let Some(execute_pipeline_request::PipelineType::StructuredPipeline(structured)) =
+            request.pipeline_type
+        else {
+            return Err(Status::invalid_argument("structured pipeline is required"));
+        };
+        let plan = decode_pipeline(structured)?;
+        self.query_policy
+            .validate(&plan.query)
+            .map_err(|error| index_status(&error))?;
+        let snapshot = self.store.snapshot();
+        let documents = execute(
+            &snapshot,
+            &database,
+            &plan.query,
+            self.query_policy.edition(),
+        )
+        .map_err(|error| query_status(&error))?;
+        let results = documents
+            .iter()
+            .map(|document| encode_pipeline_document(document, &plan))
+            .collect::<Result<Vec<_>, _>>()?;
+        let response = ExecutePipelineResponse {
+            results,
+            execution_time: Some(encode_timestamp(now())),
+            ..ExecutePipelineResponse::default()
+        };
+        Ok(Response::new(Box::pin(iter([Ok(response)]))))
     }
 
     type RunAggregationQueryStream = ResponseStream<RunAggregationQueryResponse>;
