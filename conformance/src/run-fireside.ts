@@ -8,6 +8,7 @@ const BACKEND_TEST_FILES = [
   "test/backend-rpcs.test.ts",
   "test/error-code-parity.test.ts",
   "test/firestore-smoke.test.ts",
+  "test/historical-reads.test.ts",
   "test/listen.test.ts",
   "test/named-database.test.ts",
   "test/partition-query.test.ts",

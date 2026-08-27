@@ -144,6 +144,12 @@ snapshot exists. The listener replay log remains separately and explicitly
 bounded; a resume point older than its floor receives `RESET` rather than
 causing unbounded retention.
 
+A second bounded index maps externally visible commit timestamps to retained
+logical revisions. It advances with the same replay floor and reconstructs the
+latest commit no newer than a requested `read_time`; timestamp lookup therefore
+does not retain otherwise unreachable MVCC roots or grow under no-op commits.
+Disk restart begins a new historical window at the recovered durable revision.
+
 Transactions include read-only and read-write modes. Read-write transactions
 track the read set, validate it atomically at commit, return the production
 conflict status, and support SDK retry behavior. Transforms and preconditions
@@ -344,6 +350,14 @@ production.
 Java v1.22.0 also returns a non-empty trailing `ListCollectionIds` page token
 after its last real item; following it yields an empty terminal page. Production
 and Fireside end the second page without that redundant request.
+
+The historical-read fixture creates two versions, deletes the document, and
+then presents the two observed commit timestamps as `read_time`. Production,
+Java v1.22.0, and Fireside reconstruct the requested version through
+`GetDocument`, `BatchGetDocuments`, `RunQuery`, `RunAggregationQuery`,
+`ListDocuments`, `ListCollectionIds`, and a read-only transaction. Expired
+timestamp status behavior remains unclaimed until a separate oracle fixture is
+captured.
 
 `conformance/test/streaming-write.test.ts` pins the production streaming Write
 handshake: the first database-only request returns a non-empty stream ID and

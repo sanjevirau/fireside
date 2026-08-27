@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use fireside_core_store::{
     CommitError, CommitResult, DatabaseName, Document, DocumentKey, FieldTransform, Snapshot,
-    Store, Timestamp, TransformOperation, Value, Write,
+    SnapshotError, Store, Timestamp, TransformOperation, Value, Write,
 };
 use fireside_query_engine::{
     DatabaseEdition, IndexConfigError, QueryDocument, QueryPolicy, aggregate, execute, partition,
@@ -16,13 +16,14 @@ use tonic::{Request, Response, Status};
 
 use crate::codec::{
     DecodedWrite, decode_database_name, decode_document_name, decode_fields, decode_parent,
-    decode_write, encode_document_masked, encode_fields, encode_timestamp, encode_value,
-    nested_value,
+    decode_timestamp, decode_write, encode_document_masked, encode_fields, encode_timestamp,
+    encode_value, nested_value,
 };
 use crate::google::firestore::v1::batch_get_documents_request;
 use crate::google::firestore::v1::batch_get_documents_response;
 use crate::google::firestore::v1::firestore_server::{Firestore, FirestoreServer};
 use crate::google::firestore::v1::get_document_request;
+use crate::google::firestore::v1::list_collection_ids_request;
 use crate::google::firestore::v1::list_documents_request;
 use crate::google::firestore::v1::partition_query_request;
 use crate::google::firestore::v1::run_aggregation_query_request;
@@ -95,11 +96,22 @@ impl FirestoreService {
         &self,
         database: DatabaseName,
         options: Option<TransactionOptions>,
-    ) -> Vec<u8> {
+    ) -> Result<Vec<u8>, Status> {
         let mut transactions = self.transaction_states();
-        let read_only = match options.and_then(|options| options.mode) {
-            None | Some(transaction_options::Mode::ReadWrite(_)) => false,
-            Some(transaction_options::Mode::ReadOnly(_)) => true,
+        let (read_only, snapshot) = match options.and_then(|options| options.mode) {
+            None | Some(transaction_options::Mode::ReadWrite(_)) => (false, self.store.snapshot()),
+            Some(transaction_options::Mode::ReadOnly(options)) => {
+                let snapshot = match options.consistency_selector {
+                    None => self.store.snapshot(),
+                    Some(transaction_options::read_only::ConsistencySelector::ReadTime(
+                        read_time,
+                    )) => self
+                        .store
+                        .snapshot_at_time(decode_timestamp(read_time)?)
+                        .map_err(snapshot_status)?,
+                };
+                (true, snapshot)
+            }
         };
         let sequence = self.next_id.fetch_add(1, Ordering::Relaxed);
         let mut token = b"fireside-txn-".to_vec();
@@ -108,12 +120,12 @@ impl FirestoreService {
             token.clone(),
             TransactionState {
                 database,
-                snapshot: self.store.snapshot(),
+                snapshot,
                 read_only,
                 reads: BTreeMap::new(),
             },
         );
-        token
+        Ok(token)
     }
 
     fn snapshot_for_transaction(
@@ -215,10 +227,19 @@ impl Firestore for FirestoreService {
         let token = match request.consistency_selector {
             None => Vec::new(),
             Some(get_document_request::ConsistencySelector::Transaction(token)) => token,
-            Some(get_document_request::ConsistencySelector::ReadTime(_)) => {
-                return Err(Status::unimplemented(
-                    "historical read timestamps are not implemented",
-                ));
+            Some(get_document_request::ConsistencySelector::ReadTime(read_time)) => {
+                let snapshot = self
+                    .store
+                    .snapshot_at_time(decode_timestamp(read_time)?)
+                    .map_err(snapshot_status)?;
+                let document = snapshot
+                    .get(&key)
+                    .ok_or_else(|| Status::not_found(format!("document not found: {key}")))?;
+                return Ok(Response::new(encode_document_masked(
+                    &key,
+                    &document,
+                    request.mask.as_ref(),
+                )?));
             }
         };
         let snapshot = if token.is_empty() {
@@ -243,16 +264,21 @@ impl Firestore for FirestoreService {
     ) -> Result<Response<ListDocumentsResponse>, Status> {
         let request = request.into_inner();
         let (database, parent) = decode_parent(&request.parent)?;
-        let token = match request.consistency_selector {
-            None => Vec::new(),
-            Some(list_documents_request::ConsistencySelector::Transaction(token)) => token,
-            Some(list_documents_request::ConsistencySelector::ReadTime(_)) => {
-                return Err(Status::unimplemented(
-                    "historical read timestamps are not implemented",
-                ));
-            }
+        let (token, historical) = match request.consistency_selector {
+            None => (Vec::new(), None),
+            Some(list_documents_request::ConsistencySelector::Transaction(token)) => (token, None),
+            Some(list_documents_request::ConsistencySelector::ReadTime(read_time)) => (
+                Vec::new(),
+                Some(
+                    self.store
+                        .snapshot_at_time(decode_timestamp(read_time)?)
+                        .map_err(snapshot_status)?,
+                ),
+            ),
         };
-        let snapshot = if token.is_empty() {
+        let snapshot = if let Some(snapshot) = historical {
+            snapshot
+        } else if token.is_empty() {
             self.store.snapshot()
         } else {
             self.snapshot_for_transaction(&database, &token)?
@@ -352,22 +378,29 @@ impl Firestore for FirestoreService {
     ) -> Result<Response<Self::BatchGetDocumentsStream>, Status> {
         let request = request.into_inner();
         let database = decode_database_name(&request.database)?;
-        let (token, new_transaction) = match request.consistency_selector {
-            None => (Vec::new(), false),
+        let (token, new_transaction, historical) = match request.consistency_selector {
+            None => (Vec::new(), false, None),
             Some(batch_get_documents_request::ConsistencySelector::Transaction(token)) => {
-                (token, false)
+                (token, false, None)
             }
             Some(batch_get_documents_request::ConsistencySelector::NewTransaction(options)) => (
-                self.begin_transaction_inner(database.clone(), Some(options)),
+                self.begin_transaction_inner(database.clone(), Some(options))?,
                 true,
+                None,
             ),
-            Some(batch_get_documents_request::ConsistencySelector::ReadTime(_)) => {
-                return Err(Status::unimplemented(
-                    "historical read timestamps are not implemented",
-                ));
-            }
+            Some(batch_get_documents_request::ConsistencySelector::ReadTime(read_time)) => (
+                Vec::new(),
+                false,
+                Some(
+                    self.store
+                        .snapshot_at_time(decode_timestamp(read_time)?)
+                        .map_err(snapshot_status)?,
+                ),
+            ),
         };
-        let snapshot = if token.is_empty() {
+        let snapshot = if let Some(snapshot) = historical {
+            snapshot
+        } else if token.is_empty() {
             self.store.snapshot()
         } else {
             self.snapshot_for_transaction(&database, &token)?
@@ -422,7 +455,7 @@ impl Firestore for FirestoreService {
     ) -> Result<Response<BeginTransactionResponse>, Status> {
         let request = request.into_inner();
         let database = decode_database_name(&request.database)?;
-        let transaction = self.begin_transaction_inner(database, request.options);
+        let transaction = self.begin_transaction_inner(database, request.options)?;
         Ok(Response::new(BeginTransactionResponse { transaction }))
     }
 
@@ -512,20 +545,29 @@ impl Firestore for FirestoreService {
         self.query_policy
             .validate(&query)
             .map_err(|error| index_status(&error))?;
-        let (token, new_transaction) = match request.consistency_selector {
-            None => (Vec::new(), false),
-            Some(run_query_request::ConsistencySelector::Transaction(token)) => (token, false),
-            Some(run_query_request::ConsistencySelector::NewTransaction(options)) => (
-                self.begin_transaction_inner(database.clone(), Some(options)),
-                true,
-            ),
-            Some(run_query_request::ConsistencySelector::ReadTime(_)) => {
-                return Err(Status::unimplemented(
-                    "historical read timestamps are not implemented",
-                ));
+        let (token, new_transaction, historical) = match request.consistency_selector {
+            None => (Vec::new(), false, None),
+            Some(run_query_request::ConsistencySelector::Transaction(token)) => {
+                (token, false, None)
             }
+            Some(run_query_request::ConsistencySelector::NewTransaction(options)) => (
+                self.begin_transaction_inner(database.clone(), Some(options))?,
+                true,
+                None,
+            ),
+            Some(run_query_request::ConsistencySelector::ReadTime(read_time)) => (
+                Vec::new(),
+                false,
+                Some(
+                    self.store
+                        .snapshot_at_time(decode_timestamp(read_time)?)
+                        .map_err(snapshot_status)?,
+                ),
+            ),
         };
-        let snapshot = if token.is_empty() {
+        let snapshot = if let Some(snapshot) = historical {
+            snapshot
+        } else if token.is_empty() {
             self.store.snapshot()
         } else {
             self.snapshot_for_transaction(&database, &token)?
@@ -595,22 +637,29 @@ impl Firestore for FirestoreService {
         self.query_policy
             .validate(&query)
             .map_err(|error| index_status(&error))?;
-        let (token, new_transaction) = match request.consistency_selector {
-            None => (Vec::new(), false),
+        let (token, new_transaction, historical) = match request.consistency_selector {
+            None => (Vec::new(), false, None),
             Some(run_aggregation_query_request::ConsistencySelector::Transaction(token)) => {
-                (token, false)
+                (token, false, None)
             }
             Some(run_aggregation_query_request::ConsistencySelector::NewTransaction(options)) => (
-                self.begin_transaction_inner(database.clone(), Some(options)),
+                self.begin_transaction_inner(database.clone(), Some(options))?,
                 true,
+                None,
             ),
-            Some(run_aggregation_query_request::ConsistencySelector::ReadTime(_)) => {
-                return Err(Status::unimplemented(
-                    "historical read timestamps are not implemented",
-                ));
-            }
+            Some(run_aggregation_query_request::ConsistencySelector::ReadTime(read_time)) => (
+                Vec::new(),
+                false,
+                Some(
+                    self.store
+                        .snapshot_at_time(decode_timestamp(read_time)?)
+                        .map_err(snapshot_status)?,
+                ),
+            ),
         };
-        let snapshot = if token.is_empty() {
+        let snapshot = if let Some(snapshot) = historical {
+            snapshot
+        } else if token.is_empty() {
             self.store.snapshot()
         } else {
             self.snapshot_for_transaction(&database, &token)?
@@ -650,11 +699,13 @@ impl Firestore for FirestoreService {
         request: Request<PartitionQueryRequest>,
     ) -> Result<Response<PartitionQueryResponse>, Status> {
         let request = request.into_inner();
-        if request.consistency_selector.is_some() {
-            return Err(Status::unimplemented(
-                "historical read timestamps are not implemented",
-            ));
-        }
+        let snapshot = match request.consistency_selector {
+            None => self.store.snapshot(),
+            Some(partition_query_request::ConsistencySelector::ReadTime(read_time)) => self
+                .store
+                .snapshot_at_time(decode_timestamp(read_time)?)
+                .map_err(snapshot_status)?,
+        };
         let (database, parent) = decode_parent(&request.parent)?;
         if parent.is_some() {
             return Err(Status::invalid_argument(
@@ -673,7 +724,7 @@ impl Firestore for FirestoreService {
         let maximum = usize::try_from(request.partition_count)
             .map_err(|_| Status::invalid_argument("partition_count must be positive"))?;
         let mut partitions = partition(
-            &self.store.snapshot(),
+            &snapshot,
             &database,
             &query,
             self.query_policy.edition(),
@@ -749,18 +800,18 @@ impl Firestore for FirestoreService {
         request: Request<ListCollectionIdsRequest>,
     ) -> Result<Response<ListCollectionIdsResponse>, Status> {
         let request = request.into_inner();
-        if request.consistency_selector.is_some() {
-            return Err(Status::unimplemented(
-                "historical read timestamps are not implemented",
-            ));
-        }
+        let snapshot = match request.consistency_selector {
+            None => self.store.snapshot(),
+            Some(list_collection_ids_request::ConsistencySelector::ReadTime(read_time)) => self
+                .store
+                .snapshot_at_time(decode_timestamp(read_time)?)
+                .map_err(snapshot_status)?,
+        };
         let (database, parent) = decode_parent(&request.parent)?;
         let parent_segments = parent
             .as_deref()
             .map_or_else(Vec::new, |path| path.split('/').collect::<Vec<_>>());
-        let mut collection_ids = self
-            .store
-            .snapshot()
+        let mut collection_ids = snapshot
             .documents(&database)
             .into_iter()
             .filter_map(|(key, _)| {
@@ -957,6 +1008,15 @@ fn commit_status(error: CommitError) -> Status {
         }
         CommitError::InvalidIncrementOperand { .. } => Status::invalid_argument(error.to_string()),
         CommitError::RevisionExhausted => Status::resource_exhausted(error.to_string()),
+    }
+}
+
+fn snapshot_status(error: SnapshotError) -> Status {
+    match error {
+        SnapshotError::ResetRequired(_) | SnapshotError::ReadTimeExpired { .. } => {
+            Status::failed_precondition(error.to_string())
+        }
+        SnapshotError::FutureRevision { .. } => Status::invalid_argument(error.to_string()),
     }
 }
 

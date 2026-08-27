@@ -463,39 +463,14 @@ impl Store {
     /// Reconstructs a retained historical snapshot from the bounded change log.
     pub fn snapshot_at(&self, revision: Revision) -> Result<Snapshot, SnapshotError> {
         let state = self.state();
-        if revision > state.revision {
-            return Err(SnapshotError::FutureRevision {
-                requested: revision,
-                current: state.revision,
-            });
-        }
-        if revision < state.change_floor {
-            return Err(SnapshotError::ResetRequired(ResetRequired {
-                requested: revision,
-                oldest_available: state.change_floor,
-            }));
-        }
+        state.snapshot_at_revision(revision)
+    }
 
-        let mut documents = state.documents.clone();
-        for change in state
-            .change_log
-            .iter()
-            .rev()
-            .filter(|change| change.revision > revision)
-        {
-            match &change.before {
-                Some(document) => {
-                    documents.insert(change.key.clone(), document.clone());
-                }
-                None => {
-                    documents.remove(&change.key);
-                }
-            }
-        }
-        Ok(Snapshot {
-            revision,
-            documents,
-        })
+    /// Reconstructs the latest retained snapshot whose commit timestamp is no
+    /// newer than `read_time`.
+    pub fn snapshot_at_time(&self, read_time: Timestamp) -> Result<Snapshot, SnapshotError> {
+        let state = self.state();
+        state.snapshot_at_time(read_time)
     }
 
     /// Atomically validates and applies a sequence of writes.
@@ -649,6 +624,13 @@ pub enum SnapshotError {
         /// Latest committed revision.
         current: Revision,
     },
+    /// The requested timestamp predates the bounded timestamp index.
+    ReadTimeExpired {
+        /// Requested historical timestamp.
+        requested: Timestamp,
+        /// Oldest timestamp that can still be resolved.
+        oldest_available: Timestamp,
+    },
 }
 
 impl Display for SnapshotError {
@@ -660,6 +642,13 @@ impl Display for SnapshotError {
                 "revision {} is newer than current revision {}",
                 requested.get(),
                 current.get()
+            ),
+            Self::ReadTimeExpired {
+                requested,
+                oldest_available,
+            } => write!(
+                formatter,
+                "read time {requested:?} is older than retained history {oldest_available:?}"
             ),
         }
     }
@@ -738,6 +727,14 @@ struct State {
     documents: OrdMap<DocumentKey, Arc<Document>>,
     change_log: VecDeque<Change>,
     change_floor: Revision,
+    commit_times: VecDeque<CommitPoint>,
+    history_floor: CommitPoint,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct CommitPoint {
+    revision: Revision,
+    commit_time: Timestamp,
 }
 
 impl State {
@@ -753,6 +750,14 @@ impl State {
             documents: OrdMap::new(),
             change_log: VecDeque::new(),
             change_floor: Revision::ZERO,
+            commit_times: VecDeque::new(),
+            history_floor: CommitPoint {
+                revision: Revision::ZERO,
+                commit_time: Timestamp {
+                    seconds: 0,
+                    nanos: 0,
+                },
+            },
         }
     }
 
@@ -770,6 +775,11 @@ impl State {
             documents,
             change_log: VecDeque::new(),
             change_floor: revision,
+            commit_times: VecDeque::new(),
+            history_floor: CommitPoint {
+                revision,
+                commit_time: last_commit_time,
+            },
         }
     }
 
@@ -824,6 +834,62 @@ impl State {
         for change in plan.changes {
             self.push_change(change);
         }
+        self.push_commit_point(CommitPoint {
+            revision: plan.result.revision,
+            commit_time: plan.result.commit_time,
+        });
+    }
+
+    fn snapshot_at_revision(&self, revision: Revision) -> Result<Snapshot, SnapshotError> {
+        if revision > self.revision {
+            return Err(SnapshotError::FutureRevision {
+                requested: revision,
+                current: self.revision,
+            });
+        }
+        if revision < self.change_floor {
+            return Err(SnapshotError::ResetRequired(ResetRequired {
+                requested: revision,
+                oldest_available: self.change_floor,
+            }));
+        }
+
+        let mut documents = self.documents.clone();
+        for change in self
+            .change_log
+            .iter()
+            .rev()
+            .filter(|change| change.revision > revision)
+        {
+            match &change.before {
+                Some(document) => {
+                    documents.insert(change.key.clone(), document.clone());
+                }
+                None => {
+                    documents.remove(&change.key);
+                }
+            }
+        }
+        Ok(Snapshot {
+            revision,
+            documents,
+        })
+    }
+
+    fn snapshot_at_time(&self, read_time: Timestamp) -> Result<Snapshot, SnapshotError> {
+        if read_time < self.history_floor.commit_time {
+            return Err(SnapshotError::ReadTimeExpired {
+                requested: read_time,
+                oldest_available: self.history_floor.commit_time,
+            });
+        }
+        let revision = self
+            .commit_times
+            .iter()
+            .take_while(|point| point.commit_time <= read_time)
+            .last()
+            .map_or(self.history_floor.revision, |point| point.revision);
+        self.snapshot_at_revision(revision)
     }
 
     fn next_commit_time(&self) -> Timestamp {
@@ -847,6 +913,24 @@ impl State {
         while self.change_log.len() > self.options.max_change_log_entries {
             if let Some(removed) = self.change_log.pop_front() {
                 self.change_floor = self.change_floor.max(removed.revision);
+            }
+        }
+    }
+
+    fn push_commit_point(&mut self, point: CommitPoint) {
+        self.commit_times.push_back(point);
+        while self.commit_times.len() > self.options.max_change_log_entries {
+            if let Some(removed) = self.commit_times.pop_front() {
+                self.history_floor = removed;
+            }
+        }
+        while self
+            .commit_times
+            .front()
+            .is_some_and(|point| point.revision <= self.change_floor)
+        {
+            if let Some(removed) = self.commit_times.pop_front() {
+                self.history_floor = removed;
             }
         }
     }
@@ -1233,6 +1317,88 @@ mod tests {
                 .snapshot()
                 .get(&key)
                 .expect("new value should exist")
+                .fields(),
+            &fields(Value::Integer(2))
+        );
+    }
+
+    #[test]
+    fn commit_timestamps_reconstruct_versions_after_deletion() {
+        let store = Store::default();
+        let key = key(&database("(default)"), "items/history");
+        let first = store
+            .commit(&[Write::Create {
+                key: key.clone(),
+                fields: fields(Value::String(Arc::from("first"))),
+            }])
+            .unwrap();
+        let second = store
+            .commit(&[Write::Set {
+                key: key.clone(),
+                fields: fields(Value::String(Arc::from("second"))),
+                transforms: Vec::new(),
+                precondition: Precondition::None,
+            }])
+            .unwrap();
+        store
+            .commit(&[Write::Delete {
+                key: key.clone(),
+                precondition: Precondition::None,
+            }])
+            .unwrap();
+
+        assert_eq!(
+            store
+                .snapshot_at_time(first.commit_time)
+                .unwrap()
+                .get(&key)
+                .unwrap()
+                .fields(),
+            &fields(Value::String(Arc::from("first")))
+        );
+        assert_eq!(
+            store
+                .snapshot_at_time(second.commit_time)
+                .unwrap()
+                .get(&key)
+                .unwrap()
+                .fields(),
+            &fields(Value::String(Arc::from("second")))
+        );
+        assert!(store.snapshot().get(&key).is_none());
+    }
+
+    #[test]
+    fn timestamp_index_expires_with_the_bounded_change_window() {
+        let store = Store::new(StoreOptions {
+            max_change_log_entries: 2,
+        });
+        let key = key(&database("(default)"), "items/history-floor");
+        let mut commit_times = Vec::new();
+        for value in 1..=4 {
+            commit_times.push(
+                store
+                    .commit(&[Write::Set {
+                        key: key.clone(),
+                        fields: fields(Value::Integer(value)),
+                        transforms: Vec::new(),
+                        precondition: Precondition::None,
+                    }])
+                    .unwrap()
+                    .commit_time,
+            );
+        }
+
+        assert!(matches!(
+            store.snapshot_at_time(commit_times[0]),
+            Err(SnapshotError::ReadTimeExpired { .. })
+        ));
+        assert_eq!(
+            store
+                .snapshot_at_time(commit_times[1])
+                .unwrap()
+                .get(&key)
+                .unwrap()
                 .fields(),
             &fields(Value::Integer(2))
         );

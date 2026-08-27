@@ -493,7 +493,7 @@ fn decode_resume_token(token: &[u8]) -> Result<Revision, Status> {
 
 fn resume_snapshot_status(error: SnapshotError) -> Status {
     match error {
-        SnapshotError::ResetRequired(_) => {
+        SnapshotError::ResetRequired(_) | SnapshotError::ReadTimeExpired { .. } => {
             Status::failed_precondition("listen resume token has expired")
         }
         SnapshotError::FutureRevision { .. } => Status::invalid_argument(error.to_string()),

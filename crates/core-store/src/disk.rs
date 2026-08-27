@@ -12,7 +12,7 @@ use redb::{Database, Durability, ReadableDatabase, ReadableTable, TableDefinitio
 
 use super::{
     Change, CommitError, CommitPlan, CommitResult, Document, DocumentKey, ResetRequired, Revision,
-    Snapshot, State, StoreOptions, Timestamp, Write,
+    Snapshot, SnapshotError, State, StoreOptions, Timestamp, Write,
 };
 
 const DOCUMENTS: TableDefinition<&[u8], &[u8]> = TableDefinition::new("documents_v1");
@@ -96,6 +96,16 @@ impl DiskStore {
             revision: state.memory.revision,
             documents: state.memory.documents.clone(),
         }
+    }
+
+    /// Reconstructs a retained historical snapshot by logical revision.
+    pub fn snapshot_at(&self, revision: Revision) -> Result<Snapshot, SnapshotError> {
+        self.state().memory.snapshot_at_revision(revision)
+    }
+
+    /// Reconstructs a retained historical snapshot by commit timestamp.
+    pub fn snapshot_at_time(&self, read_time: Timestamp) -> Result<Snapshot, SnapshotError> {
+        self.state().memory.snapshot_at_time(read_time)
     }
 
     /// Durably commits writes before making them visible or acknowledging the

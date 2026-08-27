@@ -6,7 +6,8 @@ target; Java is retained as a measured comparison target.
 
 The current backend cases cover SDK CRUD and listeners, paginated list RPCs,
 non-atomic BatchWrite status ordering, queries, transactions, transforms,
-precise error codes, REST, named databases, and partitioning.
+historical read-time selectors, precise error codes, REST, named databases, and
+partitioning.
 
 ```sh
 npm ci
