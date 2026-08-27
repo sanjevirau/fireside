@@ -8,9 +8,9 @@ differential conformance harness. The official Java emulator is a comparison
 target, not the specification.
 
 > [!IMPORTANT]
-> Phase 0 is complete and Phase 1 is under development. This is not yet a
-> usable Firestore emulator, and no fireside compatibility claim is made beyond
-> the checked-in core invariants.
+> Phase 0 is complete and Phase 1 is under development. Fireside passes the
+> eight checked-in backend conformance cases, but the remaining Phase 1 API,
+> persistence, import/export, listener, and torture gates are not yet complete.
 
 ## Why this exists
 
@@ -30,9 +30,9 @@ of scope until the conformance gates are met.
 
 | Target / area | Harness smoke | Firestore APIs | Browser SDK | Rules | Suite |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Production cloud | pass (8/8) | oracle only | not implemented | not implemented | not implemented |
-| Official Java emulator | pass (8/8) | oracle only | not run | not run | not run |
-| fireside | harness only | not implemented | not implemented | not implemented | not implemented |
+| Production cloud | pass (8/8) | reference target | not implemented | not implemented | not implemented |
+| Official Java emulator | pass (8/8) | comparison target | not run | not run | not run |
+| fireside | pass (8/8) | current scope 8/8 | not implemented | not implemented | not implemented |
 
 “Oracle only” means the target is exercised to validate the harness; it is not
 a compatibility claim for fireside. From Phase 2 onward this table will be
@@ -61,13 +61,14 @@ cargo test --workspace --all-targets --all-features
 npm ci --prefix conformance
 npm run check --prefix conformance
 npm test --prefix conformance
+npm run test:fireside --prefix conformance
 npm run test:official --prefix conformance
 ```
 
-The last command asks the pinned `firebase-tools` package to download and run
-the official Java emulator, then executes the smoke suite through the real
-Google Cloud Firestore Node SDK. It uses the synthetic project ID
-`demo-fireside-phase0` and never contacts a production Firestore project.
+The Fireside and official-emulator commands each start their target and execute
+the same backend suite through the real Google Cloud Firestore Node SDK. They
+use synthetic `demo-` project IDs and never contact a production Firestore
+project.
 
 ## Clean-room and licensing
 

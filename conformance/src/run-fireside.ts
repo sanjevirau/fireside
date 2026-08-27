@@ -1,0 +1,139 @@
+import { spawn, type ChildProcess } from "node:child_process";
+import { createConnection, createServer } from "node:net";
+import { resolve } from "node:path";
+
+const PROJECT_ID = "demo-fireside-fireside";
+const HOST = "127.0.0.1";
+const TEST_FILES = [
+  "test/error-code-parity.test.ts",
+  "test/firestore-smoke.test.ts",
+  "test/partition-query.test.ts",
+  "test/query-features.test.ts",
+  "test/query-ordering.test.ts",
+  "test/write-transforms.test.ts",
+] as const;
+
+const port = await reserveAvailablePort();
+const repositoryRoot = resolve(process.cwd(), "..");
+const server = spawn(
+  "cargo",
+  [
+    "run",
+    "--quiet",
+    "-p",
+    "fireside",
+    "--",
+    "--host",
+    HOST,
+    "--port",
+    String(port),
+    "--project_id",
+    PROJECT_ID,
+    "--single_project_mode",
+    "true",
+    "--database-edition",
+    "standard",
+  ],
+  {
+    cwd: repositoryRoot,
+    env: process.env,
+    stdio: ["ignore", "inherit", "inherit"],
+  },
+);
+
+try {
+  await waitUntilListening(server, port);
+  await runTests(port);
+} finally {
+  await stop(server);
+}
+
+async function runTests(port: number): Promise<void> {
+  await new Promise<void>((resolvePromise, reject) => {
+    const child = spawn(
+      process.execPath,
+      ["--import", "tsx", "--test", ...TEST_FILES],
+      {
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          CONFORMANCE_TARGET: "fireside",
+          FIRESTORE_EMULATOR_HOST: `${HOST}:${String(port)}`,
+          GCLOUD_PROJECT: PROJECT_ID,
+        },
+        stdio: "inherit",
+      },
+    );
+
+    child.once("error", reject);
+    child.once("exit", (code, signal) => {
+      if (code === 0) {
+        resolvePromise();
+        return;
+      }
+      reject(
+        new Error(
+          `fireside conformance exited with code ${String(code)} and signal ${String(signal)}`,
+        ),
+      );
+    });
+  });
+}
+
+async function reserveAvailablePort(): Promise<number> {
+  const server = createServer();
+  return await new Promise<number>((resolvePromise, reject) => {
+    server.once("error", reject);
+    server.listen(0, HOST, () => {
+      const address = server.address();
+      if (address === null || typeof address === "string") {
+        server.close();
+        reject(new Error("failed to reserve a loopback TCP port"));
+        return;
+      }
+      server.close((error) => {
+        if (error !== undefined) {
+          reject(error);
+          return;
+        }
+        resolvePromise(address.port);
+      });
+    });
+  });
+}
+
+async function waitUntilListening(
+  server: ChildProcess,
+  port: number,
+): Promise<void> {
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    if (server.exitCode !== null || server.signalCode !== null) {
+      throw new Error("fireside exited before its port became available");
+    }
+    if (await canConnect(port)) {
+      return;
+    }
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 25));
+  }
+  throw new Error("timed out waiting for fireside to listen");
+}
+
+async function canConnect(port: number): Promise<boolean> {
+  return await new Promise<boolean>((resolvePromise) => {
+    const socket = createConnection({ host: HOST, port });
+    socket.once("connect", () => {
+      socket.destroy();
+      resolvePromise(true);
+    });
+    socket.once("error", () => resolvePromise(false));
+  });
+}
+
+async function stop(server: ChildProcess): Promise<void> {
+  if (server.exitCode !== null || server.signalCode !== null) {
+    return;
+  }
+  server.kill("SIGTERM");
+  await new Promise<void>((resolvePromise) => server.once("exit", () => resolvePromise()));
+}

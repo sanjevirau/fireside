@@ -13,6 +13,10 @@ categories = ["command-line-utilities", "development-tools::testing"]
 
 [dependencies]
 clap.workspace = true
+fireside-core-store = { path = "../core-store" }
+fireside-grpc-front = { path = "../grpc-front" }
+tokio.workspace = true
+tonic.workspace = true
 
 [lints]
 workspace = true
