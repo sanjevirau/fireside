@@ -34,7 +34,7 @@ of scope until the conformance gates are met.
 | Target / area | Harness smoke | Firestore APIs | Browser SDK | Rules | Suite |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Production cloud | pass (18/18; control N/A) | reference target | not implemented | not implemented | not implemented |
-| Official Java emulator | pass (20/20) | comparison target; 6 known deviations | not run | not run | not run |
+| Official Java emulator | pass (20/20) | comparison target; 7 known deviations | not run | not run | not run |
 | fireside | pass (20/20 + strict 1/1) | current scope 20/20 + strict 1/1 | not implemented | not implemented | not implemented |
 
 Cloud is the behavioral reference; Java is measured only for comparison. From

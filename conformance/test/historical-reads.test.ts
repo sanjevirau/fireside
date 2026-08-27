@@ -135,6 +135,46 @@ test("read_time reconstructs committed versions after a later delete", async (co
     rawFirestore.getDocument({ name }, callOptions),
     (error: unknown) => grpcCode(error) === 5,
   );
+  await assert.rejects(
+    rawFirestore.getDocument(
+      {
+        name,
+        readTime: {
+          seconds: first.writeTime.seconds,
+          nanos: first.writeTime.nanoseconds + 1,
+        },
+      },
+      callOptions,
+    ),
+    (error: unknown) => grpcCode(error) === 3,
+  );
+  await assert.rejects(
+    rawFirestore.getDocument(
+      {
+        name,
+        readTime: {
+          seconds: Math.floor(Date.now() / 1_000) + 3_600,
+          nanos: 0,
+        },
+      },
+      callOptions,
+    ),
+    (error: unknown) => grpcCode(error) === 3,
+  );
+  await assert.rejects(
+    rawFirestore.getDocument(
+      {
+        name,
+        readTime: {
+          seconds: Math.floor(Date.now() / 1_000) - 7_200,
+          nanos: 0,
+        },
+      },
+      callOptions,
+    ),
+    (error: unknown) =>
+      grpcCode(error) === (configuration.name === "java" ? 5 : 9),
+  );
 });
 
 interface ObservedBatchGet {

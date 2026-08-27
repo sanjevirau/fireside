@@ -356,8 +356,11 @@ then presents the two observed commit timestamps as `read_time`. Production,
 Java v1.22.0, and Fireside reconstruct the requested version through
 `GetDocument`, `BatchGetDocuments`, `RunQuery`, `RunAggregationQuery`,
 `ListDocuments`, `ListCollectionIds`, and a read-only transaction. Expired
-timestamp status behavior remains unclaimed until a separate oracle fixture is
-captured.
+selectors are also pinned: sub-microsecond precision and future timestamps are
+`INVALID_ARGUMENT` (3), while a timestamp two hours old without PITR is
+`FAILED_PRECONDITION` (9). Java agrees on the first two but treats the old
+snapshot as an empty database and returns `NOT_FOUND` (5) for the requested
+document; this is a documented Java deviation.
 
 `conformance/test/streaming-write.test.ts` pins the production streaming Write
 handshake: the first database-only request returns a non-empty stream ID and
