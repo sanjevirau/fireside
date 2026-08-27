@@ -177,6 +177,91 @@ test("REST v1 commit, batchGet, and runQuery share document semantics", async ()
   assert.equal(deleted.status, 200);
 });
 
+test("REST v1 preserves the production missing-index status", async () => {
+  const configuration = resolveTarget(process.env);
+  const runId = randomUUID();
+  const databaseRoot = `projects/${configuration.projectId}/databases/(default)`;
+  const collectionPath = `runs/${runId}/fireside_conformance`;
+  const documentNames = ["first", "second"].map(
+    (id) => `${databaseRoot}/documents/${collectionPath}/${id}`,
+  );
+  const baseUrl = configuration.host === undefined
+    ? "https://firestore.googleapis.com"
+    : `http://${configuration.host}`;
+  const documentsUrl = `${baseUrl}/v1/${databaseRoot}/documents`;
+  const headers = {
+    ...await authorizationHeaders(configuration.host === undefined),
+    "content-type": "application/json",
+  };
+
+  const committed = await fetch(`${documentsUrl}:commit`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      writes: documentNames.map((name, index) => ({
+        update: {
+          name,
+          fields: {
+            strictGroup: { stringValue: "x" },
+            strictScore: { integerValue: String(index + 1) },
+          },
+        },
+      })),
+    }),
+  });
+  assert.equal(committed.status, 200);
+
+  try {
+    const queried = await fetch(
+      `${documentsUrl}/runs/${runId}:runQuery`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          structuredQuery: {
+            from: [{ collectionId: "fireside_conformance" }],
+            where: {
+              fieldFilter: {
+                field: { fieldPath: "strictGroup" },
+                op: "EQUAL",
+                value: { stringValue: "x" },
+              },
+            },
+            orderBy: [
+              {
+                field: { fieldPath: "strictScore" },
+                direction: "ASCENDING",
+              },
+            ],
+          },
+        }),
+      },
+    );
+
+    if (configuration.name === "cloud") {
+      assert.equal(queried.status, 400);
+      const errors = await json<readonly RestError[]>(queried);
+      assert.equal(errors.length, 1);
+      assert.equal(errors[0]?.error?.code, 400);
+      assert.equal(errors[0]?.error?.status, "FAILED_PRECONDITION");
+    } else {
+      assert.equal(queried.status, 200);
+      const responses = await json<readonly RestRunQueryResponse[]>(queried);
+      assert.deepEqual(
+        responses.flatMap((response) => response.document?.name ?? []),
+        documentNames,
+      );
+    }
+  } finally {
+    await Promise.all(
+      documentNames.map(async (name) => {
+        const resource = `${baseUrl}/v1/${name}`;
+        await fetch(resource, { method: "DELETE", headers });
+      }),
+    );
+  }
+});
+
 async function authorizationHeaders(
   cloud: boolean,
 ): Promise<Record<string, string>> {

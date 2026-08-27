@@ -295,6 +295,11 @@ as HTTP 404 with JSON error code `404` and status `NOT_FOUND`.
 The same fixture observes production `commit` returning one write result and a
 commit time, `batchGet` returning both a found and a missing result, and an
 ancestor-scoped `runQuery` returning the matching document with read times.
+For a `runQuery` that needs an undeclared composite index, production returns
+HTTP 400 and a one-element streaming response array whose embedded error has
+numeric code `400` and canonical status `FAILED_PRECONDITION`; Java v1.22.0
+executes the query instead. Default-mode fireside preserves Java's permissive
+local workflow, while strict-index mode uses the production rejection.
 For the emulator-only control contract, Java v1.22.0 accepts v1 and v2 trigger
 registration but returns HTTP 404 when deleting the successfully registered v1
 trigger. Fireside keeps the documented firebase-tools DELETE route idempotent
