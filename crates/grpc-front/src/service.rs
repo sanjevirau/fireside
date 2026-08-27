@@ -8,18 +8,23 @@ use fireside_core_store::{
     CommitError, CommitResult, DatabaseName, Document, DocumentKey, FieldTransform, Snapshot,
     Store, Timestamp, TransformOperation, Value, Write,
 };
+use fireside_query_engine::{DatabaseEdition, QueryDocument, aggregate, execute, partition};
 use tokio_stream::{Stream, iter};
 use tonic::{Request, Response, Status};
 
 use crate::codec::{
     DecodedWrite, decode_database_name, decode_document_name, decode_fields, decode_parent,
-    decode_write, encode_document_masked, encode_timestamp, encode_value, nested_value,
+    decode_write, encode_document_masked, encode_fields, encode_timestamp, encode_value,
+    nested_value,
 };
 use crate::google::firestore::v1::batch_get_documents_request;
 use crate::google::firestore::v1::batch_get_documents_response;
 use crate::google::firestore::v1::firestore_server::{Firestore, FirestoreServer};
 use crate::google::firestore::v1::get_document_request;
 use crate::google::firestore::v1::list_documents_request;
+use crate::google::firestore::v1::partition_query_request;
+use crate::google::firestore::v1::run_aggregation_query_request;
+use crate::google::firestore::v1::run_query_request;
 use crate::google::firestore::v1::transaction_options;
 use crate::google::firestore::v1::write::Operation;
 use crate::google::firestore::v1::{
@@ -33,6 +38,7 @@ use crate::google::firestore::v1::{
     TransactionOptions, UpdateDocumentRequest, WriteRequest, WriteResponse, WriteResult,
 };
 use crate::google::rpc;
+use crate::query_codec::{decode_aggregation, decode_query, query_status};
 
 type ResponseStream<T> = Pin<Box<dyn Stream<Item = Result<T, Status>> + Send + 'static>>;
 
@@ -456,9 +462,65 @@ impl Firestore for FirestoreService {
 
     async fn run_query(
         &self,
-        _request: Request<RunQueryRequest>,
+        request: Request<RunQueryRequest>,
     ) -> Result<Response<Self::RunQueryStream>, Status> {
-        Err(Status::unimplemented("RunQuery adapter is in progress"))
+        let request = request.into_inner();
+        if request.explain_options.is_some() {
+            return Err(Status::unimplemented(
+                "query explain metrics await a production fixture",
+            ));
+        }
+        let (database, parent) = decode_parent(&request.parent)?;
+        let Some(run_query_request::QueryType::StructuredQuery(structured)) = request.query_type
+        else {
+            return Err(Status::invalid_argument("structured query is required"));
+        };
+        let skipped_results = structured.offset;
+        let query = decode_query(parent.as_deref(), structured)?;
+        let (token, new_transaction) = match request.consistency_selector {
+            None => (Vec::new(), false),
+            Some(run_query_request::ConsistencySelector::Transaction(token)) => (token, false),
+            Some(run_query_request::ConsistencySelector::NewTransaction(options)) => (
+                self.begin_transaction_inner(database.clone(), Some(options)),
+                true,
+            ),
+            Some(run_query_request::ConsistencySelector::ReadTime(_)) => {
+                return Err(Status::unimplemented(
+                    "historical read timestamps are not implemented",
+                ));
+            }
+        };
+        let snapshot = if token.is_empty() {
+            self.store.snapshot()
+        } else {
+            self.snapshot_for_transaction(&database, &token)?
+        };
+        let documents = execute(&snapshot, &database, &query, DatabaseEdition::Standard)
+            .map_err(|error| query_status(&error))?;
+        let read_time = Some(encode_timestamp(now()));
+        let mut responses = Vec::with_capacity(documents.len() + usize::from(new_transaction));
+        if new_transaction {
+            responses.push(RunQueryResponse {
+                transaction: token.clone(),
+                ..RunQueryResponse::default()
+            });
+        }
+        for (index, document) in documents.iter().enumerate() {
+            self.record_read(&token, document.key(), Some(document.document().as_ref()));
+            responses.push(RunQueryResponse {
+                document: Some(encode_query_document(document)?),
+                read_time,
+                skipped_results: if index == 0 { skipped_results } else { 0 },
+                ..RunQueryResponse::default()
+            });
+        }
+        if documents.is_empty() {
+            responses.push(RunQueryResponse {
+                read_time,
+                ..RunQueryResponse::default()
+            });
+        }
+        Ok(Response::new(Box::pin(iter(responses.into_iter().map(Ok)))))
     }
 
     type ExecutePipelineStream = ResponseStream<ExecutePipelineResponse>;
@@ -476,20 +538,144 @@ impl Firestore for FirestoreService {
 
     async fn run_aggregation_query(
         &self,
-        _request: Request<RunAggregationQueryRequest>,
+        request: Request<RunAggregationQueryRequest>,
     ) -> Result<Response<Self::RunAggregationQueryStream>, Status> {
-        Err(Status::unimplemented(
-            "RunAggregationQuery adapter is in progress",
-        ))
+        let request = request.into_inner();
+        if request.explain_options.is_some() {
+            return Err(Status::unimplemented(
+                "aggregation explain metrics await a production fixture",
+            ));
+        }
+        let (database, parent) = decode_parent(&request.parent)?;
+        let Some(run_aggregation_query_request::QueryType::StructuredAggregationQuery(
+            aggregation_query,
+        )) = request.query_type
+        else {
+            return Err(Status::invalid_argument(
+                "structured aggregation query is required",
+            ));
+        };
+        let (structured, aggregation) = decode_aggregation(aggregation_query)?;
+        let query = decode_query(parent.as_deref(), structured)?;
+        let (token, new_transaction) = match request.consistency_selector {
+            None => (Vec::new(), false),
+            Some(run_aggregation_query_request::ConsistencySelector::Transaction(token)) => {
+                (token, false)
+            }
+            Some(run_aggregation_query_request::ConsistencySelector::NewTransaction(options)) => (
+                self.begin_transaction_inner(database.clone(), Some(options)),
+                true,
+            ),
+            Some(run_aggregation_query_request::ConsistencySelector::ReadTime(_)) => {
+                return Err(Status::unimplemented(
+                    "historical read timestamps are not implemented",
+                ));
+            }
+        };
+        let snapshot = if token.is_empty() {
+            self.store.snapshot()
+        } else {
+            self.snapshot_for_transaction(&database, &token)?
+        };
+        let documents = execute(&snapshot, &database, &query, DatabaseEdition::Standard)
+            .map_err(|error| query_status(&error))?;
+        for document in &documents {
+            self.record_read(&token, document.key(), Some(document.document().as_ref()));
+        }
+        let mut fields = aggregate(&documents, &aggregation.operations);
+        for (alias, bound) in aggregation.count_bounds {
+            if let Some(Value::Integer(count)) = fields.get_mut(&alias) {
+                let bound = i64::try_from(bound).unwrap_or(i64::MAX);
+                *count = (*count).min(bound);
+            }
+        }
+        let result = proto::AggregationResult {
+            aggregate_fields: encode_fields(&fields)?,
+        };
+        let mut responses = Vec::with_capacity(1 + usize::from(new_transaction));
+        if new_transaction {
+            responses.push(RunAggregationQueryResponse {
+                transaction: token,
+                ..RunAggregationQueryResponse::default()
+            });
+        }
+        responses.push(RunAggregationQueryResponse {
+            result: Some(result),
+            read_time: Some(encode_timestamp(now())),
+            ..RunAggregationQueryResponse::default()
+        });
+        Ok(Response::new(Box::pin(iter(responses.into_iter().map(Ok)))))
     }
 
     async fn partition_query(
         &self,
-        _request: Request<PartitionQueryRequest>,
+        request: Request<PartitionQueryRequest>,
     ) -> Result<Response<PartitionQueryResponse>, Status> {
-        Err(Status::unimplemented(
-            "PartitionQuery adapter is in progress",
-        ))
+        let request = request.into_inner();
+        if request.consistency_selector.is_some() {
+            return Err(Status::unimplemented(
+                "historical read timestamps are not implemented",
+            ));
+        }
+        let (database, parent) = decode_parent(&request.parent)?;
+        if parent.is_some() {
+            return Err(Status::invalid_argument(
+                "PartitionQuery parent must be the database document root",
+            ));
+        }
+        let Some(partition_query_request::QueryType::StructuredQuery(structured)) =
+            request.query_type
+        else {
+            return Err(Status::invalid_argument("structured query is required"));
+        };
+        let query = decode_query(None, structured)?;
+        let maximum = usize::try_from(request.partition_count)
+            .map_err(|_| Status::invalid_argument("partition_count must be positive"))?;
+        let mut partitions = partition(
+            &self.store.snapshot(),
+            &database,
+            &query,
+            DatabaseEdition::Standard,
+            maximum,
+        )
+        .map_err(|error| query_status(&error))?;
+        let offset = if request.page_token.is_empty() {
+            0
+        } else {
+            request
+                .page_token
+                .parse::<usize>()
+                .map_err(|_| Status::invalid_argument("invalid partition page token"))?
+        };
+        if offset > partitions.len() {
+            return Err(Status::invalid_argument("invalid partition page token"));
+        }
+        partitions.drain(..offset);
+        let page_size = normalize_page_size(request.page_size);
+        let has_more = partitions.len() > page_size;
+        partitions.truncate(page_size);
+        let returned = partitions.len();
+        let partitions = partitions
+            .into_iter()
+            .map(|partition| {
+                Ok(proto::Cursor {
+                    values: partition
+                        .values
+                        .iter()
+                        .map(encode_value)
+                        .collect::<Result<Vec<_>, _>>()?,
+                    before: partition.before,
+                })
+            })
+            .collect::<Result<Vec<_>, Status>>()?;
+        Ok(Response::new(PartitionQueryResponse {
+            partitions,
+            next_page_token: if has_more {
+                (offset + returned).to_string()
+            } else {
+                String::new()
+            },
+        }))
     }
 
     type WriteStream = ResponseStream<WriteResponse>;
@@ -673,6 +859,15 @@ fn write_result(
     })
 }
 
+fn encode_query_document(document: &QueryDocument) -> Result<proto::Document, Status> {
+    Ok(proto::Document {
+        name: document.key().to_string(),
+        fields: encode_fields(document.fields())?,
+        create_time: Some(encode_timestamp(document.document().create_time())),
+        update_time: Some(encode_timestamp(document.document().update_time())),
+    })
+}
+
 fn transform_result(
     transform: &FieldTransform,
     document: Option<&Document>,
@@ -771,7 +966,18 @@ mod tests {
     use std::collections::HashMap;
 
     use super::*;
-    use crate::google::firestore::v1::{DocumentMask, precondition};
+    use crate::google::firestore::v1::run_aggregation_query_request;
+    use crate::google::firestore::v1::run_query_request;
+    use crate::google::firestore::v1::structured_aggregation_query;
+    use crate::google::firestore::v1::structured_aggregation_query::QueryType as AggregationQueryType;
+    use crate::google::firestore::v1::structured_aggregation_query::aggregation;
+    use crate::google::firestore::v1::structured_aggregation_query::aggregation::Operator as AggregationOperator;
+    use crate::google::firestore::v1::structured_query::{
+        CollectionSelector, Direction, FieldReference, Order,
+    };
+    use crate::google::firestore::v1::{
+        DocumentMask, StructuredAggregationQuery, StructuredQuery, precondition,
+    };
 
     const DATABASE: &str = "projects/demo/databases/tenant-a";
     const DOCUMENT: &str = "projects/demo/databases/tenant-a/documents/cities/kl";
@@ -940,5 +1146,138 @@ mod tests {
             .await
             .expect_err("second transaction should abort");
         assert_eq!(conflict.code(), tonic::Code::Aborted);
+    }
+
+    async fn seeded_query_service() -> FirestoreService {
+        let service = FirestoreService::default();
+        for (id, value) in [("kl", 2), ("penang", 1)] {
+            service
+                .create_document(Request::new(CreateDocumentRequest {
+                    parent: format!("{DATABASE}/documents"),
+                    collection_id: "cities".to_owned(),
+                    document_id: id.to_owned(),
+                    document: Some(integer_document("", value)),
+                    ..CreateDocumentRequest::default()
+                }))
+                .await
+                .expect("seed create should succeed");
+        }
+        service
+    }
+
+    fn base_query() -> StructuredQuery {
+        StructuredQuery {
+            from: vec![CollectionSelector {
+                collection_id: "cities".to_owned(),
+                all_descendants: false,
+            }],
+            order_by: vec![Order {
+                field: Some(FieldReference {
+                    field_path: "value".to_owned(),
+                }),
+                direction: Direction::Ascending as i32,
+            }],
+            ..StructuredQuery::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn run_query_executes_the_query_engine() {
+        use tokio_stream::StreamExt as _;
+
+        let service = seeded_query_service().await;
+        let mut query_stream = service
+            .run_query(Request::new(RunQueryRequest {
+                parent: format!("{DATABASE}/documents"),
+                query_type: Some(run_query_request::QueryType::StructuredQuery(base_query())),
+                ..RunQueryRequest::default()
+            }))
+            .await
+            .expect("query should start")
+            .into_inner();
+        let first = query_stream
+            .next()
+            .await
+            .expect("first result should exist")
+            .expect("first result should succeed")
+            .document
+            .expect("first response should contain a document");
+        assert!(first.name.ends_with("/cities/penang"));
+        assert!(query_stream.next().await.is_some());
+        assert!(query_stream.next().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn aggregation_rpc_executes_the_query_engine() {
+        use tokio_stream::StreamExt as _;
+
+        let service = seeded_query_service().await;
+        let mut aggregation_stream = service
+            .run_aggregation_query(Request::new(RunAggregationQueryRequest {
+                parent: format!("{DATABASE}/documents"),
+                query_type: Some(
+                    run_aggregation_query_request::QueryType::StructuredAggregationQuery(
+                        StructuredAggregationQuery {
+                            aggregations: vec![structured_aggregation_query::Aggregation {
+                                alias: "total".to_owned(),
+                                operator: Some(AggregationOperator::Count(aggregation::Count {
+                                    up_to: None,
+                                })),
+                            }],
+                            query_type: Some(AggregationQueryType::StructuredQuery(base_query())),
+                        },
+                    ),
+                ),
+                ..RunAggregationQueryRequest::default()
+            }))
+            .await
+            .expect("aggregation should start")
+            .into_inner();
+        let aggregate = aggregation_stream
+            .next()
+            .await
+            .expect("aggregate result should exist")
+            .expect("aggregate result should succeed")
+            .result
+            .expect("response should contain an aggregate");
+        assert!(matches!(
+            aggregate
+                .aggregate_fields
+                .get("total")
+                .and_then(|value| value.value_type.as_ref()),
+            Some(proto::value::ValueType::IntegerValue(2))
+        ));
+    }
+
+    #[tokio::test]
+    async fn partition_rpc_executes_the_query_engine() {
+        let service = seeded_query_service().await;
+
+        let partition = service
+            .partition_query(Request::new(PartitionQueryRequest {
+                parent: format!("{DATABASE}/documents"),
+                partition_count: 1,
+                query_type: Some(partition_query_request::QueryType::StructuredQuery(
+                    StructuredQuery {
+                        from: vec![CollectionSelector {
+                            collection_id: "cities".to_owned(),
+                            all_descendants: true,
+                        }],
+                        order_by: vec![Order {
+                            field: Some(FieldReference {
+                                field_path: "__name__".to_owned(),
+                            }),
+                            direction: Direction::Ascending as i32,
+                        }],
+                        ..StructuredQuery::default()
+                    },
+                )),
+                ..PartitionQueryRequest::default()
+            }))
+            .await
+            .expect("partition query should succeed")
+            .into_inner();
+        assert_eq!(partition.partitions.len(), 1);
+        assert!(!partition.partitions[0].before);
     }
 }

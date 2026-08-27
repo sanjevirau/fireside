@@ -6,6 +6,7 @@
 #![forbid(unsafe_code)]
 
 mod codec;
+mod query_codec;
 mod service;
 
 pub use service::FirestoreService;
