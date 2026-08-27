@@ -299,6 +299,11 @@ For the emulator-only control contract, Java v1.22.0 accepts v1 and v2 trigger
 registration but returns HTTP 404 when deleting the successfully registered v1
 trigger. Fireside keeps the documented firebase-tools DELETE route idempotent
 and returns HTTP 200; the Java response is tracked as a comparison deviation.
+Named-database conformance uses the same path in the dedicated production
+`fireside-conformance` database and `(default)`. Production keeps them isolated;
+Java v1.22.0 and Fireside also accept the named resource and preserve that
+wire-level isolation, despite firebase-tools warning that the Java emulator
+does not support multiple databases.
 
 The exact gRPC status code is part of compatibility. Differential tests must pin
 at least `NOT_FOUND` (5), `ALREADY_EXISTS` (6), `FAILED_PRECONDITION` (9), and

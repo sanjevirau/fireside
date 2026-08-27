@@ -8,6 +8,7 @@ const TEST_FILES = [
   "test/error-code-parity.test.ts",
   "test/firestore-smoke.test.ts",
   "test/listen.test.ts",
+  "test/named-database.test.ts",
   "test/partition-query.test.ts",
   "test/query-features.test.ts",
   "test/query-ordering.test.ts",
