@@ -19,9 +19,17 @@ interface RestError {
 }
 
 interface RestValue {
+  readonly arrayValue?: { readonly values?: readonly RestValue[] };
+  readonly doubleValue?: number;
   readonly integerValue?: string;
+  readonly nullValue?: null;
   readonly stringValue?: string;
   readonly timestampValue?: string;
+}
+
+interface RestWriteResult {
+  readonly transformResults?: readonly RestValue[];
+  readonly updateTime?: string;
 }
 
 interface RestBatchGetResponse {
@@ -31,7 +39,7 @@ interface RestBatchGetResponse {
 
 interface RestCommitResponse {
   readonly commitTime?: string;
-  readonly writeResults?: readonly unknown[];
+  readonly writeResults?: readonly RestWriteResult[];
 }
 
 interface RestRunQueryResponse {
@@ -177,6 +185,142 @@ test("REST v1 commit, batchGet, and runQuery share document semantics", async ()
   assert.equal(deleted.status, 200);
 });
 
+test("REST v1 commit applies update and document transforms", async () => {
+  const configuration = resolveTarget(process.env);
+  const runId = randomUUID();
+  const databaseRoot = `projects/${configuration.projectId}/databases/(default)`;
+  const collectionPath = `runs/${runId}/fireside_conformance`;
+  const updateName = `${databaseRoot}/documents/${collectionPath}/update-transforms`;
+  const transformName = `${databaseRoot}/documents/${collectionPath}/document-transform`;
+  const baseUrl = configuration.host === undefined
+    ? "https://firestore.googleapis.com"
+    : `http://${configuration.host}`;
+  const documentsUrl = `${baseUrl}/v1/${databaseRoot}/documents`;
+  const headers = {
+    ...await authorizationHeaders(configuration.host === undefined),
+    "content-type": "application/json",
+  };
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1_000).toISOString();
+
+  const seeded = await fetch(`${baseUrl}/v1/${transformName}`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({
+      fields: {
+        _fireside_expires_at: { timestampValue: expiresAt },
+        bound: { stringValue: "replace me" },
+        count: { integerValue: "10" },
+        tags: {
+          arrayValue: {
+            values: [{ stringValue: "a" }, { stringValue: "b" }],
+          },
+        },
+      },
+    }),
+  });
+  assert.equal(seeded.status, 200);
+
+  try {
+    const committed = await fetch(`${documentsUrl}:commit`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        writes: [
+          {
+            update: {
+              name: updateName,
+              fields: {
+                _fireside_expires_at: { timestampValue: expiresAt },
+                count: { integerValue: "1" },
+                maximum: { integerValue: "2" },
+                minimum: { doubleValue: 5 },
+                tags: {
+                  arrayValue: { values: [{ stringValue: "a" }] },
+                },
+              },
+            },
+            updateTransforms: [
+              { fieldPath: "count", increment: { integerValue: "2" } },
+              { fieldPath: "maximum", maximum: { doubleValue: 4.5 } },
+              { fieldPath: "minimum", minimum: { integerValue: "4" } },
+              { fieldPath: "touched", setToServerValue: "REQUEST_TIME" },
+              {
+                fieldPath: "tags",
+                appendMissingElements: {
+                  values: [{ stringValue: "b" }],
+                },
+              },
+            ],
+          },
+          {
+            transform: {
+              document: transformName,
+              fieldTransforms: [
+                { fieldPath: "count", increment: { integerValue: "2" } },
+                {
+                  fieldPath: "tags",
+                  removeAllFromArray: {
+                    values: [{ stringValue: "a" }],
+                  },
+                },
+                { fieldPath: "bound", maximum: { integerValue: "7" } },
+              ],
+            },
+          },
+        ],
+      }),
+    });
+    assert.equal(committed.status, 200);
+    const commit = await json<RestCommitResponse>(committed);
+    assert.equal(commit.writeResults?.length, 2);
+    assert.deepEqual(
+      commit.writeResults?.map((result) =>
+        result.transformResults?.map(restValueKind)
+      ),
+      [
+        ["integer:3", "double:4.5", "integer:4", "timestamp", "null"],
+        ["integer:12", "null", "integer:7"],
+      ],
+    );
+
+    const [updatedResponse, transformedResponse] = await Promise.all([
+      fetch(`${baseUrl}/v1/${updateName}`, { headers }),
+      fetch(`${baseUrl}/v1/${transformName}`, { headers }),
+    ]);
+    assert.equal(updatedResponse.status, 200);
+    assert.equal(transformedResponse.status, 200);
+    const updated = await json<RestDocument>(updatedResponse);
+    const transformed = await json<RestDocument>(transformedResponse);
+    assert.deepEqual(
+      [
+        updated.fields?.count,
+        updated.fields?.maximum,
+        updated.fields?.minimum,
+        updated.fields?.touched,
+      ].map(restValueKind),
+      ["integer:3", "double:4.5", "integer:4", "timestamp"],
+    );
+    assert.deepEqual(
+      updated.fields?.tags?.arrayValue?.values?.map(restValueKind),
+      ["string:a", "string:b"],
+    );
+    assert.deepEqual(
+      [transformed.fields?.count, transformed.fields?.bound].map(restValueKind),
+      ["integer:12", "integer:7"],
+    );
+    assert.deepEqual(
+      transformed.fields?.tags?.arrayValue?.values?.map(restValueKind),
+      ["string:b"],
+    );
+  } finally {
+    await Promise.all(
+      [updateName, transformName].map(async (name) => {
+        await fetch(`${baseUrl}/v1/${name}`, { method: "DELETE", headers });
+      }),
+    );
+  }
+});
+
 test("REST v1 preserves the production missing-index status", async () => {
   const configuration = resolveTarget(process.env);
   const runId = randomUUID();
@@ -278,4 +422,23 @@ async function authorizationHeaders(
 
 async function json<T>(response: Response): Promise<T> {
   return await response.json() as T;
+}
+
+function restValueKind(value: RestValue | undefined): string {
+  if (value?.integerValue !== undefined) {
+    return `integer:${value.integerValue}`;
+  }
+  if (value?.doubleValue !== undefined) {
+    return `double:${String(value.doubleValue)}`;
+  }
+  if (value?.stringValue !== undefined) {
+    return `string:${value.stringValue}`;
+  }
+  if (value?.timestampValue !== undefined) {
+    return "timestamp";
+  }
+  if ("nullValue" in (value ?? {})) {
+    return "null";
+  }
+  return "other";
 }

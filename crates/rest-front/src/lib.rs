@@ -14,8 +14,8 @@ use axum::{Json, Router};
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use fireside_core_store::{
-    CommitError, DatabaseName, Document, DocumentKey, FieldPath, Fields, Precondition, Store,
-    Timestamp, Value, Write,
+    CommitError, DatabaseName, Document, DocumentKey, FieldPath, FieldTransform, Fields,
+    Precondition, Store, Timestamp, TransformOperation, Value, Write,
 };
 use fireside_export_format::{ExportedDocument, write_export};
 use fireside_query_engine::{
@@ -350,14 +350,28 @@ async fn commit(
     let write_results = writes
         .iter()
         .map(|write| {
-            snapshot.get(write_key(write)).map_or_else(
-                || Ok(json!({})),
-                |document| {
-                    Ok(json!({
-                        "updateTime": format_timestamp(document.update_time())?
-                    }))
-                },
-            )
+            let Some(document) = snapshot.get(write_key(write)) else {
+                return Ok(json!({}));
+            };
+            let mut encoded = Map::from_iter([(
+                "updateTime".to_owned(),
+                JsonValue::String(format_timestamp(document.update_time())?),
+            )]);
+            let transforms = write_transforms(write);
+            if !transforms.is_empty() {
+                encoded.insert(
+                    "transformResults".to_owned(),
+                    JsonValue::Array(
+                        transforms
+                            .iter()
+                            .map(|transform| {
+                                encode_transform_result(transform, &document, result.commit_time)
+                            })
+                            .collect::<Result<Vec<_>, _>>()?,
+                    ),
+                );
+            }
+            Ok(JsonValue::Object(encoded))
         })
         .collect::<Result<Vec<_>, RestError>>()?;
     Ok(Json(json!({
@@ -613,6 +627,7 @@ fn decode_write(value: &JsonValue, database: &DatabaseName) -> Result<Write, Res
             ));
         }
         let fields = decode_document_fields(&JsonValue::Object(update.clone()))?;
+        let transforms = decode_transforms(object.get("updateTransforms"))?;
         let mask = object
             .get("updateMask")
             .and_then(JsonValue::as_object)
@@ -630,17 +645,36 @@ fn decode_write(value: &JsonValue, database: &DatabaseName) -> Result<Write, Res
                             .and_then(decode_field_path)
                     })
                     .collect::<Result<Vec<_>, _>>()?,
-                transforms: Vec::new(),
+                transforms,
                 precondition,
             })
         } else {
             Ok(Write::Set {
                 key,
                 fields,
-                transforms: Vec::new(),
+                transforms,
                 precondition,
             })
         };
+    }
+    if let Some(transform) = object.get("transform").and_then(JsonValue::as_object) {
+        let name = transform
+            .get("document")
+            .and_then(JsonValue::as_str)
+            .ok_or_else(|| RestError::invalid("transform document name is required"))?;
+        let key = document_key_from_name(name)?;
+        if key.database() != database {
+            return Err(RestError::invalid(
+                "commit transform belongs to a different database",
+            ));
+        }
+        return Ok(Write::Patch {
+            key,
+            fields: Fields::new(),
+            update_mask: Vec::new(),
+            transforms: decode_transforms(transform.get("fieldTransforms"))?,
+            precondition,
+        });
     }
     if let Some(name) = object.get("delete").and_then(JsonValue::as_str) {
         let key = document_key_from_name(name)?;
@@ -652,6 +686,81 @@ fn decode_write(value: &JsonValue, database: &DatabaseName) -> Result<Write, Res
         return Ok(Write::Delete { key, precondition });
     }
     Err(RestError::invalid("unsupported commit write operation"))
+}
+
+fn decode_transforms(value: Option<&JsonValue>) -> Result<Vec<FieldTransform>, RestError> {
+    let Some(value) = value else {
+        return Ok(Vec::new());
+    };
+    value
+        .as_array()
+        .ok_or_else(|| RestError::invalid("field transforms must be an array"))?
+        .iter()
+        .map(decode_transform)
+        .collect()
+}
+
+fn decode_transform(value: &JsonValue) -> Result<FieldTransform, RestError> {
+    let object = value
+        .as_object()
+        .ok_or_else(|| RestError::invalid("field transform must be an object"))?;
+    let path = object
+        .get("fieldPath")
+        .and_then(JsonValue::as_str)
+        .ok_or_else(|| RestError::invalid("field transform path is required"))
+        .and_then(decode_field_path)?;
+    let operation_names = [
+        "setToServerValue",
+        "increment",
+        "maximum",
+        "minimum",
+        "appendMissingElements",
+        "removeAllFromArray",
+    ];
+    if operation_names
+        .iter()
+        .filter(|name| object.contains_key(**name))
+        .count()
+        != 1
+    {
+        return Err(RestError::invalid(
+            "field transform requires exactly one operation",
+        ));
+    }
+    let operation = if let Some(server_value) = object.get("setToServerValue") {
+        if server_value.as_str() != Some("REQUEST_TIME") {
+            return Err(RestError::invalid("setToServerValue must be REQUEST_TIME"));
+        }
+        TransformOperation::ServerTimestamp
+    } else if let Some(operand) = object.get("increment") {
+        TransformOperation::Increment(decode_value(operand)?)
+    } else if let Some(operand) = object.get("maximum") {
+        TransformOperation::Maximum(decode_value(operand)?)
+    } else if let Some(operand) = object.get("minimum") {
+        TransformOperation::Minimum(decode_value(operand)?)
+    } else if let Some(elements) = object.get("appendMissingElements") {
+        TransformOperation::ArrayUnion(decode_transform_elements(elements)?)
+    } else if let Some(elements) = object.get("removeAllFromArray") {
+        TransformOperation::ArrayRemove(decode_transform_elements(elements)?)
+    } else {
+        return Err(RestError::invalid("field transform operation is required"));
+    };
+    Ok(FieldTransform { path, operation })
+}
+
+fn decode_transform_elements(value: &JsonValue) -> Result<Vec<Value>, RestError> {
+    let object = value
+        .as_object()
+        .ok_or_else(|| RestError::invalid("array transform operand must be an object"))?;
+    let Some(values) = object.get("values") else {
+        return Ok(Vec::new());
+    };
+    values
+        .as_array()
+        .ok_or_else(|| RestError::invalid("array transform values must be an array"))?
+        .iter()
+        .map(decode_value)
+        .collect()
 }
 
 fn decode_json_precondition(value: Option<&JsonValue>) -> Result<Precondition, RestError> {
@@ -681,6 +790,45 @@ fn write_key(write: &Write) -> &DocumentKey {
         | Write::Patch { key, .. }
         | Write::Delete { key, .. } => key,
     }
+}
+
+fn write_transforms(write: &Write) -> &[FieldTransform] {
+    match write {
+        Write::Set { transforms, .. } | Write::Patch { transforms, .. } => transforms,
+        Write::Create { .. } | Write::Delete { .. } => &[],
+    }
+}
+
+fn encode_transform_result(
+    transform: &FieldTransform,
+    document: &Document,
+    commit_time: Timestamp,
+) -> Result<JsonValue, RestError> {
+    match &transform.operation {
+        TransformOperation::ArrayUnion(_) | TransformOperation::ArrayRemove(_) => {
+            encode_value(&Value::Null)
+        }
+        TransformOperation::ServerTimestamp => encode_value(&Value::Timestamp(commit_time)),
+        TransformOperation::Increment(_)
+        | TransformOperation::Maximum(_)
+        | TransformOperation::Minimum(_) => {
+            nested_value(document.fields(), transform.path.segments())
+                .ok_or_else(|| RestError::internal("transform result field is missing"))
+                .and_then(encode_value)
+        }
+    }
+}
+
+fn nested_value<'a>(fields: &'a Fields, segments: &[String]) -> Option<&'a Value> {
+    let (first, remaining) = segments.split_first()?;
+    let mut value = fields.get(first)?;
+    for segment in remaining {
+        let Value::Map(map) = value else {
+            return None;
+        };
+        value = map.get(segment)?;
+    }
+    Some(value)
 }
 
 fn document_key(path: DocumentPath) -> Result<DocumentKey, RestError> {

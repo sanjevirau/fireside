@@ -329,6 +329,12 @@ as HTTP 404 with JSON error code `404` and status `NOT_FOUND`.
 The same fixture observes production `commit` returning one write result and a
 commit time, `batchGet` returning both a found and a missing result, and an
 ancestor-scoped `runQuery` returning the matching document with read times.
+Its transform companion proves that REST `Commit` applies `updateTransforms`
+after update fields and accepts standalone document-transform writes in the
+same atomic batch. Production, Java, and Fireside agree on integer/double type
+preservation for increment/minimum/maximum, server timestamps, array union and
+removal, stored document values, result ordering, and null-valued array
+transform results.
 For a `runQuery` that needs an undeclared composite index, production returns
 HTTP 400 and a one-element streaming response array whose embedded error has
 numeric code `400` and canonical status `FAILED_PRECONDITION`; Java v1.22.0
