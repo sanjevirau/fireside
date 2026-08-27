@@ -11,6 +11,7 @@ const TEST_FILES = [
   "test/partition-query.test.ts",
   "test/query-features.test.ts",
   "test/query-ordering.test.ts",
+  "test/rest.test.ts",
   "test/streaming-write.test.ts",
   "test/write-transforms.test.ts",
 ] as const;

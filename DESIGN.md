@@ -288,6 +288,11 @@ generated Rust into the repository.
 commit, plus the emulator control API. `Authorization: Bearer owner` bypasses
 rules as the admin credential.
 
+`conformance/test/rest.test.ts` observes production and Java v1.22.0 accepting
+an owner/admin PATCH followed by GET and DELETE on the v1 document resource.
+Both return HTTP 200 for those operations and encode a subsequent missing read
+as HTTP 404 with JSON error code `404` and status `NOT_FOUND`.
+
 The exact gRPC status code is part of compatibility. Differential tests must pin
 at least `NOT_FOUND` (5), `ALREADY_EXISTS` (6), `FAILED_PRECONDITION` (9), and
 `ABORTED` (10) for conflicts and preconditions, including
