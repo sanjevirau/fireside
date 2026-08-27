@@ -43,16 +43,17 @@ const server = spawn(
 
 try {
   await waitUntilListening(server, port);
-  await runTests(port);
+  await runTests(port, TEST_FILES);
+  await runTests(port, ["test/control-api.test.ts"]);
 } finally {
   await stop(server);
 }
 
-async function runTests(port: number): Promise<void> {
+async function runTests(port: number, files: readonly string[]): Promise<void> {
   await new Promise<void>((resolvePromise, reject) => {
     const child = spawn(
       process.execPath,
-      ["--import", "tsx", "--test", ...TEST_FILES],
+      ["--import", "tsx", "--test", ...files],
       {
         cwd: process.cwd(),
         env: {

@@ -43,7 +43,7 @@ async function main(): Promise<void> {
         PROJECT_ID,
         "--config",
         configPath,
-        "npm run test:firestore",
+        "npm run test:firestore && npm run test:control",
       ],
       {
         ...process.env,
