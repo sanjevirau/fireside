@@ -24,7 +24,8 @@
     "test:official": "node --import tsx src/run-official.ts",
     "test:fireside": "node --import tsx src/run-fireside.ts",
     "test:fireside:strict": "node --import tsx src/run-fireside.ts --strict-indexes",
-    "capture:official-export": "node --import tsx src/capture-official-export.ts"
+    "capture:official-export": "node --import tsx src/capture-official-export.ts",
+    "test:official-export-import": "node --import tsx src/verify-official-export-import.ts"
   },
   "devDependencies": {
     "@google-cloud/firestore": "9.0.0",

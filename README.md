@@ -10,7 +10,8 @@ target, not the specification.
 > [!IMPORTANT]
 > Phase 0 is complete and Phase 1 is under development. Fireside passes the
 > sixteen checked-in backend and control conformance cases plus its dedicated
-> strict-index case, but the remaining Phase 1 API, disk wiring, import/export,
+> strict-index case. The import/export format now round-trips through Java, but
+> endpoint/CLI wiring, the remaining Phase 1 API, disk wiring,
 > expired-listener RESET, and torture gates are not yet complete.
 
 ## Why this exists
@@ -69,6 +70,7 @@ npm test --prefix conformance
 npm run test:fireside --prefix conformance
 npm run test:fireside:strict --prefix conformance
 npm run test:official --prefix conformance
+npm run test:official-export-import --prefix conformance
 ```
 
 The Fireside and official-emulator commands each start their target and execute

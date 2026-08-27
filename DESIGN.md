@@ -522,7 +522,7 @@ SHA-256 is
 The large logical record begins with a `FIRST` fragment, continues through
 `MIDDLE` fragments, and ends with `LAST`; physical records use little-endian
 lengths and the masked CRC32C covers the one-byte fragment type followed by the
-payload. Reassembling the three logical records and writing them with those
+payload. Reassembling the four logical records and writing them with those
 observed rules reproduces `output-0` byte-for-byte. The fixture and its isolated
 capture utility live under `conformance/fixtures` and `conformance/src`.
 
@@ -553,6 +553,12 @@ Writer validation is bidirectional and byte-aware:
 5. import it into Java;
 6. diff documents, types, metadata, framing, and error behavior;
 7. repeat with fireside as the first writer.
+
+Steps 1 through 6 are automated in CI: Fireside semantically decodes and
+re-encodes the checked Java artifact, producing different entity-log bytes,
+then the official emulator imports that output and the Admin SDK asserts every
+captured value and document path. Step 7 lands with the control API and startup
+import wiring so Fireside can be the first writer through its public surface.
 
 The suite wrapper is `firebase-export-metadata.json`, containing component
 versions and paths. Import resolves

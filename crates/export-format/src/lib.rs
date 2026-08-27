@@ -6,10 +6,12 @@
 
 #![forbid(unsafe_code)]
 
+mod directory;
 mod entity;
 mod leveldb_log;
 mod metadata;
 
+pub use directory::{ExportError, ExportReader, WrittenExport, write_export};
 pub use entity::{EntityError, ExportedDocument, decode_entity, encode_entity};
 pub use leveldb_log::{LevelDbLogReader, LevelDbLogWriter, LogError, LogOptions};
 pub use metadata::{

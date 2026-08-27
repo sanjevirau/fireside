@@ -66,3 +66,5 @@ jobs:
         run: npm run test:fireside:strict --prefix conformance
       - name: Download and test the official Java emulator
         run: npm run test:official --prefix conformance
+      - name: Re-import a Fireside-written export into Java
+        run: npm run test:official-export-import --prefix conformance
