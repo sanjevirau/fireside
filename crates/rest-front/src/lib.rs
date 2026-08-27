@@ -1004,7 +1004,7 @@ impl RestError {
             | CommitError::UpdateTimePrecondition { .. } => {
                 (StatusCode::PRECONDITION_FAILED, "FAILED_PRECONDITION")
             }
-            CommitError::InvalidIncrementOperand { .. } => {
+            CommitError::InvalidNumericTransformOperand { .. } => {
                 (StatusCode::BAD_REQUEST, "INVALID_ARGUMENT")
             }
             CommitError::RevisionExhausted => {

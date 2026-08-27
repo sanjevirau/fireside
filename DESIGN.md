@@ -233,7 +233,8 @@ Firestore value types and the within-type ordering rules. Supported filters are
 - `partitionQuery`;
 - limit and offset;
 - `FieldPath.documentId()`;
-- server timestamp, increment, array union, array remove, and delete transforms.
+- server timestamp, increment, minimum, maximum, array union, array remove, and
+  delete transforms.
 
 The production ordering oracle includes null, booleans, interleaved int64 and
 double values (NaN, infinities, signed zero, and integers beyond double's exact
@@ -262,8 +263,9 @@ RunAggregationQuery, PartitionQuery, Listen targets, and REST runQuery so the
 transports cannot drift.
 
 `conformance/test/write-transforms.test.ts` pins masked nested and top-level
-field deletion plus server timestamp, numeric increment, array union, and array
-remove. Production and Java agree that all server-timestamp transforms in one
+field deletion plus server timestamp, numeric increment, numeric minimum and
+maximum, array union, and array remove. Production and Java agree that all
+server-timestamp transforms in one
 write share a value, while the document update time equals the SDK write time
 and the transform timestamp does not exceed it. Increment replaces missing or
 non-numeric fields with its operand; array union/removal treat a non-array base
@@ -271,6 +273,16 @@ as empty. The core applies masks and transforms while planning the atomic MVCC
 commit, before WAL persistence or visibility. A raw v1 fixture preserves wire
 types and proves array membership equality across equivalent integer/double
 values, NaN, and signed zero.
+
+The same raw v1 oracle pins numeric minimum/maximum without lossy double
+coercion. The selected operand keeps its own integer or double wire type;
+numerically equal values retain the stored value, including its numeric type
+and signed zero. A missing or nonnumeric stored field takes the numeric operand.
+NaN wins whether it is stored or supplied, and mixed integer/double comparisons
+remain exact beyond JavaScript's safe-integer boundary. Commit transform results
+match the stored wire values. Production and Java both reject a nonnumeric
+minimum/maximum operand with gRPC status 3 (`INVALID_ARGUMENT`).
+
 An update without a mask replaces the complete document before applying its
 attached transforms: an old counter of 10 followed by a replacement containing
 `increment(2)` yields 2 and removes fields absent from the replacement. This

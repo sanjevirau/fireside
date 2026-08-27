@@ -197,6 +197,161 @@ test("array transforms use production numeric equality", async (context) => {
   );
 });
 
+test("minimum and maximum transforms preserve production numeric types", async (context) => {
+  const configuration = resolveTarget(process.env);
+  const firestore = createFirestore(configuration);
+  const rawFirestore = createV1Firestore(configuration);
+  const runId = randomUUID();
+  const documentId = "numeric-bounds";
+  const parent = `projects/${configuration.projectId}/databases/(default)/documents/runs/${runId}`;
+  const database = `projects/${configuration.projectId}/databases/(default)`;
+  const name = `${parent}/fireside_conformance/${documentId}`;
+  const document = firestore.doc(`runs/${runId}/fireside_conformance/${documentId}`);
+
+  context.after(async () => {
+    await document.delete().catch(() => undefined);
+    await Promise.all([firestore.terminate(), rawFirestore.close()]).catch(
+      () => undefined,
+    );
+  });
+
+  await rawFirestore.createDocument({
+    parent,
+    collectionId: "fireside_conformance",
+    documentId,
+    document: {
+      fields: {
+        maxPromote: { integerValue: "3" },
+        minPromote: { doubleValue: 4.5 },
+        maxEqual: { integerValue: "3" },
+        minEqual: { doubleValue: 3 },
+        storedNegativeZero: { doubleValue: -0 },
+        maximumNan: { integerValue: "9" },
+        minimumNan: { doubleValue: 9 },
+        currentNanMaximum: { doubleValue: Number.NaN },
+        currentNanMinimum: { doubleValue: Number.NaN },
+        maximumPrecise: { integerValue: "9007199254740993" },
+        minimumPrecise: { integerValue: "9007199254740993" },
+        nonNumeric: { stringValue: "replace me" },
+      },
+    },
+  });
+
+  const [commit] = await rawFirestore.commit({
+    database,
+    writes: [
+      {
+        transform: {
+          document: name,
+          fieldTransforms: [
+            { fieldPath: "maxPromote", maximum: { doubleValue: 4.5 } },
+            { fieldPath: "minPromote", minimum: { integerValue: "4" } },
+            { fieldPath: "maxEqual", maximum: { doubleValue: 3 } },
+            { fieldPath: "minEqual", minimum: { integerValue: "3" } },
+            { fieldPath: "storedNegativeZero", maximum: { integerValue: "0" } },
+            { fieldPath: "maximumNan", maximum: { doubleValue: Number.NaN } },
+            { fieldPath: "minimumNan", minimum: { doubleValue: Number.NaN } },
+            { fieldPath: "currentNanMaximum", maximum: { integerValue: "1" } },
+            { fieldPath: "currentNanMinimum", minimum: { integerValue: "1" } },
+            {
+              fieldPath: "maximumPrecise",
+              maximum: { doubleValue: 9007199254740992 },
+            },
+            {
+              fieldPath: "minimumPrecise",
+              minimum: { doubleValue: 9007199254740992 },
+            },
+            { fieldPath: "nonNumeric", maximum: { integerValue: "7" } },
+            { fieldPath: "missing", minimum: { doubleValue: 8.5 } },
+          ],
+        },
+      },
+    ],
+  });
+  const expected = [
+    "double:4.5",
+    "integer:4",
+    "integer:3",
+    "double:3",
+    "double:-0",
+    "double:nan",
+    "double:nan",
+    "double:nan",
+    "double:nan",
+    "integer:9007199254740993",
+    "double:9007199254740992",
+    "integer:7",
+    "double:8.5",
+  ];
+  assert.deepEqual(
+    (commit.writeResults?.[0]?.transformResults ?? []).map(numericKind),
+    expected,
+  );
+
+  const [stored] = await rawFirestore.getDocument({ name });
+  assert.deepEqual(
+    [
+      stored.fields?.maxPromote,
+      stored.fields?.minPromote,
+      stored.fields?.maxEqual,
+      stored.fields?.minEqual,
+      stored.fields?.storedNegativeZero,
+      stored.fields?.maximumNan,
+      stored.fields?.minimumNan,
+      stored.fields?.currentNanMaximum,
+      stored.fields?.currentNanMinimum,
+      stored.fields?.maximumPrecise,
+      stored.fields?.minimumPrecise,
+      stored.fields?.nonNumeric,
+      stored.fields?.missing,
+    ].map(numericKind),
+    expected,
+  );
+
+  await assert.rejects(
+    rawFirestore.commit({
+      database,
+      writes: [
+        {
+          transform: {
+            document: name,
+            fieldTransforms: [
+              { fieldPath: "invalid", maximum: { stringValue: "not numeric" } },
+            ],
+          },
+        },
+      ],
+    }),
+    (error: unknown) => grpcCode(error) === 3,
+  );
+});
+
+function grpcCode(error: unknown): number | undefined {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return undefined;
+  }
+  return typeof error.code === "number" ? error.code : undefined;
+}
+
+function numericKind(value: {
+  readonly integerValue?: unknown;
+  readonly doubleValue?: number | null;
+} | null | undefined): string {
+  if (value?.integerValue !== undefined && value.integerValue !== null) {
+    return `integer:${String(value.integerValue)}`;
+  }
+  if (value?.doubleValue !== undefined && value.doubleValue !== null) {
+    if (Number.isNaN(value.doubleValue)) {
+      return "double:nan";
+    }
+    if (Object.is(value.doubleValue, -0)) {
+      return "double:-0";
+    }
+    return `double:${String(value.doubleValue)}`;
+  }
+  return "other";
+}
+
 function valueKinds(
   values:
     | ReadonlyArray<{

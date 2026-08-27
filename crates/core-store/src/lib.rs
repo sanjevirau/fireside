@@ -7,6 +7,7 @@
 
 #![forbid(unsafe_code)]
 
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, VecDeque};
 use std::error::Error;
 use std::fmt::{self, Debug, Display, Formatter};
@@ -377,6 +378,10 @@ pub enum TransformOperation {
     ArrayUnion(Vec<Value>),
     /// Remove every occurrence of the supplied values.
     ArrayRemove(Vec<Value>),
+    /// Retain the numerically larger of the current value and the operand.
+    Maximum(Value),
+    /// Retain the numerically smaller of the current value and the operand.
+    Minimum(Value),
 }
 
 /// One atomic mutation in a commit.
@@ -736,7 +741,7 @@ pub enum CommitError {
         actual: Option<Timestamp>,
     },
     /// An increment transform supplied a non-numeric operand.
-    InvalidIncrementOperand {
+    InvalidNumericTransformOperand {
         /// Target document.
         key: DocumentKey,
         /// Target field.
@@ -766,9 +771,9 @@ impl Display for CommitError {
                 formatter,
                 "update-time precondition for {key} expected {expected:?}, found {actual:?}"
             ),
-            Self::InvalidIncrementOperand { key, field } => write!(
+            Self::InvalidNumericTransformOperand { key, field } => write!(
                 formatter,
-                "increment transform for {key} field {:?} requires a numeric operand",
+                "numeric transform for {key} field {:?} requires a numeric operand",
                 field.segments()
             ),
             Self::RevisionExhausted => formatter.write_str("store revision exhausted"),
@@ -1175,7 +1180,7 @@ fn apply_transform(
         TransformOperation::ServerTimestamp => Value::Timestamp(transform_time),
         TransformOperation::Increment(operand) => {
             if !matches!(operand, Value::Integer(_) | Value::Double(_)) {
-                return Err(CommitError::InvalidIncrementOperand {
+                return Err(CommitError::InvalidNumericTransformOperand {
                     key: key.clone(),
                     field: transform.path.clone(),
                 });
@@ -1209,9 +1214,86 @@ fn apply_transform(
             });
             Value::Array(result)
         }
+        TransformOperation::Maximum(operand) => numeric_bound_value(
+            nested_value(fields, transform.path.segments()),
+            operand,
+            Ordering::Less,
+            key,
+            &transform.path,
+        )?,
+        TransformOperation::Minimum(operand) => numeric_bound_value(
+            nested_value(fields, transform.path.segments()),
+            operand,
+            Ordering::Greater,
+            key,
+            &transform.path,
+        )?,
     };
     set_nested_value(fields, transform.path.segments(), next);
     Ok(())
+}
+
+fn numeric_bound_value(
+    current: Option<&Value>,
+    operand: &Value,
+    replace_when: Ordering,
+    key: &DocumentKey,
+    field: &FieldPath,
+) -> Result<Value, CommitError> {
+    if !matches!(operand, Value::Integer(_) | Value::Double(_)) {
+        return Err(CommitError::InvalidNumericTransformOperand {
+            key: key.clone(),
+            field: field.clone(),
+        });
+    }
+    let Some(current @ (Value::Integer(_) | Value::Double(_))) = current else {
+        return Ok(operand.clone());
+    };
+    if matches!(current, Value::Double(value) if value.is_nan()) {
+        return Ok(current.clone());
+    }
+    if matches!(operand, Value::Double(value) if value.is_nan()) {
+        return Ok(operand.clone());
+    }
+    Ok(if compare_numeric(current, operand) == replace_when {
+        operand.clone()
+    } else {
+        current.clone()
+    })
+}
+
+fn compare_numeric(left: &Value, right: &Value) -> Ordering {
+    match (left, right) {
+        (Value::Integer(left), Value::Integer(right)) => left.cmp(right),
+        (Value::Double(left), Value::Double(right)) => left
+            .partial_cmp(right)
+            .expect("numeric bound handles NaN before comparison"),
+        (Value::Integer(left), Value::Double(right)) => compare_integer_double(*left, *right),
+        (Value::Double(left), Value::Integer(right)) => {
+            compare_integer_double(*right, *left).reverse()
+        }
+        _ => unreachable!("numeric operands are validated before comparison"),
+    }
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn compare_integer_double(integer: i64, double: f64) -> Ordering {
+    if double >= 2_f64.powi(63) {
+        return Ordering::Less;
+    }
+    if double < -2_f64.powi(63) {
+        return Ordering::Greater;
+    }
+    let truncated = double.trunc() as i64;
+    match integer.cmp(&truncated) {
+        Ordering::Equal if double.fract().is_sign_positive() && double.fract() != 0.0 => {
+            Ordering::Less
+        }
+        Ordering::Equal if double.fract().is_sign_negative() && double.fract() != 0.0 => {
+            Ordering::Greater
+        }
+        ordering => ordering,
+    }
 }
 
 #[allow(clippy::cast_precision_loss)]
@@ -1828,6 +1910,74 @@ mod tests {
     }
 
     #[test]
+    fn numeric_bounds_preserve_types_equality_signed_zero_and_nan() {
+        let store = Store::default();
+        let key = key(&database("(default)"), "items/numeric-bounds");
+        store
+            .commit(&[Write::Create {
+                key: key.clone(),
+                fields: BTreeMap::from([
+                    ("maximum".to_owned(), Value::Integer(3)),
+                    ("minimum".to_owned(), Value::Double(4.5)),
+                    ("equal".to_owned(), Value::Integer(3)),
+                    ("zero".to_owned(), Value::Double(-0.0)),
+                    ("nan".to_owned(), Value::Integer(9)),
+                    ("nonNumeric".to_owned(), Value::Boolean(true)),
+                ]),
+            }])
+            .expect("seed should commit");
+        store
+            .commit(&[Write::Patch {
+                key: key.clone(),
+                fields: Fields::new(),
+                update_mask: Vec::new(),
+                transforms: vec![
+                    FieldTransform {
+                        path: path(&["maximum"]),
+                        operation: TransformOperation::Maximum(Value::Double(4.5)),
+                    },
+                    FieldTransform {
+                        path: path(&["minimum"]),
+                        operation: TransformOperation::Minimum(Value::Integer(4)),
+                    },
+                    FieldTransform {
+                        path: path(&["equal"]),
+                        operation: TransformOperation::Maximum(Value::Double(3.0)),
+                    },
+                    FieldTransform {
+                        path: path(&["zero"]),
+                        operation: TransformOperation::Minimum(Value::Integer(0)),
+                    },
+                    FieldTransform {
+                        path: path(&["nan"]),
+                        operation: TransformOperation::Maximum(Value::Double(f64::NAN)),
+                    },
+                    FieldTransform {
+                        path: path(&["nonNumeric"]),
+                        operation: TransformOperation::Minimum(Value::Integer(7)),
+                    },
+                    FieldTransform {
+                        path: path(&["missing"]),
+                        operation: TransformOperation::Maximum(Value::Double(8.5)),
+                    },
+                ],
+                precondition: Precondition::Exists(true),
+            }])
+            .expect("numeric bounds should commit");
+
+        let document = store.snapshot().get(&key).expect("document should exist");
+        assert_eq!(document.fields()["maximum"], Value::Double(4.5));
+        assert_eq!(document.fields()["minimum"], Value::Integer(4));
+        assert_eq!(document.fields()["equal"], Value::Integer(3));
+        assert!(
+            matches!(document.fields()["zero"], Value::Double(value) if value.is_sign_negative())
+        );
+        assert!(matches!(document.fields()["nan"], Value::Double(value) if value.is_nan()));
+        assert_eq!(document.fields()["nonNumeric"], Value::Integer(7));
+        assert_eq!(document.fields()["missing"], Value::Double(8.5));
+    }
+
+    #[test]
     #[allow(clippy::too_many_lines)]
     fn field_transforms_match_the_cloud_fixture() {
         let store = Store::default();
@@ -1998,7 +2148,7 @@ mod tests {
 
         assert_eq!(
             error,
-            CommitError::InvalidIncrementOperand {
+            CommitError::InvalidNumericTransformOperand {
                 key: transformed,
                 field: path(&["value"]),
             }

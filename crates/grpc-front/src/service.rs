@@ -977,7 +977,9 @@ fn transform_result(
             encode_value(&Value::Null)
         }
         TransformOperation::ServerTimestamp => encode_value(&Value::Timestamp(commit_time)),
-        TransformOperation::Increment(_) => document
+        TransformOperation::Increment(_)
+        | TransformOperation::Maximum(_)
+        | TransformOperation::Minimum(_) => document
             .and_then(|document| nested_value(document.fields(), transform.path.segments()))
             .map_or_else(
                 || Err(Status::internal("transform result field is missing")),
@@ -1006,7 +1008,9 @@ fn commit_status(error: CommitError) -> Status {
         CommitError::UpdateTimePrecondition { key, .. } => {
             Status::failed_precondition(format!("update time precondition failed: {key}"))
         }
-        CommitError::InvalidIncrementOperand { .. } => Status::invalid_argument(error.to_string()),
+        CommitError::InvalidNumericTransformOperand { .. } => {
+            Status::invalid_argument(error.to_string())
+        }
         CommitError::RevisionExhausted => Status::resource_exhausted(error.to_string()),
         CommitError::PersistenceUnavailable(_) => Status::unavailable(error.to_string()),
     }

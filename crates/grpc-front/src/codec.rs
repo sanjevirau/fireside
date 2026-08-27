@@ -501,10 +501,11 @@ fn decode_transforms(
                         .map(decode_value)
                         .collect::<Result<Vec<_>, _>>()?,
                 ),
-                Some(TransformType::Maximum(_) | TransformType::Minimum(_)) => {
-                    return Err(Status::unimplemented(
-                        "minimum/maximum transform behavior awaits an oracle fixture",
-                    ));
+                Some(TransformType::Maximum(value)) => {
+                    TransformOperation::Maximum(decode_value(value)?)
+                }
+                Some(TransformType::Minimum(value)) => {
+                    TransformOperation::Minimum(decode_value(value)?)
                 }
                 Some(TransformType::SetToServerValue(_)) | None => {
                     return Err(Status::invalid_argument("invalid field transform"));
