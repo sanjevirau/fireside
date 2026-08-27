@@ -24,6 +24,21 @@ interface RestValue {
   readonly timestampValue?: string;
 }
 
+interface RestBatchGetResponse {
+  readonly found?: RestDocument;
+  readonly missing?: string;
+}
+
+interface RestCommitResponse {
+  readonly commitTime?: string;
+  readonly writeResults?: readonly unknown[];
+}
+
+interface RestRunQueryResponse {
+  readonly document?: RestDocument;
+  readonly readTime?: string;
+}
+
 test("REST v1 patches, reads, deletes, and reports missing documents", async () => {
   const configuration = resolveTarget(process.env);
   const runId = randomUUID();
@@ -69,6 +84,97 @@ test("REST v1 patches, reads, deletes, and reports missing documents", async () 
   const missingError = await json<RestError>(missing);
   assert.equal(missingError.error?.code, 404);
   assert.equal(missingError.error?.status, "NOT_FOUND");
+});
+
+test("REST v1 commit, batchGet, and runQuery share document semantics", async () => {
+  const configuration = resolveTarget(process.env);
+  const runId = randomUUID();
+  const databaseRoot = `projects/${configuration.projectId}/databases/(default)`;
+  const documentPath = `runs/${runId}/fireside_conformance/rest-rpc`;
+  const documentName = `${databaseRoot}/documents/${documentPath}`;
+  const missingName = `${databaseRoot}/documents/runs/${runId}/fireside_conformance/missing`;
+  const baseUrl = configuration.host === undefined
+    ? "https://firestore.googleapis.com"
+    : `http://${configuration.host}`;
+  const documentsUrl = `${baseUrl}/v1/${databaseRoot}/documents`;
+  const headers = {
+    ...await authorizationHeaders(configuration.host === undefined),
+    "content-type": "application/json",
+  };
+
+  const committed = await fetch(`${documentsUrl}:commit`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      writes: [
+        {
+          update: {
+            name: documentName,
+            fields: {
+              rank: { integerValue: "1" },
+              source: { stringValue: "rest-rpc" },
+            },
+          },
+        },
+      ],
+    }),
+  });
+  assert.equal(committed.status, 200);
+  const commit = await json<RestCommitResponse>(committed);
+  assert.equal(commit.writeResults?.length, 1);
+  assert.equal(typeof commit.commitTime, "string");
+
+  const batch = await fetch(`${documentsUrl}:batchGet`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ documents: [documentName, missingName] }),
+  });
+  assert.equal(batch.status, 200);
+  const batchResponses = await json<readonly RestBatchGetResponse[]>(batch);
+  assert.equal(batchResponses.length, 2);
+  assert.equal(
+    batchResponses.some((response) => response.found?.name === documentName),
+    true,
+  );
+  assert.equal(
+    batchResponses.some((response) => response.missing === missingName),
+    true,
+  );
+
+  const queried = await fetch(`${documentsUrl}/runs/${runId}:runQuery`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: "fireside_conformance" }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: "source" },
+            op: "EQUAL",
+            value: { stringValue: "rest-rpc" },
+          },
+        },
+      },
+    }),
+  });
+  assert.equal(queried.status, 200);
+  const queryResponses = await json<readonly RestRunQueryResponse[]>(queried);
+  assert.deepEqual(
+    queryResponses
+      .flatMap((response) => response.document?.name ?? [])
+      .filter((name) => name === documentName),
+    [documentName],
+  );
+  assert.equal(
+    queryResponses.every((response) => typeof response.readTime === "string"),
+    true,
+  );
+
+  const deleted = await fetch(`${documentsUrl}/${documentPath}`, {
+    method: "DELETE",
+    headers,
+  });
+  assert.equal(deleted.status, 200);
 });
 
 async function authorizationHeaders(

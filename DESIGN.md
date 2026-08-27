@@ -292,6 +292,9 @@ rules as the admin credential.
 an owner/admin PATCH followed by GET and DELETE on the v1 document resource.
 Both return HTTP 200 for those operations and encode a subsequent missing read
 as HTTP 404 with JSON error code `404` and status `NOT_FOUND`.
+The same fixture observes production `commit` returning one write result and a
+commit time, `batchGet` returning both a found and a missing result, and an
+ancestor-scoped `runQuery` returning the matching document with read times.
 
 The exact gRPC status code is part of compatibility. Differential tests must pin
 at least `NOT_FOUND` (5), `ALREADY_EXISTS` (6), `FAILED_PRECONDITION` (9), and
