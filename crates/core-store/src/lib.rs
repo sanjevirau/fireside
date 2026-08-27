@@ -13,14 +13,21 @@ use std::fmt::{self, Display, Formatter};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use bincode::{Decode, Encode};
 use im::OrdMap;
 use serde::{Deserialize, Serialize};
+
+mod disk;
+
+pub use disk::{DiskError, DiskOptions, DiskStore};
 
 /// Firestore document fields in deterministic field-name order.
 pub type Fields = BTreeMap<String, Value>;
 
 /// A Firestore timestamp normalized to a valid nanosecond value.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Encode, Decode,
+)]
 pub struct Timestamp {
     seconds: i64,
     nanos: u32,
@@ -81,7 +88,7 @@ impl Display for TimestampError {
 impl Error for TimestampError {}
 
 /// A typed Firestore value. Query comparison semantics live in `query-engine`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 #[serde(rename_all = "camelCase", tag = "type", content = "value")]
 pub enum Value {
     /// The null value.
@@ -114,7 +121,9 @@ pub enum Value {
 }
 
 /// A project and database pair.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Encode, Decode,
+)]
 pub struct DatabaseName {
     project_id: Arc<str>,
     database_id: Arc<str>,
@@ -160,7 +169,9 @@ impl Display for DatabaseName {
 }
 
 /// A validated document key scoped to one named database.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Encode, Decode,
+)]
 pub struct DocumentKey {
     database: DatabaseName,
     path: Arc<str>,
@@ -229,7 +240,19 @@ impl Error for NameError {}
 
 /// Monotonic internal commit revision.
 #[derive(
-    Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+    Debug,
+    Default,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Serialize,
+    Deserialize,
+    Encode,
+    Decode,
 )]
 pub struct Revision(u64);
 
@@ -245,7 +268,7 @@ impl Revision {
 }
 
 /// Immutable stored document.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Document {
     fields: Fields,
     create_time: Timestamp,
@@ -273,7 +296,7 @@ impl Document {
 }
 
 /// Conditional write guard.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Precondition {
     /// Apply regardless of current existence.
     #[default]
@@ -285,7 +308,7 @@ pub enum Precondition {
 }
 
 /// One atomic mutation in a commit.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Write {
     /// Create a document and fail when it already exists.
     Create {
@@ -355,50 +378,10 @@ impl Store {
     /// Atomically validates and applies a sequence of writes.
     pub fn commit(&self, writes: &[Write]) -> Result<CommitResult, CommitError> {
         let mut state = self.state();
-        let mut documents = state.documents.clone();
-        let commit_time = state.next_commit_time();
-        let revision = Revision(
-            state
-                .revision
-                .0
-                .checked_add(1)
-                .ok_or(CommitError::RevisionExhausted)?,
-        );
-        let mut pending_changes = Vec::with_capacity(writes.len());
-
-        for write in writes {
-            let (key, next) = apply_write(&documents, write, commit_time)?;
-            let previous = documents.get(&key).cloned();
-
-            match &next {
-                Some(document) => {
-                    documents.insert(key.clone(), document.clone());
-                }
-                None => {
-                    documents.remove(&key);
-                }
-            }
-
-            if previous != next {
-                pending_changes.push(Change {
-                    revision,
-                    key,
-                    before: previous,
-                    after: next,
-                });
-            }
-        }
-
-        state.documents = documents;
-        state.revision = revision;
-        for change in pending_changes {
-            state.push_change(change);
-        }
-
-        Ok(CommitResult {
-            revision,
-            commit_time,
-        })
+        let plan = state.plan(writes)?;
+        let result = plan.result;
+        state.install(plan);
+        Ok(result)
     }
 
     /// Returns changes strictly newer than `after` or requests a reset when
@@ -596,7 +579,77 @@ impl State {
         }
     }
 
-    fn next_commit_time(&mut self) -> Timestamp {
+    fn from_persisted(
+        mut options: StoreOptions,
+        revision: Revision,
+        last_commit_time: Timestamp,
+        documents: OrdMap<DocumentKey, Arc<Document>>,
+    ) -> Self {
+        options.max_change_log_entries = options.max_change_log_entries.max(1);
+        Self {
+            options,
+            revision,
+            last_commit_time,
+            documents,
+            change_log: VecDeque::new(),
+            change_floor: revision,
+        }
+    }
+
+    fn plan(&self, writes: &[Write]) -> Result<CommitPlan, CommitError> {
+        let mut documents = self.documents.clone();
+        let commit_time = self.next_commit_time();
+        let revision = Revision(
+            self.revision
+                .0
+                .checked_add(1)
+                .ok_or(CommitError::RevisionExhausted)?,
+        );
+        let mut changes = Vec::with_capacity(writes.len());
+
+        for write in writes {
+            let (key, next) = apply_write(&documents, write, commit_time)?;
+            let previous = documents.get(&key).cloned();
+
+            match &next {
+                Some(document) => {
+                    documents.insert(key.clone(), document.clone());
+                }
+                None => {
+                    documents.remove(&key);
+                }
+            }
+
+            if previous != next {
+                changes.push(Change {
+                    revision,
+                    key,
+                    before: previous,
+                    after: next,
+                });
+            }
+        }
+
+        Ok(CommitPlan {
+            result: CommitResult {
+                revision,
+                commit_time,
+            },
+            documents,
+            changes,
+        })
+    }
+
+    fn install(&mut self, plan: CommitPlan) {
+        self.documents = plan.documents;
+        self.revision = plan.result.revision;
+        self.last_commit_time = plan.result.commit_time;
+        for change in plan.changes {
+            self.push_change(change);
+        }
+    }
+
+    fn next_commit_time(&self) -> Timestamp {
         let elapsed = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default();
@@ -605,13 +658,11 @@ impl State {
             seconds,
             nanos: elapsed.subsec_nanos(),
         };
-        let next = if observed > self.last_commit_time {
+        if observed > self.last_commit_time {
             observed
         } else {
             self.last_commit_time.saturating_next()
-        };
-        self.last_commit_time = next;
-        next
+        }
     }
 
     fn push_change(&mut self, change: Change) {
@@ -622,6 +673,13 @@ impl State {
             }
         }
     }
+}
+
+#[derive(Debug)]
+struct CommitPlan {
+    result: CommitResult,
+    documents: OrdMap<DocumentKey, Arc<Document>>,
+    changes: Vec<Change>,
 }
 
 fn apply_write(

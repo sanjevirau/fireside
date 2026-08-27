@@ -160,11 +160,22 @@ results without a documented gate failure.
 ### 4.3 Disk mode and crash safety
 
 In-memory mode is the default. Optional disk mode uses `redb` and a write-ahead
-journal enabled by default. A commit is acknowledged only after the journal is
-durably persisted according to the selected durability contract. State-page
-application and journal checkpointing must be idempotent. Startup validates and
-replays complete committed records, discarding only incomplete uncommitted
-tails.
+journal enabled by default. The implementation pins the newest `redb` release
+compatible with the workspace MSRV and explicitly uses immediate durability. A
+commit is planned without mutating visible memory, encoded as final document
+mutations, framed with a versioned magic value, length, and CRC32C, then synced
+to the journal. The same revision is atomically committed to `redb` before the
+new immutable root becomes visible or success is acknowledged. An ambiguous
+journal or database error fences further writes until restart.
+
+Journal records and stored keys/documents use bincode's native typed encoding,
+not its serde adapter, so every Firestore floating-point value (including NaN
+and infinities) round-trips without changing the public JSON representation.
+State application and journal checkpointing are idempotent. Startup validates
+and replays complete records newer than redb's revision, skips records already
+applied, and discards only an incomplete trailing frame. A complete frame with
+invalid magic, length, checksum, encoding, revision sequence, or timestamp
+sequence is treated as corruption rather than guessed through.
 
 The Phase 1 kill test repeatedly sends `SIGKILL` at randomized points during
 load. After each restart, every write for which the client observed commit
