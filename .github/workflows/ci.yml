@@ -36,13 +36,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version: 24.20.0
           cache: npm
           cache-dependency-path: conformance/package-lock.json
+      - name: Install current npm
+        run: npm install --global npm@12.0.2
       - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 26
       - name: Install pinned harness dependencies
         run: npm ci --prefix conformance
       - name: Type-check harness

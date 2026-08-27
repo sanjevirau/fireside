@@ -8,7 +8,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use bincode::{Decode, Encode, config};
-use redb::{Database, Durability, ReadableTable, TableDefinition};
+use redb::{Database, Durability, ReadableDatabase, ReadableTable, TableDefinition};
 
 use super::{
     Change, CommitError, CommitPlan, CommitResult, Document, DocumentKey, ResetRequired, Revision,
@@ -110,11 +110,11 @@ impl DiskStore {
         let plan = state.memory.plan(writes)?;
         let record = WalRecord::from_plan(&plan);
 
-        if let Some(journal) = &mut state.journal {
-            if let Err(error) = journal.append(&record) {
-                state.requires_restart = true;
-                return Err(error);
-            }
+        if let Some(journal) = &mut state.journal
+            && let Err(error) = journal.append(&record)
+        {
+            state.requires_restart = true;
+            return Err(error);
         }
 
         if let Err(error) = persist_record(&state.database, &record) {
@@ -218,7 +218,9 @@ struct PersistedMutation {
 
 fn initialize_database(database: &Database) -> Result<(), DiskError> {
     let mut transaction = database.begin_write().map_err(DiskError::redb)?;
-    transaction.set_durability(Durability::Immediate);
+    transaction
+        .set_durability(Durability::Immediate)
+        .map_err(DiskError::redb)?;
     {
         transaction.open_table(DOCUMENTS).map_err(DiskError::redb)?;
         transaction.open_table(METADATA).map_err(DiskError::redb)?;
@@ -281,7 +283,9 @@ fn load_persisted_state(database: &Database) -> Result<PersistedState, DiskError
 
 fn persist_record(database: &Database, record: &WalRecord) -> Result<(), DiskError> {
     let mut transaction = database.begin_write().map_err(DiskError::redb)?;
-    transaction.set_durability(Durability::Immediate);
+    transaction
+        .set_durability(Durability::Immediate)
+        .map_err(DiskError::redb)?;
     {
         let mut documents = transaction.open_table(DOCUMENTS).map_err(DiskError::redb)?;
         for mutation in &record.mutations {

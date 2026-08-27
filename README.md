@@ -49,7 +49,10 @@ The latest completed report is [Phase 0](reports/phase-0-gate.md).
 
 ## Development
 
-Prerequisites are stable Rust, Node.js 20 or later, and Java 21 or later.
+Prerequisites are Rust 1.98 stable, Node.js 24.20, npm 12.0, and Java 26.
+The repository tracks the newest stable releases that remain compatible with
+the official-emulator harness; daily dependency updates keep that policy
+visible in pull requests.
 
 ```sh
 cargo fmt --all -- --check

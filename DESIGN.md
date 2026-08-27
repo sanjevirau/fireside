@@ -72,6 +72,21 @@ When a contract is missing from this document, the required sequence is:
 5. update this document with the evidence location;
 6. implement original code until the test passes.
 
+### 2.1 Dependency freshness
+
+The workspace tracks the newest stable Rust toolchain and the newest stable
+direct dependency releases. Cargo and npm lockfiles make each gate run
+reproducible, while daily dependency-update pull requests expose new releases
+for immediate conformance testing. A newer version may be held back only when
+primary evidence shows that it is unusable or incompatible with a required
+oracle. Every such exception is recorded here and is revisited on updates.
+
+The TypeScript harness uses the newest Node.js release accepted by the current
+`firebase-tools` dependency graph. At this revision that is Node.js 24.20.0:
+the latest `firebase-tools` release accepts major 24, while its `superstatic`
+dependency rejects major 26. The harness uses npm 12.0.2 and explicitly pins
+approved dependency install scripts.
+
 ## 3. Process and transport architecture
 
 The release artifact is one `fireside` binary with service subcommands. The
@@ -160,8 +175,9 @@ results without a documented gate failure.
 ### 4.3 Disk mode and crash safety
 
 In-memory mode is the default. Optional disk mode uses `redb` and a write-ahead
-journal enabled by default. The implementation pins the newest `redb` release
-compatible with the workspace MSRV and explicitly uses immediate durability. A
+journal enabled by default. The implementation tracks the newest stable `redb`
+release and the workspace tracks the newest stable Rust toolchain. It explicitly
+uses immediate durability. A
 commit is planned without mutating visible memory, encoded as final document
 mutations, framed with a versioned magic value, length, and CRC32C, then synced
 to the journal. The same revision is atomically committed to `redb` before the
@@ -171,6 +187,9 @@ journal or database error fences further writes until restart.
 Journal records and stored keys/documents use bincode's native typed encoding,
 not its serde adapter, so every Firestore floating-point value (including NaN
 and infinities) round-trips without changing the public JSON representation.
+The production dependency remains on bincode 2.0.1 because the crates.io 3.0.0
+artifact intentionally consists only of a compile-time error; 2.0.1 is the
+newest functional release. This is re-evaluated whenever dependencies update.
 State application and journal checkpointing are idempotent. Startup validates
 and replays complete records newer than redb's revision, skips records already
 applied, and discards only an incomplete trailing frame. A complete frame with
