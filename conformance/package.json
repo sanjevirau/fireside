@@ -9,7 +9,7 @@
   "scripts": {
     "check": "tsc --noEmit",
     "test": "node --import tsx --test test/target.test.ts",
-    "test:firestore": "node --import tsx --test test/firestore-smoke.test.ts test/query-features.test.ts test/query-ordering.test.ts test/write-transforms.test.ts",
+    "test:firestore": "node --import tsx --test test/firestore-smoke.test.ts test/partition-query.test.ts test/query-features.test.ts test/query-ordering.test.ts test/write-transforms.test.ts",
     "test:smoke": "node --import tsx --test test/firestore-smoke.test.ts",
     "test:cloud": "node --import tsx src/run-cloud.ts",
     "test:official": "node --import tsx src/run-official.ts"

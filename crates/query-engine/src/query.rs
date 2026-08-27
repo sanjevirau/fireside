@@ -318,6 +318,15 @@ pub struct QueryDocument {
     projected_fields: Option<Fields>,
 }
 
+/// One production-compatible `PartitionQuery` split point.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PartitionCursor {
+    /// The document-reference value for the name-only partition query.
+    pub values: Vec<Value>,
+    /// Raw wire cursor position. Production split cursors use `false`.
+    pub before: bool,
+}
+
 impl QueryDocument {
     #[must_use]
     pub const fn key(&self) -> &DocumentKey {
@@ -400,6 +409,63 @@ pub fn execute(
             document,
         })
         .collect())
+}
+
+/// Produces deterministic split points for a supported collection-group query.
+///
+/// Production may return fewer points because placement follows its physical
+/// index partitions. A local store has no physical shards, so fireside divides
+/// the ordered result set evenly while honoring the same maximum and cursor
+/// contract.
+pub fn partition(
+    snapshot: &Snapshot,
+    database: &DatabaseName,
+    query: &Query,
+    edition: DatabaseEdition,
+    maximum_points: usize,
+) -> Result<Vec<PartitionCursor>, QueryError> {
+    if maximum_points == 0 {
+        return Err(QueryError::InvalidPartitionCount);
+    }
+    if !supported_partition_query(query) {
+        return Err(QueryError::UnsupportedPartitionQuery);
+    }
+
+    let documents = execute(snapshot, database, query, edition)?;
+    let point_count = maximum_points.min(documents.len().saturating_sub(1));
+    if point_count == 0 {
+        return Ok(Vec::new());
+    }
+
+    let segment_count = point_count + 1;
+    let segment_size = documents.len() / segment_count;
+    let remainder = documents.len() % segment_count;
+    Ok((1..=point_count)
+        .map(|point| {
+            let index = segment_size * point + remainder.min(point);
+            PartitionCursor {
+                values: vec![Value::Reference(Arc::from(
+                    documents[index].key().to_string(),
+                ))],
+                before: false,
+            }
+        })
+        .collect())
+}
+
+fn supported_partition_query(query: &Query) -> bool {
+    matches!(query.scope, QueryScope::CollectionGroup(_))
+        && query.filter.is_none()
+        && query.orders
+            == [Order {
+                path: FieldPath::DocumentId,
+                direction: Direction::Ascending,
+            }]
+        && query.start.is_none()
+        && query.end.is_none()
+        && query.offset == 0
+        && query.limit.is_none()
+        && query.projection.is_none()
 }
 
 /// Aggregation requested after query filtering, ordering, cursors, offset, and
@@ -795,6 +861,8 @@ pub enum QueryError {
     InvalidFieldPath,
     InvalidScope(String),
     CursorTooLong,
+    InvalidPartitionCount,
+    UnsupportedPartitionQuery,
 }
 
 impl Display for QueryError {
@@ -805,6 +873,12 @@ impl Display for QueryError {
             }
             Self::InvalidScope(scope) => write!(formatter, "invalid query scope: {scope}"),
             Self::CursorTooLong => formatter.write_str("cursor has more values than order clauses"),
+            Self::InvalidPartitionCount => {
+                formatter.write_str("partition point count must be positive")
+            }
+            Self::UnsupportedPartitionQuery => formatter.write_str(
+                "partition queries require an unshaped collection-group query ordered by document name ascending",
+            ),
         }
     }
 }
@@ -1126,6 +1200,46 @@ mod tests {
                 ("count".to_owned(), Value::Integer(5)),
                 ("sum".to_owned(), Value::Integer(15)),
             ])
+        );
+    }
+
+    #[test]
+    fn partition_cursors_evenly_split_the_supported_query() {
+        let (database, snapshot) = seeded_snapshot();
+        let query = Query::new(
+            QueryScope::collection_group("fireside_conformance").expect("valid collection group"),
+        )
+        .order_by(FieldPath::DocumentId, Direction::Ascending);
+
+        let cursors = partition(&snapshot, &database, &query, DatabaseEdition::Standard, 2)
+            .expect("supported query should partition");
+        assert_eq!(cursors.len(), 2);
+        assert!(cursors.iter().all(|cursor| !cursor.before));
+        assert_eq!(
+            cursors
+                .iter()
+                .map(|cursor| match cursor.values.as_slice() {
+                    [Value::Reference(reference)] => {
+                        reference.rsplit('/').next().unwrap_or_default()
+                    }
+                    _ => "",
+                })
+                .collect::<Vec<_>>(),
+            ["b", "d"]
+        );
+        assert_eq!(
+            partition(&snapshot, &database, &query, DatabaseEdition::Standard, 0,),
+            Err(QueryError::InvalidPartitionCount)
+        );
+        assert_eq!(
+            partition(
+                &snapshot,
+                &database,
+                &collection_query(),
+                DatabaseEdition::Standard,
+                2,
+            ),
+            Err(QueryError::UnsupportedPartitionQuery)
         );
     }
 }

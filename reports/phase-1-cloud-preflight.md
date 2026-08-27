@@ -24,9 +24,10 @@ report and makes no compatibility claim.
 | `(default)` | Firestore Native | Standard | `nam5` | active |
 | `fireside-conformance` | Firestore Native | Standard | `nam5` | active |
 
-Both databases apply TTL to
-`fireside_conformance._fireside_expires_at`. Tests also delete their own data
-immediately; TTL is a crash/interruption backstop.
+Both databases apply TTL to `_fireside_expires_at` in the
+`fireside_conformance` and `fireside_partition_conformance` collection groups.
+Tests also delete their own data immediately; TTL is a crash/interruption
+backstop.
 
 ## Conformance indexes
 
@@ -38,6 +39,13 @@ provisioned in the dedicated project is checked in at
 `conformance/firestore.indexes.json`. It preserves the inherited collection
 indexes and adds only the ascending collection-group index needed to isolate
 parallel conformance runs.
+
+The partition fixture has a separate `ordinal` ascending collection-group index
+recorded in the same file. Before this index was ready, production legitimately
+returned no partition points; after activation, the same 256-document request
+returned usable splits. Exact cursor placement is intentionally not asserted:
+successive production probes returned one, two, and three valid points as the
+physical index layout changed.
 
 ## Safety boundary
 
@@ -62,7 +70,7 @@ only and is not a fireside compatibility result.
 
 ## Phase 1 oracle expansion
 
-The shared harness is now 6/6 on both production and Java. In addition to the
+The shared harness is now 7/7 on both production and Java. In addition to the
 connectivity case it covers mixed value ordering, exact int64/double ordering,
 all Phase 1 filter operators, cursor boundaries, projections, collection
 groups, document IDs, and count/sum/average. Production's missing-index status
@@ -76,4 +84,11 @@ and may be later than the transform timestamp. The same fixture covers numeric
 increment on numeric, missing, and non-numeric fields plus array transforms on
 arrays and non-arrays. A raw v1 case additionally proves that array transforms
 normalize NaN, signed zero, and equivalent integer/double values for membership
-and removal. No fireside compatibility result is claimed yet.
+and removal.
+
+The raw `PartitionQuery` case verifies that production returns at most the
+requested number of ordered, unique document-reference cursors and that the
+resulting query partitions cover every source document exactly once. The
+official Java emulator returns gRPC status 12 (`UNIMPLEMENTED`) for this method;
+the harness asserts and records that Java-only deviation. No fireside
+compatibility result is claimed yet.

@@ -235,6 +235,17 @@ commit, before WAL persistence or visibility. A raw v1 fixture preserves wire
 types and proves array membership equality across equivalent integer/double
 values, NaN, and signed zero.
 
+`conformance/test/partition-query.test.ts` pins the stable `PartitionQuery`
+contract for the supported unshaped collection-group query ordered by
+`__name__` ascending: split cursors contain one document reference, use raw
+`before=false`, are ordered and unique, never exceed the requested maximum, and
+divide the result set without gaps or duplicates. Production cursor placement
+is deliberately nondeterministic because it follows physical index partitions;
+successive probes of the same logical fixture returned different valid point
+counts. Fireside has no physical shards, so it emits deterministic evenly
+spaced points within the production-valid bound. Java v1.22.0 returns gRPC 12
+(`UNIMPLEMENTED`) for `PartitionQuery`; this is a documented Java deviation.
+
 Optional `--strict-indexes` validates queries against
 `firestore.indexes.json` as production enforces composite indexes. Because the
 official emulator does not enforce these indexes, cloud is mandatory for this

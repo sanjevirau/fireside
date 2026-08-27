@@ -14,6 +14,7 @@ await new Promise<void>((resolve, reject) => {
       "tsx",
       "--test",
       "test/firestore-smoke.test.ts",
+      "test/partition-query.test.ts",
       "test/query-features.test.ts",
       "test/query-ordering.test.ts",
       "test/write-transforms.test.ts",
