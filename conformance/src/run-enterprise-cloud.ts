@@ -1,0 +1,38 @@
+import { spawn } from "node:child_process";
+
+import { CLOUD_PROJECT_ID, ENTERPRISE_DATABASE_ID } from "./target.ts";
+
+if (process.env.FIRESTORE_EMULATOR_HOST !== undefined) {
+  throw new Error("Enterprise cloud runner refuses FIRESTORE_EMULATOR_HOST");
+}
+
+await new Promise<void>((resolve, reject) => {
+  const child = spawn(
+    process.execPath,
+    ["--import", "tsx", "--test", "test/pipeline.test.ts"],
+    {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        CONFORMANCE_TARGET: "cloud",
+        CONFORMANCE_CLOUD_PROJECT: CLOUD_PROJECT_ID,
+        CONFORMANCE_CLOUD_ALLOWLIST: CLOUD_PROJECT_ID,
+        CONFORMANCE_CLOUD_DATABASE: ENTERPRISE_DATABASE_ID,
+      },
+      stdio: "inherit",
+    },
+  );
+
+  child.once("error", reject);
+  child.once("exit", (code, signal) => {
+    if (code === 0) {
+      resolve();
+      return;
+    }
+    reject(
+      new Error(
+        `Enterprise cloud suite exited with code ${String(code)} and signal ${String(signal)}`,
+      ),
+    );
+  });
+});

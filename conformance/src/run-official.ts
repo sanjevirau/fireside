@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const PROJECT_ID = "demo-fireside-phase0";
+const enterprise = process.argv.includes("--enterprise");
 
 async function main(): Promise<void> {
   const temporaryDirectory = await mkdtemp(
@@ -16,7 +17,11 @@ async function main(): Promise<void> {
     const configPath = join(temporaryDirectory, "firebase.json");
     const config = {
       emulators: {
-        firestore: { host: "127.0.0.1", port },
+        firestore: {
+          edition: enterprise ? "enterprise" : "standard",
+          host: "127.0.0.1",
+          port,
+        },
         singleProjectMode: true,
         ui: { enabled: false },
       },
@@ -43,7 +48,9 @@ async function main(): Promise<void> {
         PROJECT_ID,
         "--config",
         configPath,
-        "npm run test:firestore && npm run test:control",
+        enterprise
+          ? "node --import tsx --test test/pipeline.test.ts"
+          : "npm run test:firestore && npm run test:control",
       ],
       {
         ...process.env,

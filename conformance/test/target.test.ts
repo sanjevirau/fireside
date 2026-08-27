@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { CLOUD_PROJECT_ID, resolveTarget } from "../src/target.ts";
+import {
+  CLOUD_PROJECT_ID,
+  ENTERPRISE_DATABASE_ID,
+  resolveTarget,
+} from "../src/target.ts";
 
 test("resolves an emulator target only with an explicit host", () => {
   assert.deepEqual(
@@ -56,6 +60,33 @@ test("refuses a different cloud project even when duplicate inputs match", () =>
         CONFORMANCE_CLOUD_ALLOWLIST: "other-dedicated-project",
       }),
     /only allows cloud project fireside-conformance/,
+  );
+});
+
+test("only allows the dedicated Enterprise cloud database", () => {
+  const environment = {
+    CONFORMANCE_TARGET: "cloud",
+    CONFORMANCE_CLOUD_PROJECT: CLOUD_PROJECT_ID,
+    CONFORMANCE_CLOUD_ALLOWLIST: CLOUD_PROJECT_ID,
+  };
+  assert.deepEqual(
+    resolveTarget({
+      ...environment,
+      CONFORMANCE_CLOUD_DATABASE: ENTERPRISE_DATABASE_ID,
+    }),
+    {
+      name: "cloud",
+      projectId: CLOUD_PROJECT_ID,
+      databaseId: ENTERPRISE_DATABASE_ID,
+    },
+  );
+  assert.throws(
+    () =>
+      resolveTarget({
+        ...environment,
+        CONFORMANCE_CLOUD_DATABASE: "other-database",
+      }),
+    /only allows cloud database fireside-enterprise-conformance/,
   );
 });
 

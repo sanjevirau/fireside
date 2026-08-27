@@ -26,9 +26,12 @@ const BACKEND_TEST_FILES = [
 ] as const;
 const strictIndexes = process.argv.includes("--strict-indexes");
 const diskMode = process.argv.includes("--disk");
+const enterprise = process.argv.includes("--enterprise");
 const testFiles: readonly string[] = strictIndexes
   ? ["test/strict-indexes.test.ts"]
-  : BACKEND_TEST_FILES;
+  : enterprise
+    ? ["test/pipeline.test.ts"]
+    : BACKEND_TEST_FILES;
 
 const repositoryRoot = resolve(process.cwd(), "..");
 await buildFireside();
@@ -47,7 +50,7 @@ const serverArguments = [
   "--single_project_mode",
   "true",
   "--database-edition",
-  "standard",
+  enterprise ? "enterprise" : "standard",
 ];
 if (strictIndexes) {
   serverArguments.push("--strict-indexes");
@@ -68,7 +71,7 @@ const server = spawn(
 try {
   await waitUntilListening(server, port);
   await runTests(port, testFiles);
-  if (!strictIndexes) {
+  if (!strictIndexes && !enterprise) {
     await runTests(port, ["test/control-api.test.ts"]);
   }
 } finally {
