@@ -277,6 +277,13 @@ including streaming Write and Listen, BatchGet, Commit, BatchWrite,
 ListCollectionIds, RunQuery, RunAggregationQuery, and read-only/read-write
 transactions with retry semantics.
 
+The wire types and tonic service contract are generated at build time from the
+minimal Apache-2.0 Google API proto graph vendored at googleapis commit
+`de3c0d362adbaafc7a0cd1254a8cd49a528505ee`. Exact file provenance and the
+upstream license live in `crates/grpc-front/proto`. Code generation uses protox
+0.9.1 and tonic/prost 0.14, requires no system `protoc`, and never checks
+generated Rust into the repository.
+
 `rest-front` exposes Firestore REST v1 document CRUD, runQuery, batchGet, and
 commit, plus the emulator control API. `Authorization: Bearer owner` bypasses
 rules as the admin credential.
