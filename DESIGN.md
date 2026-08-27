@@ -416,8 +416,14 @@ does not send the filter, part of the same documented resume deviation.
 The companion `read_time` fixture supplies the first write's commit timestamp
 after a second matching write. Production and Fireside deliver only the second
 document before `CURRENT`; Java again sends `ADD`, `RESET`, and the full target.
-Expired-token reset behavior remains unclaimed until its oracle fixture is
-captured.
+When `read_time` is two hours old, production does not fail the stream: it falls
+back to the complete current target, sends an existence filter whose
+`unchanged_names` contains an empty bit sequence and zero hashes, then reaches
+`CURRENT`. Fireside follows that observed fallback. Java sends `ADD`, `RESET`,
+the complete target, then `CURRENT`, extending its documented resume-path
+deviation. Expired opaque-token behavior remains unclaimed until its oracle
+fixture is captured; the old-`read_time` result is not assumed to establish the
+opaque-token contract.
 
 ## 6. Drop-in launcher and emulator control contract
 

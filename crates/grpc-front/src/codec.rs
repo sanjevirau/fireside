@@ -307,6 +307,22 @@ pub(crate) fn decode_read_time(
     value: ProtoTimestamp,
     current: Timestamp,
 ) -> Result<Timestamp, Status> {
+    match classify_read_time(value, current)? {
+        ReadTimeClass::Retained(read_time) => Ok(read_time),
+        ReadTimeClass::Expired(_) => Err(Status::failed_precondition("read_time is too old")),
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ReadTimeClass {
+    Retained(Timestamp),
+    Expired(Timestamp),
+}
+
+pub(crate) fn classify_read_time(
+    value: ProtoTimestamp,
+    current: Timestamp,
+) -> Result<ReadTimeClass, Status> {
     const MAX_AGE_SECONDS: i64 = 60 * 60;
 
     let read_time = decode_timestamp(value)?;
@@ -326,9 +342,9 @@ pub(crate) fn decode_read_time(
     )
     .expect("current nanoseconds remain valid");
     if read_time < oldest {
-        return Err(Status::failed_precondition("read_time is too old"));
+        return Ok(ReadTimeClass::Expired(read_time));
     }
-    Ok(read_time)
+    Ok(ReadTimeClass::Retained(read_time))
 }
 
 pub(crate) fn encode_timestamp(value: Timestamp) -> ProtoTimestamp {

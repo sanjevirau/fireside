@@ -9,11 +9,11 @@ target, not the specification.
 
 > [!IMPORTANT]
 > Phase 0 is complete and Phase 1 is under development. Fireside passes the
-> twenty-one checked-in backend and control conformance cases plus its dedicated
+> twenty-two checked-in backend and control conformance cases plus its dedicated
 > strict-index case. Import/export now round-trips bidirectionally through Java
-> via the public CLI and control API, but the remaining Phase 1 API, disk
-> wiring, expired-listener RESET, multi-GB benchmark, and torture gates are not
-> yet complete.
+> via the public CLI and control API, and full backend conformance also runs in
+> crash-safe disk mode. The remaining Phase 1 API, expired-token RESET,
+> multi-GB benchmark, and torture gates are not yet complete.
 
 ## Why this exists
 
@@ -34,9 +34,9 @@ of scope until the conformance gates are met.
 
 | Target / area | Harness smoke | Firestore APIs | Browser SDK | Rules | Suite |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Production cloud | pass (19/19; control N/A) | reference target | not implemented | not implemented | not implemented |
-| Official Java emulator | pass (21/21) | comparison target; 7 known deviations | not run | not run | not run |
-| fireside | pass (21/21 + strict 1/1) | current scope 21/21 + strict 1/1 | not implemented | not implemented | not implemented |
+| Production cloud | pass (20/20; control N/A) | reference target | not implemented | not implemented | not implemented |
+| Official Java emulator | pass (22/22) | comparison target; 7 known deviations | not run | not run | not run |
+| fireside | pass (22/22 + strict 1/1) | current scope 22/22 + strict 1/1 | not implemented | not implemented | not implemented |
 
 Cloud is the behavioral reference; Java is measured only for comparison. From
 Phase 2 onward this table will be generated from CI results.
@@ -70,7 +70,9 @@ npm ci --prefix conformance
 npm run check --prefix conformance
 npm test --prefix conformance
 npm run test:fireside --prefix conformance
+npm run test:fireside:disk --prefix conformance
 npm run test:fireside:strict --prefix conformance
+npm run test:fireside-disk-recovery --prefix conformance
 npm run test:fireside-import --prefix conformance
 npm run test:official --prefix conformance
 npm run test:official-export-import --prefix conformance

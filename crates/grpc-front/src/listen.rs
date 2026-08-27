@@ -3,7 +3,9 @@ use std::time::Duration;
 
 use fireside_core_store::{DatabaseName, Revision, SnapshotError, Store, Timestamp};
 use fireside_query_engine::QueryPolicy;
-use fireside_watch_broker::{ChangeKind, TargetSpec, WatchChange, WatchDocument, WatchTarget};
+use fireside_watch_broker::{
+    ChangeBatch, ChangeKind, TargetSpec, WatchChange, WatchDocument, WatchTarget,
+};
 use md5::{Digest as _, Md5};
 use tokio::sync::mpsc;
 use tokio::time::{MissedTickBehavior, interval};
@@ -11,8 +13,8 @@ use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Code, Status, Streaming};
 
 use crate::codec::{
-    decode_database_name, decode_document_name, decode_parent, decode_read_time, encode_fields,
-    encode_timestamp,
+    ReadTimeClass, classify_read_time, decode_database_name, decode_document_name, decode_parent,
+    encode_fields, encode_timestamp,
 };
 use crate::google::firestore::v1::listen_request::TargetChange as RequestedTargetChange;
 use crate::google::firestore::v1::listen_response::ResponseType;
@@ -34,6 +36,20 @@ const RESPONSE_BUFFER: usize = 128;
 enum ResumePoint {
     Revision(Revision),
     ReadTime(Timestamp),
+    ExpiredReadTime,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum InitialFilter {
+    None,
+    UnchangedNames,
+    CountOnly,
+}
+
+struct InitialTarget {
+    watch: WatchTarget,
+    changes: ChangeBatch,
+    filter: InitialFilter,
 }
 
 pub(crate) fn stream(
@@ -133,22 +149,8 @@ async fn add_target(
     target: Target,
 ) -> Result<(), Status> {
     let expected_count = target.expected_count.filter(|count| *count > 0);
-    let resume_point = match target.resume_type.as_ref() {
-        Some(ResumeType::ResumeToken(token)) => {
-            Some(ResumePoint::Revision(decode_resume_token(token)?))
-        }
-        Some(ResumeType::ReadTime(read_time)) => {
-            Some(ResumePoint::ReadTime(decode_read_time(*read_time, now())?))
-        }
-        None => None,
-    };
-    let id = if target.target_id == 0 {
-        let assigned = *next_assigned_id;
-        *next_assigned_id = next_assigned_id.saturating_add(1);
-        assigned
-    } else {
-        target.target_id
-    };
+    let resume_point = decode_resume_point(&target)?;
+    let id = assign_target_id(target.target_id, next_assigned_id);
     if id <= 0 {
         return Err(Status::invalid_argument(
             "listen target ID must be positive",
@@ -170,45 +172,139 @@ async fn add_target(
             .validate(query)
             .map_err(|error| Status::failed_precondition(error.to_string()))?;
     }
-    let snapshot = store.snapshot();
-    let (watch, initial, send_filter) = if let Some(resume_point) = resume_point {
-        let baseline = match resume_point {
-            ResumePoint::Revision(revision) => store.snapshot_at(revision),
-            ResumePoint::ReadTime(read_time) => store.snapshot_at_time(read_time),
-        }
-        .map_err(resume_snapshot_status)?;
-        let (mut watch, _) =
-            WatchTarget::initialize(id, database, spec, query_policy.edition(), &baseline)
-                .map_err(|error| query_status(&error))?;
-        let baseline_count = i32::try_from(watch.document_keys().count()).unwrap_or(i32::MAX);
-        let replay = watch
-            .refresh(&snapshot)
-            .map_err(|error| query_status(&error))?;
-        (
-            watch,
-            replay,
-            expected_count.is_some_and(|expected| expected != baseline_count),
-        )
-    } else {
-        let (watch, initial) =
-            WatchTarget::initialize(id, database, spec, query_policy.edition(), &snapshot)
-                .map_err(|error| query_status(&error))?;
-        (watch, initial, false)
-    };
-
-    send_target_change(sender, TargetChangeType::Add, vec![id], None, None).await?;
-    for change in initial.changes {
-        send_document_change(sender, id, change).await?;
+    let initial = initialize_target(
+        store,
+        id,
+        database,
+        spec,
+        query_policy,
+        resume_point.as_ref(),
+        expected_count,
+    )?;
+    send_initial_target(sender, id, &initial).await?;
+    if !target.once {
+        targets.insert(id, initial.watch);
     }
-    if send_filter {
-        send_existence_filter(sender, id, &watch).await?;
+    Ok(())
+}
+
+fn decode_resume_point(target: &Target) -> Result<Option<ResumePoint>, Status> {
+    match target.resume_type.as_ref() {
+        Some(ResumeType::ResumeToken(token)) => decode_resume_token(token)
+            .map(ResumePoint::Revision)
+            .map(Some),
+        Some(ResumeType::ReadTime(read_time)) => {
+            Ok(Some(match classify_read_time(*read_time, now())? {
+                ReadTimeClass::Retained(read_time) => ResumePoint::ReadTime(read_time),
+                ReadTimeClass::Expired(_) => ResumePoint::ExpiredReadTime,
+            }))
+        }
+        None => Ok(None),
+    }
+}
+
+fn assign_target_id(requested: i32, next_assigned_id: &mut i32) -> i32 {
+    if requested != 0 {
+        return requested;
+    }
+    let assigned = *next_assigned_id;
+    *next_assigned_id = next_assigned_id.saturating_add(1);
+    assigned
+}
+
+fn initialize_target(
+    store: &Store,
+    id: i32,
+    database: DatabaseName,
+    spec: TargetSpec,
+    query_policy: &QueryPolicy,
+    resume_point: Option<&ResumePoint>,
+    expected_count: Option<i32>,
+) -> Result<InitialTarget, Status> {
+    let snapshot = store.snapshot();
+    let (watch, changes, filter) = match resume_point {
+        Some(ResumePoint::Revision(revision)) => {
+            let baseline = store
+                .snapshot_at(*revision)
+                .map_err(resume_snapshot_status)?;
+            resumed_target(
+                id,
+                database,
+                spec,
+                query_policy,
+                &baseline,
+                &snapshot,
+                expected_count,
+            )?
+        }
+        Some(ResumePoint::ReadTime(read_time)) => {
+            let baseline = store
+                .snapshot_at_time(*read_time)
+                .map_err(resume_snapshot_status)?;
+            resumed_target(
+                id,
+                database,
+                spec,
+                query_policy,
+                &baseline,
+                &snapshot,
+                expected_count,
+            )?
+        }
+        Some(ResumePoint::ExpiredReadTime) => {
+            let (watch, initial) =
+                WatchTarget::initialize(id, database, spec, query_policy.edition(), &snapshot)
+                    .map_err(|error| query_status(&error))?;
+            (watch, initial, InitialFilter::CountOnly)
+        }
+        None => {
+            let (watch, initial) =
+                WatchTarget::initialize(id, database, spec, query_policy.edition(), &snapshot)
+                    .map_err(|error| query_status(&error))?;
+            (watch, initial, InitialFilter::None)
+        }
+    };
+    Ok(InitialTarget {
+        watch,
+        changes,
+        filter,
+    })
+}
+
+async fn send_initial_target(
+    sender: &mpsc::Sender<Result<ListenResponse, Status>>,
+    id: i32,
+    initial: &InitialTarget,
+) -> Result<(), Status> {
+    send_target_change(sender, TargetChangeType::Add, vec![id], None, None).await?;
+    if initial.filter == InitialFilter::CountOnly {
+        send_target_change(
+            sender,
+            TargetChangeType::NoChange,
+            Vec::new(),
+            Some(resume_token(initial.changes.revision)),
+            Some(now()),
+        )
+        .await?;
+    }
+    for change in &initial.changes.changes {
+        send_document_change(sender, id, change.clone()).await?;
+    }
+    match initial.filter {
+        InitialFilter::None => {}
+        InitialFilter::UnchangedNames => {
+            send_existence_filter(sender, id, &initial.watch).await?;
+        }
+        InitialFilter::CountOnly => {
+            send_count_existence_filter(sender, id, &initial.watch).await?;
+        }
     }
     let read_time = now();
     send_target_change(
         sender,
         TargetChangeType::Current,
         vec![id],
-        Some(resume_token(initial.revision)),
+        Some(resume_token(initial.changes.revision)),
         Some(read_time),
     )
     .await?;
@@ -216,14 +312,35 @@ async fn add_target(
         sender,
         TargetChangeType::NoChange,
         Vec::new(),
-        Some(resume_token(initial.revision)),
+        Some(resume_token(initial.changes.revision)),
         Some(read_time),
     )
     .await?;
-    if !target.once {
-        targets.insert(id, watch);
-    }
     Ok(())
+}
+
+fn resumed_target(
+    id: i32,
+    database: DatabaseName,
+    spec: TargetSpec,
+    query_policy: &QueryPolicy,
+    baseline: &fireside_core_store::Snapshot,
+    snapshot: &fireside_core_store::Snapshot,
+    expected_count: Option<i32>,
+) -> Result<(WatchTarget, ChangeBatch, InitialFilter), Status> {
+    let (mut watch, _) =
+        WatchTarget::initialize(id, database, spec, query_policy.edition(), baseline)
+            .map_err(|error| query_status(&error))?;
+    let baseline_count = i32::try_from(watch.document_keys().count()).unwrap_or(i32::MAX);
+    let replay = watch
+        .refresh(snapshot)
+        .map_err(|error| query_status(&error))?;
+    let initial_filter = if expected_count.is_some_and(|expected| expected != baseline_count) {
+        InitialFilter::UnchangedNames
+    } else {
+        InitialFilter::None
+    };
+    Ok((watch, replay, initial_filter))
 }
 
 fn decode_target_spec(
@@ -357,6 +474,31 @@ async fn send_existence_filter(
                 target_id,
                 count,
                 unchanged_names: Some(unchanged_names_bloom_filter(&names)?),
+            })),
+        },
+    )
+    .await
+}
+
+async fn send_count_existence_filter(
+    sender: &mpsc::Sender<Result<ListenResponse, Status>>,
+    target_id: i32,
+    target: &WatchTarget,
+) -> Result<(), Status> {
+    let count = i32::try_from(target.document_keys().count()).unwrap_or(i32::MAX);
+    send(
+        sender,
+        ListenResponse {
+            response_type: Some(ResponseType::Filter(ExistenceFilter {
+                target_id,
+                count,
+                unchanged_names: Some(BloomFilter {
+                    bits: Some(BitSequence {
+                        bitmap: Vec::new(),
+                        padding: 0,
+                    }),
+                    hash_count: 0,
+                }),
             })),
         },
     )

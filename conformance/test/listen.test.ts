@@ -40,6 +40,7 @@ interface ListenCheckpoint {
     readonly count: number;
     readonly bitmap: Uint8Array;
     readonly hasUnchangedNames: boolean;
+    readonly hasBits: boolean;
     readonly hashCount: number;
     readonly bitmapBytes: number;
     readonly padding: number;
@@ -176,6 +177,7 @@ test("raw Listen resumes after a CURRENT checkpoint without replaying prior docu
       : [{
         bitmapBytes: 4,
         count: 1,
+        hasBits: true,
         hasUnchangedNames: true,
         hashCount: 20,
         padding: 3,
@@ -220,6 +222,7 @@ test("raw Listen resumes after a CURRENT checkpoint without replaying prior docu
       : [{
         bitmapBytes: 7,
         count: 2,
+        hasBits: true,
         hasUnchangedNames: true,
         hashCount: 18,
         padding: 3,
@@ -303,6 +306,67 @@ test("raw Listen read_time delivers only changes after the historical snapshot",
     configuration.name === "java"
       ? ["ADD", "RESET", "CURRENT"]
       : ["ADD", "CURRENT"],
+  );
+});
+
+test("raw Listen falls back to the full target when read_time has expired", async (context) => {
+  const configuration = resolveTarget(process.env);
+  const firestore = createFirestore(configuration);
+  const rawFirestore = createV1Firestore(configuration);
+  const runId = randomUUID();
+  const collection = firestore.collection(`runs/${runId}/fireside_conformance`);
+  const alpha = collection.doc("alpha");
+  const database = `projects/${configuration.projectId}/databases/(default)`;
+  const stream = rawFirestore.listen({
+    otherArgs: { headers: { "google-cloud-resource-prefix": database } },
+  });
+
+  context.after(async () => {
+    stream.end();
+    await alpha.delete().catch(() => undefined);
+    await Promise.all([firestore.terminate(), rawFirestore.close()]);
+  });
+
+  await alpha.set({ rank: 1 });
+  const responses = rawResponseQueue(stream);
+  stream.write({
+    database,
+    addTarget: {
+      query: {
+        parent: `${database}/documents/runs/${runId}`,
+        structuredQuery: {
+          from: [{ collectionId: "fireside_conformance" }],
+        },
+      },
+      targetId: 11,
+      readTime: {
+        seconds: Math.floor((Date.now() - 2 * 60 * 60 * 1_000) / 1_000),
+        nanos: 0,
+      },
+    },
+  });
+  const checkpoint = await readCheckpoint(responses);
+
+  assert.deepEqual(checkpoint.documentIds, ["alpha"]);
+  assert.deepEqual(
+    checkpoint.targetChangeTypes,
+    configuration.name === "java"
+      ? ["ADD", "RESET", "CURRENT"]
+      : ["ADD", "CURRENT"],
+  );
+  assert.deepEqual(
+    filterMetadata(checkpoint.filters),
+    configuration.name === "java"
+      ? []
+      : [{
+        bitmapBytes: 0,
+        count: 1,
+        hasBits: true,
+        hasUnchangedNames: true,
+        hashCount: 0,
+        padding: 0,
+        targetId: 11,
+      }],
   );
 });
 
@@ -439,6 +503,8 @@ async function readCheckpoint(
         bitmap: bytes(filter.unchangedNames?.bits?.bitmap ?? ""),
         bitmapBytes: byteLength(filter.unchangedNames?.bits?.bitmap ?? ""),
         count: filter.count ?? 0,
+        hasBits: filter.unchangedNames?.bits !== undefined &&
+          filter.unchangedNames?.bits !== null,
         hasUnchangedNames: filter.unchangedNames !== undefined &&
           filter.unchangedNames !== null,
         hashCount: filter.unchangedNames?.hashCount ?? 0,
@@ -488,6 +554,7 @@ function bytes(value: string | Uint8Array): Uint8Array {
 function filterMetadata(filters: ListenCheckpoint["filters"]): ReadonlyArray<{
   readonly bitmapBytes: number;
   readonly count: number;
+  readonly hasBits: boolean;
   readonly hasUnchangedNames: boolean;
   readonly hashCount: number;
   readonly padding: number;
