@@ -332,6 +332,19 @@ transactions instead of committing one; the comparison assertion records both
 observed Java outcomes, while Cloud and Fireside still require exactly one
 commit and one `ABORTED` response.
 
+The raw backend fixture pins `ListDocuments` field masks and page-token chaining,
+lexicographic direct-child `ListCollectionIds`, and non-atomic `BatchWrite`
+statuses in request order. Production and Fireside return the two masked
+document pages. Java v1.22.0 returns the first page but terminates the valid
+second-page request carrying its own token with an empty gRPC `UNKNOWN` (2);
+this is a documented Java deviation. Java also requires `Bearer owner` on raw
+`BatchWrite`, after which its per-write `[ALREADY_EXISTS, OK]` result matches
+production.
+
+Java v1.22.0 also returns a non-empty trailing `ListCollectionIds` page token
+after its last real item; following it yields an empty terminal page. Production
+and Fireside end the second page without that redundant request.
+
 `conformance/test/streaming-write.test.ts` pins the production streaming Write
 handshake: the first database-only request returns a non-empty stream ID and
 token with no write results or commit time; a subsequent request may omit the
