@@ -46,6 +46,7 @@ pub(crate) type ResponseStream<T> = Pin<Box<dyn Stream<Item = Result<T, Status>>
 #[derive(Clone)]
 pub struct FirestoreService {
     store: Store,
+    edition: DatabaseEdition,
     transactions: Arc<Mutex<HashMap<Vec<u8>, TransactionState>>>,
     commit_guard: Arc<Mutex<()>>,
     next_id: Arc<AtomicU64>,
@@ -55,8 +56,15 @@ impl FirestoreService {
     /// Creates a service backed by an in-memory MVCC store.
     #[must_use]
     pub fn new(store: Store) -> Self {
+        Self::new_with_edition(store, DatabaseEdition::Standard)
+    }
+
+    /// Creates a service with the selected database-edition query semantics.
+    #[must_use]
+    pub fn new_with_edition(store: Store, edition: DatabaseEdition) -> Self {
         Self {
             store,
+            edition,
             transactions: Arc::new(Mutex::new(HashMap::new())),
             commit_guard: Arc::new(Mutex::new(())),
             next_id: Arc::new(AtomicU64::new(1)),
@@ -511,7 +519,7 @@ impl Firestore for FirestoreService {
         } else {
             self.snapshot_for_transaction(&database, &token)?
         };
-        let documents = execute(&snapshot, &database, &query, DatabaseEdition::Standard)
+        let documents = execute(&snapshot, &database, &query, self.edition)
             .map_err(|error| query_status(&error))?;
         let read_time = Some(encode_timestamp(now()));
         let mut responses = Vec::with_capacity(documents.len() + usize::from(new_transaction));
@@ -593,7 +601,7 @@ impl Firestore for FirestoreService {
         } else {
             self.snapshot_for_transaction(&database, &token)?
         };
-        let documents = execute(&snapshot, &database, &query, DatabaseEdition::Standard)
+        let documents = execute(&snapshot, &database, &query, self.edition)
             .map_err(|error| query_status(&error))?;
         for document in &documents {
             self.record_read(&token, document.key(), Some(document.document().as_ref()));
@@ -651,7 +659,7 @@ impl Firestore for FirestoreService {
             &self.store.snapshot(),
             &database,
             &query,
-            DatabaseEdition::Standard,
+            self.edition,
             maximum,
         )
         .map_err(|error| query_status(&error))?;
@@ -714,6 +722,7 @@ impl Firestore for FirestoreService {
     ) -> Result<Response<Self::ListenStream>, Status> {
         Ok(Response::new(crate::listen::stream(
             self.store.clone(),
+            self.edition,
             request.into_inner(),
         )))
     }

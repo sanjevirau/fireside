@@ -30,15 +30,17 @@ const RESPONSE_BUFFER: usize = 128;
 
 pub(crate) fn stream(
     store: Store,
+    edition: DatabaseEdition,
     input: Streaming<ListenRequest>,
 ) -> ResponseStream<ListenResponse> {
     let (sender, receiver) = mpsc::channel(RESPONSE_BUFFER);
-    tokio::spawn(run(store, input, sender));
+    tokio::spawn(run(store, edition, input, sender));
     Box::pin(ReceiverStream::new(receiver))
 }
 
 async fn run(
     store: Store,
+    edition: DatabaseEdition,
     mut input: Streaming<ListenRequest>,
     sender: mpsc::Sender<Result<ListenResponse, Status>>,
 ) {
@@ -57,6 +59,7 @@ async fn run(
                             &sender,
                             &mut targets,
                             &mut next_assigned_id,
+                            edition,
                             request,
                         ).await {
                             let _ = sender.send(Err(error)).await;
@@ -85,12 +88,22 @@ async fn handle_request(
     sender: &mpsc::Sender<Result<ListenResponse, Status>>,
     targets: &mut BTreeMap<i32, WatchTarget>,
     next_assigned_id: &mut i32,
+    edition: DatabaseEdition,
     request: ListenRequest,
 ) -> Result<(), Status> {
     let database = decode_database_name(&request.database)?;
     match request.target_change {
         Some(RequestedTargetChange::AddTarget(target)) => {
-            add_target(store, sender, targets, next_assigned_id, database, target).await
+            add_target(
+                store,
+                sender,
+                targets,
+                next_assigned_id,
+                edition,
+                database,
+                target,
+            )
+            .await
         }
         Some(RequestedTargetChange::RemoveTarget(id)) => {
             targets.remove(&id);
@@ -107,6 +120,7 @@ async fn add_target(
     sender: &mpsc::Sender<Result<ListenResponse, Status>>,
     targets: &mut BTreeMap<i32, WatchTarget>,
     next_assigned_id: &mut i32,
+    edition: DatabaseEdition,
     database: DatabaseName,
     target: Target,
 ) -> Result<(), Status> {
@@ -139,9 +153,8 @@ async fn add_target(
     }
     let spec = decode_target_spec(&database, target.target_type)?;
     let snapshot = store.snapshot();
-    let (watch, initial) =
-        WatchTarget::initialize(id, database, spec, DatabaseEdition::Standard, &snapshot)
-            .map_err(|error| query_status(&error))?;
+    let (watch, initial) = WatchTarget::initialize(id, database, spec, edition, &snapshot)
+        .map_err(|error| query_status(&error))?;
 
     send_target_change(sender, TargetChangeType::Add, vec![id], None, None).await?;
     for change in initial.changes {

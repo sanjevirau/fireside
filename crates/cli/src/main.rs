@@ -8,7 +8,8 @@ use std::process::ExitCode;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use fireside_core_store::{Store, StoreOptions};
 use fireside_grpc_front::FirestoreService;
-use fireside_rest_front::router as rest_router;
+use fireside_query_engine::DatabaseEdition as QueryDatabaseEdition;
+use fireside_rest_front::router_with_edition as rest_router;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -85,8 +86,12 @@ async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
     };
 
     let store = Store::new(StoreOptions::default());
-    let service = FirestoreService::new(store.clone()).into_server();
-    let routes = tonic::service::Routes::from(rest_router(store)).add_service(service);
+    let edition = match arguments.database_edition {
+        DatabaseEdition::Standard => QueryDatabaseEdition::Standard,
+        DatabaseEdition::Enterprise => QueryDatabaseEdition::Enterprise,
+    };
+    let service = FirestoreService::new_with_edition(store.clone(), edition).into_server();
+    let routes = tonic::service::Routes::from(rest_router(store, edition)).add_service(service);
     eprintln!("fireside Firestore listening on {address}");
     let result = tonic::transport::Server::builder()
         .accept_http1(true)
@@ -171,6 +176,20 @@ mod tests {
         assert_eq!(arguments.project_id.as_deref(), Some("demo-project"));
         assert_eq!(arguments.single_project_mode, Some(true));
         assert_eq!(arguments.database_edition, DatabaseEdition::Standard);
+    }
+
+    #[test]
+    fn enterprise_database_edition_is_preserved() {
+        let arguments = normalize_arguments([
+            OsString::from("fireside"),
+            OsString::from("--database-edition"),
+            OsString::from("enterprise"),
+        ]);
+        let cli = Cli::try_parse_from(arguments).expect("enterprise edition should parse");
+        let Command::Firestore(arguments) = cli.command else {
+            panic!("expected Firestore command");
+        };
+        assert_eq!(arguments.database_edition, DatabaseEdition::Enterprise);
     }
 
     #[test]

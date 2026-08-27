@@ -35,6 +35,11 @@ const CLEAR_ROUTE: &str = "/emulator/v1/projects/{project}/databases/{database}/
 
 /// Creates the HTTP/1 router that shares the Firestore store with gRPC.
 pub fn router(store: Store) -> Router {
+    router_with_edition(store, DatabaseEdition::Standard)
+}
+
+/// Creates the shared HTTP/1 router with selected query edition semantics.
+pub fn router_with_edition(store: Store, edition: DatabaseEdition) -> Router {
     Router::new()
         .route(
             DOCUMENT_ROUTE,
@@ -55,6 +60,7 @@ pub fn router(store: Store) -> Router {
         .fallback(project_operation)
         .with_state(RestState {
             store,
+            edition,
             control: Arc::new(Mutex::new(ControlState::default())),
         })
 }
@@ -62,6 +68,7 @@ pub fn router(store: Store) -> Router {
 #[derive(Clone)]
 struct RestState {
     store: Store,
+    edition: DatabaseEdition,
     control: Arc<Mutex<ControlState>>,
 }
 
@@ -388,13 +395,8 @@ fn run_query(
         .and_then(JsonValue::as_object)
         .ok_or_else(|| RestError::invalid("structuredQuery is required"))?;
     let query = decode_query(structured, parent)?;
-    let documents = execute(
-        &state.store.snapshot(),
-        database,
-        &query,
-        DatabaseEdition::Standard,
-    )
-    .map_err(|error| RestError::invalid(error.to_string()))?;
+    let documents = execute(&state.store.snapshot(), database, &query, state.edition)
+        .map_err(|error| RestError::invalid(error.to_string()))?;
     let read_time = format_timestamp(now_timestamp())?;
     let mut responses = documents
         .iter()
