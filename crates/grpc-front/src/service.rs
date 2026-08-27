@@ -9,7 +9,9 @@ use fireside_core_store::{
     SnapshotError, Store, Timestamp, TransformOperation, Value, Write,
 };
 use fireside_query_engine::{
-    DatabaseEdition, IndexConfigError, QueryDocument, QueryPolicy, aggregate, execute, partition,
+    DatabaseEdition, Direction as QueryDirection, FieldPath as QueryFieldPath, IndexConfigError,
+    Query as StructuredQuery, QueryDocument, QueryPolicy, QueryScope, aggregate, compare_values,
+    execute, partition,
 };
 use tokio_stream::{Stream, iter};
 use tonic::{Request, Response, Status};
@@ -283,17 +285,55 @@ impl Firestore for FirestoreService {
         } else {
             self.snapshot_for_transaction(&database, &token)?
         };
-        let descending = parse_list_order(&request.order_by)?;
+        let orders = parse_list_order(&request.order_by)?;
+        if request.collection_id.is_empty()
+            && orders
+                != [ListOrder {
+                    path: QueryFieldPath::DocumentId,
+                    direction: QueryDirection::Ascending,
+                }]
+        {
+            return Err(Status::invalid_argument(
+                "kind is required for all orders except __key__ ascending",
+            ));
+        }
+        if !request.collection_id.is_empty() {
+            let collection_path = parent.as_ref().map_or_else(
+                || request.collection_id.clone(),
+                |parent| format!("{parent}/{}", request.collection_id),
+            );
+            let mut query = StructuredQuery::new(
+                QueryScope::collection(collection_path).map_err(|error| query_status(&error))?,
+            );
+            for order in &orders {
+                query = query.order_by(order.path.clone(), order.direction);
+            }
+            self.query_policy
+                .validate(&query)
+                .map_err(|error| index_status(&error))?;
+        }
         let mut documents = snapshot
             .documents(&database)
             .into_iter()
             .filter(|(key, _)| {
                 direct_child_matches(key.path(), parent.as_deref(), &request.collection_id)
             })
+            .filter(|(_, document)| {
+                orders
+                    .iter()
+                    .all(|order| list_order_exists(order, document))
+            })
             .collect::<Vec<_>>();
-        if descending {
-            documents.reverse();
-        }
+        documents.sort_by(|(left_key, left), (right_key, right)| {
+            compare_list_documents(
+                left_key,
+                left,
+                right_key,
+                right,
+                &orders,
+                self.query_policy.edition(),
+            )
+        });
         if !request.page_token.is_empty() {
             documents = documents
                 .into_iter()
@@ -1033,13 +1073,110 @@ fn rpc_status(status: &Status) -> rpc::Status {
     }
 }
 
-fn parse_list_order(order: &str) -> Result<bool, Status> {
-    match order.trim().to_ascii_lowercase().as_str() {
-        "" | "__name__" | "__name__ asc" => Ok(false),
-        "__name__ desc" => Ok(true),
-        _ => Err(Status::unimplemented(
-            "ListDocuments currently supports only __name__ ordering",
-        )),
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ListOrder {
+    path: QueryFieldPath,
+    direction: QueryDirection,
+}
+
+fn parse_list_order(order: &str) -> Result<Vec<ListOrder>, Status> {
+    let mut orders = if order.trim().is_empty() {
+        Vec::new()
+    } else {
+        split_order_clauses(order)?
+            .into_iter()
+            .map(parse_order_clause)
+            .collect::<Result<Vec<_>, _>>()?
+    };
+    if orders
+        .iter()
+        .all(|order| order.path != QueryFieldPath::DocumentId)
+    {
+        orders.push(ListOrder {
+            path: QueryFieldPath::DocumentId,
+            direction: orders
+                .last()
+                .map_or(QueryDirection::Ascending, |order| order.direction),
+        });
+    }
+    Ok(orders)
+}
+
+fn split_order_clauses(order: &str) -> Result<Vec<&str>, Status> {
+    let mut clauses = Vec::new();
+    let mut start = 0;
+    let mut quoted = false;
+    let mut escaped = false;
+    for (index, character) in order.char_indices() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if quoted && character == '\\' {
+            escaped = true;
+        } else if character == '`' {
+            quoted = !quoted;
+        } else if character == ',' && !quoted {
+            clauses.push(order[start..index].trim());
+            start = index + character.len_utf8();
+        }
+    }
+    clauses.push(order[start..].trim());
+    if quoted || clauses.iter().any(|clause| clause.is_empty()) {
+        return Err(Status::invalid_argument("invalid ListDocuments order_by"));
+    }
+    Ok(clauses)
+}
+
+fn parse_order_clause(clause: &str) -> Result<ListOrder, Status> {
+    let lower = clause.to_ascii_lowercase();
+    let (path, direction) = if lower.ends_with(" desc") {
+        (&clause[..clause.len() - 5], QueryDirection::Descending)
+    } else if lower.ends_with(" asc") {
+        (&clause[..clause.len() - 4], QueryDirection::Ascending)
+    } else {
+        (clause, QueryDirection::Ascending)
+    };
+    let path = QueryFieldPath::parse_wire(path.trim()).map_err(|error| query_status(&error))?;
+    Ok(ListOrder { path, direction })
+}
+
+fn compare_list_documents(
+    left_key: &DocumentKey,
+    left: &Document,
+    right_key: &DocumentKey,
+    right: &Document,
+    orders: &[ListOrder],
+    edition: DatabaseEdition,
+) -> std::cmp::Ordering {
+    for order in orders {
+        let ordering = match &order.path {
+            QueryFieldPath::DocumentId => {
+                left_key.path().split('/').cmp(right_key.path().split('/'))
+            }
+            QueryFieldPath::Field(segments) => compare_values(
+                nested_value(left.fields(), segments)
+                    .expect("documents missing ordered fields are filtered"),
+                nested_value(right.fields(), segments)
+                    .expect("documents missing ordered fields are filtered"),
+                edition,
+            ),
+        };
+        if ordering != std::cmp::Ordering::Equal {
+            return if order.direction == QueryDirection::Descending {
+                ordering.reverse()
+            } else {
+                ordering
+            };
+        }
+    }
+    std::cmp::Ordering::Equal
+}
+
+fn list_order_exists(order: &ListOrder, document: &Document) -> bool {
+    match &order.path {
+        QueryFieldPath::DocumentId => true,
+        QueryFieldPath::Field(segments) => nested_value(document.fields(), segments).is_some(),
     }
 }
 
@@ -1095,6 +1232,39 @@ mod tests {
     use crate::google::firestore::v1::{
         DocumentMask, StructuredAggregationQuery, StructuredQuery, precondition,
     };
+
+    #[test]
+    fn list_order_parser_handles_ties_directions_and_quoted_commas() {
+        let orders = parse_list_order("rank desc").expect("valid order");
+        assert_eq!(
+            orders,
+            [
+                ListOrder {
+                    path: QueryFieldPath::Field(vec!["rank".to_owned()]),
+                    direction: QueryDirection::Descending,
+                },
+                ListOrder {
+                    path: QueryFieldPath::DocumentId,
+                    direction: QueryDirection::Descending,
+                },
+            ]
+        );
+        assert_eq!(
+            parse_list_order("`literal,field` asc, __name__ desc")
+                .expect("quoted comma should remain in the field path"),
+            [
+                ListOrder {
+                    path: QueryFieldPath::Field(vec!["literal,field".to_owned()]),
+                    direction: QueryDirection::Ascending,
+                },
+                ListOrder {
+                    path: QueryFieldPath::DocumentId,
+                    direction: QueryDirection::Descending,
+                },
+            ]
+        );
+        assert!(parse_list_order("rank,,__name__").is_err());
+    }
 
     const DATABASE: &str = "projects/demo/databases/tenant-a";
     const DOCUMENT: &str = "projects/demo/databases/tenant-a/documents/cities/kl";

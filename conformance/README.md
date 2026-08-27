@@ -4,7 +4,8 @@ The harness runs identical TypeScript cases through real Google SDKs. Its three
 target names are `cloud`, `java`, and `fireside`. Cloud is the ground-truth
 target; Java is retained as a measured comparison target.
 
-The current backend cases cover SDK CRUD and listeners, paginated list RPCs,
+The current backend cases cover SDK CRUD and listeners, field-ordered paginated
+list RPCs,
 non-atomic BatchWrite status ordering, queries, transactions, transforms
 (including exact mixed-numeric minimum/maximum behavior),
 historical read-time selectors, precise error codes, REST, named databases, and

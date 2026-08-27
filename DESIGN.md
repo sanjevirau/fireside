@@ -379,6 +379,14 @@ this is a documented Java deviation. Java also requires `Bearer owner` on raw
 `BatchWrite`, after which its per-write `[ALREADY_EXISTS, OK]` result matches
 production.
 
+The same fixture pins `ListDocuments.order_by` field expressions. Production,
+Java, and Fireside exclude documents missing the ordered field, use an implicit
+document-name tie-break in the field direction, and preserve that order across
+page boundaries. A field order without `collection_id` is rejected with
+`INVALID_ARGUMENT` (3) and the observed detail
+`kind is required for all orders except __key__ ascending`. Fireside parses
+quoted field paths and shares mixed-value comparison with the query engine.
+
 Java v1.22.0 also returns a non-empty trailing `ListCollectionIds` page token
 after its last real item; following it yields an empty terminal page. Production
 and Fireside end the second page without that redundant request.

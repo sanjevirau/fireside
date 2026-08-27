@@ -122,6 +122,101 @@ test("list RPCs paginate direct children and preserve masks", async (context) =>
   );
 });
 
+test("ListDocuments orders fields and requires a collection selector", async (context) => {
+  const configuration = resolveTarget(process.env);
+  const firestore = createFirestore(configuration);
+  const rawFirestore = createV1Firestore(configuration);
+  const runId = randomUUID();
+  const database = `projects/${configuration.projectId}/databases/(default)`;
+  const parentPath = `runs/${runId}`;
+  const parent = `${database}/documents/${parentPath}`;
+  const ordered = firestore.collection(`${parentPath}/ordered`);
+  const other = firestore.collection(`${parentPath}/other`);
+  const documents = [
+    ordered.doc("a"),
+    ordered.doc("b"),
+    ordered.doc("c"),
+    ordered.doc("missing"),
+    other.doc("x"),
+  ];
+  const expiresAt = Timestamp.fromMillis(Date.now() + DAY_MILLISECONDS);
+  const pageOptions = configuration.host === undefined
+    ? { autoPaginate: false }
+    : {
+      autoPaginate: false,
+      otherArgs: { headers: { authorization: "Bearer owner" } },
+    };
+
+  context.after(async () => {
+    await Promise.all(documents.map(async (document) => document.delete())).catch(
+      () => undefined,
+    );
+    await Promise.all([firestore.terminate(), rawFirestore.close()]).catch(
+      () => undefined,
+    );
+  });
+
+  await Promise.all([
+    documents[0]!.set({ _fireside_expires_at: expiresAt, rank: 2 }),
+    documents[1]!.set({ _fireside_expires_at: expiresAt, rank: 1 }),
+    documents[2]!.set({ _fireside_expires_at: expiresAt, rank: 1 }),
+    documents[3]!.set({ _fireside_expires_at: expiresAt }),
+    documents[4]!.set({ _fireside_expires_at: expiresAt, rank: 0 }),
+  ]);
+
+  const request = {
+    parent,
+    collectionId: "ordered",
+    pageSize: 2,
+    orderBy: "rank",
+  };
+  const [first, , firstResponse] = await rawFirestore.listDocuments(
+    request,
+    pageOptions,
+  );
+  assert.deepEqual(first.map((document) => document.name), [
+    `${parent}/ordered/b`,
+    `${parent}/ordered/c`,
+  ]);
+  const token = requiredPageToken(firstResponse.nextPageToken);
+  if (configuration.name === "java") {
+    await assert.rejects(
+      rawFirestore.listDocuments({ ...request, pageToken: token }, pageOptions),
+      (error: unknown) => grpcCode(error) === 2,
+    );
+  } else {
+    const [second, , secondResponse] = await rawFirestore.listDocuments(
+      { ...request, pageToken: token },
+      pageOptions,
+    );
+    assert.deepEqual(second.map((document) => document.name), [
+      `${parent}/ordered/a`,
+    ]);
+    assert.equal(secondResponse.nextPageToken ?? "", "");
+  }
+
+  const [descending] = await rawFirestore.listDocuments(
+    { ...request, pageSize: 10, orderBy: "rank desc" },
+    pageOptions,
+  );
+  assert.deepEqual(descending.map((document) => document.name), [
+    `${parent}/ordered/a`,
+    `${parent}/ordered/c`,
+    `${parent}/ordered/b`,
+  ]);
+
+  await assert.rejects(
+    rawFirestore.listDocuments(
+      { parent, pageSize: 10, orderBy: "rank" },
+      pageOptions,
+    ),
+    (error: unknown) =>
+      grpcCode(error) === 3 &&
+      grpcDetails(error) ===
+        "kind is required for all orders except __key__ ascending",
+  );
+});
+
 test("BatchWrite reports per-write conflicts and commits independent writes", async (context) => {
   const configuration = resolveTarget(process.env);
   const firestore = createFirestore(configuration);
@@ -197,4 +292,11 @@ function grpcCode(error: unknown): number | undefined {
     return undefined;
   }
   return typeof error.code === "number" ? error.code : undefined;
+}
+
+function grpcDetails(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null || !("details" in error)) {
+    return undefined;
+  }
+  return typeof error.details === "string" ? error.details : undefined;
 }
