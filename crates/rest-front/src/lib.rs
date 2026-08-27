@@ -18,7 +18,7 @@ use fireside_core_store::{
 };
 use fireside_query_engine::{
     DatabaseEdition, Direction, FieldFilter, FieldOperator, FieldPath as QueryFieldPath, Filter,
-    Limit, Query as StructuredQuery, QueryScope, execute,
+    Limit, Query as StructuredQuery, QueryPolicy, QueryScope, execute,
 };
 use serde::Deserialize;
 use serde_json::{Map, Value as JsonValue, json};
@@ -35,11 +35,16 @@ const CLEAR_ROUTE: &str = "/emulator/v1/projects/{project}/databases/{database}/
 
 /// Creates the HTTP/1 router that shares the Firestore store with gRPC.
 pub fn router(store: Store) -> Router {
-    router_with_edition(store, DatabaseEdition::Standard)
+    router_with_query_policy(store, QueryPolicy::default())
 }
 
 /// Creates the shared HTTP/1 router with selected query edition semantics.
 pub fn router_with_edition(store: Store, edition: DatabaseEdition) -> Router {
+    router_with_query_policy(store, QueryPolicy::new(edition))
+}
+
+/// Creates the shared HTTP/1 router with edition and strict-index behavior.
+pub fn router_with_query_policy(store: Store, query_policy: QueryPolicy) -> Router {
     Router::new()
         .route(
             DOCUMENT_ROUTE,
@@ -60,7 +65,7 @@ pub fn router_with_edition(store: Store, edition: DatabaseEdition) -> Router {
         .fallback(project_operation)
         .with_state(RestState {
             store,
-            edition,
+            query_policy,
             control: Arc::new(Mutex::new(ControlState::default())),
         })
 }
@@ -68,7 +73,7 @@ pub fn router_with_edition(store: Store, edition: DatabaseEdition) -> Router {
 #[derive(Clone)]
 struct RestState {
     store: Store,
-    edition: DatabaseEdition,
+    query_policy: QueryPolicy,
     control: Arc<Mutex<ControlState>>,
 }
 
@@ -395,8 +400,17 @@ fn run_query(
         .and_then(JsonValue::as_object)
         .ok_or_else(|| RestError::invalid("structuredQuery is required"))?;
     let query = decode_query(structured, parent)?;
-    let documents = execute(&state.store.snapshot(), database, &query, state.edition)
-        .map_err(|error| RestError::invalid(error.to_string()))?;
+    state
+        .query_policy
+        .validate(&query)
+        .map_err(|error| RestError::streaming_failed_precondition(error.to_string()))?;
+    let documents = execute(
+        &state.store.snapshot(),
+        database,
+        &query,
+        state.query_policy.edition(),
+    )
+    .map_err(|error| RestError::invalid(error.to_string()))?;
     let read_time = format_timestamp(now_timestamp())?;
     let mut responses = documents
         .iter()
@@ -893,6 +907,7 @@ struct RestError {
     status: StatusCode,
     code: &'static str,
     message: String,
+    streaming: bool,
 }
 
 impl RestError {
@@ -901,6 +916,16 @@ impl RestError {
             status: StatusCode::BAD_REQUEST,
             code: "INVALID_ARGUMENT",
             message: message.into(),
+            streaming: false,
+        }
+    }
+
+    fn streaming_failed_precondition(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::BAD_REQUEST,
+            code: "FAILED_PRECONDITION",
+            message: message.into(),
+            streaming: true,
         }
     }
 
@@ -909,6 +934,7 @@ impl RestError {
             status: StatusCode::NOT_FOUND,
             code: "NOT_FOUND",
             message: message.into(),
+            streaming: false,
         }
     }
 
@@ -917,6 +943,7 @@ impl RestError {
             status: StatusCode::INTERNAL_SERVER_ERROR,
             code: "INTERNAL",
             message: message.into(),
+            streaming: false,
         }
     }
 
@@ -925,6 +952,7 @@ impl RestError {
             status: StatusCode::NOT_IMPLEMENTED,
             code: "UNIMPLEMENTED",
             message: message.into(),
+            streaming: false,
         }
     }
 
@@ -949,6 +977,7 @@ impl RestError {
             status,
             code,
             message: error.to_string(),
+            streaming: false,
         }
     }
 }
@@ -956,17 +985,19 @@ impl RestError {
 impl IntoResponse for RestError {
     fn into_response(self) -> Response {
         let numeric = self.status.as_u16();
-        (
-            self.status,
-            Json(json!({
-                "error": {
-                    "code": numeric,
-                    "message": self.message,
-                    "status": self.code,
-                }
-            })),
-        )
-            .into_response()
+        let body = json!({
+            "error": {
+                "code": numeric,
+                "message": self.message,
+                "status": self.code,
+            }
+        });
+        let body = if self.streaming {
+            JsonValue::Array(vec![body])
+        } else {
+            body
+        };
+        (self.status, Json(body)).into_response()
     }
 }
 

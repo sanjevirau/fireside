@@ -8,8 +8,10 @@ use std::process::ExitCode;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use fireside_core_store::{Store, StoreOptions};
 use fireside_grpc_front::FirestoreService;
-use fireside_query_engine::DatabaseEdition as QueryDatabaseEdition;
-use fireside_rest_front::router_with_edition as rest_router;
+use fireside_query_engine::{DatabaseEdition as QueryDatabaseEdition, IndexCatalog, QueryPolicy};
+use fireside_rest_front::router_with_query_policy as rest_router;
+
+const INDEX_CONFIG_PATH: &str = "firestore.indexes.json";
 
 #[derive(Debug, Parser)]
 #[command(
@@ -62,6 +64,8 @@ struct FirestoreArgs {
         default_value_t
     )]
     database_edition: DatabaseEdition,
+    #[arg(long)]
+    strict_indexes: bool,
 }
 
 #[tokio::main]
@@ -90,8 +94,17 @@ async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
         DatabaseEdition::Standard => QueryDatabaseEdition::Standard,
         DatabaseEdition::Enterprise => QueryDatabaseEdition::Enterprise,
     };
-    let service = FirestoreService::new_with_edition(store.clone(), edition).into_server();
-    let routes = tonic::service::Routes::from(rest_router(store, edition)).add_service(service);
+    let query_policy = match build_query_policy(edition, arguments.strict_indexes) {
+        Ok(query_policy) => query_policy,
+        Err(error) => {
+            eprintln!("invalid strict-index configuration: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let service =
+        FirestoreService::new_with_query_policy(store.clone(), query_policy.clone()).into_server();
+    let routes =
+        tonic::service::Routes::from(rest_router(store, query_policy)).add_service(service);
     eprintln!("fireside Firestore listening on {address}");
     let result = tonic::transport::Server::builder()
         .accept_http1(true)
@@ -106,6 +119,19 @@ async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+fn build_query_policy(
+    edition: QueryDatabaseEdition,
+    strict_indexes: bool,
+) -> Result<QueryPolicy, String> {
+    if !strict_indexes {
+        return Ok(QueryPolicy::new(edition));
+    }
+    let json = std::fs::read_to_string(INDEX_CONFIG_PATH)
+        .map_err(|error| format!("cannot read {INDEX_CONFIG_PATH}: {error}"))?;
+    let catalog = IndexCatalog::from_json(&json).map_err(|error| error.to_string())?;
+    Ok(QueryPolicy::strict(edition, catalog))
 }
 
 fn resolve_address(host: &str, port: u16) -> Result<SocketAddr, String> {
@@ -190,6 +216,19 @@ mod tests {
             panic!("expected Firestore command");
         };
         assert_eq!(arguments.database_edition, DatabaseEdition::Enterprise);
+    }
+
+    #[test]
+    fn strict_index_mode_is_preserved() {
+        let arguments = normalize_arguments([
+            OsString::from("fireside"),
+            OsString::from("--strict-indexes"),
+        ]);
+        let cli = Cli::try_parse_from(arguments).expect("strict indexes should parse");
+        let Command::Firestore(arguments) = cli.command else {
+            panic!("expected Firestore command");
+        };
+        assert!(arguments.strict_indexes);
     }
 
     #[test]

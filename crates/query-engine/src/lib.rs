@@ -9,6 +9,7 @@
 
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use fireside_core_store::Value;
 
@@ -34,6 +35,52 @@ pub enum DatabaseEdition {
     Standard,
     /// Firestore Native mode Enterprise edition.
     Enterprise,
+}
+
+/// Query behavior shared by every Firestore transport.
+#[derive(Debug, Clone)]
+pub struct QueryPolicy {
+    edition: DatabaseEdition,
+    strict_indexes: Option<Arc<IndexCatalog>>,
+}
+
+impl QueryPolicy {
+    /// Creates a permissive local policy for one database edition.
+    #[must_use]
+    pub const fn new(edition: DatabaseEdition) -> Self {
+        Self {
+            edition,
+            strict_indexes: None,
+        }
+    }
+
+    /// Creates a production-style policy backed by an index catalog.
+    #[must_use]
+    pub fn strict(edition: DatabaseEdition, catalog: IndexCatalog) -> Self {
+        Self {
+            edition,
+            strict_indexes: Some(Arc::new(catalog)),
+        }
+    }
+
+    /// Returns the database edition used for value comparison.
+    #[must_use]
+    pub const fn edition(&self) -> DatabaseEdition {
+        self.edition
+    }
+
+    /// Rejects queries that need an index absent from strict-mode configuration.
+    pub fn validate(&self, query: &Query) -> Result<(), IndexConfigError> {
+        self.strict_indexes
+            .as_deref()
+            .map_or(Ok(()), |catalog| catalog.validate(query))
+    }
+}
+
+impl Default for QueryPolicy {
+    fn default() -> Self {
+        Self::new(DatabaseEdition::Standard)
+    }
 }
 
 /// Compares two Firestore values using the production query order.

@@ -22,7 +22,8 @@
     "test:smoke": "node --import tsx --test test/firestore-smoke.test.ts",
     "test:cloud": "node --import tsx src/run-cloud.ts",
     "test:official": "node --import tsx src/run-official.ts",
-    "test:fireside": "node --import tsx src/run-fireside.ts"
+    "test:fireside": "node --import tsx src/run-fireside.ts",
+    "test:fireside:strict": "node --import tsx src/run-fireside.ts --strict-indexes"
   },
   "devDependencies": {
     "@google-cloud/firestore": "9.0.0",

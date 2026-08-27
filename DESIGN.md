@@ -241,7 +241,11 @@ with ordering on `score` returns status 9 (`FAILED_PRECONDITION`) in production
 without its manual index, while Java executes it. In default mode fireside does
 not enforce indexes; `--strict-indexes` parses `firestore.indexes.json`, models
 automatic collection indexes and explicit collection-group field overrides,
-and rejects a missing required index before query execution.
+and rejects a missing required index before query execution. The flag loads
+that exact filename from the process working directory and invalid or missing
+configuration fails startup. One shared query policy covers gRPC RunQuery,
+RunAggregationQuery, PartitionQuery, Listen targets, and REST runQuery so the
+transports cannot drift.
 
 `conformance/test/write-transforms.test.ts` pins masked nested and top-level
 field deletion plus server timestamp, numeric increment, array union, and array

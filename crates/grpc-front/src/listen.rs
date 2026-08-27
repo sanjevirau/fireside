@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
 
 use fireside_core_store::{DatabaseName, Revision, Store};
-use fireside_query_engine::DatabaseEdition;
+use fireside_query_engine::QueryPolicy;
 use fireside_watch_broker::{ChangeKind, TargetSpec, WatchChange, WatchDocument, WatchTarget};
 use tokio::sync::mpsc;
 use tokio::time::{MissedTickBehavior, interval};
@@ -30,17 +30,17 @@ const RESPONSE_BUFFER: usize = 128;
 
 pub(crate) fn stream(
     store: Store,
-    edition: DatabaseEdition,
+    query_policy: QueryPolicy,
     input: Streaming<ListenRequest>,
 ) -> ResponseStream<ListenResponse> {
     let (sender, receiver) = mpsc::channel(RESPONSE_BUFFER);
-    tokio::spawn(run(store, edition, input, sender));
+    tokio::spawn(run(store, query_policy, input, sender));
     Box::pin(ReceiverStream::new(receiver))
 }
 
 async fn run(
     store: Store,
-    edition: DatabaseEdition,
+    query_policy: QueryPolicy,
     mut input: Streaming<ListenRequest>,
     sender: mpsc::Sender<Result<ListenResponse, Status>>,
 ) {
@@ -59,7 +59,7 @@ async fn run(
                             &sender,
                             &mut targets,
                             &mut next_assigned_id,
-                            edition,
+                            &query_policy,
                             request,
                         ).await {
                             let _ = sender.send(Err(error)).await;
@@ -88,7 +88,7 @@ async fn handle_request(
     sender: &mpsc::Sender<Result<ListenResponse, Status>>,
     targets: &mut BTreeMap<i32, WatchTarget>,
     next_assigned_id: &mut i32,
-    edition: DatabaseEdition,
+    query_policy: &QueryPolicy,
     request: ListenRequest,
 ) -> Result<(), Status> {
     let database = decode_database_name(&request.database)?;
@@ -99,7 +99,7 @@ async fn handle_request(
                 sender,
                 targets,
                 next_assigned_id,
-                edition,
+                query_policy,
                 database,
                 target,
             )
@@ -120,7 +120,7 @@ async fn add_target(
     sender: &mpsc::Sender<Result<ListenResponse, Status>>,
     targets: &mut BTreeMap<i32, WatchTarget>,
     next_assigned_id: &mut i32,
-    edition: DatabaseEdition,
+    query_policy: &QueryPolicy,
     database: DatabaseName,
     target: Target,
 ) -> Result<(), Status> {
@@ -152,9 +152,15 @@ async fn add_target(
         return Ok(());
     }
     let spec = decode_target_spec(&database, target.target_type)?;
+    if let TargetSpec::Query(query) = &spec {
+        query_policy
+            .validate(query)
+            .map_err(|error| Status::failed_precondition(error.to_string()))?;
+    }
     let snapshot = store.snapshot();
-    let (watch, initial) = WatchTarget::initialize(id, database, spec, edition, &snapshot)
-        .map_err(|error| query_status(&error))?;
+    let (watch, initial) =
+        WatchTarget::initialize(id, database, spec, query_policy.edition(), &snapshot)
+            .map_err(|error| query_status(&error))?;
 
     send_target_change(sender, TargetChangeType::Add, vec![id], None, None).await?;
     for change in initial.changes {

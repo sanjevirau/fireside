@@ -8,7 +8,9 @@ use fireside_core_store::{
     CommitError, CommitResult, DatabaseName, Document, DocumentKey, FieldTransform, Snapshot,
     Store, Timestamp, TransformOperation, Value, Write,
 };
-use fireside_query_engine::{DatabaseEdition, QueryDocument, aggregate, execute, partition};
+use fireside_query_engine::{
+    DatabaseEdition, IndexConfigError, QueryDocument, QueryPolicy, aggregate, execute, partition,
+};
 use tokio_stream::{Stream, iter};
 use tonic::{Request, Response, Status};
 
@@ -46,7 +48,7 @@ pub(crate) type ResponseStream<T> = Pin<Box<dyn Stream<Item = Result<T, Status>>
 #[derive(Clone)]
 pub struct FirestoreService {
     store: Store,
-    edition: DatabaseEdition,
+    query_policy: QueryPolicy,
     transactions: Arc<Mutex<HashMap<Vec<u8>, TransactionState>>>,
     commit_guard: Arc<Mutex<()>>,
     next_id: Arc<AtomicU64>,
@@ -62,9 +64,15 @@ impl FirestoreService {
     /// Creates a service with the selected database-edition query semantics.
     #[must_use]
     pub fn new_with_edition(store: Store, edition: DatabaseEdition) -> Self {
+        Self::new_with_query_policy(store, QueryPolicy::new(edition))
+    }
+
+    /// Creates a service with shared edition and strict-index query behavior.
+    #[must_use]
+    pub fn new_with_query_policy(store: Store, query_policy: QueryPolicy) -> Self {
         Self {
             store,
-            edition,
+            query_policy,
             transactions: Arc::new(Mutex::new(HashMap::new())),
             commit_guard: Arc::new(Mutex::new(())),
             next_id: Arc::new(AtomicU64::new(1)),
@@ -501,6 +509,9 @@ impl Firestore for FirestoreService {
         };
         let skipped_results = structured.offset;
         let query = decode_query(parent.as_deref(), structured)?;
+        self.query_policy
+            .validate(&query)
+            .map_err(|error| index_status(&error))?;
         let (token, new_transaction) = match request.consistency_selector {
             None => (Vec::new(), false),
             Some(run_query_request::ConsistencySelector::Transaction(token)) => (token, false),
@@ -519,7 +530,7 @@ impl Firestore for FirestoreService {
         } else {
             self.snapshot_for_transaction(&database, &token)?
         };
-        let documents = execute(&snapshot, &database, &query, self.edition)
+        let documents = execute(&snapshot, &database, &query, self.query_policy.edition())
             .map_err(|error| query_status(&error))?;
         let read_time = Some(encode_timestamp(now()));
         let mut responses = Vec::with_capacity(documents.len() + usize::from(new_transaction));
@@ -581,6 +592,9 @@ impl Firestore for FirestoreService {
         };
         let (structured, aggregation) = decode_aggregation(aggregation_query)?;
         let query = decode_query(parent.as_deref(), structured)?;
+        self.query_policy
+            .validate(&query)
+            .map_err(|error| index_status(&error))?;
         let (token, new_transaction) = match request.consistency_selector {
             None => (Vec::new(), false),
             Some(run_aggregation_query_request::ConsistencySelector::Transaction(token)) => {
@@ -601,7 +615,7 @@ impl Firestore for FirestoreService {
         } else {
             self.snapshot_for_transaction(&database, &token)?
         };
-        let documents = execute(&snapshot, &database, &query, self.edition)
+        let documents = execute(&snapshot, &database, &query, self.query_policy.edition())
             .map_err(|error| query_status(&error))?;
         for document in &documents {
             self.record_read(&token, document.key(), Some(document.document().as_ref()));
@@ -653,13 +667,16 @@ impl Firestore for FirestoreService {
             return Err(Status::invalid_argument("structured query is required"));
         };
         let query = decode_query(None, structured)?;
+        self.query_policy
+            .validate(&query)
+            .map_err(|error| index_status(&error))?;
         let maximum = usize::try_from(request.partition_count)
             .map_err(|_| Status::invalid_argument("partition_count must be positive"))?;
         let mut partitions = partition(
             &self.store.snapshot(),
             &database,
             &query,
-            self.edition,
+            self.query_policy.edition(),
             maximum,
         )
         .map_err(|error| query_status(&error))?;
@@ -722,7 +739,7 @@ impl Firestore for FirestoreService {
     ) -> Result<Response<Self::ListenStream>, Status> {
         Ok(Response::new(crate::listen::stream(
             self.store.clone(),
-            self.edition,
+            self.query_policy.clone(),
             request.into_inner(),
         )))
     }
@@ -916,6 +933,10 @@ fn transform_result(
                 encode_value,
             ),
     }
+}
+
+fn index_status(error: &IndexConfigError) -> Status {
+    Status::failed_precondition(error.to_string())
 }
 
 fn commit_status(error: CommitError) -> Status {

@@ -62,5 +62,7 @@ jobs:
         run: npm test --prefix conformance
       - name: Run Fireside conformance
         run: npm run test:fireside --prefix conformance
+      - name: Run Fireside strict-index conformance
+        run: npm run test:fireside:strict --prefix conformance
       - name: Download and test the official Java emulator
         run: npm run test:official --prefix conformance

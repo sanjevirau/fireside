@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 
 const PROJECT_ID = "demo-fireside-fireside";
 const HOST = "127.0.0.1";
-const TEST_FILES = [
+const BACKEND_TEST_FILES = [
   "test/error-code-parity.test.ts",
   "test/firestore-smoke.test.ts",
   "test/listen.test.ts",
@@ -16,27 +16,35 @@ const TEST_FILES = [
   "test/streaming-write.test.ts",
   "test/write-transforms.test.ts",
 ] as const;
+const strictIndexes = process.argv.includes("--strict-indexes");
+const testFiles: readonly string[] = strictIndexes
+  ? ["test/strict-indexes.test.ts"]
+  : BACKEND_TEST_FILES;
 
 const repositoryRoot = resolve(process.cwd(), "..");
 await buildFireside();
 const port = await reserveAvailablePort();
 const executable = process.platform === "win32" ? "fireside.exe" : "fireside";
+const serverArguments = [
+  "--host",
+  HOST,
+  "--port",
+  String(port),
+  "--project_id",
+  PROJECT_ID,
+  "--single_project_mode",
+  "true",
+  "--database-edition",
+  "standard",
+];
+if (strictIndexes) {
+  serverArguments.push("--strict-indexes");
+}
 const server = spawn(
   join(repositoryRoot, "target", "debug", executable),
-  [
-    "--host",
-    HOST,
-    "--port",
-    String(port),
-    "--project_id",
-    PROJECT_ID,
-    "--single_project_mode",
-    "true",
-    "--database-edition",
-    "standard",
-  ],
+  serverArguments,
   {
-    cwd: repositoryRoot,
+    cwd: process.cwd(),
     env: process.env,
     stdio: ["ignore", "inherit", "inherit"],
   },
@@ -44,8 +52,10 @@ const server = spawn(
 
 try {
   await waitUntilListening(server, port);
-  await runTests(port, TEST_FILES);
-  await runTests(port, ["test/control-api.test.ts"]);
+  await runTests(port, testFiles);
+  if (!strictIndexes) {
+    await runTests(port, ["test/control-api.test.ts"]);
+  }
 } finally {
   await stop(server);
 }
@@ -60,6 +70,7 @@ async function runTests(port: number, files: readonly string[]): Promise<void> {
         env: {
           ...process.env,
           CONFORMANCE_TARGET: "fireside",
+          CONFORMANCE_STRICT_INDEXES: strictIndexes ? "1" : "0",
           FIRESTORE_EMULATOR_HOST: `${HOST}:${String(port)}`,
           GCLOUD_PROJECT: PROJECT_ID,
         },

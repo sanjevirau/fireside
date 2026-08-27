@@ -9,7 +9,8 @@ target, not the specification.
 
 > [!IMPORTANT]
 > Phase 0 is complete and Phase 1 is under development. Fireside passes the
-> fifteen checked-in backend and control conformance cases, but the remaining
+> fifteen checked-in backend and control conformance cases plus its dedicated
+> strict-index case, but the remaining
 > Phase 1 API, persistence, import/export, listener-resume, and torture gates
 > are not yet complete.
 
@@ -33,10 +34,15 @@ of scope until the conformance gates are met.
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Production cloud | pass (14/14; control N/A) | reference target | not implemented | not implemented | not implemented |
 | Official Java emulator | pass (15/15) | comparison target; 3 known deviations | not run | not run | not run |
-| fireside | pass (15/15) | current scope 15/15 | not implemented | not implemented | not implemented |
+| fireside | pass (15/15 + strict 1/1) | current scope 15/15 + strict 1/1 | not implemented | not implemented | not implemented |
 
 Cloud is the behavioral reference; Java is measured only for comparison. From
 Phase 2 onward this table will be generated from CI results.
+
+Pass `--strict-indexes` to load `firestore.indexes.json` from the process
+working directory at startup. Invalid or missing configuration fails startup;
+default mode intentionally retains the official emulator's permissive index
+workflow.
 
 ## Repository layout
 
@@ -62,6 +68,7 @@ npm ci --prefix conformance
 npm run check --prefix conformance
 npm test --prefix conformance
 npm run test:fireside --prefix conformance
+npm run test:fireside:strict --prefix conformance
 npm run test:official --prefix conformance
 ```
 
