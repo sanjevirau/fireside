@@ -1,5 +1,7 @@
 # fireside
 
+[![CI](https://github.com/sanjevirau/fireside/actions/workflows/ci.yml/badge.svg)](https://github.com/sanjevirau/fireside/actions/workflows/ci.yml)
+
 `fireside` is a clean-room, single-binary local emulator suite written in Rust.
 Its compatibility target is production Google Cloud behavior, measured by a
 differential conformance harness. The official Java emulator is a comparison
@@ -28,7 +30,7 @@ of scope until the conformance gates are met.
 | Target / area | Phase 0 harness | Firestore APIs | Browser SDK | Rules | Suite |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Production cloud | not run | not implemented | not implemented | not implemented | not implemented |
-| Official Java emulator | 1 smoke suite | oracle only | not run | not run | not run |
+| Official Java emulator | pass (1/1) | oracle only | not run | not run | not run |
 | fireside | harness only | not implemented | not implemented | not implemented | not implemented |
 
 “Oracle only” means the target is exercised to validate the harness; it is not
@@ -41,6 +43,8 @@ generated from CI results.
 - `conformance/`: TypeScript differential harness using real Google SDKs.
 - `DESIGN.md`: living architecture, wire contracts, evidence rules, and gates.
 - `reports/`: immutable phase-gate and name-availability evidence.
+
+The latest completed report is [Phase 0](reports/phase-0-gate.md).
 
 ## Phase 0 development
 
