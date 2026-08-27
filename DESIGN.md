@@ -336,6 +336,16 @@ counts. Fireside has no physical shards, so it emits deterministic evenly
 spaced points within the production-valid bound. Java v1.22.0 returns gRPC 12
 (`UNIMPLEMENTED`) for `PartitionQuery`; this is a documented Java deviation.
 
+`conformance/test/pipeline-edition.test.ts` pins the database-edition gate for
+the newer `ExecutePipeline` RPC. Production rejects any pipeline on a Standard
+database with status 9 (`FAILED_PRECONDITION`) and the structured reason
+`PIPELINE_REQUIRES_ENTERPRISE_EDITION`. Java v1.22.0 rejects the same request
+with status 3 (`INVALID_ARGUMENT`), a documented Java deviation. Fireside
+matches the production status in Standard mode. Enterprise stage semantics are
+unclaimed until the dedicated conformance project has an explicitly authorized
+Enterprise database; the handler remains `UNIMPLEMENTED` in Enterprise mode
+rather than guessing those semantics.
+
 Optional `--strict-indexes` validates queries against
 `firestore.indexes.json` as production enforces composite indexes. Because the
 official emulator does not enforce these indexes, cloud is mandatory for this

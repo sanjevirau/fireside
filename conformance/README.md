@@ -11,7 +11,8 @@ non-atomic BatchWrite status ordering, queries, transactions, transforms
 RunQuery and RunAggregationQuery planning and analyzed explain metrics,
 historical read-time selectors, precise error codes, REST, named databases, and
 ancestor-scoped collection groups, partitioning, and nearest-vector queries
-over both gRPC and REST.
+over both gRPC and REST. It also pins the Standard-edition `ExecutePipeline`
+gate; Enterprise pipeline stages require a separate Enterprise cloud oracle.
 
 ```sh
 npm ci

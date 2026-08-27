@@ -29,6 +29,11 @@ Both databases apply TTL to `_fireside_expires_at` in the
 Tests also delete their own data immediately; TTL is a crash/interruption
 backstop.
 
+No Enterprise-edition database is provisioned. Production confirms that
+`ExecutePipeline` rejects Standard databases with status 9; Enterprise pipeline
+semantics remain outside the authorized cloud target until the maintainer
+approves creating a dedicated Enterprise database.
+
 The later nearest-vector fixture added the same TTL backstop for the
 `fireside_vector_conformance` collection group in `(default)`.
 

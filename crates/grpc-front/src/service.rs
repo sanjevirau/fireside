@@ -715,6 +715,11 @@ impl Firestore for FirestoreService {
         &self,
         _request: Request<ExecutePipelineRequest>,
     ) -> Result<Response<Self::ExecutePipelineStream>, Status> {
+        if self.query_policy.edition() == DatabaseEdition::Standard {
+            return Err(Status::failed_precondition(
+                "Pipeline Operations are only available for Firestore databases in Enterprise edition.\n\nPlease switch to an Enterprise edition database to take advantage of such functionality.",
+            ));
+        }
         Err(Status::unimplemented(
             "ExecutePipeline requires production fixtures",
         ))
@@ -1480,8 +1485,22 @@ mod tests {
         CollectionSelector, Direction, FieldReference, Order,
     };
     use crate::google::firestore::v1::{
-        DocumentMask, StructuredAggregationQuery, StructuredQuery, precondition,
+        DocumentMask, ExecutePipelineRequest, StructuredAggregationQuery, StructuredQuery,
+        precondition,
     };
+
+    #[tokio::test]
+    async fn standard_edition_rejects_pipeline_execution() {
+        let service =
+            FirestoreService::new(Store::new(fireside_core_store::StoreOptions::default()));
+        let Err(error) = service
+            .execute_pipeline(Request::new(ExecutePipelineRequest::default()))
+            .await
+        else {
+            panic!("standard databases cannot execute pipelines");
+        };
+        assert_eq!(error.code(), tonic::Code::FailedPrecondition);
+    }
 
     #[test]
     fn list_order_parser_handles_ties_directions_and_quoted_commas() {
