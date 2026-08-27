@@ -305,6 +305,10 @@ decisions, so matching the message while returning the wrong code is a failure.
 Firestore and Java v1.22.0: missing update is 5, duplicate create is 6, stale
 update-time compare-and-set is 9, and one of two concurrent transactions that
 read then update the same document is aborted with 10.
+Under parallel full-suite load Java v1.22.0 has also aborted both competing
+transactions instead of committing one; the comparison assertion records both
+observed Java outcomes, while Cloud and Fireside still require exactly one
+commit and one `ABORTED` response.
 
 `conformance/test/streaming-write.test.ts` pins the production streaming Write
 handshake: the first database-only request returns a non-empty stream ID and
