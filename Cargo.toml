@@ -1,0 +1,37 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/capture-proxy",
+  "crates/cli",
+  "crates/core-store",
+  "crates/export-format",
+  "crates/grpc-front",
+  "crates/query-engine",
+  "crates/rest-front",
+  "crates/rules-engine",
+  "crates/watch-broker",
+  "crates/webchannel-front",
+]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/sanjevirau/fireside"
+homepage = "https://github.com/sanjevirau/fireside"
+
+[workspace.dependencies]
+clap = { version = "4.5.47", features = ["derive"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.143"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+unreachable_pub = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+module_name_repetitions = "allow"
