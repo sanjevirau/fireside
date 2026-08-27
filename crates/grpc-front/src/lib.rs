@@ -9,6 +9,7 @@ mod codec;
 mod listen;
 mod query_codec;
 mod service;
+mod write_stream;
 
 pub use service::FirestoreService;
 

@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createConnection, createServer } from "node:net";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 
 const PROJECT_ID = "demo-fireside-fireside";
 const HOST = "127.0.0.1";
@@ -15,16 +15,13 @@ const TEST_FILES = [
   "test/write-transforms.test.ts",
 ] as const;
 
-const port = await reserveAvailablePort();
 const repositoryRoot = resolve(process.cwd(), "..");
+await buildFireside();
+const port = await reserveAvailablePort();
+const executable = process.platform === "win32" ? "fireside.exe" : "fireside";
 const server = spawn(
-  "cargo",
+  join(repositoryRoot, "target", "debug", executable),
   [
-    "run",
-    "--quiet",
-    "-p",
-    "fireside",
-    "--",
     "--host",
     HOST,
     "--port",
@@ -76,6 +73,32 @@ async function runTests(port: number): Promise<void> {
       reject(
         new Error(
           `fireside conformance exited with code ${String(code)} and signal ${String(signal)}`,
+        ),
+      );
+    });
+  });
+}
+
+async function buildFireside(): Promise<void> {
+  await new Promise<void>((resolvePromise, reject) => {
+    const child = spawn(
+      "cargo",
+      ["build", "--quiet", "--locked", "-p", "fireside"],
+      {
+        cwd: repositoryRoot,
+        env: process.env,
+        stdio: "inherit",
+      },
+    );
+    child.once("error", reject);
+    child.once("exit", (code, signal) => {
+      if (code === 0) {
+        resolvePromise();
+        return;
+      }
+      reject(
+        new Error(
+          `cargo build exited with code ${String(code)} and signal ${String(signal)}`,
         ),
       );
     });

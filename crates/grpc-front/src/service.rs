@@ -146,6 +146,22 @@ impl FirestoreService {
         })
     }
 
+    pub(crate) fn apply_stream_writes(
+        &self,
+        writes: Vec<proto::Write>,
+    ) -> Result<CommitResponse, Status> {
+        let decoded = writes
+            .into_iter()
+            .map(decode_write)
+            .collect::<Result<Vec<_>, _>>()?;
+        let _guard = self.write_lock();
+        self.apply_writes(&decoded)
+    }
+
+    pub(crate) fn next_stream_id(&self) -> u64 {
+        self.next_id.fetch_add(1, Ordering::Relaxed)
+    }
+
     fn transaction_states(&self) -> MutexGuard<'_, HashMap<Vec<u8>, TransactionState>> {
         self.transactions
             .lock()
@@ -682,9 +698,12 @@ impl Firestore for FirestoreService {
 
     async fn write(
         &self,
-        _request: Request<tonic::Streaming<WriteRequest>>,
+        request: Request<tonic::Streaming<WriteRequest>>,
     ) -> Result<Response<Self::WriteStream>, Status> {
-        Err(Status::unimplemented("streaming Write is in progress"))
+        Ok(Response::new(crate::write_stream::stream(
+            self.clone(),
+            request.into_inner(),
+        )))
     }
 
     type ListenStream = ResponseStream<ListenResponse>;
