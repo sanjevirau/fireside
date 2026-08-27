@@ -515,9 +515,10 @@ that real output differs from the LevelDB specification in CRC and EOF handling
 are hypotheses until fixtures from real artifacts pin them.
 
 The first checked oracle was captured on 2026-08-27 from official emulator
-v1.22.0 through firebase-tools v15.28.1. It contains three synthetic documents,
-including a 160,000-byte UTF-8 field. Its `output-0` SHA-256 is
-`33c30015175342e7e5e8b78804bea406de6fbc86d2ef3ee5ec9851692b1a5671`.
+v1.22.0 through firebase-tools v15.28.1. It contains four synthetic documents,
+including a nested document and a 160,000-byte UTF-8 field. Its `output-0`
+SHA-256 is
+`304668940b2b4a613801d6ec12df159e1b86e09b739c7219f695ae81e7392ad7`.
 The large logical record begins with a `FIRST` fragment, continues through
 `MIDDLE` fragments, and ends with `LAST`; physical records use little-endian
 lengths and the masked CRC32C covers the one-byte fragment type followed by the

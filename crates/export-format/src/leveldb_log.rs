@@ -409,8 +409,8 @@ mod tests {
         while let Some(record) = reader.next_record().expect("oracle log should decode") {
             records.push(record);
         }
-        assert_eq!(records.len(), 3);
-        assert!(records[0].len() > BLOCK_BYTES * 4);
+        assert_eq!(records.len(), 4);
+        assert!(records.iter().any(|record| record.len() > BLOCK_BYTES * 4));
 
         let mut writer = LevelDbLogWriter::new(Vec::new());
         for record in &records {
