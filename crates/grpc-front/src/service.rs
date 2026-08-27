@@ -727,11 +727,7 @@ impl Firestore for FirestoreService {
         request: Request<RunAggregationQueryRequest>,
     ) -> Result<Response<Self::RunAggregationQueryStream>, Status> {
         let request = request.into_inner();
-        if request.explain_options.is_some() {
-            return Err(Status::unimplemented(
-                "aggregation explain metrics await a production fixture",
-            ));
-        }
+        let explain_options = request.explain_options;
         let (database, parent) = decode_parent(&request.parent)?;
         let Some(run_aggregation_query_request::QueryType::StructuredAggregationQuery(
             aggregation_query,
@@ -742,6 +738,9 @@ impl Firestore for FirestoreService {
             ));
         };
         let (structured, aggregation) = decode_aggregation(aggregation_query)?;
+        let explain_plan = explain_options
+            .as_ref()
+            .map(|_| query_plan_summary(&structured));
         let query = decode_query(parent.as_deref(), structured)?;
         self.query_policy
             .validate(&query)
@@ -773,22 +772,27 @@ impl Firestore for FirestoreService {
         } else {
             self.snapshot_for_transaction(&database, &token)?
         };
+        if explain_options
+            .as_ref()
+            .is_some_and(|options| !options.analyze)
+        {
+            return Ok(Response::new(aggregation_plan_stream(
+                new_transaction,
+                token,
+                explain_plan.expect("explain options create a plan"),
+            )));
+        }
+        let started = Instant::now();
         let documents = execute(&snapshot, &database, &query, self.query_policy.edition())
             .map_err(|error| query_status(&error))?;
         for document in &documents {
             self.record_read(&token, document.key(), Some(document.document().as_ref()));
         }
-        let mut fields = aggregate(&documents, &aggregation.operations);
-        for (alias, bound) in aggregation.count_bounds {
-            if let Some(Value::Integer(count)) = fields.get_mut(&alias) {
-                let bound = i64::try_from(bound).unwrap_or(i64::MAX);
-                *count = (*count).min(bound);
-            }
-        }
-        let result = proto::AggregationResult {
-            aggregate_fields: encode_fields(&fields)?,
-        };
-        let mut responses = Vec::with_capacity(1 + usize::from(new_transaction));
+        let result = aggregate_query_result(&documents, aggregation)?;
+        let execution_duration = started.elapsed();
+        let mut responses = Vec::with_capacity(
+            1 + usize::from(new_transaction) + usize::from(explain_options.is_some()),
+        );
         if new_transaction {
             responses.push(RunAggregationQueryResponse {
                 transaction: token,
@@ -800,6 +804,15 @@ impl Firestore for FirestoreService {
             read_time: Some(encode_timestamp(now())),
             ..RunAggregationQueryResponse::default()
         });
+        if explain_options.is_some() {
+            responses.push(RunAggregationQueryResponse {
+                explain_metrics: Some(query_explain_metrics(
+                    explain_plan.expect("explain options create a plan"),
+                    Some((1, execution_duration)),
+                )),
+                ..RunAggregationQueryResponse::default()
+            });
+        }
         Ok(Response::new(Box::pin(iter(responses.into_iter().map(Ok)))))
     }
 
@@ -1237,6 +1250,41 @@ fn query_plan_stream(
         ..RunQueryResponse::default()
     });
     Box::pin(iter(responses.into_iter().map(Ok)))
+}
+
+fn aggregation_plan_stream(
+    new_transaction: bool,
+    token: Vec<u8>,
+    plan_summary: proto::PlanSummary,
+) -> ResponseStream<RunAggregationQueryResponse> {
+    let mut responses = Vec::with_capacity(1 + usize::from(new_transaction));
+    if new_transaction {
+        responses.push(RunAggregationQueryResponse {
+            transaction: token,
+            ..RunAggregationQueryResponse::default()
+        });
+    }
+    responses.push(RunAggregationQueryResponse {
+        explain_metrics: Some(query_explain_metrics(plan_summary, None)),
+        ..RunAggregationQueryResponse::default()
+    });
+    Box::pin(iter(responses.into_iter().map(Ok)))
+}
+
+fn aggregate_query_result(
+    documents: &[QueryDocument],
+    aggregation: crate::query_codec::DecodedAggregation,
+) -> Result<proto::AggregationResult, Status> {
+    let mut fields = aggregate(documents, &aggregation.operations);
+    for (alias, bound) in aggregation.count_bounds {
+        if let Some(Value::Integer(count)) = fields.get_mut(&alias) {
+            let bound = i64::try_from(bound).unwrap_or(i64::MAX);
+            *count = (*count).min(bound);
+        }
+    }
+    Ok(proto::AggregationResult {
+        aggregate_fields: encode_fields(&fields)?,
+    })
 }
 
 fn struct_string(value: impl Into<String>) -> prost_types::Value {

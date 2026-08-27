@@ -27,6 +27,15 @@ interface RunQueryResponse {
   readonly explainMetrics?: ExplainMetrics | null;
 }
 
+interface RunAggregationQueryResponse {
+  readonly result?: {
+    readonly aggregateFields?: {
+      readonly total?: { readonly integerValue?: unknown } | null;
+    } | null;
+  } | null;
+  readonly explainMetrics?: ExplainMetrics | null;
+}
+
 test("RunQuery explain separates planning from analyzed execution", async (context) => {
   const configuration = resolveTarget(process.env);
   const firestore = createFirestore(configuration);
@@ -103,12 +112,107 @@ test("RunQuery explain separates planning from analyzed execution", async (conte
   }
 });
 
-function hasExplainMetrics(response: RunQueryResponse): boolean {
+test("RunAggregationQuery explain reports the aggregate result count", async (context) => {
+  const configuration = resolveTarget(process.env);
+  const firestore = createFirestore(configuration);
+  const rawFirestore = createV1Firestore(configuration);
+  const runId = randomUUID();
+  const database = `projects/${configuration.projectId}/databases/(default)`;
+  const parentPath = `runs/${runId}`;
+  const parent = `${database}/documents/${parentPath}`;
+  const collection = firestore.collection(`${parentPath}/aggregate_explain`);
+  const documents = [collection.doc("a"), collection.doc("b")];
+  const expiresAt = Timestamp.fromMillis(Date.now() + DAY_MILLISECONDS);
+  const callOptions = configuration.host === undefined
+    ? {}
+    : { otherArgs: { headers: { authorization: "Bearer owner" } } };
+
+  context.after(async () => {
+    await Promise.all(documents.map(async (document) => document.delete())).catch(
+      () => undefined,
+    );
+    await Promise.all([firestore.terminate(), rawFirestore.close()]).catch(
+      () => undefined,
+    );
+  });
+
+  await Promise.all([
+    documents[0]!.set({ _fireside_expires_at: expiresAt, score: 2 }),
+    documents[1]!.set({ _fireside_expires_at: expiresAt, score: 1 }),
+  ]);
+
+  const structuredAggregationQuery = {
+    structuredQuery: {
+      from: [{ collectionId: "aggregate_explain" }],
+      orderBy: [
+        { field: { fieldPath: "score" }, direction: "ASCENDING" as const },
+      ],
+    },
+    aggregations: [{ alias: "total", count: {} }],
+  };
+  const planned = await collect<RunAggregationQueryResponse>(
+    rawFirestore.runAggregationQuery(
+      {
+        parent,
+        structuredAggregationQuery,
+        explainOptions: { analyze: false },
+      },
+      callOptions,
+    ),
+  );
+  if (configuration.name === "java") {
+    assert.equal(aggregateCount(planned), "2");
+    assert.equal(planned.filter(hasExplainMetrics).length, 0);
+  } else {
+    assert.equal(aggregateCount(planned), undefined);
+    assert.equal(planned.filter(hasExplainMetrics).length, 1);
+    const plannedMetrics = planned.at(-1)?.explainMetrics;
+    assert.ok(plannedMetrics?.planSummary);
+    assert.ok((plannedMetrics.planSummary.indexesUsed?.length ?? 0) > 0);
+    assert.equal(plannedMetrics.executionStats ?? null, null);
+  }
+
+  const analyzed = await collect<RunAggregationQueryResponse>(
+    rawFirestore.runAggregationQuery(
+      {
+        parent,
+        structuredAggregationQuery,
+        explainOptions: { analyze: true },
+      },
+      callOptions,
+    ),
+  );
+  assert.equal(aggregateCount(analyzed), "2");
+  if (configuration.name === "java") {
+    assert.equal(analyzed.filter(hasExplainMetrics).length, 0);
+  } else {
+    assert.equal(analyzed.filter(hasExplainMetrics).length, 1);
+    const analyzedMetrics = analyzed.at(-1)?.explainMetrics;
+    assert.ok(analyzedMetrics?.planSummary);
+    assert.ok((analyzedMetrics.planSummary.indexesUsed?.length ?? 0) > 0);
+    assert.equal(String(analyzedMetrics.executionStats?.resultsReturned), "1");
+    assert.ok(analyzedMetrics.executionStats?.executionDuration);
+    assert.ok(analyzedMetrics.executionStats?.readOperations !== undefined);
+    assert.ok(analyzedMetrics.executionStats?.debugStats);
+  }
+});
+
+function hasExplainMetrics(
+  response: { readonly explainMetrics?: ExplainMetrics | null },
+): boolean {
   return response.explainMetrics !== undefined && response.explainMetrics !== null;
 }
 
 function documentNames(responses: readonly RunQueryResponse[]): string[] {
   return responses.flatMap((response) => response.document?.name ?? []);
+}
+
+function aggregateCount(
+  responses: readonly RunAggregationQueryResponse[],
+): string | undefined {
+  const value = responses.find((response) => response.result !== undefined)
+    ?.result?.aggregateFields?.total?.integerValue;
+  return value === undefined ? undefined : String(value);
 }
 
 async function collect<T>(stream: NodeJS.ReadableStream): Promise<T[]> {

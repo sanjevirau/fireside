@@ -262,15 +262,17 @@ configuration fails startup. One shared query policy covers gRPC RunQuery,
 RunAggregationQuery, PartitionQuery, Listen targets, and REST runQuery so the
 transports cannot drift.
 
-`conformance/test/query-explain.test.ts` pins `RunQuery.explain_options`.
-Production plan-only mode suppresses query documents and sends one final plan
-summary without execution statistics. Analyze mode returns the normally ordered
-documents and sends exactly one final metrics response containing both the plan
-summary and execution statistics; the fixture pins `results_returned` to the
-two returned documents and requires duration, read-operation, and debug fields.
-Fireside reports its actual virtual MVCC index shape and measured execution
-duration. Java v1.22.0 ignores both explain modes, executes both requests, and
-returns no metrics; this is a documented Java deviation.
+`conformance/test/query-explain.test.ts` pins `RunQuery.explain_options` and
+`RunAggregationQuery.explain_options`. Production plan-only mode suppresses
+query documents or aggregation results and sends one final plan summary without
+execution statistics. Analyze mode returns the normally ordered documents or
+aggregate result and sends exactly one final metrics response containing both
+the plan summary and execution statistics. The fixture pins
+`results_returned` to two document rows for RunQuery and one aggregate row for
+RunAggregationQuery, and requires duration, read-operation, and debug fields.
+Fireside reports its in-memory virtual plan and measured execution duration.
+Java v1.22.0 ignores both explain modes on both RPCs, executes every request,
+and returns no metrics; this is one documented Java deviation.
 
 `conformance/test/ancestor-collection-group.test.ts` pins document-ancestor
 scoping for `allDescendants` collection selectors over both gRPC and REST.
