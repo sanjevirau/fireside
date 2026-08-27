@@ -2,10 +2,11 @@
 
 #![forbid(unsafe_code)]
 
-use std::sync::Arc;
+use std::collections::BTreeMap;
+use std::sync::{Arc, Mutex, MutexGuard};
 
-use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
+use axum::extract::{OriginalUri, Path, Query, State};
+use axum::http::{Method, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
@@ -28,6 +29,9 @@ const DOCUMENT_ROUTE: &str = "/v1/projects/{project}/databases/{database}/docume
 const COMMIT_ROUTE: &str = "/v1/projects/{project}/databases/{database}/documents:commit";
 const BATCH_GET_ROUTE: &str = "/v1/projects/{project}/databases/{database}/documents:batchGet";
 const RUN_QUERY_ROUTE: &str = "/v1/projects/{project}/databases/{database}/documents:runQuery";
+const TRIGGER_ROUTE: &str = "/emulator/v1/projects/{project}/triggers/{key}";
+const EVENTARC_ROUTE: &str = "/emulator/v1/projects/{project}/eventarcTrigger";
+const CLEAR_ROUTE: &str = "/emulator/v1/projects/{project}/databases/{database}/documents";
 
 /// Creates the HTTP/1 router that shares the Firestore store with gRPC.
 pub fn router(store: Store) -> Router {
@@ -42,12 +46,30 @@ pub fn router(store: Store) -> Router {
         .route(COMMIT_ROUTE, axum::routing::post(commit))
         .route(BATCH_GET_ROUTE, axum::routing::post(batch_get))
         .route(RUN_QUERY_ROUTE, axum::routing::post(run_query_at_root))
-        .with_state(RestState { store })
+        .route(
+            TRIGGER_ROUTE,
+            axum::routing::put(put_trigger).delete(delete_trigger),
+        )
+        .route(EVENTARC_ROUTE, axum::routing::post(post_eventarc_trigger))
+        .route(CLEAR_ROUTE, axum::routing::delete(clear_database))
+        .fallback(project_operation)
+        .with_state(RestState {
+            store,
+            control: Arc::new(Mutex::new(ControlState::default())),
+        })
 }
 
 #[derive(Clone)]
 struct RestState {
     store: Store,
+    control: Arc<Mutex<ControlState>>,
+}
+
+#[derive(Default)]
+struct ControlState {
+    triggers: BTreeMap<(String, String), JsonValue>,
+    eventarc_triggers: BTreeMap<(String, String), JsonValue>,
+    rules: BTreeMap<String, JsonValue>,
 }
 
 #[derive(Deserialize)]
@@ -61,6 +83,23 @@ struct DocumentPath {
 struct DatabasePath {
     project: String,
     database: String,
+}
+
+#[derive(Deserialize)]
+struct TriggerPath {
+    project: String,
+    key: String,
+}
+
+#[derive(Deserialize)]
+struct ProjectPath {
+    project: String,
+}
+
+#[derive(Deserialize)]
+struct EventarcParameters {
+    #[serde(rename = "eventarcTriggerId")]
+    trigger_id: String,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -147,6 +186,100 @@ async fn delete_document(
         }])
         .map_err(|error| RestError::commit(&error))?;
     Ok(Json(json!({})))
+}
+
+async fn put_trigger(
+    State(state): State<RestState>,
+    Path(path): Path<TriggerPath>,
+    Json(body): Json<JsonValue>,
+) -> Json<JsonValue> {
+    control_state(&state)
+        .triggers
+        .insert((path.project, path.key), body);
+    Json(json!({}))
+}
+
+async fn delete_trigger(
+    State(state): State<RestState>,
+    Path(path): Path<TriggerPath>,
+) -> Json<JsonValue> {
+    control_state(&state)
+        .triggers
+        .remove(&(path.project, path.key));
+    Json(json!({}))
+}
+
+async fn post_eventarc_trigger(
+    State(state): State<RestState>,
+    Path(path): Path<ProjectPath>,
+    Query(parameters): Query<EventarcParameters>,
+    Json(body): Json<JsonValue>,
+) -> Result<Json<JsonValue>, RestError> {
+    if parameters.trigger_id.is_empty() {
+        return Err(RestError::invalid("eventarcTriggerId is required"));
+    }
+    control_state(&state)
+        .eventarc_triggers
+        .insert((path.project, parameters.trigger_id), body);
+    Ok(Json(json!({})))
+}
+
+async fn project_operation(
+    State(state): State<RestState>,
+    method: Method,
+    OriginalUri(uri): OriginalUri,
+    Json(body): Json<JsonValue>,
+) -> Result<Json<JsonValue>, RestError> {
+    let Some(operation) = uri.path().strip_prefix("/emulator/v1/projects/") else {
+        return Err(RestError::not_found("unknown HTTP endpoint"));
+    };
+    let (project, suffix) = operation
+        .split_once(':')
+        .ok_or_else(|| RestError::not_found("unknown emulator project operation"))?;
+    if project.is_empty() || project.contains('/') {
+        return Err(RestError::invalid("invalid project ID"));
+    }
+    match (method, suffix) {
+        (Method::PUT, "securityRules") => {
+            control_state(&state).rules.insert(project.to_owned(), body);
+            Ok(Json(json!({})))
+        }
+        (Method::POST, "export") => Err(RestError::unimplemented(
+            "export writer is not implemented yet",
+        )),
+        _ => Err(RestError::not_found("unknown emulator project operation")),
+    }
+}
+
+async fn clear_database(
+    State(state): State<RestState>,
+    Path(path): Path<DatabasePath>,
+) -> Result<Json<JsonValue>, RestError> {
+    let database = database_name(path)?;
+    let writes = state
+        .store
+        .snapshot()
+        .documents(&database)
+        .into_iter()
+        .map(|(key, _)| Write::Delete {
+            key,
+            precondition: Precondition::None,
+        })
+        .collect::<Vec<_>>();
+    if !writes.is_empty() {
+        state
+            .store
+            .commit(&writes)
+            .map_err(|error| RestError::commit(&error))?;
+    }
+    Ok(Json(json!({})))
+}
+
+fn control_state(state: &RestState) -> MutexGuard<'_, ControlState> {
+    state
+        .control
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 async fn commit(
@@ -785,6 +918,14 @@ impl RestError {
         }
     }
 
+    fn unimplemented(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::NOT_IMPLEMENTED,
+            code: "UNIMPLEMENTED",
+            message: message.into(),
+        }
+    }
+
     fn commit(error: &CommitError) -> Self {
         let (status, code) = match error {
             CommitError::AlreadyExists(_) => (StatusCode::CONFLICT, "ALREADY_EXISTS"),
@@ -830,6 +971,11 @@ impl IntoResponse for RestError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn control_and_document_routes_can_share_one_router() {
+        let _router = router(Store::default());
+    }
 
     #[test]
     fn rest_values_preserve_int64_special_doubles_and_vectors() {
