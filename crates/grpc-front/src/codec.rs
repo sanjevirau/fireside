@@ -303,6 +303,34 @@ pub(crate) fn decode_timestamp(value: ProtoTimestamp) -> Result<Timestamp, Statu
         .map_err(|error| Status::invalid_argument(error.to_string()))
 }
 
+pub(crate) fn decode_read_time(
+    value: ProtoTimestamp,
+    current: Timestamp,
+) -> Result<Timestamp, Status> {
+    const MAX_AGE_SECONDS: i64 = 60 * 60;
+
+    let read_time = decode_timestamp(value)?;
+    if !read_time.nanos().is_multiple_of(1_000) {
+        return Err(Status::invalid_argument(
+            "read_time cannot have more than microseconds precision",
+        ));
+    }
+    if read_time > current {
+        return Err(Status::invalid_argument(
+            "read_time cannot be in the future",
+        ));
+    }
+    let oldest = Timestamp::new(
+        current.seconds().saturating_sub(MAX_AGE_SECONDS),
+        current.nanos(),
+    )
+    .expect("current nanoseconds remain valid");
+    if read_time < oldest {
+        return Err(Status::failed_precondition("read_time is too old"));
+    }
+    Ok(read_time)
+}
+
 pub(crate) fn encode_timestamp(value: Timestamp) -> ProtoTimestamp {
     ProtoTimestamp {
         seconds: value.seconds(),

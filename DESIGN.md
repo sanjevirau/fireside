@@ -402,8 +402,11 @@ observed filter has 29 usable bits and 20 MD5-derived hashes; for two names it
 has 53 bits and 18 hashes. Fireside follows the vendored protocol's little-endian
 128-bit MD5 split and double-hash construction. Java's full-target RESET path
 does not send the filter, part of the same documented resume deviation.
-Expired-token reset behavior and read-time resume remain unclaimed until their
-oracle fixtures are captured.
+The companion `read_time` fixture supplies the first write's commit timestamp
+after a second matching write. Production and Fireside deliver only the second
+document before `CURRENT`; Java again sends `ADD`, `RESET`, and the full target.
+Expired-token reset behavior remains unclaimed until its oracle fixture is
+captured.
 
 ## 6. Drop-in launcher and emulator control contract
 

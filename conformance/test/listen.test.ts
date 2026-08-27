@@ -249,6 +249,63 @@ test("raw Listen resumes after a CURRENT checkpoint without replaying prior docu
   }
 });
 
+test("raw Listen read_time delivers only changes after the historical snapshot", async (context) => {
+  const configuration = resolveTarget(process.env);
+  const firestore = createFirestore(configuration);
+  const rawFirestore = createV1Firestore(configuration);
+  const runId = randomUUID();
+  const collection = firestore.collection(`runs/${runId}/fireside_conformance`);
+  const alpha = collection.doc("alpha");
+  const beta = collection.doc("beta");
+  const database = `projects/${configuration.projectId}/databases/(default)`;
+  const stream = rawFirestore.listen({
+    otherArgs: { headers: { "google-cloud-resource-prefix": database } },
+  });
+
+  context.after(async () => {
+    stream.end();
+    await Promise.all([
+      alpha.delete().catch(() => undefined),
+      beta.delete().catch(() => undefined),
+    ]);
+    await Promise.all([firestore.terminate(), rawFirestore.close()]);
+  });
+
+  const first = await alpha.set({ rank: 1 });
+  await beta.set({ rank: 2 });
+  const responses = rawResponseQueue(stream);
+  stream.write({
+    database,
+    addTarget: {
+      query: {
+        parent: `${database}/documents/runs/${runId}`,
+        structuredQuery: {
+          from: [{ collectionId: "fireside_conformance" }],
+          orderBy: [
+            { field: { fieldPath: "rank" }, direction: "ASCENDING" },
+          ],
+        },
+      },
+      targetId: 9,
+      readTime: {
+        seconds: first.writeTime.seconds,
+        nanos: first.writeTime.nanoseconds,
+      },
+    },
+  });
+  const checkpoint = await readCheckpoint(responses);
+  assert.deepEqual(
+    checkpoint.documentIds,
+    configuration.name === "java" ? ["alpha", "beta"] : ["beta"],
+  );
+  assert.deepEqual(
+    checkpoint.targetChangeTypes,
+    configuration.name === "java"
+      ? ["ADD", "RESET", "CURRENT"]
+      : ["ADD", "CURRENT"],
+  );
+});
+
 function snapshotQueue(): {
   readonly next: () => Promise<ObservedSnapshot>;
   readonly push: (snapshot: QuerySnapshot) => void;

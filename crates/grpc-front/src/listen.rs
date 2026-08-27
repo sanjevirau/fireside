@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
 
-use fireside_core_store::{DatabaseName, Revision, SnapshotError, Store};
+use fireside_core_store::{DatabaseName, Revision, SnapshotError, Store, Timestamp};
 use fireside_query_engine::QueryPolicy;
 use fireside_watch_broker::{ChangeKind, TargetSpec, WatchChange, WatchDocument, WatchTarget};
 use md5::{Digest as _, Md5};
@@ -11,7 +11,8 @@ use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Code, Status, Streaming};
 
 use crate::codec::{
-    decode_database_name, decode_document_name, decode_parent, encode_fields, encode_timestamp,
+    decode_database_name, decode_document_name, decode_parent, decode_read_time, encode_fields,
+    encode_timestamp,
 };
 use crate::google::firestore::v1::listen_request::TargetChange as RequestedTargetChange;
 use crate::google::firestore::v1::listen_response::ResponseType;
@@ -29,6 +30,11 @@ use crate::service::ResponseStream;
 
 const POLL_INTERVAL: Duration = Duration::from_millis(10);
 const RESPONSE_BUFFER: usize = 128;
+
+enum ResumePoint {
+    Revision(Revision),
+    ReadTime(Timestamp),
+}
 
 pub(crate) fn stream(
     store: Store,
@@ -127,12 +133,12 @@ async fn add_target(
     target: Target,
 ) -> Result<(), Status> {
     let expected_count = target.expected_count.filter(|count| *count > 0);
-    let resume_revision = match target.resume_type.as_ref() {
-        Some(ResumeType::ResumeToken(token)) => Some(decode_resume_token(token)?),
-        Some(ResumeType::ReadTime(_)) => {
-            return Err(Status::unimplemented(
-                "listen read-time resume requires a production fixture",
-            ));
+    let resume_point = match target.resume_type.as_ref() {
+        Some(ResumeType::ResumeToken(token)) => {
+            Some(ResumePoint::Revision(decode_resume_token(token)?))
+        }
+        Some(ResumeType::ReadTime(read_time)) => {
+            Some(ResumePoint::ReadTime(decode_read_time(*read_time, now())?))
         }
         None => None,
     };
@@ -165,10 +171,12 @@ async fn add_target(
             .map_err(|error| Status::failed_precondition(error.to_string()))?;
     }
     let snapshot = store.snapshot();
-    let (watch, initial, send_filter) = if let Some(revision) = resume_revision {
-        let baseline = store
-            .snapshot_at(revision)
-            .map_err(resume_snapshot_status)?;
+    let (watch, initial, send_filter) = if let Some(resume_point) = resume_point {
+        let baseline = match resume_point {
+            ResumePoint::Revision(revision) => store.snapshot_at(revision),
+            ResumePoint::ReadTime(read_time) => store.snapshot_at_time(read_time),
+        }
+        .map_err(resume_snapshot_status)?;
         let (mut watch, _) =
             WatchTarget::initialize(id, database, spec, query_policy.edition(), &baseline)
                 .map_err(|error| query_status(&error))?;

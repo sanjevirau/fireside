@@ -11,13 +11,12 @@ use fireside_core_store::{
 use fireside_query_engine::{
     DatabaseEdition, IndexConfigError, QueryDocument, QueryPolicy, aggregate, execute, partition,
 };
-use prost_types::Timestamp as ProtoTimestamp;
 use tokio_stream::{Stream, iter};
 use tonic::{Request, Response, Status};
 
 use crate::codec::{
     DecodedWrite, decode_database_name, decode_document_name, decode_fields, decode_parent,
-    decode_timestamp, decode_write, encode_document_masked, encode_fields, encode_timestamp,
+    decode_read_time, decode_write, encode_document_masked, encode_fields, encode_timestamp,
     encode_value, nested_value,
 };
 use crate::google::firestore::v1::batch_get_documents_request;
@@ -108,7 +107,7 @@ impl FirestoreService {
                         read_time,
                     )) => self
                         .store
-                        .snapshot_at_time(decode_read_time(read_time)?)
+                        .snapshot_at_time(decode_read_time(read_time, now())?)
                         .map_err(snapshot_status)?,
                 };
                 (true, snapshot)
@@ -231,7 +230,7 @@ impl Firestore for FirestoreService {
             Some(get_document_request::ConsistencySelector::ReadTime(read_time)) => {
                 let snapshot = self
                     .store
-                    .snapshot_at_time(decode_read_time(read_time)?)
+                    .snapshot_at_time(decode_read_time(read_time, now())?)
                     .map_err(snapshot_status)?;
                 let document = snapshot
                     .get(&key)
@@ -272,7 +271,7 @@ impl Firestore for FirestoreService {
                 Vec::new(),
                 Some(
                     self.store
-                        .snapshot_at_time(decode_read_time(read_time)?)
+                        .snapshot_at_time(decode_read_time(read_time, now())?)
                         .map_err(snapshot_status)?,
                 ),
             ),
@@ -394,7 +393,7 @@ impl Firestore for FirestoreService {
                 false,
                 Some(
                     self.store
-                        .snapshot_at_time(decode_read_time(read_time)?)
+                        .snapshot_at_time(decode_read_time(read_time, now())?)
                         .map_err(snapshot_status)?,
                 ),
             ),
@@ -561,7 +560,7 @@ impl Firestore for FirestoreService {
                 false,
                 Some(
                     self.store
-                        .snapshot_at_time(decode_read_time(read_time)?)
+                        .snapshot_at_time(decode_read_time(read_time, now())?)
                         .map_err(snapshot_status)?,
                 ),
             ),
@@ -653,7 +652,7 @@ impl Firestore for FirestoreService {
                 false,
                 Some(
                     self.store
-                        .snapshot_at_time(decode_read_time(read_time)?)
+                        .snapshot_at_time(decode_read_time(read_time, now())?)
                         .map_err(snapshot_status)?,
                 ),
             ),
@@ -704,7 +703,7 @@ impl Firestore for FirestoreService {
             None => self.store.snapshot(),
             Some(partition_query_request::ConsistencySelector::ReadTime(read_time)) => self
                 .store
-                .snapshot_at_time(decode_read_time(read_time)?)
+                .snapshot_at_time(decode_read_time(read_time, now())?)
                 .map_err(snapshot_status)?,
         };
         let (database, parent) = decode_parent(&request.parent)?;
@@ -805,7 +804,7 @@ impl Firestore for FirestoreService {
             None => self.store.snapshot(),
             Some(list_collection_ids_request::ConsistencySelector::ReadTime(read_time)) => self
                 .store
-                .snapshot_at_time(decode_read_time(read_time)?)
+                .snapshot_at_time(decode_read_time(read_time, now())?)
                 .map_err(snapshot_status)?,
         };
         let (database, parent) = decode_parent(&request.parent)?;
@@ -1019,32 +1018,6 @@ fn snapshot_status(error: SnapshotError) -> Status {
         }
         SnapshotError::FutureRevision { .. } => Status::invalid_argument(error.to_string()),
     }
-}
-
-fn decode_read_time(value: ProtoTimestamp) -> Result<Timestamp, Status> {
-    const MAX_AGE_SECONDS: i64 = 60 * 60;
-
-    let read_time = decode_timestamp(value)?;
-    if !read_time.nanos().is_multiple_of(1_000) {
-        return Err(Status::invalid_argument(
-            "read_time cannot have more than microseconds precision",
-        ));
-    }
-    let current = now();
-    if read_time > current {
-        return Err(Status::invalid_argument(
-            "read_time cannot be in the future",
-        ));
-    }
-    let oldest = Timestamp::new(
-        current.seconds().saturating_sub(MAX_AGE_SECONDS),
-        current.nanos(),
-    )
-    .expect("current nanoseconds remain valid");
-    if read_time < oldest {
-        return Err(Status::failed_precondition("read_time is too old"));
-    }
-    Ok(read_time)
 }
 
 fn rpc_status(status: &Status) -> rpc::Status {
