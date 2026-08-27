@@ -439,6 +439,13 @@ return only the requested masked field while persisting fields excluded from
 the response mask, populate both create and update times, and return
 `ALREADY_EXISTS` (6) when the assigned ID is reused explicitly.
 
+The Admin SDK `BulkWriter` fixture exercises independent create, upsert, update,
+and delete operations in one writer alongside an explicit duplicate create and
+missing-document update. Production, Java v1.22.0, and Fireside commit the four
+independent successes, preserve their stored effects, invoke the per-write error
+callback once for each failure, and reject only the affected promises with
+`ALREADY_EXISTS` (6) and `NOT_FOUND` (5), respectively.
+
 The same fixture pins `ListDocuments.order_by` field expressions. Production,
 Java, and Fireside exclude documents missing the ordered field, use an implicit
 document-name tie-break in the field direction, and preserve that order across

@@ -128,5 +128,14 @@ The raw `CreateDocument` fixture records that production assigns a non-empty
 ID when `document_id` is omitted, applies the response mask without dropping
 masked-out stored fields, returns create/update timestamps, and rejects an
 explicit reuse of the assigned ID with `ALREADY_EXISTS` (6). Java v1.22.0 and
-Fireside match this contract. The current Standard scoreboard is production
-31/31 and Java/Fireside 33/33 including the two emulator-only control cases.
+Fireside match this contract. At this CreateDocument checkpoint the Standard
+scoreboard was production 31/31 and Java/Fireside 33/33 including the two
+emulator-only control cases.
+
+The Admin SDK `BulkWriter` fixture records independent create, set, update, and
+delete success in the presence of two write-local failures. Production, Java
+v1.22.0, and Fireside preserve the four successful effects and surface only the
+duplicate create and missing update through the writer's error callback and
+operation promises as `ALREADY_EXISTS` (6) and `NOT_FOUND` (5). The current
+Standard scoreboard is production 32/32 and Java/Fireside 34/34 including the
+two emulator-only control cases.
