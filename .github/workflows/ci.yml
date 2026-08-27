@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    name: Rust quality gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install stable Rust components
+        run: rustup show
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Deny Clippy warnings
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - name: Run Rust tests
+        run: cargo test --workspace --all-targets --all-features
+
+  conformance:
+    name: Official emulator smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: conformance/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install pinned harness dependencies
+        run: npm ci --prefix conformance
+      - name: Type-check harness
+        run: npm run check --prefix conformance
+      - name: Run harness unit tests
+        run: npm test --prefix conformance
+      - name: Download and test the official Java emulator
+        run: npm run test:official --prefix conformance
