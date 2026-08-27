@@ -293,6 +293,10 @@ at least `NOT_FOUND` (5), `ALREADY_EXISTS` (6), `FAILED_PRECONDITION` (9), and
 `ABORTED` (10) for conflicts and preconditions, including
 `update_time`/lastUpdateTime compare-and-set. Clients use these codes for retry
 decisions, so matching the message while returning the wrong code is a failure.
+`conformance/test/error-code-parity.test.ts` observes all four against Cloud
+Firestore and Java v1.22.0: missing update is 5, duplicate create is 6, stale
+update-time compare-and-set is 9, and one of two concurrent transactions that
+read then update the same document is aborted with 10.
 
 ### 5.3 Watch semantics
 

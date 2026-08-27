@@ -13,6 +13,7 @@ await new Promise<void>((resolve, reject) => {
       "--import",
       "tsx",
       "--test",
+      "test/error-code-parity.test.ts",
       "test/firestore-smoke.test.ts",
       "test/partition-query.test.ts",
       "test/query-features.test.ts",

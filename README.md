@@ -30,8 +30,8 @@ of scope until the conformance gates are met.
 
 | Target / area | Harness smoke | Firestore APIs | Browser SDK | Rules | Suite |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Production cloud | pass (7/7) | oracle only | not implemented | not implemented | not implemented |
-| Official Java emulator | pass (7/7) | oracle only | not run | not run | not run |
+| Production cloud | pass (8/8) | oracle only | not implemented | not implemented | not implemented |
+| Official Java emulator | pass (8/8) | oracle only | not run | not run | not run |
 | fireside | harness only | not implemented | not implemented | not implemented | not implemented |
 
 “Oracle only” means the target is exercised to validate the harness; it is not
