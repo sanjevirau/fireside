@@ -127,6 +127,77 @@ test("write conflicts return the production gRPC status codes", async (context) 
   assert.equal(errorCode(rejected[0]?.reason), 10);
 });
 
+test("Admin SDK retries an aborted read-write transaction", async (context) => {
+  const configuration = resolveTarget(process.env);
+  const firestore = createFirestore(configuration);
+  const rawFirestore = createV1Firestore(configuration);
+  const document = firestore.doc(
+    `runs/${randomUUID()}/fireside_conformance/transaction-retry`,
+  );
+  const database = `projects/${configuration.projectId}/databases/(default)`;
+  const documentName = `${database}/documents/${document.path}`;
+  const expiresAt = Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1_000);
+  const callOptions = configuration.host === undefined
+    ? {}
+    : { otherArgs: { headers: { authorization: "Bearer owner" } } };
+
+  context.after(async () => {
+    await document.delete().catch(() => undefined);
+    await Promise.all([firestore.terminate(), rawFirestore.close()]).catch(
+      () => undefined,
+    );
+  });
+
+  await document.create({ _fireside_expires_at: expiresAt, value: 0 });
+  const [competing] = await rawFirestore.beginTransaction(
+    { database },
+    callOptions,
+  );
+  const competingTransaction = competing.transaction;
+  assert.ok(competingTransaction);
+  await rawFirestore.getDocument(
+    { name: documentName, transaction: competingTransaction },
+    callOptions,
+  );
+  let attempts = 0;
+  const observedValues: number[] = [];
+  const returnedValue = await firestore.runTransaction(
+    async (transaction) => {
+      const snapshot = await transaction.get(document);
+      const value = snapshot.get("value") as number;
+      attempts += 1;
+      observedValues.push(value);
+      if (attempts === 1) {
+        await rawFirestore.commit(
+          {
+            database,
+            transaction: competingTransaction,
+            writes: [
+              {
+                update: {
+                  name: documentName,
+                  fields: { value: { integerValue: "10" } },
+                },
+                updateMask: { fieldPaths: ["value"] },
+              },
+            ],
+          },
+          callOptions,
+        );
+      }
+      transaction.update(document, { value: value + 1 });
+      return value;
+    },
+    { maxAttempts: 3 },
+  );
+
+  const retryValue = configuration.name === "java" ? 0 : 10;
+  assert.equal(attempts, 2);
+  assert.deepEqual(observedValues, [0, retryValue]);
+  assert.equal(returnedValue, retryValue);
+  assert.equal((await document.get()).get("value"), retryValue + 1);
+});
+
 async function grpcCode(operation: () => Promise<unknown>): Promise<number> {
   try {
     await operation();
