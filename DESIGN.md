@@ -208,6 +208,14 @@ success must exist and no partially committed batch may be visible. This is a
 headline differentiator: the official emulator loses all in-memory state on an
 unclean exit.
 
+The public CLI contract is `--data-dir <path>` to select disk mode. The
+write-ahead journal is always enabled in that mode unless the operator supplies
+the explicit `--no-wal` unsafe opt-out; `--no-wal` without `--data-dir` is
+rejected during argument parsing. Disk state lives entirely below the selected
+directory in `fireside.redb` and `fireside.wal`. Persistence failures after
+startup fence the store and surface as gRPC/REST `UNAVAILABLE`; Firestore
+precondition errors retain their separately oracle-tested status codes.
+
 ## 5. Firestore behavior surfaces
 
 ### 5.1 Values and queries

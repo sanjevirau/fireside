@@ -1,5 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { mkdtemp, rm } from "node:fs/promises";
 import { createConnection, createServer } from "node:net";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const PROJECT_ID = "demo-fireside-fireside";
@@ -19,12 +21,16 @@ const BACKEND_TEST_FILES = [
   "test/write-transforms.test.ts",
 ] as const;
 const strictIndexes = process.argv.includes("--strict-indexes");
+const diskMode = process.argv.includes("--disk");
 const testFiles: readonly string[] = strictIndexes
   ? ["test/strict-indexes.test.ts"]
   : BACKEND_TEST_FILES;
 
 const repositoryRoot = resolve(process.cwd(), "..");
 await buildFireside();
+const dataDirectory = diskMode
+  ? await mkdtemp(join(tmpdir(), "fireside-conformance-disk-"))
+  : undefined;
 const port = await reserveAvailablePort();
 const executable = process.platform === "win32" ? "fireside.exe" : "fireside";
 const serverArguments = [
@@ -41,6 +47,9 @@ const serverArguments = [
 ];
 if (strictIndexes) {
   serverArguments.push("--strict-indexes");
+}
+if (dataDirectory !== undefined) {
+  serverArguments.push("--data-dir", dataDirectory);
 }
 const server = spawn(
   join(repositoryRoot, "target", "debug", executable),
@@ -60,6 +69,9 @@ try {
   }
 } finally {
   await stop(server);
+  if (dataDirectory !== undefined) {
+    await rm(dataDirectory, { recursive: true, force: true });
+  }
 }
 
 async function runTests(port: number, files: readonly string[]): Promise<void> {

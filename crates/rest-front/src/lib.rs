@@ -1010,6 +1010,14 @@ impl RestError {
             CommitError::RevisionExhausted => {
                 return Self::internal(error.to_string());
             }
+            CommitError::PersistenceUnavailable(_) => {
+                return Self {
+                    status: StatusCode::SERVICE_UNAVAILABLE,
+                    code: "UNAVAILABLE",
+                    message: error.to_string(),
+                    streaming: false,
+                };
+            }
         };
         Self {
             status,

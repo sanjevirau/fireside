@@ -62,8 +62,13 @@ jobs:
         run: npm test --prefix conformance
       - name: Run Fireside conformance
         run: npm run test:fireside --prefix conformance
+      - name: Run Fireside disk-mode conformance
+        run: npm run test:fireside:disk --prefix conformance
       - name: Run Fireside strict-index conformance
         run: npm run test:fireside:strict --prefix conformance
+      - name: Prove disk recovery across SIGKILL
+        if: runner.os != 'Windows'
+        run: npm run test:fireside-disk-recovery --prefix conformance
       - name: Import an official export into Fireside
         run: npm run test:fireside-import --prefix conformance
       - name: Download and test the official Java emulator

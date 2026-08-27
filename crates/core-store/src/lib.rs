@@ -9,7 +9,8 @@
 
 use std::collections::{BTreeMap, VecDeque};
 use std::error::Error;
-use std::fmt::{self, Display, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
+use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -437,9 +438,15 @@ impl Default for StoreOptions {
 }
 
 /// Thread-safe MVCC store.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Store {
-    inner: Arc<Mutex<State>>,
+    backend: StoreBackend,
+}
+
+#[derive(Clone)]
+enum StoreBackend {
+    Memory(Arc<Mutex<State>>),
+    Disk(DiskStore),
 }
 
 impl Store {
@@ -447,78 +454,127 @@ impl Store {
     #[must_use]
     pub fn new(options: StoreOptions) -> Self {
         Self {
-            inner: Arc::new(Mutex::new(State::new(options))),
+            backend: StoreBackend::Memory(Arc::new(Mutex::new(State::new(options)))),
         }
+    }
+
+    /// Opens or creates a durable store inside `directory`.
+    pub fn open_disk(directory: impl AsRef<Path>, options: DiskOptions) -> Result<Self, DiskError> {
+        DiskStore::open(directory, options).map(|store| Self {
+            backend: StoreBackend::Disk(store),
+        })
     }
 
     /// Returns an immutable snapshot at the current revision.
     #[must_use]
     pub fn snapshot(&self) -> Snapshot {
-        let state = self.state();
-        Snapshot {
-            revision: state.revision,
-            documents: state.documents.clone(),
+        match &self.backend {
+            StoreBackend::Memory(inner) => {
+                let state = lock(inner);
+                Snapshot {
+                    revision: state.revision,
+                    documents: state.documents.clone(),
+                }
+            }
+            StoreBackend::Disk(store) => store.snapshot(),
         }
     }
 
     /// Reconstructs a retained historical snapshot from the bounded change log.
     pub fn snapshot_at(&self, revision: Revision) -> Result<Snapshot, SnapshotError> {
-        let state = self.state();
-        state.snapshot_at_revision(revision)
+        match &self.backend {
+            StoreBackend::Memory(inner) => lock(inner).snapshot_at_revision(revision),
+            StoreBackend::Disk(store) => store.snapshot_at(revision),
+        }
     }
 
     /// Reconstructs the latest retained snapshot whose commit timestamp is no
     /// newer than `read_time`.
     pub fn snapshot_at_time(&self, read_time: Timestamp) -> Result<Snapshot, SnapshotError> {
-        let state = self.state();
-        state.snapshot_at_time(read_time)
+        match &self.backend {
+            StoreBackend::Memory(inner) => lock(inner).snapshot_at_time(read_time),
+            StoreBackend::Disk(store) => store.snapshot_at_time(read_time),
+        }
     }
 
     /// Atomically validates and applies a sequence of writes.
     pub fn commit(&self, writes: &[Write]) -> Result<CommitResult, CommitError> {
-        let mut state = self.state();
-        let plan = state.plan(writes)?;
-        let result = plan.result;
-        state.install(plan);
-        Ok(result)
+        match &self.backend {
+            StoreBackend::Memory(inner) => {
+                let mut state = lock(inner);
+                let plan = state.plan(writes)?;
+                let result = plan.result;
+                state.install(plan);
+                Ok(result)
+            }
+            StoreBackend::Disk(store) => store.commit(writes).map_err(|error| match error {
+                DiskError::Commit(error) => error,
+                error => CommitError::PersistenceUnavailable(error.to_string()),
+            }),
+        }
     }
 
     /// Returns changes strictly newer than `after` or requests a reset when
     /// that replay point has fallen out of the bounded log.
     pub fn changes_since(&self, after: Revision) -> Result<Vec<Change>, ResetRequired> {
-        let state = self.state();
-        if after < state.change_floor {
-            return Err(ResetRequired {
-                requested: after,
-                oldest_available: state.change_floor,
-            });
-        }
+        match &self.backend {
+            StoreBackend::Memory(inner) => {
+                let state = lock(inner);
+                if after < state.change_floor {
+                    return Err(ResetRequired {
+                        requested: after,
+                        oldest_available: state.change_floor,
+                    });
+                }
 
-        Ok(state
-            .change_log
-            .iter()
-            .filter(|change| change.revision > after)
-            .cloned()
-            .collect())
+                Ok(state
+                    .change_log
+                    .iter()
+                    .filter(|change| change.revision > after)
+                    .cloned()
+                    .collect())
+            }
+            StoreBackend::Disk(store) => store.changes_since(after),
+        }
     }
 
     /// Current commit revision.
     #[must_use]
     pub fn revision(&self) -> Revision {
-        self.state().revision
+        match &self.backend {
+            StoreBackend::Memory(inner) => lock(inner).revision,
+            StoreBackend::Disk(store) => store.revision(),
+        }
     }
 
     /// Number of replay changes currently retained.
     #[must_use]
     pub fn retained_change_count(&self) -> usize {
-        self.state().change_log.len()
+        match &self.backend {
+            StoreBackend::Memory(inner) => lock(inner).change_log.len(),
+            StoreBackend::Disk(store) => store.retained_change_count(),
+        }
     }
+}
 
-    fn state(&self) -> MutexGuard<'_, State> {
-        self.inner
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
+impl Debug for Store {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        let backend = match self.backend {
+            StoreBackend::Memory(_) => "memory",
+            StoreBackend::Disk(_) => "disk",
+        };
+        formatter
+            .debug_struct("Store")
+            .field("backend", &backend)
+            .field("revision", &self.revision())
+            .finish_non_exhaustive()
     }
+}
+
+fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 impl Default for Store {
@@ -688,6 +744,8 @@ pub enum CommitError {
     },
     /// The internal revision counter cannot advance further.
     RevisionExhausted,
+    /// A durable backend could not safely accept or acknowledge the commit.
+    PersistenceUnavailable(String),
 }
 
 impl Display for CommitError {
@@ -714,6 +772,9 @@ impl Display for CommitError {
                 field.segments()
             ),
             Self::RevisionExhausted => formatter.write_str("store revision exhausted"),
+            Self::PersistenceUnavailable(error) => {
+                write!(formatter, "durable store is unavailable: {error}")
+            }
         }
     }
 }

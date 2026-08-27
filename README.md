@@ -23,7 +23,8 @@ The project is designed around four testable properties:
 - one lightweight process and one multiplexed port for gRPC, REST, and
   WebChannel;
 - bounded memory under sustained writes and active listeners;
-- crash-safe optional disk persistence with a write-ahead journal.
+- crash-safe optional disk persistence via `--data-dir <path>`, with a
+  default-on write-ahead journal (`--no-wal` is the explicit unsafe opt-out).
 
 The repository is intentionally standalone. It must not read from, depend on,
 or integrate with another local project. Product integration is explicitly out

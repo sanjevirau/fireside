@@ -1008,6 +1008,7 @@ fn commit_status(error: CommitError) -> Status {
         }
         CommitError::InvalidIncrementOperand { .. } => Status::invalid_argument(error.to_string()),
         CommitError::RevisionExhausted => Status::resource_exhausted(error.to_string()),
+        CommitError::PersistenceUnavailable(_) => Status::unavailable(error.to_string()),
     }
 }
 

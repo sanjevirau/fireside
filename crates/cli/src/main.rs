@@ -6,7 +6,9 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use fireside_core_store::{DatabaseName, DocumentKey, Precondition, Store, StoreOptions, Write};
+use fireside_core_store::{
+    DatabaseName, DiskOptions, DocumentKey, Precondition, Store, StoreOptions, Write,
+};
 use fireside_export_format::ExportReader;
 use fireside_grpc_front::FirestoreService;
 use fireside_query_engine::{DatabaseEdition as QueryDatabaseEdition, IndexCatalog, QueryPolicy};
@@ -68,6 +70,12 @@ struct FirestoreArgs {
     database_edition: DatabaseEdition,
     #[arg(long)]
     strict_indexes: bool,
+    /// Persist Firestore state in this directory instead of keeping it in memory.
+    #[arg(long = "data-dir")]
+    data_dir: Option<PathBuf>,
+    /// Disable the default-on write-ahead journal in disk mode.
+    #[arg(long = "no-wal", requires = "data_dir")]
+    no_wal: bool,
 }
 
 #[tokio::main]
@@ -91,7 +99,13 @@ async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
         }
     };
 
-    let store = Store::new(StoreOptions::default());
+    let store = match open_store(arguments) {
+        Ok(store) => store,
+        Err(error) => {
+            eprintln!("Firestore storage failed to open: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
     if let Some(path) = &arguments.seed_from_export {
         match seed_store_from_export(&store, path, arguments.project_id.as_deref()) {
             Ok(count) => eprintln!(
@@ -119,6 +133,17 @@ async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
         FirestoreService::new_with_query_policy(store.clone(), query_policy.clone()).into_server();
     let routes =
         tonic::service::Routes::from(rest_router(store, query_policy)).add_service(service);
+    if let Some(data_dir) = &arguments.data_dir {
+        let journal = if arguments.no_wal {
+            "write-ahead journal disabled"
+        } else {
+            "write-ahead journal enabled"
+        };
+        eprintln!(
+            "fireside Firestore persistence: {} ({journal})",
+            data_dir.display()
+        );
+    }
     eprintln!("fireside Firestore listening on {address}");
     let result = tonic::transport::Server::builder()
         .accept_http1(true)
@@ -132,6 +157,21 @@ async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
             eprintln!("Firestore server failed: {error}");
             ExitCode::FAILURE
         }
+    }
+}
+
+fn open_store(arguments: &FirestoreArgs) -> Result<Store, String> {
+    match &arguments.data_dir {
+        Some(directory) => Store::open_disk(
+            directory,
+            DiskOptions {
+                store: StoreOptions::default(),
+                journal: !arguments.no_wal,
+            },
+        )
+        .map_err(|error| error.to_string()),
+        None if arguments.no_wal => Err("--no-wal requires --data-dir <path>".to_owned()),
+        None => Ok(Store::new(StoreOptions::default())),
     }
 }
 
@@ -216,6 +256,33 @@ fn normalize_arguments(arguments: impl IntoIterator<Item = OsString>) -> Vec<OsS
 mod tests {
     use super::*;
     use fireside_core_store::Value;
+    use std::fs;
+    use std::path::Path;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+    struct TestDirectory(PathBuf);
+
+    impl TestDirectory {
+        fn new() -> Self {
+            let sequence = TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+            let path = std::env::temp_dir()
+                .join(format!("fireside-cli-{}-{sequence}", std::process::id()));
+            fs::create_dir_all(&path).expect("test directory should be created");
+            Self(path)
+        }
+
+        fn path(&self) -> &Path {
+            &self.0
+        }
+    }
+
+    impl Drop for TestDirectory {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
 
     #[test]
     fn parses_firestore_command() {
@@ -281,6 +348,103 @@ mod tests {
             panic!("expected Firestore command");
         };
         assert!(arguments.strict_indexes);
+    }
+
+    #[test]
+    fn data_directory_enables_disk_mode_with_wal_by_default() {
+        let arguments = normalize_arguments([
+            OsString::from("fireside"),
+            OsString::from("--data-dir"),
+            OsString::from("state"),
+        ]);
+        let cli = Cli::try_parse_from(arguments).expect("disk mode should parse");
+        let Command::Firestore(arguments) = cli.command else {
+            panic!("expected Firestore command");
+        };
+        assert_eq!(arguments.data_dir, Some(PathBuf::from("state")));
+        assert!(!arguments.no_wal);
+    }
+
+    #[test]
+    fn no_wal_is_an_explicit_disk_mode_opt_out() {
+        let arguments = normalize_arguments([
+            OsString::from("fireside"),
+            OsString::from("--data-dir"),
+            OsString::from("state"),
+            OsString::from("--no-wal"),
+        ]);
+        let cli = Cli::try_parse_from(arguments).expect("WAL opt-out should parse");
+        let Command::Firestore(arguments) = cli.command else {
+            panic!("expected Firestore command");
+        };
+        assert!(arguments.no_wal);
+    }
+
+    #[test]
+    fn no_wal_requires_disk_mode() {
+        let arguments =
+            normalize_arguments([OsString::from("fireside"), OsString::from("--no-wal")]);
+        let error = Cli::try_parse_from(arguments).expect_err("memory mode has no WAL");
+        assert_eq!(
+            error.kind(),
+            clap::error::ErrorKind::MissingRequiredArgument
+        );
+    }
+
+    #[test]
+    fn disk_mode_store_survives_reopen_and_creates_default_wal() {
+        let directory = TestDirectory::new();
+        let cli = Cli::try_parse_from([
+            OsString::from("fireside"),
+            OsString::from("firestore"),
+            OsString::from("--data-dir"),
+            directory.path().as_os_str().to_owned(),
+        ])
+        .expect("disk mode should parse");
+        let Command::Firestore(arguments) = cli.command else {
+            panic!("expected Firestore command");
+        };
+        let database = DatabaseName::new("fireside-test", "(default)").unwrap();
+        let key = DocumentKey::new(database, "items/persisted").unwrap();
+        {
+            let store = open_store(&arguments).expect("disk store should open");
+            store
+                .commit(&[Write::Set {
+                    key: key.clone(),
+                    fields: std::collections::BTreeMap::from([(
+                        "value".to_owned(),
+                        Value::Integer(42),
+                    )]),
+                    transforms: Vec::new(),
+                    precondition: Precondition::None,
+                }])
+                .expect("write should commit");
+        }
+
+        let reopened = open_store(&arguments).expect("disk store should reopen");
+        assert!(reopened.snapshot().get(&key).is_some());
+        assert!(directory.path().join("fireside.redb").is_file());
+        assert!(directory.path().join("fireside.wal").is_file());
+    }
+
+    #[test]
+    fn no_wal_omits_the_journal_file() {
+        let directory = TestDirectory::new();
+        let cli = Cli::try_parse_from([
+            OsString::from("fireside"),
+            OsString::from("firestore"),
+            OsString::from("--data-dir"),
+            directory.path().as_os_str().to_owned(),
+            OsString::from("--no-wal"),
+        ])
+        .expect("WAL opt-out should parse");
+        let Command::Firestore(arguments) = cli.command else {
+            panic!("expected Firestore command");
+        };
+        drop(open_store(&arguments).expect("disk store should open"));
+
+        assert!(directory.path().join("fireside.redb").is_file());
+        assert!(!directory.path().join("fireside.wal").exists());
     }
 
     #[test]
