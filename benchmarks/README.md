@@ -18,6 +18,9 @@ The runner writes and synchronizes these series throughout each stage:
 
 - `rss.csv`: process RSS/high-water/swap plus host available memory, swap, and
   load;
+- `logical-memory.ndjson`: versioned Fireside current-document, replay-version,
+  change-log, listener, transaction, and WAL logical accounting sampled beside
+  RSS;
 - `throughput.csv`: cumulative and interval completions/errors/retry attempts;
 - `latency.csv`: 10-second write and listener p50/p95/p99/max series;
 - `stalls.ndjson`, `errors.ndjson`, and `events.ndjson`;
@@ -35,3 +38,8 @@ The runner stops on the first Fireside gate failure and preserves every file.
 It does not tune or retry a failed gate. The Java comparison begins only after
 all Fireside criteria pass, is reported separately, and permits one documented
 `-Xmx8g` comparison only following an observed Java heap failure.
+
+The frozen fail-fast observation rule can shorten a clearly failing Fireside
+soak without changing its pass threshold: after the 30-minute warm-up, a full
+trailing 60-minute Theil-Sen slope strictly above 10 MiB/hour records a failure
+and stops the sequence. It cannot fire before minute 90.

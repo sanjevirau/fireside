@@ -188,6 +188,21 @@ Theil-Sen slope. The allocator change is an absolute-footprint improvement, not
 proof that the bounded-memory invariant is fixed. The immutable endurance gate
 remains the only pass/fail evidence for the combined result.
 
+Fireside permanently exposes internal logical-memory accounting at
+`GET /emulator/v1/debug/memory`. Schema version 1 reports current document
+versions, distinct document versions retained by the replay horizon,
+change-log and commit-index entries, active listener streams/targets and their
+visible documents, active transactions/read sets and referenced snapshots, and
+resident application WAL buffers. Logical bytes count deterministic
+user-controlled resource-name and value bytes plus fixed-width scalars; they
+exclude allocator and container overhead. Replay-version bytes may overlap the
+current-document view and snapshot bytes are shared references, so the endpoint
+does not present their sum as physical memory. Listen streams and transactions
+use drop-based registrations: normal close, commit, rollback, error, and client
+disconnect paths remove their accounting entries with the retained structures.
+The endurance harness samples this endpoint into `logical-memory.ndjson` beside
+each RSS sample.
+
 Phase 1 must measure resident memory during a multi-hour torture run with
 thousands of writes per minute, multiple active listeners, and mixed
 transactions. The gate requires a flat post-warmup trend, evidence that old
@@ -208,6 +223,13 @@ more than the larger of 5% or 16 MiB. The gate also fixes a 65,536-document,
 32 KiB-per-document official-format artifact whose entity shard is at least
 2 GiB, a 512 MiB import peak-RSS ceiling, and 100 randomized SIGKILL rounds
 covering at least 10,000 acknowledged two-document atomic commits.
+
+The manifest's fail-fast observation rule does not weaken those criteria. A
+Fireside soak records an early failure once it has a complete 60-minute window
+after the 30-minute warm-up and that window's Theil-Sen slope is strictly above
+ten times the unchanged 1 MiB/hour limit. Its earliest possible decision is
+therefore minute 90. The runner writes the partial summary and stops the
+sequence under the same first-Fireside-failure policy.
 
 ### 4.3 Disk mode and crash safety
 

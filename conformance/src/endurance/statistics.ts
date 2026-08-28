@@ -47,3 +47,18 @@ export function theilSenBytesPerHour(
   }
   return median(slopes);
 }
+
+export function sustainedWindowTheilSenBytesPerHour(
+  samples: ReadonlyArray<{ readonly elapsedSeconds: number; readonly rssBytes: number }>,
+  warmupSeconds: number,
+  windowSeconds: number,
+): number | null {
+  const latest = samples.at(-1)?.elapsedSeconds;
+  if (latest === undefined || latest < warmupSeconds + windowSeconds) {
+    return null;
+  }
+  const windowStart = latest - windowSeconds;
+  return theilSenBytesPerHour(
+    samples.filter((sample) => sample.elapsedSeconds >= windowStart),
+  );
+}

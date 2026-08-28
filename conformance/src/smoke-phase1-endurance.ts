@@ -41,6 +41,18 @@ try {
       Reflect.get(result.summary.criteria as object, "serverAlive"),
       true,
     );
+    const releasedMemory = await waitForReleasedRuntimeMemory(server);
+    assert.equal(Reflect.get(releasedMemory, "schemaVersion"), 1);
+    const currentDocuments = requiredObject(releasedMemory, "currentDocuments");
+    assert.equal(Reflect.get(currentDocuments, "entries"), 105);
+    const changeLog = requiredObject(releasedMemory, "changeLog");
+    assert.ok(Number(Reflect.get(changeLog, "entries")) <= 4_096);
+    assert.equal(
+      Reflect.get(requiredObject(releasedMemory, "transactions"), "transactions"),
+      0,
+    );
+    const logicalSeries = await readFile(resolve(output, "logical-memory.ndjson"), "utf8");
+    assert.match(logicalSeries, /"schemaVersion":1/u);
     await server.stop();
     server = undefined;
   }
@@ -103,6 +115,33 @@ try {
   } else {
     console.error(`failed endurance smoke evidence preserved at ${directory}`);
   }
+}
+
+async function waitForReleasedRuntimeMemory(
+  handle: ServerHandle,
+): Promise<Record<string, unknown>> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const response = await fetch(
+      `http://${handle.host}:${String(handle.port)}/emulator/v1/debug/memory`,
+    );
+    assert.equal(response.status, 200);
+    const memory = await response.json() as Record<string, unknown>;
+    const listeners = requiredObject(memory, "listeners");
+    if (
+      Reflect.get(listeners, "streams") === 0
+      && Reflect.get(listeners, "targets") === 0
+    ) {
+      return memory;
+    }
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 20));
+  }
+  throw new Error("listener accounting remained after the soak client terminated");
+}
+
+function requiredObject(source: object, field: string): Record<string, unknown> {
+  const value = Reflect.get(source, field) as unknown;
+  assert.ok(typeof value === "object" && value !== null, `${field} must be an object`);
+  return value as Record<string, unknown>;
 }
 
 function failedSeedManifest(source: EnduranceManifest): EnduranceManifest {

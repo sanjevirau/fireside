@@ -6,6 +6,7 @@ import { loadManifest } from "../src/endurance/manifest.ts";
 import {
   median,
   percentile,
+  sustainedWindowTheilSenBytesPerHour,
   theilSenBytesPerHour,
 } from "../src/endurance/statistics.ts";
 
@@ -36,6 +37,18 @@ test("frozen endurance schedule preserves the approved operation mix", async () 
   assert.equal(manifest.soak.listeners.activeCount, 8);
   assert.equal(manifest.recovery.rounds, 100);
   assert.equal(manifest.recovery.minimumAcknowledgedCommits, 10_000);
+});
+
+test("sustained slope observation waits for one full post-warm-up hour", () => {
+  const samples = Array.from({ length: 10 }, (_, index) => ({
+    elapsedSeconds: index * 600,
+    rssBytes: index * 20 * 1_048_576,
+  }));
+  assert.equal(sustainedWindowTheilSenBytesPerHour(samples.slice(0, 9), 1_800, 3_600), null);
+  assert.equal(
+    sustainedWindowTheilSenBytesPerHour(samples, 1_800, 3_600),
+    120 * 1_048_576,
+  );
 });
 
 test("frozen working-set payload sizing is internally exact", async () => {

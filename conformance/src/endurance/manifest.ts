@@ -53,6 +53,10 @@ export interface EnduranceManifest {
       readonly finalMedianWindowSeconds: number;
       readonly maximumFinalMedianIncreaseFraction: number;
       readonly maximumFinalMedianIncreaseBytesFloor: number;
+      readonly failFast: {
+        readonly sustainedWindowSeconds: number;
+        readonly maximumSlopeMultiple: number;
+      };
     };
   };
   readonly import: {
@@ -115,6 +119,12 @@ export async function loadManifest(): Promise<EnduranceManifest> {
   }
   if (manifest.soak.listeners.activeCount !== 8) {
     throw new Error("frozen endurance manifest must keep eight listeners active");
+  }
+  if (
+    manifest.soak.memory.failFast.sustainedWindowSeconds !== 3_600
+    || manifest.soak.memory.failFast.maximumSlopeMultiple !== 10
+  ) {
+    throw new Error("frozen endurance fail-fast observation rule was changed");
   }
   return manifest;
 }

@@ -7,7 +7,12 @@ import { DurableLog } from "./durable-log.ts";
 import type { EnduranceManifest } from "./manifest.ts";
 import { sampleProcess } from "./process-metrics.ts";
 import type { ServerHandle, ServerKind } from "./server.ts";
-import { median, percentile, theilSenBytesPerHour } from "./statistics.ts";
+import {
+  median,
+  percentile,
+  sustainedWindowTheilSenBytesPerHour,
+  theilSenBytesPerHour,
+} from "./statistics.ts";
 
 export interface SoakResult {
   readonly passed: boolean;
@@ -23,6 +28,13 @@ interface ListenerState {
 interface RssPoint {
   readonly elapsedSeconds: number;
   readonly rssBytes: number;
+}
+
+interface FailFastSlopeFailure {
+  readonly elapsedSeconds: number;
+  readonly observedBytesPerHour: number;
+  readonly maximumBytesPerHour: number;
+  readonly sustainedWindowSeconds: number;
 }
 
 const MAXIMUM_SEED_BATCH_PAYLOAD_BYTES = 3 * 1024 * 1024;
@@ -41,6 +53,9 @@ export async function runSoak(
   const rss = new DurableLog(
     resolve(outputDirectory, requiredFile(files, "rss")),
     "timestamp,elapsed_seconds,rss_bytes,peak_rss_bytes,process_swap_bytes,system_available_bytes,system_swap_used_bytes,load_1",
+  );
+  const logicalMemory = new DurableLog(
+    resolve(outputDirectory, requiredFile(files, "logicalMemory")),
   );
   const throughput = new DurableLog(
     resolve(outputDirectory, requiredFile(files, "throughput")),
@@ -90,6 +105,7 @@ export async function runSoak(
   let stallTimer: NodeJS.Timeout | undefined;
   let churnTimer: NodeJS.Timeout | undefined;
   let rssRecording = Promise.resolve();
+  let failFastSlopeFailure: FailFastSlopeFailure | undefined;
 
   try {
     events.json(event("seed-start", { kind }));
@@ -137,6 +153,9 @@ export async function runSoak(
     const inFlight = new Set<Promise<void>>();
 
     for (let index = 0; index < totalOperations; index += 1) {
+      if (failFastSlopeFailure !== undefined) {
+        break;
+      }
       if (server.child.exitCode !== null || server.child.signalCode !== null) {
         errors.json(event("server-exit", {
           code: server.child.exitCode,
@@ -150,6 +169,9 @@ export async function runSoak(
         break;
       }
       await delayUntil(plannedAt);
+      if (failFastSlopeFailure !== undefined) {
+        break;
+      }
       while (inFlight.size >= manifest.soak.maxConcurrentOperations) {
         await Promise.race(inFlight);
         if (Date.now() >= deadline) {
@@ -221,6 +243,7 @@ export async function runSoak(
         (expected, slot) => listenerObserved[slot] === expected,
       ),
       noProgressStalls: stallEvents === 0,
+      failFastSlope: failFastSlopeFailure === undefined,
       rssSlope:
         rssSlope !== null
         && rssSlope <= manifest.soak.memory.maximumRssSlopeBytesPerHour,
@@ -267,6 +290,7 @@ export async function runSoak(
         finalMedianBytes: finalMedian,
         medianAllowanceBytes: medianAllowance,
       },
+      failFastSlopeFailure: failFastSlopeFailure ?? null,
       writeLatencyMilliseconds: latencySummary(writeLatencies),
       listenerLatencyMilliseconds: latencySummary(listenerLatencies),
       criteria,
@@ -293,6 +317,7 @@ export async function runSoak(
     errors.close();
     stalls.close();
     rss.close();
+    logicalMemory.close();
     throughput.close();
     latency.close();
   }
@@ -444,11 +469,15 @@ export async function runSoak(
       return;
     }
     try {
-      const sample = await sampleProcess(server.pid);
+      const [sample, accounting] = await Promise.all([
+        sampleProcess(server.pid),
+        kind === "java" ? Promise.resolve(undefined) : sampleLogicalMemory(server),
+      ]);
       const elapsedSeconds = (Date.now() - measurementStart) / 1_000;
       rssSamples.push({ elapsedSeconds, rssBytes: sample.rssBytes });
+      const timestamp = new Date().toISOString();
       rss.write([
-        new Date().toISOString(),
+        timestamp,
         elapsedSeconds,
         sample.rssBytes,
         sample.peakRssBytes,
@@ -457,6 +486,32 @@ export async function runSoak(
         sample.systemSwapUsedBytes,
         sample.loadOne,
       ].join(","));
+      if (accounting !== undefined) {
+        logicalMemory.json({ timestamp, elapsedSeconds, ...accounting });
+      }
+      if (kind !== "java" && failFastSlopeFailure === undefined) {
+        const rule = manifest.soak.memory.failFast;
+        const observedBytesPerHour = sustainedWindowTheilSenBytesPerHour(
+          rssSamples,
+          manifest.soak.warmupSeconds,
+          rule.sustainedWindowSeconds,
+        );
+        const maximumBytesPerHour = manifest.soak.memory.maximumRssSlopeBytesPerHour
+          * rule.maximumSlopeMultiple;
+        if (
+          observedBytesPerHour !== null
+          && observedBytesPerHour > maximumBytesPerHour
+        ) {
+          failFastSlopeFailure = {
+            elapsedSeconds,
+            observedBytesPerHour,
+            maximumBytesPerHour,
+            sustainedWindowSeconds: rule.sustainedWindowSeconds,
+          };
+          stopped = true;
+          events.json(event("rss-slope-fail-fast", { ...failFastSlopeFailure }));
+        }
+      }
     } catch (error) {
       failed += 1;
       intervalFailed += 1;
@@ -534,6 +589,26 @@ export async function runSoak(
     }
     return collection.doc(documentId(ordinal));
   }
+}
+
+async function sampleLogicalMemory(
+  server: ServerHandle,
+): Promise<Record<string, unknown>> {
+  const response = await fetch(
+    `http://${server.host}:${String(server.port)}/emulator/v1/debug/memory`,
+  );
+  if (!response.ok) {
+    throw new Error(`logical-memory endpoint returned HTTP ${String(response.status)}`);
+  }
+  const accounting: unknown = await response.json();
+  if (
+    typeof accounting !== "object"
+    || accounting === null
+    || Reflect.get(accounting, "schemaVersion") !== 1
+  ) {
+    throw new Error("logical-memory endpoint returned an unsupported schema");
+  }
+  return accounting as Record<string, unknown>;
 }
 
 async function seedWorkingSet(
