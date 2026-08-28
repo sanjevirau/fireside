@@ -191,7 +191,7 @@ pub(crate) fn decode_value(value: proto::Value) -> Result<Value, Status> {
         ValueType::IntegerValue(value) => Ok(Value::Integer(value)),
         ValueType::DoubleValue(value) => Ok(Value::Double(value)),
         ValueType::TimestampValue(value) => Ok(Value::Timestamp(decode_timestamp(value)?)),
-        ValueType::StringValue(value) => Ok(Value::String(Arc::from(value))),
+        ValueType::StringValue(value) => Ok(Value::String(value.into())),
         ValueType::BytesValue(value) => Ok(Value::Bytes(Arc::from(value))),
         ValueType::ReferenceValue(value) => Ok(Value::Reference(Arc::from(value))),
         ValueType::GeoPointValue(value) => Ok(Value::GeoPoint {
@@ -273,7 +273,7 @@ fn decode_map_value(fields: HashMap<String, proto::Value>) -> Result<Value, Stat
     let fields = decode_fields(fields)?;
     if !matches!(
         fields.get(RESERVED_TYPE_FIELD),
-        Some(Value::String(value)) if value.as_ref() == VECTOR_TYPE
+        Some(Value::String(value)) if value.as_str() == VECTOR_TYPE
     ) {
         return Ok(Value::Map(fields));
     }

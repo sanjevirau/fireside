@@ -252,7 +252,7 @@ fn decode_value(value: wire::PropertyValue, meaning: i32) -> Result<Value, Entit
     if let Some(value) = value.bytes {
         return match meaning {
             NO_MEANING | TEXT_MEANING => String::from_utf8(value)
-                .map(|value| Value::String(Arc::from(value)))
+                .map(|value| Value::String(value.into()))
                 .map_err(EntityError::Utf8),
             BLOB_MEANING | BYTE_STRING_MEANING => Ok(Value::Bytes(Arc::from(value))),
             ENTITY_MEANING => decode_embedded_entity(&value),

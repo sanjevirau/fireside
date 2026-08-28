@@ -99,6 +99,8 @@ pub struct AllocatorMemoryUsage {
     pub name: String,
     /// Allocator implementation version number.
     pub version: u32,
+    /// Tokio runtime worker threads serving this process.
+    pub runtime_worker_threads: usize,
     /// Allocator-native statistics, or `null` if collection failed.
     pub statistics: JsonValue,
     /// Collection error when allocator-native statistics are unavailable.
@@ -1114,7 +1116,7 @@ fn decode_value(value: &JsonValue) -> Result<Value, RestError> {
         return parse_timestamp(value).map(Value::Timestamp);
     }
     if let Some(value) = object.get("stringValue").and_then(JsonValue::as_str) {
-        return Ok(Value::String(Arc::from(value)));
+        return Ok(Value::String(value.into()));
     }
     if let Some(value) = object.get("bytesValue").and_then(JsonValue::as_str) {
         return BASE64
@@ -1158,7 +1160,7 @@ fn decode_value(value: &JsonValue) -> Result<Value, RestError> {
 fn decode_special_map(fields: Fields) -> Result<Value, RestError> {
     if !matches!(
         fields.get("__type__"),
-        Some(Value::String(value)) if value.as_ref() == "__vector__"
+        Some(Value::String(value)) if value.as_str() == "__vector__"
     ) {
         return Ok(Value::Map(fields));
     }

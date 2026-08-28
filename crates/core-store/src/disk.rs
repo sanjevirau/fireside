@@ -858,7 +858,7 @@ mod tests {
                 .memory
                 .plan(&[Write::Create {
                     key: document_key.clone(),
-                    fields: fields(Value::String(Arc::from("journal"))),
+                    fields: fields(Value::String("journal".into())),
                 }])
                 .expect("plan should validate");
             state

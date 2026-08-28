@@ -506,8 +506,6 @@ impl Error for IndexConfigError {}
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use fireside_core_store::Value;
 
     use super::*;
@@ -551,7 +549,7 @@ mod tests {
         Filter::Field(FieldFilter {
             path: field(name),
             operator: FieldOperator::Equal,
-            value: Value::String(Arc::from("value")),
+            value: Value::String("value".into()),
         })
     }
 

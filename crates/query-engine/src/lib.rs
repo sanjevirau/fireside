@@ -266,7 +266,7 @@ mod tests {
             Value::Integer(7),
             Value::Double(f64::INFINITY),
             Value::Timestamp(Timestamp::new(0, 0).expect("valid timestamp")),
-            Value::String(Arc::from("")),
+            Value::String("".into()),
             Value::Bytes(Arc::from([])),
             Value::Reference(Arc::from(
                 "projects/p/databases/(default)/documents/reference_targets/a",
@@ -339,8 +339,8 @@ mod tests {
     #[test]
     fn standard_edition_compares_only_the_indexed_scalar_prefix() {
         let prefix = "a".repeat(STANDARD_INDEXED_VALUE_BYTES);
-        let left = Value::String(Arc::from(format!("{prefix}x")));
-        let right = Value::String(Arc::from(format!("{prefix}y")));
+        let left = Value::String(format!("{prefix}x").into());
+        let right = Value::String(format!("{prefix}y").into());
         assert_eq!(
             compare_values(&left, &right, DatabaseEdition::Standard),
             Ordering::Equal

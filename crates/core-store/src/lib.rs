@@ -19,6 +19,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use bincode::{Decode, Encode};
 use im::OrdMap;
 use serde::{Deserialize, Serialize};
+pub use smol_str::SmolStr as FirestoreString;
 
 mod disk;
 
@@ -106,7 +107,7 @@ pub enum Value {
     /// A timestamp.
     Timestamp(Timestamp),
     /// A UTF-8 string.
-    String(Arc<str>),
+    String(#[bincode(with_serde)] FirestoreString),
     /// Arbitrary bytes.
     Bytes(Arc<[u8]>),
     /// A fully-qualified document reference.
@@ -1511,7 +1512,8 @@ fn value_logical_bytes(value: &Value) -> u64 {
         Value::Boolean(_) => 1,
         Value::Integer(_) | Value::Double(_) => 8,
         Value::Timestamp(_) => 12,
-        Value::String(value) | Value::Reference(value) => usize_to_u64(value.len()),
+        Value::String(value) => usize_to_u64(value.len()),
+        Value::Reference(value) => usize_to_u64(value.len()),
         Value::Bytes(value) => usize_to_u64(value.len()),
         Value::GeoPoint { .. } => 16,
         Value::Array(values) => values.iter().fold(0_u64, |total, value| {
@@ -1990,6 +1992,31 @@ mod tests {
     }
 
     #[test]
+    fn short_firestore_strings_are_inline_and_round_trip() {
+        let token = FirestoreString::new("fireside-memory-185002");
+        assert_eq!(token.len(), 22);
+        assert!(!token.is_heap_allocated());
+        assert!(std::mem::size_of::<Value>() <= 32);
+
+        let value = Value::String(token);
+        let encoded = bincode::encode_to_vec(&value, bincode::config::standard())
+            .expect("short string should encode");
+        let (decoded, consumed): (Value, usize) =
+            bincode::decode_from_slice(&encoded, bincode::config::standard())
+                .expect("short string should decode");
+        assert_eq!(consumed, encoded.len());
+        assert_eq!(decoded, value);
+        let Value::String(decoded) = decoded else {
+            panic!("expected string value");
+        };
+        assert!(!decoded.is_heap_allocated());
+
+        let long = FirestoreString::new("a Unicode value longer than twenty-three bytes: 世界");
+        assert!(long.is_heap_allocated());
+        assert_eq!(long, "a Unicode value longer than twenty-three bytes: 世界");
+    }
+
+    #[test]
     fn snapshot_remains_stable_across_later_commits() {
         let store = Store::default();
         let key = key(&database("(default)"), "items/one");
@@ -2031,13 +2058,13 @@ mod tests {
         let first = store
             .commit(&[Write::Create {
                 key: key.clone(),
-                fields: fields(Value::String(Arc::from("first"))),
+                fields: fields(Value::String("first".into())),
             }])
             .unwrap();
         let second = store
             .commit(&[Write::Set {
                 key: key.clone(),
-                fields: fields(Value::String(Arc::from("second"))),
+                fields: fields(Value::String("second".into())),
                 transforms: Vec::new(),
                 precondition: Precondition::None,
             }])
@@ -2056,7 +2083,7 @@ mod tests {
                 .get(&key)
                 .unwrap()
                 .fields(),
-            &fields(Value::String(Arc::from("first")))
+            &fields(Value::String("first".into()))
         );
         assert_eq!(
             store
@@ -2065,7 +2092,7 @@ mod tests {
                 .get(&key)
                 .unwrap()
                 .fields(),
-            &fields(Value::String(Arc::from("second")))
+            &fields(Value::String("second".into()))
         );
         assert!(store.snapshot().get(&key).is_none());
     }
@@ -2186,11 +2213,11 @@ mod tests {
             .commit(&[
                 Write::Create {
                     key: default_key.clone(),
-                    fields: fields(Value::String(Arc::from("default"))),
+                    fields: fields(Value::String("default".into())),
                 },
                 Write::Create {
                     key: named_key.clone(),
-                    fields: fields(Value::String(Arc::from("named"))),
+                    fields: fields(Value::String("named".into())),
                 },
             ])
             .expect("cross-database commit should succeed");
@@ -2316,12 +2343,12 @@ mod tests {
         let key = key(&database("(default)"), "items/hot");
         let mut weak_values: Vec<Weak<str>> = Vec::new();
 
-        let initial: Arc<str> = Arc::from("initial");
+        let initial: Arc<str> = Arc::from("initial-version-value-is-long");
         weak_values.push(Arc::downgrade(&initial));
         store
             .commit(&[Write::Set {
                 key: key.clone(),
-                fields: fields(Value::String(initial)),
+                fields: fields(Value::String(initial.into())),
                 transforms: Vec::new(),
                 precondition: Precondition::None,
             }])
@@ -2329,12 +2356,12 @@ mod tests {
         let old_snapshot = store.snapshot();
 
         for index in 0..10_000 {
-            let value: Arc<str> = Arc::from(format!("version-{index}"));
+            let value: Arc<str> = Arc::from(format!("version-{index:020}"));
             weak_values.push(Arc::downgrade(&value));
             store
                 .commit(&[Write::Set {
                     key: key.clone(),
-                    fields: fields(Value::String(value)),
+                    fields: fields(Value::String(value.into())),
                     transforms: Vec::new(),
                     precondition: Precondition::None,
                 }])
@@ -2610,14 +2637,11 @@ mod tests {
                 key: key.clone(),
                 fields: BTreeMap::from([
                     ("counter".to_owned(), Value::Integer(1)),
-                    ("nonNumber".to_owned(), Value::String(Arc::from("replace"))),
-                    (
-                        "scalarArray".to_owned(),
-                        Value::String(Arc::from("replace")),
-                    ),
+                    ("nonNumber".to_owned(), Value::String("replace".into())),
+                    ("scalarArray".to_owned(), Value::String("replace".into())),
                     (
                         "tags".to_owned(),
-                        Value::Array(vec![Value::String(Arc::from("a")), Value::Integer(1)]),
+                        Value::Array(vec![Value::String("a".into()), Value::Integer(1)]),
                     ),
                 ]),
             }])
@@ -2636,9 +2660,9 @@ mod tests {
                     FieldTransform {
                         path: path(&["tags"]),
                         operation: TransformOperation::ArrayUnion(vec![
-                            Value::String(Arc::from("b")),
+                            Value::String("b".into()),
                             Value::Integer(1),
-                            Value::String(Arc::from("b")),
+                            Value::String("b".into()),
                         ]),
                     },
                     FieldTransform {
@@ -2664,9 +2688,9 @@ mod tests {
         assert_eq!(
             first_document.fields().get("tags"),
             Some(&Value::Array(vec![
-                Value::String(Arc::from("a")),
+                Value::String("a".into()),
                 Value::Integer(1),
-                Value::String(Arc::from("b")),
+                Value::String("b".into()),
             ]))
         );
         assert_eq!(
@@ -2695,14 +2719,14 @@ mod tests {
                     FieldTransform {
                         path: path(&["scalarArray"]),
                         operation: TransformOperation::ArrayUnion(vec![
-                            Value::String(Arc::from("x")),
-                            Value::String(Arc::from("x")),
+                            Value::String("x".into()),
+                            Value::String("x".into()),
                         ]),
                     },
                     FieldTransform {
                         path: path(&["tags"]),
                         operation: TransformOperation::ArrayRemove(vec![
-                            Value::String(Arc::from("a")),
+                            Value::String("a".into()),
                             Value::Integer(1),
                         ]),
                     },
@@ -2724,11 +2748,11 @@ mod tests {
         );
         assert_eq!(
             second_document.fields().get("scalarArray"),
-            Some(&Value::Array(vec![Value::String(Arc::from("x"))]))
+            Some(&Value::Array(vec![Value::String("x".into())]))
         );
         assert_eq!(
             second_document.fields().get("tags"),
-            Some(&Value::Array(vec![Value::String(Arc::from("b"))]))
+            Some(&Value::Array(vec![Value::String("b".into())]))
         );
     }
 
@@ -2760,9 +2784,7 @@ mod tests {
                     update_mask: Vec::new(),
                     transforms: vec![FieldTransform {
                         path: path(&["value"]),
-                        operation: TransformOperation::Increment(Value::String(Arc::from(
-                            "invalid",
-                        ))),
+                        operation: TransformOperation::Increment(Value::String("invalid".into())),
                     }],
                     precondition: Precondition::Exists(true),
                 },

@@ -24,7 +24,9 @@ use fireside_rest_front::{
 static GLOBAL_ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[derive(Debug)]
-struct MimallocMemoryReporter;
+struct MimallocMemoryReporter {
+    runtime_worker_threads: usize,
+}
 
 impl AllocatorMemoryReporter for MimallocMemoryReporter {
     fn memory_usage(&self) -> AllocatorMemoryUsage {
@@ -41,6 +43,7 @@ impl AllocatorMemoryReporter for MimallocMemoryReporter {
         AllocatorMemoryUsage {
             name: "mimalloc".to_owned(),
             version: mimalloc::MiMalloc.version(),
+            runtime_worker_threads: self.runtime_worker_threads,
             statistics,
             error,
         }
@@ -49,6 +52,7 @@ impl AllocatorMemoryReporter for MimallocMemoryReporter {
 
 const INDEX_CONFIG_PATH: &str = "firestore.indexes.json";
 const IMPORT_BATCH_SIZE: usize = 500;
+const DEFAULT_MAX_WORKER_THREADS: usize = 4;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -109,18 +113,45 @@ struct FirestoreArgs {
     /// Disable the default-on write-ahead journal in disk mode.
     #[arg(long = "no-wal", requires = "data_dir")]
     no_wal: bool,
+    /// Tokio worker threads. Defaults to at most four to bound per-worker allocator pages.
+    #[arg(long = "worker-threads", default_value_t = default_worker_threads())]
+    worker_threads: usize,
 }
 
-#[tokio::main]
-async fn main() -> ExitCode {
+fn main() -> ExitCode {
     let cli = Cli::parse_from(normalize_arguments(std::env::args_os()));
     match cli.command {
-        Command::Firestore(arguments) => run_firestore(&arguments).await,
+        Command::Firestore(arguments) => run_firestore_runtime(&arguments),
         Command::CaptureProxy => {
             eprintln!("fireside capture proxy is not implemented yet");
             ExitCode::FAILURE
         }
     }
+}
+
+fn run_firestore_runtime(arguments: &FirestoreArgs) -> ExitCode {
+    if arguments.worker_threads == 0 {
+        eprintln!("--worker-threads must be at least 1");
+        return ExitCode::FAILURE;
+    }
+    let runtime = match tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(arguments.worker_threads)
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime,
+        Err(error) => {
+            eprintln!("Firestore runtime failed to start: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
+    runtime.block_on(run_firestore(arguments))
+}
+
+fn default_worker_threads() -> usize {
+    std::thread::available_parallelism()
+        .map_or(1, std::num::NonZeroUsize::get)
+        .min(DEFAULT_MAX_WORKER_THREADS)
 }
 
 async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
@@ -167,7 +198,9 @@ async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
     let routes = tonic::service::Routes::from(rest_router(
         store,
         query_policy,
-        Some(Arc::new(MimallocMemoryReporter)),
+        Some(Arc::new(MimallocMemoryReporter {
+            runtime_worker_threads: arguments.worker_threads,
+        })),
     ))
     .add_service(service);
     if let Some(data_dir) = &arguments.data_dir {
@@ -181,7 +214,10 @@ async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
             data_dir.display()
         );
     }
-    eprintln!("fireside Firestore listening on {address}");
+    eprintln!(
+        "fireside Firestore listening on {address} with {} runtime worker thread(s)",
+        arguments.worker_threads
+    );
     let result = tonic::transport::Server::builder()
         .accept_http1(true)
         .add_routes(routes)
@@ -339,9 +375,13 @@ mod tests {
 
     #[test]
     fn allocator_reporter_returns_versioned_native_statistics() {
-        let usage = MimallocMemoryReporter.memory_usage();
+        let usage = MimallocMemoryReporter {
+            runtime_worker_threads: 3,
+        }
+        .memory_usage();
         assert_eq!(usage.name, "mimalloc");
         assert!(usage.version > 0);
+        assert_eq!(usage.runtime_worker_threads, 3);
         assert!(usage.error.is_none());
         assert!(usage.statistics.get("stat_version").is_some());
         assert!(usage.statistics.get("process").is_some());
@@ -438,6 +478,27 @@ mod tests {
             error.kind(),
             clap::error::ErrorKind::MissingRequiredArgument
         );
+    }
+
+    #[test]
+    fn runtime_worker_threads_are_bounded_and_overridable() {
+        assert!((1..=DEFAULT_MAX_WORKER_THREADS).contains(&default_worker_threads()));
+        let cli = Cli::try_parse_from(["fireside", "firestore", "--worker-threads", "2"])
+            .expect("worker override should parse");
+        let Command::Firestore(arguments) = cli.command else {
+            panic!("expected Firestore command");
+        };
+        assert_eq!(arguments.worker_threads, 2);
+    }
+
+    #[test]
+    fn zero_runtime_workers_fail_before_runtime_start() {
+        let cli = Cli::try_parse_from(["fireside", "firestore", "--worker-threads", "0"])
+            .expect("numeric worker override should parse");
+        let Command::Firestore(arguments) = cli.command else {
+            panic!("expected Firestore command");
+        };
+        assert_eq!(run_firestore_runtime(&arguments), ExitCode::FAILURE);
     }
 
     #[test]

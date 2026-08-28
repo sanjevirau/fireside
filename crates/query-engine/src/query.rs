@@ -885,9 +885,8 @@ impl FieldValue<'_> {
         match self {
             Self::Borrowed(left) => compare_values(left, right, edition),
             Self::DocumentName(left) => match right {
-                Value::Reference(right) | Value::String(right) => {
-                    left.split('/').cmp(right.split('/'))
-                }
+                Value::Reference(right) => left.split('/').cmp(right.split('/')),
+                Value::String(right) => left.split('/').cmp(right.split('/')),
                 _ => Ordering::Greater,
             },
         }
@@ -1152,7 +1151,7 @@ mod tests {
     }
 
     fn string(value: &str) -> Value {
-        Value::String(Arc::from(value))
+        Value::String(value.into())
     }
 
     fn array(values: &[&str]) -> Value {

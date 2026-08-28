@@ -251,6 +251,19 @@ worker policy plus inline storage for short Firestore strings, with an explicit
 worker override and unchanged wire/disk/query semantics. Neither change is a
 gate result until the same one-hour verification passes.
 
+The candidate implementation caps the default Tokio runtime at four workers
+or the host's available parallelism, whichever is smaller. `--worker-threads`
+is an explicit operational override, the selected count is emitted at startup,
+and the debug-memory allocator object reports it as `runtimeWorkerThreads`.
+Firestore string values use a 24-byte immutable representation with up to 23
+UTF-8 bytes inline and shared heap storage above that limit. Thus the measured
+22-byte operation token has no retained string allocation, while cloning long
+values remains constant-time. Bincode uses the string's Serde representation,
+so disk and WAL records retain value semantics independently of the in-memory
+layout. Unit tests pin inline eligibility, long Unicode behavior, enum size,
+and disk serialization; differential and endurance verification remain
+mandatory before this candidate is accepted.
+
 Phase 1 must measure resident memory during a multi-hour torture run with
 thousands of writes per minute, multiple active listeners, and mixed
 transactions. The gate requires a flat post-warmup trend, evidence that old

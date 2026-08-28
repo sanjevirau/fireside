@@ -27,6 +27,13 @@ target, not the specification.
 > verification. No new gate was launched and no performance gate is currently
 > claimed.
 
+The candidate runtime bounds its default worker pool to at most four threads;
+`--worker-threads <n>` is the explicit override. The selected count is visible
+in startup output and `GET /emulator/v1/debug/memory`. Firestore strings up to
+23 UTF-8 bytes are stored inline, with shared immutable heap storage for longer
+values. These are candidate memory fixes, not performance claims, until the
+unchanged verification and full gate pass.
+
 The approved Phase 1 endurance gate is frozen in
 [`benchmarks/phase-1-endurance.json`](benchmarks/phase-1-endurance.json). Its
 detached Linux runner preserves live RSS and resident-page categories,
