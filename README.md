@@ -13,8 +13,10 @@ target, not the specification.
 > its two dedicated strict-index cases, and the first Enterprise pipeline case.
 > Import/export now round-trips bidirectionally through Java via the public CLI
 > and control API, and full backend conformance also runs in crash-safe disk
-> mode. The first Phase 1 endurance attempt failed during large-document seeding;
-> its evidence is published, and no performance gate is currently claimed.
+> mode. The approved four-hour in-memory endurance rerun met every workload and
+> listener criterion but failed both RSS-flatness criteria. Its evidence and
+> allocator-retention diagnosis are published; no performance gate is currently
+> claimed until an unchanged-manifest rerun passes.
 
 The approved Phase 1 endurance gate is frozen in
 [`benchmarks/phase-1-endurance.json`](benchmarks/phase-1-endurance.json). Its

@@ -1,7 +1,7 @@
 # fireside design and compatibility contract
 
 Status: Phase 0 living specification
-Last updated: 2026-08-27
+Last updated: 2026-08-28
 
 This document is normative for project process and architecture, but not for
 Google Cloud behavior. Every behavioral assertion must be promoted from a
@@ -176,6 +176,15 @@ change-log entries older than the safe watermark are reclaimed. Listener
 buffers and replay windows have explicit byte and item caps with an
 oracle-backed reset/reconnect policy. No unbounded channel is permitted on a
 write or listener path.
+
+The release binary uses mimalloc with transparent huge pages disabled. The
+first complete in-memory endurance soak proved that the logical replay bounds
+alone were insufficient for a flat process RSS under glibc: freed snapshot and
+protobuf allocations remained resident in allocator arenas. A live
+`malloc_trim(0)` diagnostic returned those pages immediately without changing
+the working set, active listeners, or completed-operation count. Allocator
+selection is therefore part of the bounded-memory design, while the immutable
+endurance gate remains the only pass/fail evidence for the combined result.
 
 Phase 1 must measure resident memory during a multi-hour torture run with
 thousands of writes per minute, multiple active listeners, and mixed
