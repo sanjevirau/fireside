@@ -474,6 +474,16 @@ independent successes, preserve their stored effects, invoke the per-write error
 callback once for each failure, and reject only the affected promises with
 `ALREADY_EXISTS` (6) and `NOT_FOUND` (5), respectively.
 
+A second BulkWriter fixture sends ten individually valid documents whose raw
+byte fields total 5,120,000 bytes. Production, Java v1.22.0, and Fireside accept
+the batch. This pins that the gRPC frontend cannot retain tonic's 4 MiB default
+decode ceiling; Fireside uses a 10 MiB transport ceiling, but makes no untested
+claim about the exact production boundary above the checked fixture. Endurance
+working-set seeding additionally flushes before raw field payloads exceed 3 MiB,
+so setup never depends on SDK grouping of many large documents. That setup cap
+does not change the frozen timed workload, where each scheduled operation is an
+individual write or transaction.
+
 The same fixture pins `ListDocuments.order_by` field expressions. Production,
 Java, and Fireside exclude documents missing the ordered field, use an implicit
 document-name tie-break in the field direction, and preserve that order across

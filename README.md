@@ -9,12 +9,12 @@ target, not the specification.
 
 > [!IMPORTANT]
 > Phase 0 is complete and Phase 1 is under development. Fireside passes the
-> thirty-five checked-in Standard-edition backend and control conformance cases,
+> thirty-six checked-in Standard-edition backend and control conformance cases,
 > its two dedicated strict-index cases, and the first Enterprise pipeline case.
 > Import/export now round-trips bidirectionally through Java via the public CLI
 > and control API, and full backend conformance also runs in crash-safe disk
-> mode. The remaining Phase 1 coverage, expired-token RESET, multi-GB benchmark,
-> and torture gates are not yet complete.
+> mode. The first Phase 1 endurance attempt failed during large-document seeding;
+> its evidence is published, and no performance gate is currently claimed.
 
 The approved Phase 1 endurance gate is frozen in
 [`benchmarks/phase-1-endurance.json`](benchmarks/phase-1-endurance.json). Its
@@ -41,9 +41,9 @@ of scope until the conformance gates are met.
 
 | Target / area | Harness smoke | Firestore APIs | Browser SDK | Rules | Suite |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Production cloud | pass (Standard 33/33; Enterprise 1/1; control N/A) | reference target | not implemented | not implemented | not implemented |
-| Official Java emulator | pass (Standard 35/35; Enterprise 1/1) | comparison target; 11 known deviations | not run | not run | not run |
-| fireside | pass (Standard 35/35 + strict 2/2; Enterprise 1/1) | current measured scope | not implemented | not implemented | not implemented |
+| Production cloud | pass (Standard 34/34; Enterprise 1/1; control N/A) | reference target | not implemented | not implemented | not implemented |
+| Official Java emulator | pass (Standard 36/36; Enterprise 1/1) | comparison target; 11 known deviations | not run | not run | not run |
+| fireside | pass (Standard 36/36 + strict 2/2; Enterprise 1/1) | current measured scope | not implemented | not implemented | not implemented |
 
 Cloud is the behavioral reference; Java is measured only for comparison. From
 Phase 2 onward this table will be generated from CI results.
@@ -60,7 +60,9 @@ workflow.
 - `DESIGN.md`: living architecture, wire contracts, evidence rules, and gates.
 - `reports/`: immutable phase-gate and name-availability evidence.
 
-The latest completed report is [Phase 0](reports/phase-0-gate.md).
+The latest gate report is the preserved
+[failed Phase 1 endurance attempt](reports/phase-1-gate.md). Phase 0 remains
+[complete](reports/phase-0-gate.md).
 
 ## Development
 
