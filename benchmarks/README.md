@@ -1,0 +1,37 @@
+# Phase 1 endurance gate
+
+`phase-1-endurance.json` is the immutable gate manifest approved before the
+first measurement run. It fixes the Linux venue, 100,000-document working-set
+sizing, operation and large-document mix, listener churn, duration, rate,
+memory estimators and thresholds, 2 GiB import artifact, randomized recovery
+rounds, Java comparison policy, telemetry files, and stop-on-failure policy.
+
+The working set contains 99,000 1 KiB documents and 1,000 large documents:
+200 each at 100, 300, 500, 700, and 900 KiB. Its exact raw field payload is
+613,376,000 bytes (584.9609375 MiB), well below the approved approximate 8 GiB
+steady-state host ceiling even after emulator overhead. Every 100th operation
+rewrites a full large document. Exactly 20 of every 100 operations are
+read-write transactions; 10 update the eight listener documents; the
+categories do not overlap.
+
+The runner writes and synchronizes these series throughout each stage:
+
+- `rss.csv`: process RSS/high-water/swap plus host available memory, swap, and
+  load;
+- `throughput.csv`: cumulative and interval completions/errors/retry attempts;
+- `latency.csv`: 10-second write and listener p50/p95/p99/max series;
+- `stalls.ndjson`, `errors.ndjson`, and `events.ndjson`;
+- recovery attempt and acknowledgement journals plus per-round CSV;
+- one `summary.json` per stage and a top-level `run-state.json`.
+
+`prepare-phase-1-endurance.sh` builds the release binary, installs the pinned
+harness, downloads the pinned Java emulator, and generates the official-format
+artifact locally on the measurement host. `run-phase-1-endurance.sh` runs the
+frozen sequence. Production runs must execute it detached under `tmux`; the
+short `npm run test:endurance:smoke --prefix conformance` command validates
+tooling only and is never gate evidence.
+
+The runner stops on the first Fireside gate failure and preserves every file.
+It does not tune or retry a failed gate. The Java comparison begins only after
+all Fireside criteria pass, is reported separately, and permits one documented
+`-Xmx8g` comparison only following an observed Java heap failure.

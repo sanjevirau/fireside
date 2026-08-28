@@ -16,7 +16,7 @@
   },
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "node --import tsx --test test/target.test.ts",
+    "test": "node --import tsx --test test/target.test.ts test/endurance-tooling.test.ts",
     "test:firestore": "node --import tsx --test test/ancestor-collection-group.test.ts test/backend-rpcs.test.ts test/error-code-parity.test.ts test/firestore-smoke.test.ts test/historical-reads.test.ts test/listen.test.ts test/named-database.test.ts test/partition-query.test.ts test/pipeline-edition.test.ts test/query-explain.test.ts test/query-features.test.ts test/query-ordering.test.ts test/rest.test.ts test/streaming-write.test.ts test/vector-query.test.ts test/write-transforms.test.ts",
     "test:control": "node --import tsx --test test/control-api.test.ts",
     "test:smoke": "node --import tsx --test test/firestore-smoke.test.ts",
@@ -33,7 +33,9 @@
     "test:fireside-import": "node --import tsx src/run-fireside-import.ts",
     "capture:official-export": "node --import tsx src/capture-official-export.ts",
     "test:official-export-import": "node --import tsx src/verify-official-export-import.ts",
-    "test:fireside-export-java-import": "node --import tsx src/verify-fireside-export-java-import.ts"
+    "test:fireside-export-java-import": "node --import tsx src/verify-fireside-export-java-import.ts",
+    "test:endurance:smoke": "node --import tsx src/smoke-phase1-endurance.ts",
+    "test:endurance": "node --import tsx src/run-phase1-endurance.ts"
   },
   "devDependencies": {
     "@google-cloud/firestore": "9.0.0",
