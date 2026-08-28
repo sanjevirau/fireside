@@ -14,6 +14,8 @@ use fireside_grpc_front::FirestoreService;
 use fireside_query_engine::{DatabaseEdition as QueryDatabaseEdition, IndexCatalog, QueryPolicy};
 use fireside_rest_front::router_with_query_policy as rest_router;
 
+// Snapshot and protobuf churn repeatedly frees similarly sized allocations.
+// Mimalloc returns empty pages instead of leaving them resident in glibc arenas.
 #[global_allocator]
 static GLOBAL_ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
