@@ -203,6 +203,17 @@ disconnect paths remove their accounting entries with the retained structures.
 The endurance harness samples this endpoint into `logical-memory.ndjson` beside
 each RSS sample.
 
+The first instrumented one-hour diagnostic measured a 26.559 MiB/hour
+post-warm-up RSS slope while current live-document bytes grew only
+0.733 MiB/hour and every retained entry count was flat. Replay-version bytes
+had a zero Theil-Sen slope after falling from 515.7 MB at the end of ordered
+seeding to about 49.6 MB under the steady write mix. Thirty-two listener churn
+cycles retained exactly eight streams and targets; sampled transaction and WAL
+state returned to zero. The logical-retention hypothesis is therefore rejected
+for the instrumented subsystems. Further work returns to allocator/resident
+pages or uncounted container overhead; the result does not authorize a gate
+rerun.
+
 Phase 1 must measure resident memory during a multi-hour torture run with
 thousands of writes per minute, multiple active listeners, and mixed
 transactions. The gate requires a flat post-warmup trend, evidence that old

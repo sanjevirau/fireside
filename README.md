@@ -16,8 +16,10 @@ target, not the specification.
 > mode. The approved four-hour in-memory endurance rerun met every workload and
 > listener criterion but failed both RSS-flatness criteria. Its evidence is
 > published. A subsequent allocator-remediation diagnostic still measured a
-> 47.616 MiB/hour post-warm-up RSS slope, so no new gate was launched and no
-> performance gate is currently claimed.
+> 47.616 MiB/hour post-warm-up RSS slope. Permanent subsystem accounting then
+> showed a 26.559 MiB/hour RSS slope with bounded logical store, listener,
+> transaction, and WAL state, returning diagnosis to allocator/resident pages.
+> No new gate was launched and no performance gate is currently claimed.
 
 The approved Phase 1 endurance gate is frozen in
 [`benchmarks/phase-1-endurance.json`](benchmarks/phase-1-endurance.json). Its
