@@ -226,6 +226,18 @@ for the instrumented subsystems. Further work returns to allocator/resident
 pages or uncounted container overhead; the result does not authorize a gate
 rerun.
 
+The follow-up allocator-page diagnostic measured a 23.573 MiB/hour RSS slope,
+all of it mirrored by PSS and anonymous private-dirty pages. Mimalloc's virtual
+reservation was flat, current commitment grew only 0.352 MiB/hour, abandoned
+pages did not accumulate, purge/reclaim counters advanced continuously, and
+transparent huge pages remained zero. The concrete growing allocator state was
+active size-class pages: 158.506 pages/hour overall, led by 48-byte and 80-byte
+objects in 64 KiB pages and the 327,680-byte class in 4 MiB pages. Twelve
+allocator thread heaps and thirteen process threads remained active. This
+narrows the causal experiment to worker/thread-heap multiplication; it does not
+yet identify an owning Rust allocation path and therefore does not justify a
+speculative production fix or gate rerun.
+
 Phase 1 must measure resident memory during a multi-hour torture run with
 thousands of writes per minute, multiple active listeners, and mixed
 transactions. The gate requires a flat post-warmup trend, evidence that old

@@ -18,8 +18,11 @@ target, not the specification.
 > published. A subsequent allocator-remediation diagnostic still measured a
 > 47.616 MiB/hour post-warm-up RSS slope. Permanent subsystem accounting then
 > showed a 26.559 MiB/hour RSS slope with bounded logical store, listener,
-> transaction, and WAL state, returning diagnosis to allocator/resident pages.
-> No new gate was launched and no performance gate is currently claimed.
+> transaction, and WAL state. Allocator-page telemetry then localized the
+> remaining 23.573 MiB/hour signal to anonymous private-dirty active mimalloc
+> size-class pages, not abandoned pages or retained logical state. The owning
+> allocation path is still under controlled diagnosis. No new gate was
+> launched and no performance gate is currently claimed.
 
 The approved Phase 1 endurance gate is frozen in
 [`benchmarks/phase-1-endurance.json`](benchmarks/phase-1-endurance.json). Its
