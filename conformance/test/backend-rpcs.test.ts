@@ -164,6 +164,48 @@ test("BulkWriter commits independent writes and surfaces per-write errors", asyn
   assert.equal(deletedSnapshot!.exists, false);
 });
 
+test("BulkWriter accepts a near-5-MiB batch of individually valid documents", async (context) => {
+  const configuration = resolveTarget(process.env);
+  const firestore = createFirestore(configuration);
+  const runId = randomUUID();
+  const collection = firestore.collection(
+    `runs/${runId}/fireside_large_bulk_writer`,
+  );
+  const expiresAt = Timestamp.fromMillis(Date.now() + DAY_MILLISECONDS);
+  const sizes = [102_400, 307_200, 512_000, 716_800, 921_600];
+  const documents = Array.from({ length: 10 }, (_, index) =>
+    collection.doc(`document-${String(index).padStart(2, "0")}`)
+  );
+
+  context.after(async () => {
+    await Promise.all(documents.map((document) => document.delete())).catch(
+      () => undefined,
+    );
+    await firestore.terminate().catch(() => undefined);
+  });
+
+  const writer = firestore.bulkWriter({ throttling: false });
+  writer.onWriteError(() => false);
+  const operations = documents.map((document, index) =>
+    writer.set(document, {
+      _fireside_expires_at: expiresAt,
+      ordinal: index,
+      payload: Buffer.alloc(sizes[index % sizes.length]!, 0x4c),
+    })
+  );
+  const outcomesPromise = Promise.allSettled(operations);
+  await writer.close();
+  const outcomes = await outcomesPromise;
+
+  assert.deepEqual(
+    outcomes.map((outcome) => outcome.status),
+    Array<string>(documents.length).fill("fulfilled"),
+  );
+  const [first, last] = await firestore.getAll(documents[0]!, documents.at(-1)!);
+  assert.equal(first!.get("ordinal"), 0);
+  assert.equal(last!.get("ordinal"), documents.length - 1);
+});
+
 test("list RPCs paginate direct children and preserve masks", async (context) => {
   const configuration = resolveTarget(process.env);
   const firestore = createFirestore(configuration);

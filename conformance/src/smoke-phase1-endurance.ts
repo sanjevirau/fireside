@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -45,6 +45,22 @@ try {
     server = undefined;
   }
 
+  const failedSeedOutput = resolve(directory, "failed-seed");
+  server = await startServer({
+    kind: "fireside-memory",
+    projectId: "demo-fireside-endurance",
+    outputDirectory: failedSeedOutput,
+  });
+  await assert.rejects(
+    runSoak(failedSeedManifest(manifest), server, "fireside-memory", failedSeedOutput),
+  );
+  await server.stop();
+  server = undefined;
+  assert.match(
+    await readFile(resolve(failedSeedOutput, "errors.ndjson"), "utf8"),
+    /"type":"seed-error"/u,
+  );
+
   const artifact = resolve(directory, "phase1-smoke-export");
   await execute(
     "cargo",
@@ -87,6 +103,29 @@ try {
   } else {
     console.error(`failed endurance smoke evidence preserved at ${directory}`);
   }
+}
+
+function failedSeedManifest(source: EnduranceManifest): EnduranceManifest {
+  return {
+    ...source,
+    soak: {
+      ...source.soak,
+      workingSet: {
+        ...source.soak.workingSet,
+        documentCount: 1,
+        smallDocumentCount: 1,
+        smallPayloadBytes: 11 * 1024 * 1024,
+        largeDocumentCount: 0,
+        listenerDocumentCount: 1,
+        listenerDocumentIndexes: [0],
+        seedBatchSize: 1,
+      },
+      listeners: {
+        ...source.soak.listeners,
+        activeCount: 1,
+      },
+    },
+  };
 }
 
 function smokeManifest(source: EnduranceManifest): EnduranceManifest {

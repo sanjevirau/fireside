@@ -25,6 +25,8 @@ interface RssPoint {
   readonly rssBytes: number;
 }
 
+const MAXIMUM_SEED_BATCH_PAYLOAD_BYTES = 3 * 1024 * 1024;
+
 export async function runSoak(
   manifest: EnduranceManifest,
   server: ServerHandle,
@@ -92,7 +94,12 @@ export async function runSoak(
   try {
     events.json(event("seed-start", { kind }));
     const seedStarted = performance.now();
-    await seedWorkingSet(firestore, manifest, payloads);
+    try {
+      await seedWorkingSet(firestore, manifest, payloads);
+    } catch (error) {
+      errors.json(event("seed-error", { kind, message: errorMessage(error) }));
+      throw error;
+    }
     events.json(event("seed-complete", {
       durationMilliseconds: performance.now() - seedStarted,
       documents: manifest.soak.workingSet.documentCount,
@@ -541,31 +548,50 @@ async function seedWorkingSet(
     return false;
   });
   const collection = firestore.collection(manifest.soak.workingSet.collection);
-  const pending: Promise<unknown>[] = [];
+  const pending: Promise<void>[] = [];
+  let pendingPayloadBytes = 0;
   for (let ordinal = 0; ordinal < manifest.soak.workingSet.documentCount; ordinal += 1) {
     const isLarge = ordinal >= manifest.soak.workingSet.smallDocumentCount;
     const payload = isLarge
       ? largePayloadForOrdinal(manifest, payloads, ordinal)
       : payloads.small;
-    pending.push(
-      writer.set(
-        collection.doc(documentId(ordinal)),
-        documentFields(0, "seed", isLarge ? "large" : "small", payload),
-      ),
+    if (
+      pending.length > 0
+      && pendingPayloadBytes + payload.length > MAXIMUM_SEED_BATCH_PAYLOAD_BYTES
+    ) {
+      await drainPendingWrites();
+    }
+    const write = writer.set(
+      collection.doc(documentId(ordinal)),
+      documentFields(0, "seed", isLarge ? "large" : "small", payload),
+    ).then(
+      () => undefined,
+      (error: unknown) => {
+        writerError = error instanceof Error ? error : new Error(String(error));
+      },
     );
+    pending.push(write);
+    pendingPayloadBytes += payload.length;
     if (pending.length >= manifest.soak.workingSet.seedBatchSize) {
-      await writer.flush();
-      await Promise.all(pending.splice(0));
+      await drainPendingWrites();
     }
     if (writerError !== undefined) {
       throw writerError;
     }
   }
-  await writer.flush();
-  await Promise.all(pending);
+  await drainPendingWrites();
   await writer.close();
   if (writerError !== undefined) {
     throw writerError;
+  }
+
+  async function drainPendingWrites(): Promise<void> {
+    await writer.flush();
+    await Promise.all(pending.splice(0));
+    pendingPayloadBytes = 0;
+    if (writerError !== undefined) {
+      throw writerError;
+    }
   }
 }
 

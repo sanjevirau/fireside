@@ -47,6 +47,8 @@ use crate::google::rpc;
 use crate::pipeline::{decode_pipeline, encode_pipeline_document};
 use crate::query_codec::{decode_aggregation, decode_query, query_status};
 
+const MAXIMUM_REQUEST_BYTES: usize = 10 * 1024 * 1024;
+
 pub(crate) type ResponseStream<T> = Pin<Box<dyn Stream<Item = Result<T, Status>> + Send + 'static>>;
 
 /// Handwritten Firestore v1 service adapter over the MVCC store.
@@ -87,7 +89,7 @@ impl FirestoreService {
     /// Wraps this adapter in tonic's generated HTTP service.
     #[must_use]
     pub fn into_server(self) -> FirestoreServer<Self> {
-        FirestoreServer::new(self)
+        FirestoreServer::new(self).max_decoding_message_size(MAXIMUM_REQUEST_BYTES)
     }
 
     /// Returns the underlying store for diagnostics and in-process tests.
