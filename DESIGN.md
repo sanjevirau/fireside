@@ -179,12 +179,14 @@ write or listener path.
 
 The release binary uses mimalloc with transparent huge pages disabled. The
 first complete in-memory endurance soak proved that the logical replay bounds
-alone were insufficient for a flat process RSS under glibc: freed snapshot and
-protobuf allocations remained resident in allocator arenas. A live
-`malloc_trim(0)` diagnostic returned those pages immediately without changing
-the working set, active listeners, or completed-operation count. Allocator
-selection is therefore part of the bounded-memory design, while the immutable
-endurance gate remains the only pass/fail evidence for the combined result.
+alone were insufficient for a flat process RSS under glibc. A live
+`malloc_trim(0)` diagnostic returned some pages immediately without changing
+the workload, and disabling allocator transparent huge pages reduced the next
+probe's initial RSS. Allocator behavior was therefore part of the symptom, but
+the one-hour no-THP follow-up still measured a 47.616 MiB/hour post-warm-up
+Theil-Sen slope. The allocator change is an absolute-footprint improvement, not
+proof that the bounded-memory invariant is fixed. The immutable endurance gate
+remains the only pass/fail evidence for the combined result.
 
 Phase 1 must measure resident memory during a multi-hour torture run with
 thousands of writes per minute, multiple active listeners, and mixed

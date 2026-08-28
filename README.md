@@ -14,9 +14,10 @@ target, not the specification.
 > Import/export now round-trips bidirectionally through Java via the public CLI
 > and control API, and full backend conformance also runs in crash-safe disk
 > mode. The approved four-hour in-memory endurance rerun met every workload and
-> listener criterion but failed both RSS-flatness criteria. Its evidence and
-> allocator-retention diagnosis are published; no performance gate is currently
-> claimed until an unchanged-manifest rerun passes.
+> listener criterion but failed both RSS-flatness criteria. Its evidence is
+> published. A subsequent allocator-remediation diagnostic still measured a
+> 47.616 MiB/hour post-warm-up RSS slope, so no new gate was launched and no
+> performance gate is currently claimed.
 
 The approved Phase 1 endurance gate is frozen in
 [`benchmarks/phase-1-endurance.json`](benchmarks/phase-1-endurance.json). Its
