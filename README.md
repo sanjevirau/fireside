@@ -13,8 +13,14 @@ target, not the specification.
 > its two dedicated strict-index cases, and the first Enterprise pipeline case.
 > Import/export now round-trips bidirectionally through Java via the public CLI
 > and control API, and full backend conformance also runs in crash-safe disk
-> mode. The remaining Phase 1 coverage, expired-token RESET, multi-GB benchmark, and
-> torture gates are not yet complete.
+> mode. The remaining Phase 1 coverage, expired-token RESET, multi-GB benchmark,
+> and torture gates are not yet complete.
+
+The approved Phase 1 endurance gate is frozen in
+[`benchmarks/phase-1-endurance.json`](benchmarks/phase-1-endurance.json). Its
+detached Linux runner preserves live RSS, throughput, latency, listener-churn,
+stall, import, and recovery evidence under `endurance-results/`; those results
+are not claimed until the full run completes.
 
 ## Why this exists
 

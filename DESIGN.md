@@ -149,6 +149,12 @@ logical revisions. It advances with the same replay floor and reconstructs the
 latest commit no newer than a requested `read_time`; timestamp lookup therefore
 does not retain otherwise unreachable MVCC roots or grow under no-op commits.
 Disk restart begins a new historical window at the recovered durable revision.
+Disk-backed current snapshots hold a redb read transaction and decode requested
+documents on demand instead of rebuilding an in-memory shadow of the entire
+database. Recent historical snapshots add a bounded overlay reconstructed from
+the change window. Full query scans may materialize their result candidates,
+but startup, point reads, writes, and import-serving reads remain proportional
+to touched documents rather than total persisted bytes.
 
 Transactions include read-only and read-write modes. Read-write transactions
 track the read set, validate it atomically at commit, return the production
@@ -177,6 +183,20 @@ transactions. The gate requires a flat post-warmup trend, evidence that old
 versions were reclaimed, and no stalls. The exact slope threshold is fixed in
 the benchmark manifest before the gate run; it cannot be relaxed after seeing
 results without a documented gate failure.
+
+The approved immutable Phase 1 manifest is
+`benchmarks/phase-1-endurance.json`. On `sanjevi-linux` it fixes two four-hour
+soaks at 3,000 writes/minute over 100,000 documents, eight single-document
+listeners with two-minute round-robin churn, and exactly 20% read-write
+transactions. One percent of operations rewrite large documents. The working
+set is 99,000 1 KiB payloads plus 1,000 payloads evenly split across 100, 300,
+500, 700, and 900 KiB, for 613,376,000 raw payload bytes. Fireside RSS must
+remain below 8 GiB, its post-warmup Theil-Sen slope must not exceed 1 MiB/hour,
+and its final 30-minute median may exceed the initial steady-state median by no
+more than the larger of 5% or 16 MiB. The gate also fixes a 65,536-document,
+32 KiB-per-document official-format artifact whose entity shard is at least
+2 GiB, a 512 MiB import peak-RSS ceiling, and 100 randomized SIGKILL rounds
+covering at least 10,000 acknowledged two-document atomic commits.
 
 ### 4.3 Disk mode and crash safety
 
