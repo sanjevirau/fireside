@@ -146,9 +146,9 @@ function smokeManifest(source: EnduranceManifest): EnduranceManifest {
       },
       workingSet: {
         ...source.soak.workingSet,
-        documentCount: 100,
+        documentCount: 105,
         smallDocumentCount: 95,
-        largeDocumentCount: 5,
+        largeDocumentCount: 10,
         largeDocumentSizesBytes: [102_400, 204_800, 307_200, 409_600, 512_000],
         maximumObservedFiresideRssBytes: 2_147_483_648,
         listenerDocumentCount: 2,
