@@ -1,5 +1,6 @@
 //! Crash-safe disk persistence for the MVCC store.
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::fs::{self, File, OpenOptions};
@@ -8,11 +9,13 @@ use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use bincode::{Decode, Encode, config};
-use redb::{Database, Durability, ReadableDatabase, ReadableTable, TableDefinition};
+use redb::{
+    Database, Durability, ReadTransaction, ReadableDatabase, ReadableTable, TableDefinition,
+};
 
 use super::{
-    Change, CommitError, CommitPlan, CommitResult, Document, DocumentKey, ResetRequired, Revision,
-    Snapshot, SnapshotError, State, StoreOptions, Timestamp, Write,
+    Change, CommitError, CommitPlan, CommitResult, DatabaseName, Document, DocumentKey,
+    ResetRequired, Revision, Snapshot, SnapshotError, State, StoreOptions, Timestamp, Write,
 };
 
 const DOCUMENTS: TableDefinition<&[u8], &[u8]> = TableDefinition::new("documents_v1");
@@ -23,7 +26,7 @@ const JOURNAL_FILE: &str = "fireside.wal";
 const FRAME_MAGIC: [u8; 8] = *b"FSWAL001";
 const FRAME_HEADER_LEN: usize = 16;
 const MAX_WAL_RECORD_BYTES: usize = 64 * 1024 * 1024;
-type LoadedDatabase = (Revision, Timestamp, im::OrdMap<DocumentKey, Arc<Document>>);
+type LoadedDatabase = (Revision, Timestamp);
 
 /// Disk-store resource and durability settings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -75,8 +78,9 @@ impl DiskStore {
             journal.checkpoint()?;
         }
 
-        let (revision, last_commit_time, documents) = load_database(&database)?;
-        let memory = State::from_persisted(options.store, revision, last_commit_time, documents);
+        let (revision, last_commit_time) = load_database(&database)?;
+        let memory =
+            State::from_persisted(options.store, revision, last_commit_time, im::OrdMap::new());
 
         Ok(Self {
             inner: Arc::new(Mutex::new(DiskState {
@@ -92,20 +96,43 @@ impl DiskStore {
     #[must_use]
     pub fn snapshot(&self) -> Snapshot {
         let state = self.state();
-        Snapshot {
-            revision: state.memory.revision,
-            documents: state.memory.documents.clone(),
-        }
+        Snapshot::disk(
+            state.memory.revision,
+            DiskSnapshot::open(&state.database, im::OrdMap::new()),
+        )
     }
 
     /// Reconstructs a retained historical snapshot by logical revision.
     pub fn snapshot_at(&self, revision: Revision) -> Result<Snapshot, SnapshotError> {
-        self.state().memory.snapshot_at_revision(revision)
+        let state = self.state();
+        let overlay = historical_overlay(&state.memory, revision)?;
+        Ok(Snapshot::disk(
+            revision,
+            DiskSnapshot::open(&state.database, overlay),
+        ))
     }
 
     /// Reconstructs a retained historical snapshot by commit timestamp.
     pub fn snapshot_at_time(&self, read_time: Timestamp) -> Result<Snapshot, SnapshotError> {
-        self.state().memory.snapshot_at_time(read_time)
+        let state = self.state();
+        if read_time < state.memory.history_floor.commit_time {
+            return Err(SnapshotError::ReadTimeExpired {
+                requested: read_time,
+                oldest_available: state.memory.history_floor.commit_time,
+            });
+        }
+        let revision = state
+            .memory
+            .commit_times
+            .iter()
+            .take_while(|point| point.commit_time <= read_time)
+            .last()
+            .map_or(state.memory.history_floor.revision, |point| point.revision);
+        let overlay = historical_overlay(&state.memory, revision)?;
+        Ok(Snapshot::disk(
+            revision,
+            DiskSnapshot::open(&state.database, overlay),
+        ))
     }
 
     /// Durably commits writes before making them visible or acknowledging the
@@ -117,7 +144,8 @@ impl DiskStore {
             return Err(DiskError::RequiresRestart);
         }
 
-        let plan = state.memory.plan(writes)?;
+        let documents = load_write_documents(&state.database, writes)?;
+        let plan = state.memory.plan_with_documents(writes, documents)?;
         let record = WalRecord::from_plan(&plan);
 
         if let Some(journal) = &mut state.journal
@@ -133,7 +161,7 @@ impl DiskStore {
         }
 
         let result = plan.result;
-        state.memory.install(plan);
+        state.memory.install_disk(plan);
 
         // A checkpoint failure cannot make the acknowledged commit unsafe:
         // recovery skips records already represented by redb's revision.
@@ -180,6 +208,123 @@ impl DiskStore {
         self.inner
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct DiskSnapshot {
+    transaction: Arc<ReadTransaction>,
+    overlay: im::OrdMap<DocumentKey, Option<Arc<Document>>>,
+}
+
+impl DiskSnapshot {
+    fn open(database: &Database, overlay: im::OrdMap<DocumentKey, Option<Arc<Document>>>) -> Self {
+        let transaction = database
+            .begin_read()
+            .expect("an open redb database must support read snapshots");
+        Self {
+            transaction: Arc::new(transaction),
+            overlay,
+        }
+    }
+
+    pub(crate) fn get(&self, key: &DocumentKey) -> Option<Arc<Document>> {
+        if let Some(document) = self.overlay.get(key) {
+            return document.clone();
+        }
+        let encoded_key = encode(key).ok()?;
+        let table = self.transaction.open_table(DOCUMENTS).ok()?;
+        let value = table.get(encoded_key.as_slice()).ok()??;
+        decode(value.value()).ok().map(Arc::new)
+    }
+
+    pub(crate) fn documents(&self, database: &DatabaseName) -> Vec<(DocumentKey, Arc<Document>)> {
+        let mut documents = BTreeMap::new();
+        if let Ok(table) = self.transaction.open_table(DOCUMENTS)
+            && let Ok(entries) = table.iter()
+        {
+            for entry in entries.flatten() {
+                let (key, document) = entry;
+                let Ok(key) = decode::<DocumentKey>(key.value()) else {
+                    continue;
+                };
+                if key.database() != database {
+                    continue;
+                }
+                let Ok(document) = decode::<Document>(document.value()) else {
+                    continue;
+                };
+                documents.insert(key, Arc::new(document));
+            }
+        }
+        for (key, document) in &self.overlay {
+            if key.database() != database {
+                continue;
+            }
+            match document {
+                Some(document) => {
+                    documents.insert(key.clone(), document.clone());
+                }
+                None => {
+                    documents.remove(key);
+                }
+            }
+        }
+        documents.into_iter().collect()
+    }
+}
+
+fn historical_overlay(
+    state: &State,
+    revision: Revision,
+) -> Result<im::OrdMap<DocumentKey, Option<Arc<Document>>>, SnapshotError> {
+    if revision > state.revision {
+        return Err(SnapshotError::FutureRevision {
+            requested: revision,
+            current: state.revision,
+        });
+    }
+    if revision < state.change_floor {
+        return Err(SnapshotError::ResetRequired(ResetRequired {
+            requested: revision,
+            oldest_available: state.change_floor,
+        }));
+    }
+    let mut overlay = im::OrdMap::new();
+    for change in state
+        .change_log
+        .iter()
+        .rev()
+        .filter(|change| change.revision > revision)
+    {
+        overlay.insert(change.key.clone(), change.before.clone());
+    }
+    Ok(overlay)
+}
+
+fn load_write_documents(
+    database: &Database,
+    writes: &[Write],
+) -> Result<im::OrdMap<DocumentKey, Arc<Document>>, DiskError> {
+    let keys = writes.iter().map(write_key).collect::<BTreeSet<_>>();
+    let transaction = database.begin_read().map_err(DiskError::redb)?;
+    let table = transaction.open_table(DOCUMENTS).map_err(DiskError::redb)?;
+    let mut documents = im::OrdMap::new();
+    for key in keys {
+        let encoded_key = encode(key)?;
+        if let Some(document) = table.get(encoded_key.as_slice()).map_err(DiskError::redb)? {
+            documents.insert(key.clone(), Arc::new(decode(document.value())?));
+        }
+    }
+    Ok(documents)
+}
+
+const fn write_key(write: &Write) -> &DocumentKey {
+    match write {
+        Write::Create { key, .. }
+        | Write::Set { key, .. }
+        | Write::Patch { key, .. }
+        | Write::Delete { key, .. } => key,
     }
 }
 
@@ -240,13 +385,17 @@ fn initialize_database(database: &Database) -> Result<(), DiskError> {
 
 fn load_database(database: &Database) -> Result<LoadedDatabase, DiskError> {
     let transaction = database.begin_read().map_err(DiskError::redb)?;
-    let mut documents = im::OrdMap::new();
+    let mut document_count = 0_u64;
     {
         let table = transaction.open_table(DOCUMENTS).map_err(DiskError::redb)?;
         let entries = table.iter().map_err(DiskError::redb)?;
         for entry in entries {
             let (key, document) = entry.map_err(DiskError::redb)?;
-            documents.insert(decode(key.value())?, Arc::new(decode(document.value())?));
+            let _: DocumentKey = decode(key.value())?;
+            let _: Document = decode(document.value())?;
+            document_count = document_count
+                .checked_add(1)
+                .ok_or_else(|| DiskError::Corrupt("document count overflows u64".to_owned()))?;
         }
     }
 
@@ -260,11 +409,10 @@ fn load_database(database: &Database) -> Result<LoadedDatabase, DiskError> {
     };
 
     match persisted_state {
-        Some(state) => Ok((state.revision, state.last_commit_time, documents)),
-        None if documents.is_empty() => Ok((
+        Some(state) => Ok((state.revision, state.last_commit_time)),
+        None if document_count == 0 => Ok((
             Revision::ZERO,
             Timestamp::new(0, 0).expect("zero nanoseconds are valid"),
-            documents,
         )),
         None => Err(DiskError::Corrupt(
             "document table exists without store metadata".to_owned(),
@@ -632,10 +780,12 @@ mod tests {
                 }])
                 .expect("commit should be durable");
             assert_eq!(store.revision().get(), 1);
+            assert!(store.state().memory.documents.is_empty());
         }
 
         let reopened = DiskStore::open(directory.path(), DiskOptions::default())
             .expect("disk store should reopen");
+        assert!(reopened.state().memory.documents.is_empty());
         let document = reopened
             .snapshot()
             .get(&document_key)

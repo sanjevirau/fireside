@@ -476,10 +476,7 @@ impl Store {
         match &self.backend {
             StoreBackend::Memory(inner) => {
                 let state = lock(inner);
-                Snapshot {
-                    revision: state.revision,
-                    documents: state.documents.clone(),
-                }
+                Snapshot::memory(state.revision, state.documents.clone())
             }
             StoreBackend::Disk(store) => store.snapshot(),
         }
@@ -589,13 +586,47 @@ impl Default for Store {
 }
 
 /// Immutable read view of the database map.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Snapshot {
     revision: Revision,
-    documents: OrdMap<DocumentKey, Arc<Document>>,
+    documents: SnapshotDocuments,
+}
+
+#[derive(Clone)]
+enum SnapshotDocuments {
+    Memory(OrdMap<DocumentKey, Arc<Document>>),
+    Disk(disk::DiskSnapshot),
+}
+
+impl Debug for Snapshot {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        let backend = match self.documents {
+            SnapshotDocuments::Memory(_) => "memory",
+            SnapshotDocuments::Disk(_) => "disk",
+        };
+        formatter
+            .debug_struct("Snapshot")
+            .field("revision", &self.revision)
+            .field("backend", &backend)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Snapshot {
+    fn memory(revision: Revision, documents: OrdMap<DocumentKey, Arc<Document>>) -> Self {
+        Self {
+            revision,
+            documents: SnapshotDocuments::Memory(documents),
+        }
+    }
+
+    fn disk(revision: Revision, documents: disk::DiskSnapshot) -> Self {
+        Self {
+            revision,
+            documents: SnapshotDocuments::Disk(documents),
+        }
+    }
+
     /// Revision observed by this snapshot.
     #[must_use]
     pub const fn revision(&self) -> Revision {
@@ -605,29 +636,31 @@ impl Snapshot {
     /// Reads one document from this snapshot.
     #[must_use]
     pub fn get(&self, key: &DocumentKey) -> Option<Arc<Document>> {
-        self.documents.get(key).cloned()
+        match &self.documents {
+            SnapshotDocuments::Memory(documents) => documents.get(key).cloned(),
+            SnapshotDocuments::Disk(documents) => documents.get(key),
+        }
     }
 
-    /// Iterates documents from one named database in key order without
-    /// allocating a second collection.
-    pub fn iter_documents<'a>(
-        &'a self,
-        database: &'a DatabaseName,
-    ) -> impl Iterator<Item = (&'a DocumentKey, &'a Document)> + 'a {
-        self.documents
-            .iter()
-            .filter(move |(key, _)| key.database() == database)
-            .map(|(key, document)| (key, document.as_ref()))
+    /// Iterates owned documents from one named database in key order.
+    pub fn iter_documents(
+        &self,
+        database: &DatabaseName,
+    ) -> impl Iterator<Item = (DocumentKey, Arc<Document>)> {
+        self.documents(database).into_iter()
     }
 
     /// Copies the documents belonging to one named database in key order.
     #[must_use]
     pub fn documents(&self, database: &DatabaseName) -> Vec<(DocumentKey, Arc<Document>)> {
-        self.documents
-            .iter()
-            .filter(|(key, _)| key.database() == database)
-            .map(|(key, document)| (key.clone(), document.clone()))
-            .collect()
+        match &self.documents {
+            SnapshotDocuments::Memory(documents) => documents
+                .iter()
+                .filter(|(key, _)| key.database() == database)
+                .map(|(key, document)| (key.clone(), document.clone()))
+                .collect(),
+            SnapshotDocuments::Disk(documents) => documents.documents(database),
+        }
     }
 }
 
@@ -851,7 +884,14 @@ impl State {
     }
 
     fn plan(&self, writes: &[Write]) -> Result<CommitPlan, CommitError> {
-        let mut documents = self.documents.clone();
+        self.plan_with_documents(writes, self.documents.clone())
+    }
+
+    fn plan_with_documents(
+        &self,
+        writes: &[Write],
+        mut documents: OrdMap<DocumentKey, Arc<Document>>,
+    ) -> Result<CommitPlan, CommitError> {
         let commit_time = self.next_commit_time();
         let revision = Revision(
             self.revision
@@ -896,14 +936,23 @@ impl State {
 
     fn install(&mut self, plan: CommitPlan) {
         self.documents = plan.documents;
-        self.revision = plan.result.revision;
-        self.last_commit_time = plan.result.commit_time;
-        for change in plan.changes {
+        self.install_metadata(plan.result, plan.changes);
+    }
+
+    fn install_disk(&mut self, plan: CommitPlan) {
+        self.documents = OrdMap::new();
+        self.install_metadata(plan.result, plan.changes);
+    }
+
+    fn install_metadata(&mut self, result: CommitResult, changes: Vec<Change>) {
+        self.revision = result.revision;
+        self.last_commit_time = result.commit_time;
+        for change in changes {
             self.push_change(change);
         }
         self.push_commit_point(CommitPoint {
-            revision: plan.result.revision,
-            commit_time: plan.result.commit_time,
+            revision: result.revision,
+            commit_time: result.commit_time,
         });
     }
 
@@ -937,10 +986,7 @@ impl State {
                 }
             }
         }
-        Ok(Snapshot {
-            revision,
-            documents,
-        })
+        Ok(Snapshot::memory(revision, documents))
     }
 
     fn snapshot_at_time(&self, read_time: Timestamp) -> Result<Snapshot, SnapshotError> {

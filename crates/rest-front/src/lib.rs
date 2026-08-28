@@ -290,7 +290,7 @@ async fn export_database(
     tokio::task::spawn_blocking(move || {
         let documents = snapshot
             .iter_documents(&database)
-            .map(|(key, document)| ExportedDocument::new(key.clone(), document.fields().clone()));
+            .map(|(key, document)| ExportedDocument::new(key, document.fields().clone()));
         write_export(destination, documents)
     })
     .await
