@@ -1,0 +1,68 @@
+{
+  "outcome": "pass",
+  "revision": "1feef4e459de2fd51db4153bfb69f3f8ace09405",
+  "manifestSha256": "00f8c4f40e209a89ac3b059d6c10269e997c501a1cb8df50003b2195beedad41",
+  "measuredSeconds": 3630.083,
+  "warmupSeconds": 1800,
+  "rssSamples": 364,
+  "postWarmupSamples": 184,
+  "rss": {
+    "firstBytes": 825212928,
+    "lastBytes": 840577024,
+    "maximumSampledBytes": 864505856,
+    "postWarmupTheilSenBytesPerHour": 766810.4444870828,
+    "limitBytesPerHour": 1048576,
+    "firstThirtyMinuteMedianBytes": 858302464,
+    "trailingThirtyMinuteMedianBytes": 845963264
+  },
+  "residentAttribution": {
+    "pssTheilSenBytesPerHour": 737237.6784336064,
+    "anonymousTheilSenBytesPerHour": 737270.3085010359,
+    "privateDirtyTheilSenBytesPerHour": 737270.3085010359,
+    "lazyFreeTheilSenBytesPerHour": 0,
+    "anonymousHugePagesTheilSenBytesPerHour": 0,
+    "maximumProcessSwapBytes": 0,
+    "maximumSystemSwapBytes": 0
+  },
+  "workload": {
+    "scheduledOperations": 181503,
+    "completedOperations": 181502,
+    "failedOperations": 0,
+    "transactionAttempts": 36301,
+    "listenerChurns": 30,
+    "recordedErrors": 0,
+    "recordedStalls": 0,
+    "medianIntervalWriteP99Milliseconds": 5.292594000231475,
+    "maximumIntervalWriteP99Milliseconds": 8.053141000214964,
+    "medianIntervalListenerP99Milliseconds": 14.918452999554574,
+    "maximumIntervalListenerP99Milliseconds": 64.69059600005858
+  },
+  "logicalStatePostWarmupTheilSenPerHour": {
+    "currentDocumentEntries": 0,
+    "currentDocumentBytes": 768604.9587416691,
+    "replayDocumentVersionEntries": 0,
+    "replayDocumentVersionBytes": 0,
+    "changeLogEntries": 0,
+    "changeLogBytes": 0,
+    "commitTimeIndexEntries": 0,
+    "commitTimeIndexBytes": 0,
+    "listenerStreams": 0,
+    "listenerTargets": 0,
+    "listenerBytes": 0,
+    "transactionEntries": 0,
+    "transactionBytes": 0,
+    "walEntries": 0,
+    "walBytes": 0
+  },
+  "allocator": {
+    "name": "mimalloc",
+    "runtimeWorkerThreads": 4,
+    "postWarmupActivePageSlopePerHour": 10.069831484167286,
+    "postWarmupAbandonedPageSlopePerHour": 7.081987159247308,
+    "shortStringSixtyFourBytePageSlopePerHour": 0
+  },
+  "notes": [
+    "The verification was intentionally interrupted immediately after 3600 measured seconds, so run-state.json correctly retains its last durable running state and no four-hour summary exists.",
+    "The current-document logical-byte slope is expected live-value growth as fixed seed tokens are replaced; its entry count stays exactly 100000 and all historical and registry structures remain bounded."
+  ]
+}

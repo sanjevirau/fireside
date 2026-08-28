@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 2,
+  "name": "phase-1-endurance",
+  "frozen": true,
+  "frozenAt": "2026-08-28T00:00:00+08:00",
+  "venue": {
+    "host": "sanjevi-linux",
+    "os": "Ubuntu 26.04 LTS",
+    "architecture": "x86_64",
+    "cpu": "AMD Ryzen 5 2600",
+    "logicalCpus": 12,
+    "installedMemoryBytes": 16146874368,
+    "availableMemoryAtPreflightBytes": 14784929792,
+    "rootFilesystem": "NVMe",
+    "rootFreeBytesAtPreflight": 168728793088,
+    "requiredSwapUsedBytesAtStart": 0,
+    "allowedBackgroundServices": [
+      "gnome greeter",
+      "dockerd with zero containers",
+      "Codex remote host"
+    ]
+  },
+  "toolchain": {
+    "rust": "1.98.0",
+    "node": "24.20.0",
+    "npm": "12.0.2",
+    "java": "21.0.2",
+    "officialFirestoreEmulator": "1.22.0"
+  },
+  "sequence": [
+    "fireside-memory-soak",
+    "fireside-disk-soak",
+    "fireside-2gib-import",
+    "fireside-sigkill-recovery",
+    "java-default-soak",
+    "java-2gib-import",
+    "java-crash-observation"
+  ],
+  "soak": {
+    "durationSeconds": 14400,
+    "warmupSeconds": 1800,
+    "rssSampleIntervalSeconds": 10,
+    "metricRollupIntervalSeconds": 10,
+    "targetWritesPerMinute": 3000,
+    "targetWritesPerSecond": 50,
+    "minimumCompletionRatio": 0.99,
+    "maxConcurrentOperations": 12,
+    "transactionSchedule": {
+      "modulus": 5,
+      "remainder": 2,
+      "fraction": 0.2,
+      "hotDocumentCount": 256,
+      "maxAttempts": 5
+    },
+    "targetSchedule": {
+      "largeDocument": {
+        "modulus": 100,
+        "remainder": 0,
+        "fraction": 0.01
+      },
+      "listenerDocument": {
+        "modulus": 10,
+        "remainder": 1,
+        "fraction": 0.1
+      },
+      "ordinarySmallDocumentFraction": 0.89
+    },
+    "workingSet": {
+      "documentCount": 100000,
+      "collection": "phase1_endurance",
+      "smallDocumentCount": 99000,
+      "smallPayloadBytes": 1024,
+      "largeDocumentCount": 1000,
+      "largeDocumentSizesBytes": [
+        102400,
+        307200,
+        512000,
+        716800,
+        921600
+      ],
+      "largeDocumentsPerSize": 200,
+      "rawPayloadBytes": 613376000,
+      "rawPayloadMiB": 584.9609375,
+      "maximumObservedFiresideRssBytes": 8589934592,
+      "listenerDocumentCount": 8,
+      "listenerDocumentIndexes": [0, 1, 2, 3, 4, 5, 6, 7],
+      "seedBatchSize": 500
+    },
+    "listeners": {
+      "activeCount": 8,
+      "kind": "single-document",
+      "churnIntervalSeconds": 120,
+      "churnOrder": "round-robin",
+      "finalDrainSeconds": 30,
+      "requireMonotonicPerDocumentSequence": true,
+      "requireFinalExpectedState": true
+    },
+    "progress": {
+      "maximumNoCompletionSeconds": 10,
+      "unexpectedErrorsAllowed": 0,
+      "listenerMismatchesAllowed": 0
+    },
+    "memory": {
+      "slopeEstimator": "theil-sen",
+      "maximumRssSlopeBytesPerHour": 1048576,
+      "initialMedianWindowStartSeconds": 1800,
+      "initialMedianWindowEndSeconds": 3600,
+      "finalMedianWindowSeconds": 1800,
+      "maximumFinalMedianIncreaseFraction": 0.05,
+      "maximumFinalMedianIncreaseBytesFloor": 16777216,
+      "medianAllowanceRule": "max(five-percent-of-initial,16MiB)",
+      "failFast": {
+        "sustainedWindowSeconds": 3600,
+        "maximumSlopeMultiple": 10,
+        "rule": "abort Fireside soak when trailing post-warm-up Theil-Sen slope is greater than 10x the immutable limit for a full 60-minute window"
+      }
+    },
+    "latency": {
+      "recordPercentiles": [0.5, 0.95, 0.99],
+      "hardMaximumMilliseconds": null
+    },
+    "deterministicSeed": "fireside-phase-1-endurance-v1"
+  },
+  "import": {
+    "format": "official Datastore LevelDB-log plus EntityProto export",
+    "documentCount": 65536,
+    "payloadBytesPerDocument": 32768,
+    "minimumArtifactBytes": 2147483648,
+    "maximumArtifactBytes": 2164260864,
+    "firesideMode": "redb with default-on WAL",
+    "maximumPeakRssBytes": 536870912,
+    "rssSampleIntervalMilliseconds": 250,
+    "verificationRandomReads": 10000,
+    "verificationConcurrency": 32,
+    "verificationSeed": "fireside-phase-1-import-v1",
+    "unexpectedErrorsAllowed": 0
+  },
+  "recovery": {
+    "rounds": 100,
+    "minimumAcknowledgedCommits": 10000,
+    "acknowledgedCommitsBeforeEachKill": 100,
+    "documentsPerAtomicCommit": 2,
+    "randomKillDelayMilliseconds": {
+      "minimum": 1,
+      "maximum": 50
+    },
+    "deterministicSeed": "fireside-phase-1-recovery-v1",
+    "acknowledgedWritesLostAllowed": 0,
+    "partialAtomicCommitsAllowed": 0
+  },
+  "javaComparison": {
+    "gate": false,
+    "soakRuns": [
+      {
+        "name": "default-jvm",
+        "javaToolOptions": null
+      }
+    ],
+    "heapFailureRetry": {
+      "allowedOnlyAfterOutOfMemoryFailure": true,
+      "maximumAdditionalRuns": 1,
+      "javaToolOptions": "-Xmx8g"
+    },
+    "persistenceExpected": false,
+    "crashDataLossIsDesignDifference": true
+  },
+  "telemetry": {
+    "root": "endurance-results",
+    "files": {
+      "rss": "rss.csv",
+      "throughput": "throughput.csv",
+      "latency": "latency.csv",
+      "stalls": "stalls.ndjson",
+      "errors": "errors.ndjson",
+      "events": "events.ndjson",
+      "logicalMemory": "logical-memory.ndjson",
+      "summary": "summary.json",
+      "serverLog": "server.log",
+      "runnerLog": "runner.log"
+    },
+    "flushEveryRecord": true,
+    "hostSystemMetrics": [
+      "MemAvailable",
+      "SwapTotal",
+      "SwapFree",
+      "loadavg"
+    ]
+  },
+  "failurePolicy": {
+    "stopSequenceOnFirstFiresideGateFailure": true,
+    "preserveAllMetricsAndLogs": true,
+    "automaticRetuneOrRerun": false,
+    "tagOnFailure": false
+  }
+}
