@@ -14,6 +14,9 @@ use fireside_grpc_front::FirestoreService;
 use fireside_query_engine::{DatabaseEdition as QueryDatabaseEdition, IndexCatalog, QueryPolicy};
 use fireside_rest_front::router_with_query_policy as rest_router;
 
+#[global_allocator]
+static GLOBAL_ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 const INDEX_CONFIG_PATH: &str = "firestore.indexes.json";
 const IMPORT_BATCH_SIZE: usize = 500;
 
