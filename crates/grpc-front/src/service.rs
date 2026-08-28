@@ -6,7 +6,8 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use fireside_core_store::{
     CommitError, CommitResult, DatabaseName, Document, DocumentKey, FieldTransform, Snapshot,
-    SnapshotError, Store, Timestamp, TransformOperation, Value, Write,
+    SnapshotError, Store, Timestamp, TransactionMemoryRegistration, TransformOperation, Value,
+    Write, database_name_logical_bytes, document_key_logical_bytes,
 };
 use fireside_query_engine::{
     DatabaseEdition, Direction as QueryDirection, FieldPath as QueryFieldPath, IndexConfigError,
@@ -122,6 +123,11 @@ impl FirestoreService {
         let sequence = self.next_id.fetch_add(1, Ordering::Relaxed);
         let mut token = b"fireside-txn-".to_vec();
         token.extend_from_slice(&sequence.to_be_bytes());
+        let accounting = self.store.runtime_memory_accounting().register_transaction(
+            database_name_logical_bytes(&database)
+                .saturating_add(u64::try_from(token.len()).unwrap_or(u64::MAX)),
+            snapshot.logical_memory_usage(),
+        );
         transactions.insert(
             token.clone(),
             TransactionState {
@@ -129,6 +135,7 @@ impl FirestoreService {
                 snapshot,
                 read_only,
                 reads: BTreeMap::new(),
+                accounting,
             },
         );
         Ok(token)
@@ -155,11 +162,14 @@ impl FirestoreService {
         if token.is_empty() {
             return;
         }
-        if let Some(transaction) = self.transaction_states().get_mut(token) {
+        if let Some(transaction) = self.transaction_states().get_mut(token)
+            && let std::collections::btree_map::Entry::Vacant(entry) =
+                transaction.reads.entry(key.clone())
+        {
+            entry.insert(document.map(Document::update_time));
             transaction
-                .reads
-                .entry(key.clone())
-                .or_insert_with(|| document.map(Document::update_time));
+                .accounting
+                .add_read(document_key_logical_bytes(key).saturating_add(13));
         }
     }
 
@@ -285,6 +295,7 @@ struct TransactionState {
     snapshot: Snapshot,
     read_only: bool,
     reads: BTreeMap<DocumentKey, Option<Timestamp>>,
+    accounting: TransactionMemoryRegistration,
 }
 
 #[tonic::async_trait]
@@ -958,6 +969,7 @@ impl Firestore for FirestoreService {
         Ok(Response::new(crate::listen::stream(
             self.store.clone(),
             self.query_policy.clone(),
+            self.store.runtime_memory_accounting(),
             request.into_inner(),
         )))
     }
@@ -1775,6 +1787,10 @@ mod tests {
                 .await
                 .expect("transaction read should succeed");
         }
+        let active_memory = service.store().memory_usage();
+        assert_eq!(active_memory.transactions.transactions, 2);
+        assert_eq!(active_memory.transactions.read_entries, 2);
+        assert_eq!(active_memory.transactions.snapshot_references, 2);
 
         service
             .commit(Request::new(CommitRequest {
@@ -1807,6 +1823,10 @@ mod tests {
             .await
             .expect_err("second transaction should abort");
         assert_eq!(conflict.code(), tonic::Code::Aborted);
+        assert_eq!(
+            service.store().memory_usage().transactions,
+            fireside_core_store::TransactionMemoryUsage::default(),
+        );
     }
 
     async fn seeded_query_service() -> FirestoreService {

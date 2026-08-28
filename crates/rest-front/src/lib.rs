@@ -35,6 +35,7 @@ const RUN_QUERY_ROUTE: &str = "/v1/projects/{project}/databases/{database}/docum
 const TRIGGER_ROUTE: &str = "/emulator/v1/projects/{project}/triggers/{key}";
 const EVENTARC_ROUTE: &str = "/emulator/v1/projects/{project}/eventarcTrigger";
 const CLEAR_ROUTE: &str = "/emulator/v1/projects/{project}/databases/{database}/documents";
+const DEBUG_MEMORY_ROUTE: &str = "/emulator/v1/debug/memory";
 
 /// Creates the HTTP/1 router that shares the Firestore store with gRPC.
 pub fn router(store: Store) -> Router {
@@ -65,6 +66,7 @@ pub fn router_with_query_policy(store: Store, query_policy: QueryPolicy) -> Rout
         )
         .route(EVENTARC_ROUTE, axum::routing::post(post_eventarc_trigger))
         .route(CLEAR_ROUTE, axum::routing::delete(clear_database))
+        .route(DEBUG_MEMORY_ROUTE, get(debug_memory))
         .fallback(project_operation)
         .with_state(RestState {
             store,
@@ -122,6 +124,12 @@ struct ExportRequest {
     database: String,
     export_directory: PathBuf,
     export_name: String,
+}
+
+async fn debug_memory(
+    State(state): State<RestState>,
+) -> Json<fireside_core_store::StoreMemoryUsage> {
+    Json(state.store.memory_usage())
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -1266,6 +1274,21 @@ mod tests {
     #[test]
     fn control_and_document_routes_can_share_one_router() {
         let _router = router(Store::default());
+    }
+
+    #[tokio::test]
+    async fn debug_memory_exposes_versioned_store_accounting() {
+        let state = RestState {
+            store: Store::default(),
+            query_policy: QueryPolicy::default(),
+            control: Arc::new(Mutex::new(ControlState::default())),
+        };
+        let Json(usage) = debug_memory(State(state)).await;
+        assert_eq!(usage.schema_version, 1);
+        assert_eq!(usage.backend, "memory");
+        assert_eq!(usage.current_documents.entries, 0);
+        assert_eq!(usage.listeners.streams, 0);
+        assert_eq!(usage.transactions.transactions, 0);
     }
 
     #[test]

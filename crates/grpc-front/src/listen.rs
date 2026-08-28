@@ -1,7 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
 
-use fireside_core_store::{DatabaseName, Revision, SnapshotError, Store, Timestamp};
+use fireside_core_store::{
+    DatabaseName, ListenerMemoryRegistration, Revision, RuntimeMemoryAccounting, SnapshotError,
+    Store, Timestamp,
+};
 use fireside_query_engine::QueryPolicy;
 use fireside_watch_broker::{
     ChangeBatch, ChangeKind, TargetSpec, WatchChange, WatchDocument, WatchTarget,
@@ -55,20 +58,23 @@ struct InitialTarget {
 pub(crate) fn stream(
     store: Store,
     query_policy: QueryPolicy,
+    memory_accounting: RuntimeMemoryAccounting,
     input: Streaming<ListenRequest>,
 ) -> ResponseStream<ListenResponse> {
     let (sender, receiver) = mpsc::channel(RESPONSE_BUFFER);
-    tokio::spawn(run(store, query_policy, input, sender));
+    tokio::spawn(run(store, query_policy, memory_accounting, input, sender));
     Box::pin(ReceiverStream::new(receiver))
 }
 
 async fn run(
     store: Store,
     query_policy: QueryPolicy,
+    memory_accounting: RuntimeMemoryAccounting,
     mut input: Streaming<ListenRequest>,
     sender: mpsc::Sender<Result<ListenResponse, Status>>,
 ) {
     let mut targets = BTreeMap::<i32, WatchTarget>::new();
+    let memory_registration = memory_accounting.register_listener_stream();
     let mut next_assigned_id = 1;
     let mut poll = interval(POLL_INTERVAL);
     poll.set_missed_tick_behavior(MissedTickBehavior::Skip);
@@ -89,6 +95,7 @@ async fn run(
                             let _ = sender.send(Err(error)).await;
                             break;
                         }
+                        record_target_memory(&memory_registration, &targets);
                     }
                     Ok(None) => break,
                     Err(error) => {
@@ -102,9 +109,31 @@ async fn run(
                     let _ = sender.send(Err(error)).await;
                     break;
                 }
+                record_target_memory(&memory_registration, &targets);
             }
         }
     }
+}
+
+fn record_target_memory(
+    registration: &ListenerMemoryRegistration,
+    targets: &BTreeMap<i32, WatchTarget>,
+) {
+    let (documents, logical_bytes) =
+        targets
+            .values()
+            .fold((0_u64, 0_u64), |(documents, logical_bytes), target| {
+                let usage = target.logical_memory_usage();
+                (
+                    documents.saturating_add(usage.entries),
+                    logical_bytes.saturating_add(usage.logical_bytes),
+                )
+            });
+    registration.update(
+        u64::try_from(targets.len()).unwrap_or(u64::MAX),
+        documents,
+        logical_bytes,
+    );
 }
 
 async fn handle_request(

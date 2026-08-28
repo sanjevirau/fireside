@@ -15,7 +15,9 @@ use redb::{
 
 use super::{
     Change, CommitError, CommitPlan, CommitResult, DatabaseName, Document, DocumentKey,
-    ResetRequired, Revision, Snapshot, SnapshotError, State, StoreOptions, Timestamp, Write,
+    ListenerMemoryUsage, LogicalMemoryUsage, ResetRequired, Revision, Snapshot, SnapshotError,
+    State, StoreMemoryUsage, StoreOptions, Timestamp, TransactionMemoryUsage, Write,
+    document_entry_logical_bytes,
 };
 
 const DOCUMENTS: TableDefinition<&[u8], &[u8]> = TableDefinition::new("documents_v1");
@@ -26,7 +28,7 @@ const JOURNAL_FILE: &str = "fireside.wal";
 const FRAME_MAGIC: [u8; 8] = *b"FSWAL001";
 const FRAME_HEADER_LEN: usize = 16;
 const MAX_WAL_RECORD_BYTES: usize = 64 * 1024 * 1024;
-type LoadedDatabase = (Revision, Timestamp);
+type LoadedDatabase = (Revision, Timestamp, LogicalMemoryUsage);
 
 /// Disk-store resource and durability settings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -78,9 +80,14 @@ impl DiskStore {
             journal.checkpoint()?;
         }
 
-        let (revision, last_commit_time) = load_database(&database)?;
-        let memory =
-            State::from_persisted(options.store, revision, last_commit_time, im::OrdMap::new());
+        let (revision, last_commit_time, current_documents) = load_database(&database)?;
+        let memory = State::from_persisted(
+            options.store,
+            revision,
+            last_commit_time,
+            im::OrdMap::new(),
+            current_documents,
+        );
 
         Ok(Self {
             inner: Arc::new(Mutex::new(DiskState {
@@ -99,6 +106,7 @@ impl DiskStore {
         Snapshot::disk(
             state.memory.revision,
             DiskSnapshot::open(&state.database, im::OrdMap::new()),
+            state.memory.current_documents,
         )
     }
 
@@ -109,6 +117,7 @@ impl DiskStore {
         Ok(Snapshot::disk(
             revision,
             DiskSnapshot::open(&state.database, overlay),
+            state.memory.document_usage_at_revision(revision),
         ))
     }
 
@@ -132,6 +141,7 @@ impl DiskStore {
         Ok(Snapshot::disk(
             revision,
             DiskSnapshot::open(&state.database, overlay),
+            state.memory.document_usage_at_revision(revision),
         ))
     }
 
@@ -202,6 +212,17 @@ impl DiskStore {
     #[must_use]
     pub fn retained_change_count(&self) -> usize {
         self.state().memory.change_log.len()
+    }
+
+    pub(crate) fn memory_usage(
+        &self,
+        listeners: ListenerMemoryUsage,
+        transactions: TransactionMemoryUsage,
+    ) -> StoreMemoryUsage {
+        let state = self.state();
+        state
+            .memory
+            .memory_usage("disk", state.journal.is_some(), listeners, transactions)
     }
 
     fn state(&self) -> MutexGuard<'_, DiskState> {
@@ -385,17 +406,18 @@ fn initialize_database(database: &Database) -> Result<(), DiskError> {
 
 fn load_database(database: &Database) -> Result<LoadedDatabase, DiskError> {
     let transaction = database.begin_read().map_err(DiskError::redb)?;
-    let mut document_count = 0_u64;
+    let mut current_documents = LogicalMemoryUsage::default();
     {
         let table = transaction.open_table(DOCUMENTS).map_err(DiskError::redb)?;
         let entries = table.iter().map_err(DiskError::redb)?;
         for entry in entries {
             let (key, document) = entry.map_err(DiskError::redb)?;
-            let _: DocumentKey = decode(key.value())?;
-            let _: Document = decode(document.value())?;
-            document_count = document_count
-                .checked_add(1)
-                .ok_or_else(|| DiskError::Corrupt("document count overflows u64".to_owned()))?;
+            let key: DocumentKey = decode(key.value())?;
+            let document: Document = decode(document.value())?;
+            current_documents.entries = current_documents.entries.saturating_add(1);
+            current_documents.logical_bytes = current_documents
+                .logical_bytes
+                .saturating_add(document_entry_logical_bytes(&key, &document));
         }
     }
 
@@ -409,10 +431,11 @@ fn load_database(database: &Database) -> Result<LoadedDatabase, DiskError> {
     };
 
     match persisted_state {
-        Some(state) => Ok((state.revision, state.last_commit_time)),
-        None if document_count == 0 => Ok((
+        Some(state) => Ok((state.revision, state.last_commit_time, current_documents)),
+        None if current_documents.entries == 0 => Ok((
             Revision::ZERO,
             Timestamp::new(0, 0).expect("zero nanoseconds are valid"),
+            current_documents,
         )),
         None => Err(DiskError::Corrupt(
             "document table exists without store metadata".to_owned(),

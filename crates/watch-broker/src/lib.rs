@@ -5,7 +5,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use fireside_core_store::{DatabaseName, Document, DocumentKey, Fields, Revision, Snapshot};
+use fireside_core_store::{
+    DatabaseName, Document, DocumentKey, Fields, LogicalMemoryUsage, Revision, Snapshot,
+    database_name_logical_bytes, document_key_logical_bytes, fields_logical_bytes,
+};
 use fireside_query_engine::{DatabaseEdition, Query, QueryError, execute};
 
 /// A query or explicit document set attached to a listen target.
@@ -138,6 +141,28 @@ impl WatchTarget {
     /// Current target document keys in stable resource-name order.
     pub fn document_keys(&self) -> impl Iterator<Item = &DocumentKey> {
         self.documents.keys()
+    }
+
+    /// Logical bytes retained by this target's specification and visible view.
+    #[must_use]
+    pub fn logical_memory_usage(&self) -> LogicalMemoryUsage {
+        let specification_bytes = match &self.spec {
+            TargetSpec::Query(_) => 0,
+            TargetSpec::Documents(keys) => keys.iter().fold(0_u64, |total, key| {
+                total.saturating_add(document_key_logical_bytes(key))
+            }),
+        };
+        let visible_bytes = self.documents.values().fold(0_u64, |total, document| {
+            total
+                .saturating_add(document_key_logical_bytes(&document.key))
+                .saturating_add(fields_logical_bytes(&document.fields))
+        });
+        LogicalMemoryUsage::new(
+            u64::try_from(self.documents.len()).unwrap_or(u64::MAX),
+            database_name_logical_bytes(&self.database)
+                .saturating_add(specification_bytes)
+                .saturating_add(visible_bytes),
+        )
     }
 
     /// Re-evaluates the target and returns only transitions from its prior view.

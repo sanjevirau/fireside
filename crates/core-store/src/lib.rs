@@ -12,6 +12,7 @@ use std::collections::{BTreeMap, VecDeque};
 use std::error::Error;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -434,6 +435,258 @@ pub struct StoreOptions {
     pub max_change_log_entries: usize,
 }
 
+/// A deterministic logical-size measurement for one retained subsystem.
+///
+/// Logical bytes count user-controlled key and value bytes plus fixed-width
+/// scalar values. They intentionally exclude allocator and container overhead,
+/// so repeated samples remain comparable across allocators and platforms.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LogicalMemoryUsage {
+    /// Live logical entries in the subsystem.
+    pub entries: u64,
+    /// Live logical bytes owned or referenced by those entries.
+    pub logical_bytes: u64,
+}
+
+impl LogicalMemoryUsage {
+    /// Creates a logical usage measurement.
+    #[must_use]
+    pub const fn new(entries: u64, logical_bytes: u64) -> Self {
+        Self {
+            entries,
+            logical_bytes,
+        }
+    }
+}
+
+/// Listener registry accounting aggregated across all active Listen streams.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListenerMemoryUsage {
+    /// Active Listen streams.
+    pub streams: u64,
+    /// Active targets across those streams.
+    pub targets: u64,
+    /// Target-visible document entries.
+    pub documents: u64,
+    /// Logical target specification and visible-document bytes.
+    pub logical_bytes: u64,
+}
+
+/// Transaction registry accounting aggregated across active transactions.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TransactionMemoryUsage {
+    /// Active transaction entries.
+    pub transactions: u64,
+    /// Document reads retained for conflict detection.
+    pub read_entries: u64,
+    /// Transaction-owned token, database, and read-set bytes.
+    pub logical_bytes: u64,
+    /// Immutable snapshot roots referenced by active transactions.
+    pub snapshot_references: u64,
+    /// Documents logically visible through all referenced snapshots.
+    pub snapshot_document_entries: u64,
+    /// Document bytes logically visible through all referenced snapshots.
+    pub snapshot_logical_bytes: u64,
+}
+
+/// Permanent internal memory accounting exposed by the emulator debug API.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoreMemoryUsage {
+    /// Debug-memory schema version.
+    pub schema_version: u32,
+    /// Storage backend (`memory` or `disk`).
+    pub backend: &'static str,
+    /// Current store revision.
+    pub revision: u64,
+    /// Oldest exclusive revision accepted by the replay window.
+    pub change_floor_revision: u64,
+    /// Oldest retained commit-time index revision.
+    pub history_floor_revision: u64,
+    /// Configured maximum number of replay changes.
+    pub maximum_change_log_entries: u64,
+    /// Current document versions addressable by normal reads.
+    pub current_documents: LogicalMemoryUsage,
+    /// Distinct document versions referenced by the replay window. This may
+    /// include a current version and therefore is not summed with
+    /// `current_documents` as a physical-byte total.
+    pub replay_document_versions: LogicalMemoryUsage,
+    /// Change-log metadata, excluding document payloads counted above.
+    pub change_log: LogicalMemoryUsage,
+    /// Commit timestamp index entries.
+    pub commit_time_index: LogicalMemoryUsage,
+    /// Active listener and target state.
+    pub listeners: ListenerMemoryUsage,
+    /// Active transaction and snapshot state.
+    pub transactions: TransactionMemoryUsage,
+    /// Resident application-level WAL buffers. The current synchronous journal
+    /// implementation has no persistent userspace buffer between commits.
+    pub wal_buffers: LogicalMemoryUsage,
+    /// Whether the application-level write-ahead journal is enabled.
+    pub wal_enabled: bool,
+}
+
+/// Shared registry for logical state retained outside the core document map.
+#[derive(Clone, Default)]
+pub struct RuntimeMemoryAccounting {
+    inner: Arc<Mutex<RuntimeMemoryState>>,
+    next_id: Arc<AtomicU64>,
+}
+
+impl Debug for RuntimeMemoryAccounting {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("RuntimeMemoryAccounting")
+            .finish_non_exhaustive()
+    }
+}
+
+impl RuntimeMemoryAccounting {
+    /// Registers one live Listen stream. Dropping the returned registration
+    /// removes all target accounting for that stream.
+    #[must_use]
+    pub fn register_listener_stream(&self) -> ListenerMemoryRegistration {
+        let id = self.next_id.fetch_add(1, AtomicOrdering::Relaxed);
+        lock(&self.inner)
+            .listeners
+            .insert(id, ListenerStreamMemory::default());
+        ListenerMemoryRegistration {
+            id,
+            accounting: self.clone(),
+        }
+    }
+
+    /// Registers one transaction snapshot. Dropping the returned registration
+    /// removes the transaction and its read-set accounting.
+    #[must_use]
+    pub fn register_transaction(
+        &self,
+        owned_logical_bytes: u64,
+        snapshot: LogicalMemoryUsage,
+    ) -> TransactionMemoryRegistration {
+        let id = self.next_id.fetch_add(1, AtomicOrdering::Relaxed);
+        lock(&self.inner).transactions.insert(
+            id,
+            TransactionStateMemory {
+                read_entries: 0,
+                logical_bytes: owned_logical_bytes,
+                snapshot,
+            },
+        );
+        TransactionMemoryRegistration {
+            id,
+            accounting: self.clone(),
+        }
+    }
+
+    fn snapshot(&self) -> (ListenerMemoryUsage, TransactionMemoryUsage) {
+        let state = lock(&self.inner);
+        let listeners = state.listeners.values().fold(
+            ListenerMemoryUsage {
+                streams: usize_to_u64(state.listeners.len()),
+                ..ListenerMemoryUsage::default()
+            },
+            |mut total, stream| {
+                total.targets = total.targets.saturating_add(stream.targets);
+                total.documents = total.documents.saturating_add(stream.documents);
+                total.logical_bytes = total.logical_bytes.saturating_add(stream.logical_bytes);
+                total
+            },
+        );
+        let transactions = state.transactions.values().fold(
+            TransactionMemoryUsage {
+                transactions: usize_to_u64(state.transactions.len()),
+                ..TransactionMemoryUsage::default()
+            },
+            |mut total, transaction| {
+                total.read_entries = total.read_entries.saturating_add(transaction.read_entries);
+                total.logical_bytes = total
+                    .logical_bytes
+                    .saturating_add(transaction.logical_bytes);
+                total.snapshot_references = total.snapshot_references.saturating_add(1);
+                total.snapshot_document_entries = total
+                    .snapshot_document_entries
+                    .saturating_add(transaction.snapshot.entries);
+                total.snapshot_logical_bytes = total
+                    .snapshot_logical_bytes
+                    .saturating_add(transaction.snapshot.logical_bytes);
+                total
+            },
+        );
+        (listeners, transactions)
+    }
+}
+
+/// RAII registration for one Listen stream's retained target state.
+pub struct ListenerMemoryRegistration {
+    id: u64,
+    accounting: RuntimeMemoryAccounting,
+}
+
+impl ListenerMemoryRegistration {
+    /// Replaces the stream's current target accounting.
+    pub fn update(&self, targets: u64, documents: u64, logical_bytes: u64) {
+        if let Some(stream) = lock(&self.accounting.inner).listeners.get_mut(&self.id) {
+            *stream = ListenerStreamMemory {
+                targets,
+                documents,
+                logical_bytes,
+            };
+        }
+    }
+}
+
+impl Drop for ListenerMemoryRegistration {
+    fn drop(&mut self) {
+        lock(&self.accounting.inner).listeners.remove(&self.id);
+    }
+}
+
+/// RAII registration for one live transaction and its conflict read set.
+pub struct TransactionMemoryRegistration {
+    id: u64,
+    accounting: RuntimeMemoryAccounting,
+}
+
+impl TransactionMemoryRegistration {
+    /// Adds a newly retained conflict-read entry.
+    pub fn add_read(&self, logical_bytes: u64) {
+        if let Some(transaction) = lock(&self.accounting.inner).transactions.get_mut(&self.id) {
+            transaction.read_entries = transaction.read_entries.saturating_add(1);
+            transaction.logical_bytes = transaction.logical_bytes.saturating_add(logical_bytes);
+        }
+    }
+}
+
+impl Drop for TransactionMemoryRegistration {
+    fn drop(&mut self) {
+        lock(&self.accounting.inner).transactions.remove(&self.id);
+    }
+}
+
+#[derive(Debug, Default)]
+struct RuntimeMemoryState {
+    listeners: BTreeMap<u64, ListenerStreamMemory>,
+    transactions: BTreeMap<u64, TransactionStateMemory>,
+}
+
+#[derive(Debug, Default)]
+struct ListenerStreamMemory {
+    targets: u64,
+    documents: u64,
+    logical_bytes: u64,
+}
+
+#[derive(Debug)]
+struct TransactionStateMemory {
+    read_entries: u64,
+    logical_bytes: u64,
+    snapshot: LogicalMemoryUsage,
+}
+
 impl Default for StoreOptions {
     fn default() -> Self {
         Self {
@@ -446,6 +699,7 @@ impl Default for StoreOptions {
 #[derive(Clone)]
 pub struct Store {
     backend: StoreBackend,
+    memory_accounting: RuntimeMemoryAccounting,
 }
 
 #[derive(Clone)]
@@ -460,6 +714,7 @@ impl Store {
     pub fn new(options: StoreOptions) -> Self {
         Self {
             backend: StoreBackend::Memory(Arc::new(Mutex::new(State::new(options)))),
+            memory_accounting: RuntimeMemoryAccounting::default(),
         }
     }
 
@@ -467,6 +722,7 @@ impl Store {
     pub fn open_disk(directory: impl AsRef<Path>, options: DiskOptions) -> Result<Self, DiskError> {
         DiskStore::open(directory, options).map(|store| Self {
             backend: StoreBackend::Disk(store),
+            memory_accounting: RuntimeMemoryAccounting::default(),
         })
     }
 
@@ -476,7 +732,11 @@ impl Store {
         match &self.backend {
             StoreBackend::Memory(inner) => {
                 let state = lock(inner);
-                Snapshot::memory(state.revision, state.documents.clone())
+                Snapshot::memory(
+                    state.revision,
+                    state.documents.clone(),
+                    state.current_documents,
+                )
             }
             StoreBackend::Disk(store) => store.snapshot(),
         }
@@ -557,6 +817,24 @@ impl Store {
             StoreBackend::Disk(store) => store.retained_change_count(),
         }
     }
+
+    /// Shared accounting registry used by transaction and listener owners.
+    #[must_use]
+    pub fn runtime_memory_accounting(&self) -> RuntimeMemoryAccounting {
+        self.memory_accounting.clone()
+    }
+
+    /// Captures one internally consistent logical-memory snapshot.
+    #[must_use]
+    pub fn memory_usage(&self) -> StoreMemoryUsage {
+        let (listeners, transactions) = self.memory_accounting.snapshot();
+        match &self.backend {
+            StoreBackend::Memory(inner) => {
+                lock(inner).memory_usage("memory", false, listeners, transactions)
+            }
+            StoreBackend::Disk(store) => store.memory_usage(listeners, transactions),
+        }
+    }
 }
 
 impl Debug for Store {
@@ -590,6 +868,7 @@ impl Default for Store {
 pub struct Snapshot {
     revision: Revision,
     documents: SnapshotDocuments,
+    logical_usage: LogicalMemoryUsage,
 }
 
 #[derive(Clone)]
@@ -613,17 +892,27 @@ impl Debug for Snapshot {
 }
 
 impl Snapshot {
-    fn memory(revision: Revision, documents: OrdMap<DocumentKey, Arc<Document>>) -> Self {
+    fn memory(
+        revision: Revision,
+        documents: OrdMap<DocumentKey, Arc<Document>>,
+        logical_usage: LogicalMemoryUsage,
+    ) -> Self {
         Self {
             revision,
             documents: SnapshotDocuments::Memory(documents),
+            logical_usage,
         }
     }
 
-    fn disk(revision: Revision, documents: disk::DiskSnapshot) -> Self {
+    fn disk(
+        revision: Revision,
+        documents: disk::DiskSnapshot,
+        logical_usage: LogicalMemoryUsage,
+    ) -> Self {
         Self {
             revision,
             documents: SnapshotDocuments::Disk(documents),
+            logical_usage,
         }
     }
 
@@ -631,6 +920,12 @@ impl Snapshot {
     #[must_use]
     pub const fn revision(&self) -> Revision {
         self.revision
+    }
+
+    /// Documents and logical bytes visible through this immutable snapshot.
+    #[must_use]
+    pub const fn logical_memory_usage(&self) -> LogicalMemoryUsage {
+        self.logical_usage
     }
 
     /// Reads one document from this snapshot.
@@ -829,12 +1124,27 @@ struct State {
     change_floor: Revision,
     commit_times: VecDeque<CommitPoint>,
     history_floor: CommitPoint,
+    current_documents: LogicalMemoryUsage,
+    replay_versions: BTreeMap<DocumentVersion, RetainedVersion>,
+    change_log_logical_bytes: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct CommitPoint {
     revision: Revision,
     commit_time: Timestamp,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct DocumentVersion {
+    key: DocumentKey,
+    update_time: Timestamp,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct RetainedVersion {
+    references: u64,
+    logical_bytes: u64,
 }
 
 impl State {
@@ -858,6 +1168,9 @@ impl State {
                     nanos: 0,
                 },
             },
+            current_documents: LogicalMemoryUsage::default(),
+            replay_versions: BTreeMap::new(),
+            change_log_logical_bytes: 0,
         }
     }
 
@@ -866,6 +1179,7 @@ impl State {
         revision: Revision,
         last_commit_time: Timestamp,
         documents: OrdMap<DocumentKey, Arc<Document>>,
+        current_documents: LogicalMemoryUsage,
     ) -> Self {
         options.max_change_log_entries = options.max_change_log_entries.max(1);
         Self {
@@ -880,6 +1194,9 @@ impl State {
                 revision,
                 commit_time: last_commit_time,
             },
+            current_documents,
+            replay_versions: BTreeMap::new(),
+            change_log_logical_bytes: 0,
         }
     }
 
@@ -948,6 +1265,7 @@ impl State {
         self.revision = result.revision;
         self.last_commit_time = result.commit_time;
         for change in changes {
+            apply_document_transition(&mut self.current_documents, &change);
             self.push_change(change);
         }
         self.push_commit_point(CommitPoint {
@@ -986,7 +1304,11 @@ impl State {
                 }
             }
         }
-        Ok(Snapshot::memory(revision, documents))
+        Ok(Snapshot::memory(
+            revision,
+            documents,
+            self.document_usage_at_revision(revision),
+        ))
     }
 
     fn snapshot_at_time(&self, read_time: Timestamp) -> Result<Snapshot, SnapshotError> {
@@ -1022,9 +1344,19 @@ impl State {
     }
 
     fn push_change(&mut self, change: Change) {
+        self.change_log_logical_bytes = self
+            .change_log_logical_bytes
+            .saturating_add(change_metadata_logical_bytes(&change));
+        self.add_replay_version(&change.key, change.before.as_deref());
+        self.add_replay_version(&change.key, change.after.as_deref());
         self.change_log.push_back(change);
         while self.change_log.len() > self.options.max_change_log_entries {
             if let Some(removed) = self.change_log.pop_front() {
+                self.change_log_logical_bytes = self
+                    .change_log_logical_bytes
+                    .saturating_sub(change_metadata_logical_bytes(&removed));
+                self.remove_replay_version(&removed.key, removed.before.as_deref());
+                self.remove_replay_version(&removed.key, removed.after.as_deref());
                 self.change_floor = self.change_floor.max(removed.revision);
             }
         }
@@ -1047,6 +1379,95 @@ impl State {
             }
         }
     }
+
+    fn add_replay_version(&mut self, key: &DocumentKey, document: Option<&Document>) {
+        let Some(document) = document else {
+            return;
+        };
+        let version = DocumentVersion {
+            key: key.clone(),
+            update_time: document.update_time(),
+        };
+        let logical_bytes = document_entry_logical_bytes(key, document);
+        self.replay_versions
+            .entry(version)
+            .and_modify(|retained| {
+                retained.references = retained.references.saturating_add(1);
+            })
+            .or_insert(RetainedVersion {
+                references: 1,
+                logical_bytes,
+            });
+    }
+
+    fn remove_replay_version(&mut self, key: &DocumentKey, document: Option<&Document>) {
+        let Some(document) = document else {
+            return;
+        };
+        let version = DocumentVersion {
+            key: key.clone(),
+            update_time: document.update_time(),
+        };
+        let remove = self
+            .replay_versions
+            .get_mut(&version)
+            .is_some_and(|retained| {
+                retained.references = retained.references.saturating_sub(1);
+                retained.references == 0
+            });
+        if remove {
+            self.replay_versions.remove(&version);
+        }
+    }
+
+    fn document_usage_at_revision(&self, revision: Revision) -> LogicalMemoryUsage {
+        let mut usage = self.current_documents;
+        for change in self
+            .change_log
+            .iter()
+            .rev()
+            .filter(|change| change.revision > revision)
+        {
+            apply_reverse_document_transition(&mut usage, change);
+        }
+        usage
+    }
+
+    fn memory_usage(
+        &self,
+        backend: &'static str,
+        wal_enabled: bool,
+        listeners: ListenerMemoryUsage,
+        transactions: TransactionMemoryUsage,
+    ) -> StoreMemoryUsage {
+        StoreMemoryUsage {
+            schema_version: 1,
+            backend,
+            revision: self.revision.get(),
+            change_floor_revision: self.change_floor.get(),
+            history_floor_revision: self.history_floor.revision.get(),
+            maximum_change_log_entries: usize_to_u64(self.options.max_change_log_entries),
+            current_documents: self.current_documents,
+            replay_document_versions: LogicalMemoryUsage {
+                entries: usize_to_u64(self.replay_versions.len()),
+                logical_bytes: self.replay_versions.values().fold(0_u64, |total, version| {
+                    total.saturating_add(version.logical_bytes)
+                }),
+            },
+            change_log: LogicalMemoryUsage {
+                entries: usize_to_u64(self.change_log.len()),
+                logical_bytes: self.change_log_logical_bytes,
+            },
+            commit_time_index: LogicalMemoryUsage {
+                entries: usize_to_u64(self.commit_times.len()),
+                logical_bytes: usize_to_u64(self.commit_times.len()).saturating_mul(20),
+            },
+            listeners,
+            transactions,
+            wal_buffers: LogicalMemoryUsage::default(),
+            wal_enabled,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -1054,6 +1475,97 @@ struct CommitPlan {
     result: CommitResult,
     documents: OrdMap<DocumentKey, Arc<Document>>,
     changes: Vec<Change>,
+}
+
+/// Logical bytes in a database resource name.
+#[must_use]
+pub fn database_name_logical_bytes(database: &DatabaseName) -> u64 {
+    usize_to_u64(database.project_id.len()).saturating_add(usize_to_u64(database.database_id.len()))
+}
+
+/// Logical bytes in a document resource key.
+#[must_use]
+pub fn document_key_logical_bytes(key: &DocumentKey) -> u64 {
+    database_name_logical_bytes(&key.database).saturating_add(usize_to_u64(key.path.len()))
+}
+
+/// Logical user-value bytes in a stored document, excluding its resource key.
+#[must_use]
+pub fn document_logical_bytes(document: &Document) -> u64 {
+    fields_logical_bytes(&document.fields).saturating_add(24)
+}
+
+/// Logical bytes in a Firestore field map.
+#[must_use]
+pub fn fields_logical_bytes(fields: &Fields) -> u64 {
+    fields.iter().fold(0_u64, |total, (name, value)| {
+        total
+            .saturating_add(usize_to_u64(name.len()))
+            .saturating_add(value_logical_bytes(value))
+    })
+}
+
+fn value_logical_bytes(value: &Value) -> u64 {
+    match value {
+        Value::Null => 0,
+        Value::Boolean(_) => 1,
+        Value::Integer(_) | Value::Double(_) => 8,
+        Value::Timestamp(_) => 12,
+        Value::String(value) | Value::Reference(value) => usize_to_u64(value.len()),
+        Value::Bytes(value) => usize_to_u64(value.len()),
+        Value::GeoPoint { .. } => 16,
+        Value::Array(values) => values.iter().fold(0_u64, |total, value| {
+            total.saturating_add(value_logical_bytes(value))
+        }),
+        Value::Map(values) => values.iter().fold(0_u64, |total, (name, value)| {
+            total
+                .saturating_add(usize_to_u64(name.len()))
+                .saturating_add(value_logical_bytes(value))
+        }),
+        Value::Vector(values) => usize_to_u64(values.len()).saturating_mul(8),
+    }
+}
+
+fn document_entry_logical_bytes(key: &DocumentKey, document: &Document) -> u64 {
+    document_key_logical_bytes(key).saturating_add(document_logical_bytes(document))
+}
+
+fn change_metadata_logical_bytes(change: &Change) -> u64 {
+    document_key_logical_bytes(&change.key).saturating_add(10)
+}
+
+fn apply_document_transition(usage: &mut LogicalMemoryUsage, change: &Change) {
+    if let Some(before) = &change.before {
+        usage.entries = usage.entries.saturating_sub(1);
+        usage.logical_bytes = usage
+            .logical_bytes
+            .saturating_sub(document_entry_logical_bytes(&change.key, before));
+    }
+    if let Some(after) = &change.after {
+        usage.entries = usage.entries.saturating_add(1);
+        usage.logical_bytes = usage
+            .logical_bytes
+            .saturating_add(document_entry_logical_bytes(&change.key, after));
+    }
+}
+
+fn apply_reverse_document_transition(usage: &mut LogicalMemoryUsage, change: &Change) {
+    if let Some(after) = &change.after {
+        usage.entries = usage.entries.saturating_sub(1);
+        usage.logical_bytes = usage
+            .logical_bytes
+            .saturating_sub(document_entry_logical_bytes(&change.key, after));
+    }
+    if let Some(before) = &change.before {
+        usage.entries = usage.entries.saturating_add(1);
+        usage.logical_bytes = usage
+            .logical_bytes
+            .saturating_add(document_entry_logical_bytes(&change.key, before));
+    }
+}
+
+fn usize_to_u64(value: usize) -> u64 {
+    u64::try_from(value).unwrap_or(u64::MAX)
 }
 
 fn apply_write(
@@ -1839,6 +2351,71 @@ mod tests {
             "persistent roots retained {retained_values} payloads"
         );
         assert_eq!(store.retained_change_count(), 1);
+    }
+
+    #[test]
+    fn logical_accounting_pins_large_document_replay_retention() {
+        const CHANGE_LIMIT: usize = 5;
+        const MAXIMUM_PAYLOAD_BYTES: u64 = 900 * 1_024;
+        let store = Store::new(StoreOptions {
+            max_change_log_entries: CHANGE_LIMIT,
+        });
+        let key = key(&database("(default)"), "items/large-hot");
+        let sizes = [100, 300, 500, 700, 900];
+
+        for index in 0..100 {
+            let size_kib = sizes[index % sizes.len()];
+            store
+                .commit(&[Write::Set {
+                    key: key.clone(),
+                    fields: fields(Value::Bytes(Arc::from(vec![0x4c; size_kib * 1_024]))),
+                    transforms: Vec::new(),
+                    precondition: Precondition::None,
+                }])
+                .expect("large update should commit");
+        }
+
+        let usage = store.memory_usage();
+        assert_eq!(usage.current_documents.entries, 1);
+        assert_eq!(
+            usage.change_log.entries,
+            u64::try_from(CHANGE_LIMIT).unwrap()
+        );
+        assert_eq!(usage.replay_document_versions.entries, 6);
+        assert!(usage.change_floor_revision > 0);
+        assert!(
+            usage.replay_document_versions.logical_bytes
+                <= 6 * (MAXIMUM_PAYLOAD_BYTES + document_key_logical_bytes(&key) + 64),
+            "bounded replay window retained {} logical bytes",
+            usage.replay_document_versions.logical_bytes,
+        );
+    }
+
+    #[test]
+    fn runtime_registrations_leave_no_accounting_after_drop() {
+        let store = Store::default();
+        let accounting = store.runtime_memory_accounting();
+        let listener = accounting.register_listener_stream();
+        listener.update(2, 3, 400);
+        let transaction = accounting.register_transaction(70, LogicalMemoryUsage::new(5, 600));
+        transaction.add_read(30);
+
+        let active = store.memory_usage();
+        assert_eq!(active.listeners.streams, 1);
+        assert_eq!(active.listeners.targets, 2);
+        assert_eq!(active.listeners.documents, 3);
+        assert_eq!(active.listeners.logical_bytes, 400);
+        assert_eq!(active.transactions.transactions, 1);
+        assert_eq!(active.transactions.read_entries, 1);
+        assert_eq!(active.transactions.logical_bytes, 100);
+        assert_eq!(active.transactions.snapshot_document_entries, 5);
+        assert_eq!(active.transactions.snapshot_logical_bytes, 600);
+
+        drop(listener);
+        drop(transaction);
+        let released = store.memory_usage();
+        assert_eq!(released.listeners, ListenerMemoryUsage::default());
+        assert_eq!(released.transactions, TransactionMemoryUsage::default());
     }
 
     #[test]
