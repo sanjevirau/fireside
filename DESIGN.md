@@ -238,6 +238,19 @@ narrows the causal experiment to worker/thread-heap multiplication; it does not
 yet identify an owning Rust allocation path and therefore does not justify a
 speculative production fix or gate rerun.
 
+A controlled rerun with `TOKIO_WORKER_THREADS=1` kept every other input fixed
+and reduced that slope by 91.81%, to 1.931 MiB/hour, proving worker-heap
+multiplication is causal but not sufficient. Only the 64-byte allocator page
+class retained a non-zero slope in the one-worker run: 36.667 64 KiB
+pages/hour. Its page count correlated 0.9935 with current-document logical
+bytes. The frozen workload replaces the four-byte seed operation token with a
+22-byte live token while keeping ordinary document payload and field names
+fixed, and Fireside represents each string as a separately allocated
+`Arc<str>`. The eligible production fix is therefore a bounded default runtime
+worker policy plus inline storage for short Firestore strings, with an explicit
+worker override and unchanged wire/disk/query semantics. Neither change is a
+gate result until the same one-hour verification passes.
+
 Phase 1 must measure resident memory during a multi-hour torture run with
 thousands of writes per minute, multiple active listeners, and mixed
 transactions. The gate requires a flat post-warmup trend, evidence that old

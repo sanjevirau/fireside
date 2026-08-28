@@ -20,9 +20,12 @@ target, not the specification.
 > showed a 26.559 MiB/hour RSS slope with bounded logical store, listener,
 > transaction, and WAL state. Allocator-page telemetry then localized the
 > remaining 23.573 MiB/hour signal to anonymous private-dirty active mimalloc
-> size-class pages, not abandoned pages or retained logical state. The owning
-> allocation path is still under controlled diagnosis. No new gate was
-> launched and no performance gate is currently claimed.
+> size-class pages, not abandoned pages or retained logical state. A controlled
+> one-worker run reduced the slope by 91.81% but still failed at 1.931 MiB/hour;
+> its sole growing page class tracks the frozen workload's short live string
+> values. The attributed runtime-worker and short-string fixes are under
+> verification. No new gate was launched and no performance gate is currently
+> claimed.
 
 The approved Phase 1 endurance gate is frozen in
 [`benchmarks/phase-1-endurance.json`](benchmarks/phase-1-endurance.json). Its
