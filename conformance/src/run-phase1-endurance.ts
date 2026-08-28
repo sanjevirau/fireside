@@ -15,6 +15,7 @@ import { promisify } from "node:util";
 import { createHash } from "node:crypto";
 
 import { runImportGate } from "./endurance/import-gate.ts";
+import { requireGate } from "./endurance/gate.ts";
 import { observeJavaCrash } from "./endurance/java-crash.ts";
 import {
   loadManifest,
@@ -278,23 +279,6 @@ async function preflightHost(
     artifactBytes: artifact.size,
     toolchain: { rust, node, npm, java, git },
   };
-}
-
-function requireGate(
-  passed: boolean,
-  stage: string,
-  evidence: Record<string, unknown>,
-): void {
-  if (!passed) {
-    throw new GateFailure(stage, evidence);
-  }
-}
-
-class GateFailure extends Error {
-  constructor(stage: string, evidence: Record<string, unknown>) {
-    super(`Phase 1 gate failed at ${stage}: ${JSON.stringify(evidence)}`);
-    this.name = "GateFailure";
-  }
 }
 
 async function writeState(

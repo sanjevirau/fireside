@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { GateFailure, requireGate } from "../src/endurance/gate.ts";
 import { loadManifest } from "../src/endurance/manifest.ts";
 import {
   median,
@@ -59,5 +60,19 @@ test("endurance statistics use nearest-rank percentiles and Theil-Sen slope", ()
       { elapsedSeconds: 7_200, rssBytes: 2_097_252 },
     ]),
     1_048_576,
+  );
+});
+
+test("a failed endurance criterion raises a durable gate failure", () => {
+  assert.doesNotThrow(() => requireGate(true, "memory-soak", { passed: true }));
+  assert.throws(
+    () => requireGate(false, "memory-soak", { rssSlope: false }),
+    (error: unknown) => {
+      assert.ok(error instanceof GateFailure);
+      assert.equal(error.name, "GateFailure");
+      assert.match(error.message, /memory-soak/u);
+      assert.match(error.message, /"rssSlope":false/u);
+      return true;
+    },
   );
 });
