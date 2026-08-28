@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { GateFailure, requireGate } from "../src/endurance/gate.ts";
 import { loadManifest } from "../src/endurance/manifest.ts";
+import { parseSmapsRollup } from "../src/endurance/process-metrics.ts";
 import {
   median,
   percentile,
@@ -74,6 +75,31 @@ test("endurance statistics use nearest-rank percentiles and Theil-Sen slope", ()
     ]),
     1_048_576,
   );
+});
+
+test("Linux process telemetry separates resident-page categories", () => {
+  const usage = parseSmapsRollup(`
+Rss:                1024 kB
+Pss:                 900 kB
+Shared_Clean:         10 kB
+Shared_Dirty:          2 kB
+Private_Clean:         4 kB
+Private_Dirty:       880 kB
+Anonymous:           850 kB
+LazyFree:              8 kB
+AnonHugePages:         0 kB
+Swap:                  1 kB
+`);
+  assert.deepEqual(usage, {
+    pssBytes: 921_600,
+    anonymousBytes: 870_400,
+    privateCleanBytes: 4_096,
+    privateDirtyBytes: 901_120,
+    sharedCleanBytes: 10_240,
+    sharedDirtyBytes: 2_048,
+    lazyFreeBytes: 8_192,
+    anonymousHugePagesBytes: 0,
+  });
 });
 
 test("a failed endurance criterion raises a durable gate failure", () => {

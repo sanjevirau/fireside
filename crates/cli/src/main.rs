@@ -4,6 +4,7 @@ use std::ffi::OsString;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::path::PathBuf;
 use std::process::ExitCode;
+use std::sync::Arc;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use fireside_core_store::{
@@ -12,12 +13,39 @@ use fireside_core_store::{
 use fireside_export_format::ExportReader;
 use fireside_grpc_front::FirestoreService;
 use fireside_query_engine::{DatabaseEdition as QueryDatabaseEdition, IndexCatalog, QueryPolicy};
-use fireside_rest_front::router_with_query_policy as rest_router;
+use fireside_rest_front::{
+    AllocatorMemoryReporter, AllocatorMemoryUsage,
+    router_with_query_policy_and_memory_reporter as rest_router,
+};
 
 // Snapshot and protobuf churn repeatedly frees similarly sized allocations.
 // Mimalloc returns empty pages instead of leaving them resident in glibc arenas.
 #[global_allocator]
 static GLOBAL_ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+#[derive(Debug)]
+struct MimallocMemoryReporter;
+
+impl AllocatorMemoryReporter for MimallocMemoryReporter {
+    fn memory_usage(&self) -> AllocatorMemoryUsage {
+        let (statistics, error) = match mimalloc::MiMalloc::stats_json() {
+            Ok(statistics) => match statistics.to_str() {
+                Ok(statistics) => match serde_json::from_str(statistics) {
+                    Ok(statistics) => (statistics, None),
+                    Err(error) => (serde_json::Value::Null, Some(error.to_string())),
+                },
+                Err(error) => (serde_json::Value::Null, Some(error.to_string())),
+            },
+            Err(error) => (serde_json::Value::Null, Some(error.to_owned())),
+        };
+        AllocatorMemoryUsage {
+            name: "mimalloc".to_owned(),
+            version: mimalloc::MiMalloc.version(),
+            statistics,
+            error,
+        }
+    }
+}
 
 const INDEX_CONFIG_PATH: &str = "firestore.indexes.json";
 const IMPORT_BATCH_SIZE: usize = 500;
@@ -136,8 +164,12 @@ async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
     };
     let service =
         FirestoreService::new_with_query_policy(store.clone(), query_policy.clone()).into_server();
-    let routes =
-        tonic::service::Routes::from(rest_router(store, query_policy)).add_service(service);
+    let routes = tonic::service::Routes::from(rest_router(
+        store,
+        query_policy,
+        Some(Arc::new(MimallocMemoryReporter)),
+    ))
+    .add_service(service);
     if let Some(data_dir) = &arguments.data_dir {
         let journal = if arguments.no_wal {
             "write-ahead journal disabled"
@@ -303,6 +335,18 @@ mod tests {
     fn parses_capture_proxy_command() {
         let cli = Cli::try_parse_from(["fireside", "capture-proxy"]).expect("command should parse");
         assert_eq!(cli.command, Command::CaptureProxy);
+    }
+
+    #[test]
+    fn allocator_reporter_returns_versioned_native_statistics() {
+        let usage = MimallocMemoryReporter.memory_usage();
+        assert_eq!(usage.name, "mimalloc");
+        assert!(usage.version > 0);
+        assert!(usage.error.is_none());
+        assert!(usage.statistics.get("stat_version").is_some());
+        assert!(usage.statistics.get("process").is_some());
+        assert!(usage.statistics.get("committed").is_some());
+        assert!(usage.statistics.get("reserved").is_some());
     }
 
     #[test]

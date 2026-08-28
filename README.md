@@ -23,9 +23,10 @@ target, not the specification.
 
 The approved Phase 1 endurance gate is frozen in
 [`benchmarks/phase-1-endurance.json`](benchmarks/phase-1-endurance.json). Its
-detached Linux runner preserves live RSS, throughput, latency, listener-churn,
-logical memory by retained subsystem, stall, import, and recovery evidence
-under `endurance-results/`; those results are not claimed until the full run
+detached Linux runner preserves live RSS and resident-page categories,
+throughput, latency, listener-churn, logical memory by retained subsystem,
+allocator statistics, stall, import, and recovery evidence under
+`endurance-results/`; those results are not claimed until the full run
 completes. A versioned internal accounting snapshot is also available from
 `GET /emulator/v1/debug/memory`.
 

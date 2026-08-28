@@ -52,7 +52,7 @@ export async function runSoak(
   const stalls = new DurableLog(resolve(outputDirectory, requiredFile(files, "stalls")));
   const rss = new DurableLog(
     resolve(outputDirectory, requiredFile(files, "rss")),
-    "timestamp,elapsed_seconds,rss_bytes,peak_rss_bytes,process_swap_bytes,system_available_bytes,system_swap_used_bytes,load_1",
+    "timestamp,elapsed_seconds,rss_bytes,peak_rss_bytes,process_swap_bytes,pss_bytes,anonymous_bytes,private_clean_bytes,private_dirty_bytes,shared_clean_bytes,shared_dirty_bytes,lazy_free_bytes,anonymous_huge_pages_bytes,system_available_bytes,system_swap_used_bytes,load_1",
   );
   const logicalMemory = new DurableLog(
     resolve(outputDirectory, requiredFile(files, "logicalMemory")),
@@ -482,6 +482,14 @@ export async function runSoak(
         sample.rssBytes,
         sample.peakRssBytes,
         sample.processSwapBytes,
+        sample.pssBytes,
+        sample.anonymousBytes,
+        sample.privateCleanBytes,
+        sample.privateDirtyBytes,
+        sample.sharedCleanBytes,
+        sample.sharedDirtyBytes,
+        sample.lazyFreeBytes,
+        sample.anonymousHugePagesBytes,
         sample.systemAvailableBytes,
         sample.systemSwapUsedBytes,
         sample.loadOne,

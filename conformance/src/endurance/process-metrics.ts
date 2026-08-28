@@ -9,6 +9,14 @@ export interface ProcessSample {
   readonly rssBytes: number;
   readonly peakRssBytes: number;
   readonly processSwapBytes: number;
+  readonly pssBytes: number;
+  readonly anonymousBytes: number;
+  readonly privateCleanBytes: number;
+  readonly privateDirtyBytes: number;
+  readonly sharedCleanBytes: number;
+  readonly sharedDirtyBytes: number;
+  readonly lazyFreeBytes: number;
+  readonly anonymousHugePagesBytes: number;
   readonly systemAvailableBytes: number;
   readonly systemSwapUsedBytes: number;
   readonly loadOne: number;
@@ -25,13 +33,22 @@ export async function sampleProcess(pid: number): Promise<ProcessSample> {
       rssBytes,
       peakRssBytes: rssBytes,
       processSwapBytes: 0,
+      pssBytes: rssBytes,
+      anonymousBytes: 0,
+      privateCleanBytes: 0,
+      privateDirtyBytes: 0,
+      sharedCleanBytes: 0,
+      sharedDirtyBytes: 0,
+      lazyFreeBytes: 0,
+      anonymousHugePagesBytes: 0,
       systemAvailableBytes: freemem(),
       systemSwapUsedBytes: 0,
       loadOne: loadavg()[0] ?? 0,
     };
   }
-  const [status, memory, load] = await Promise.all([
+  const [status, smaps, memory, load] = await Promise.all([
     readFile(`/proc/${String(pid)}/status`, "utf8"),
+    readFile(`/proc/${String(pid)}/smaps_rollup`, "utf8"),
     readFile("/proc/meminfo", "utf8"),
     readFile("/proc/loadavg", "utf8"),
   ]);
@@ -41,9 +58,33 @@ export async function sampleProcess(pid: number): Promise<ProcessSample> {
     rssBytes: statusKilobytes(status, "VmRSS"),
     peakRssBytes: statusKilobytes(status, "VmHWM"),
     processSwapBytes: statusKilobytes(status, "VmSwap"),
+    ...parseSmapsRollup(smaps),
     systemAvailableBytes: memoryKilobytes(memory, "MemAvailable"),
     systemSwapUsedBytes: Math.max(0, swapTotal - swapFree),
     loadOne: Number.parseFloat(load.split(/\s+/u)[0] ?? "NaN"),
+  };
+}
+
+export function parseSmapsRollup(contents: string): Pick<
+  ProcessSample,
+  | "pssBytes"
+  | "anonymousBytes"
+  | "privateCleanBytes"
+  | "privateDirtyBytes"
+  | "sharedCleanBytes"
+  | "sharedDirtyBytes"
+  | "lazyFreeBytes"
+  | "anonymousHugePagesBytes"
+> {
+  return {
+    pssBytes: statusKilobytes(contents, "Pss"),
+    anonymousBytes: statusKilobytes(contents, "Anonymous"),
+    privateCleanBytes: statusKilobytes(contents, "Private_Clean"),
+    privateDirtyBytes: statusKilobytes(contents, "Private_Dirty"),
+    sharedCleanBytes: statusKilobytes(contents, "Shared_Clean"),
+    sharedDirtyBytes: statusKilobytes(contents, "Shared_Dirty"),
+    lazyFreeBytes: statusKilobytes(contents, "LazyFree"),
+    anonymousHugePagesBytes: statusKilobytes(contents, "AnonHugePages"),
   };
 }
 

@@ -23,7 +23,7 @@ use fireside_query_engine::{
     FieldPath as QueryFieldPath, Filter, Limit, Query as StructuredQuery, QueryPolicy, QueryScope,
     execute,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value as JsonValue, json};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
@@ -49,6 +49,15 @@ pub fn router_with_edition(store: Store, edition: DatabaseEdition) -> Router {
 
 /// Creates the shared HTTP/1 router with edition and strict-index behavior.
 pub fn router_with_query_policy(store: Store, query_policy: QueryPolicy) -> Router {
+    router_with_query_policy_and_memory_reporter(store, query_policy, None)
+}
+
+/// Creates the shared HTTP/1 router with process allocator telemetry.
+pub fn router_with_query_policy_and_memory_reporter(
+    store: Store,
+    query_policy: QueryPolicy,
+    allocator_memory_reporter: Option<Arc<dyn AllocatorMemoryReporter>>,
+) -> Router {
     Router::new()
         .route(
             DOCUMENT_ROUTE,
@@ -72,7 +81,74 @@ pub fn router_with_query_policy(store: Store, query_policy: QueryPolicy) -> Rout
             store,
             query_policy,
             control: Arc::new(Mutex::new(ControlState::default())),
+            allocator_memory_reporter,
         })
+}
+
+/// Supplies allocator-owned process statistics to the debug-memory endpoint.
+pub trait AllocatorMemoryReporter: Send + Sync {
+    /// Captures a point-in-time allocator snapshot.
+    fn memory_usage(&self) -> AllocatorMemoryUsage;
+}
+
+/// Allocator statistics captured from the allocator used by the serving binary.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AllocatorMemoryUsage {
+    /// Allocator implementation name.
+    pub name: String,
+    /// Allocator implementation version number.
+    pub version: u32,
+    /// Allocator-native statistics, or `null` if collection failed.
+    pub statistics: JsonValue,
+    /// Collection error when allocator-native statistics are unavailable.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+/// Process resident-page categories read from the operating system.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProcessResidentMemoryUsage {
+    /// Kernel source used for this sample.
+    pub source: String,
+    /// Total resident set size.
+    pub rss_bytes: Option<u64>,
+    /// Proportional set size.
+    pub pss_bytes: Option<u64>,
+    /// Anonymous resident memory.
+    pub anonymous_bytes: Option<u64>,
+    /// Private clean resident pages.
+    pub private_clean_bytes: Option<u64>,
+    /// Private dirty resident pages.
+    pub private_dirty_bytes: Option<u64>,
+    /// Shared clean resident pages.
+    pub shared_clean_bytes: Option<u64>,
+    /// Shared dirty resident pages.
+    pub shared_dirty_bytes: Option<u64>,
+    /// Anonymous pages eligible for lazy reclamation.
+    pub lazy_free_bytes: Option<u64>,
+    /// Anonymous transparent-huge-page residency.
+    pub anonymous_huge_pages_bytes: Option<u64>,
+    /// Process swap residency.
+    pub swap_bytes: Option<u64>,
+    /// Collection error when resident-page statistics are unavailable.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+/// Full permanent memory snapshot returned by the debug-memory endpoint.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DebugMemoryUsage {
+    /// Logical state retained by the emulator.
+    #[serde(flatten)]
+    pub store: fireside_core_store::StoreMemoryUsage,
+    /// Serving allocator state when the binary provides a reporter.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allocator: Option<AllocatorMemoryUsage>,
+    /// Operating-system resident-page categories for this process.
+    pub process_resident: ProcessResidentMemoryUsage,
 }
 
 #[derive(Clone)]
@@ -80,6 +156,7 @@ struct RestState {
     store: Store,
     query_policy: QueryPolicy,
     control: Arc<Mutex<ControlState>>,
+    allocator_memory_reporter: Option<Arc<dyn AllocatorMemoryReporter>>,
 }
 
 #[derive(Default)]
@@ -126,10 +203,74 @@ struct ExportRequest {
     export_name: String,
 }
 
-async fn debug_memory(
-    State(state): State<RestState>,
-) -> Json<fireside_core_store::StoreMemoryUsage> {
-    Json(state.store.memory_usage())
+async fn debug_memory(State(state): State<RestState>) -> Json<DebugMemoryUsage> {
+    Json(DebugMemoryUsage {
+        store: state.store.memory_usage(),
+        allocator: state
+            .allocator_memory_reporter
+            .as_ref()
+            .map(|reporter| reporter.memory_usage()),
+        process_resident: process_resident_memory_usage(),
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn process_resident_memory_usage() -> ProcessResidentMemoryUsage {
+    const SOURCE: &str = "/proc/self/smaps_rollup";
+    match std::fs::read_to_string(SOURCE) {
+        Ok(contents) => {
+            parse_smaps_rollup(&contents).unwrap_or_else(|error| ProcessResidentMemoryUsage {
+                source: SOURCE.to_owned(),
+                error: Some(error),
+                ..ProcessResidentMemoryUsage::default()
+            })
+        }
+        Err(error) => ProcessResidentMemoryUsage {
+            source: SOURCE.to_owned(),
+            error: Some(error.to_string()),
+            ..ProcessResidentMemoryUsage::default()
+        },
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn process_resident_memory_usage() -> ProcessResidentMemoryUsage {
+    ProcessResidentMemoryUsage {
+        source: "unsupported".to_owned(),
+        error: Some("resident-page accounting requires Linux".to_owned()),
+        ..ProcessResidentMemoryUsage::default()
+    }
+}
+
+#[cfg(any(target_os = "linux", test))]
+fn parse_smaps_rollup(contents: &str) -> Result<ProcessResidentMemoryUsage, String> {
+    fn bytes(contents: &str, field: &str) -> Option<u64> {
+        contents.lines().find_map(|line| {
+            let (name, value) = line.split_once(':')?;
+            if name != field {
+                return None;
+            }
+            let kilobytes = value.split_ascii_whitespace().next()?.parse::<u64>().ok()?;
+            Some(kilobytes.saturating_mul(1_024))
+        })
+    }
+
+    let rss_bytes = bytes(contents, "Rss")
+        .ok_or_else(|| "smaps rollup does not contain an Rss measurement".to_owned())?;
+    Ok(ProcessResidentMemoryUsage {
+        source: "/proc/self/smaps_rollup".to_owned(),
+        rss_bytes: Some(rss_bytes),
+        pss_bytes: bytes(contents, "Pss"),
+        anonymous_bytes: bytes(contents, "Anonymous"),
+        private_clean_bytes: bytes(contents, "Private_Clean"),
+        private_dirty_bytes: bytes(contents, "Private_Dirty"),
+        shared_clean_bytes: bytes(contents, "Shared_Clean"),
+        shared_dirty_bytes: bytes(contents, "Shared_Dirty"),
+        lazy_free_bytes: bytes(contents, "LazyFree"),
+        anonymous_huge_pages_bytes: bytes(contents, "AnonHugePages"),
+        swap_bytes: bytes(contents, "Swap"),
+        error: None,
+    })
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -1282,13 +1423,38 @@ mod tests {
             store: Store::default(),
             query_policy: QueryPolicy::default(),
             control: Arc::new(Mutex::new(ControlState::default())),
+            allocator_memory_reporter: None,
         };
         let Json(usage) = debug_memory(State(state)).await;
-        assert_eq!(usage.schema_version, 1);
-        assert_eq!(usage.backend, "memory");
-        assert_eq!(usage.current_documents.entries, 0);
-        assert_eq!(usage.listeners.streams, 0);
-        assert_eq!(usage.transactions.transactions, 0);
+        assert_eq!(usage.store.schema_version, 1);
+        assert_eq!(usage.store.backend, "memory");
+        assert_eq!(usage.store.current_documents.entries, 0);
+        assert_eq!(usage.store.listeners.streams, 0);
+        assert_eq!(usage.store.transactions.transactions, 0);
+        assert!(usage.allocator.is_none());
+    }
+
+    #[test]
+    fn parses_linux_resident_page_categories() {
+        let usage = parse_smaps_rollup(
+            "00400000-00401000 ---p 00000000 00:00 0 [rollup]\n\
+             Rss:                1024 kB\n\
+             Pss:                 900 kB\n\
+             Shared_Clean:         10 kB\n\
+             Shared_Dirty:          2 kB\n\
+             Private_Clean:         4 kB\n\
+             Private_Dirty:       880 kB\n\
+             Anonymous:           850 kB\n\
+             LazyFree:              8 kB\n\
+             AnonHugePages:         0 kB\n\
+             Swap:                  1 kB\n",
+        )
+        .expect("valid smaps rollup should parse");
+        assert_eq!(usage.rss_bytes, Some(1_048_576));
+        assert_eq!(usage.private_dirty_bytes, Some(901_120));
+        assert_eq!(usage.anonymous_bytes, Some(870_400));
+        assert_eq!(usage.lazy_free_bytes, Some(8_192));
+        assert_eq!(usage.swap_bytes, Some(1_024));
     }
 
     #[test]

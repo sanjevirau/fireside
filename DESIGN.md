@@ -203,6 +203,18 @@ disconnect paths remove their accounting entries with the retained structures.
 The endurance harness samples this endpoint into `logical-memory.ndjson` beside
 each RSS sample.
 
+The same endpoint also reports allocator-native process statistics and Linux
+resident-page categories. The serving binary exposes mimalloc's versioned JSON
+statistics, including current/peak reserved, committed, page-committed, page,
+segment, requested-allocation, purge, and process RSS/commit measurements. On
+Linux, `processResident` is read from `/proc/self/smaps_rollup` and separates
+anonymous, private/shared clean and dirty, lazy-free, transparent-huge-page,
+PSS, RSS, and swap bytes. The endurance runner independently records the same
+kernel page categories in `rss.csv`, so allocator-reported commitment,
+application logical state, and actual kernel residency can be correlated at
+the same ten-second cadence. These additive fields retain schema-version 1
+because existing fields and meanings are unchanged.
+
 The first instrumented one-hour diagnostic measured a 26.559 MiB/hour
 post-warm-up RSS slope while current live-document bytes grew only
 0.733 MiB/hour and every retained entry count was flat. Replay-version bytes

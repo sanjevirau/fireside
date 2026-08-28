@@ -51,6 +51,12 @@ try {
       Reflect.get(requiredObject(releasedMemory, "transactions"), "transactions"),
       0,
     );
+    const allocator = requiredObject(releasedMemory, "allocator");
+    assert.equal(Reflect.get(allocator, "name"), "mimalloc");
+    assert.ok(Number(Reflect.get(allocator, "version")) > 0);
+    assert.ok(Reflect.get(allocator, "error") === undefined);
+    assert.ok(Reflect.get(requiredObject(allocator, "statistics"), "process") !== undefined);
+    assert.ok(Reflect.get(releasedMemory, "processResident") !== undefined);
     const logicalSeries = await readFile(resolve(output, "logical-memory.ndjson"), "utf8");
     assert.match(logicalSeries, /"schemaVersion":1/u);
     await server.stop();
