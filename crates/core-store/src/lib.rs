@@ -513,6 +513,44 @@ pub struct DiskCacheMemoryUsage {
     pub write_misses: u64,
 }
 
+/// Lifetime counters for one disk write-path buffer owner.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WriteBufferMemoryUsage {
+    /// Buffers whose owning Rust values are currently alive.
+    pub live_buffers: u64,
+    /// Allocator capacity owned by the currently alive buffers.
+    pub live_capacity_bytes: u64,
+    /// Maximum simultaneously live buffers since startup.
+    pub peak_live_buffers: u64,
+    /// Maximum simultaneously live allocator capacity since startup.
+    pub peak_live_capacity_bytes: u64,
+    /// Buffers registered since startup.
+    pub allocations: u64,
+    /// Registered buffers dropped since startup.
+    pub releases: u64,
+    /// Sum of registered allocator capacity since startup.
+    pub cumulative_allocated_capacity_bytes: u64,
+    /// Sum of released allocator capacity since startup.
+    pub cumulative_released_capacity_bytes: u64,
+}
+
+/// Permanent lifetime accounting for transient disk write-path buffers.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiskWriteBufferMemoryUsage {
+    /// Aggregate across all tracked disk write-path owners.
+    pub all: WriteBufferMemoryUsage,
+    /// Encoded payload written to the application-level journal.
+    pub wal_payloads: WriteBufferMemoryUsage,
+    /// Encoded redb document keys.
+    pub redb_keys: WriteBufferMemoryUsage,
+    /// Encoded redb document values.
+    pub redb_documents: WriteBufferMemoryUsage,
+    /// Encoded redb store metadata values.
+    pub redb_metadata: WriteBufferMemoryUsage,
+}
+
 /// Permanent internal memory accounting exposed by the emulator debug API.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -550,6 +588,8 @@ pub struct StoreMemoryUsage {
     pub wal_enabled: bool,
     /// redb page-cache state for the disk backend; `null` in memory mode.
     pub disk_cache: Option<DiskCacheMemoryUsage>,
+    /// Transient disk write-path buffer lifetime counters; `null` in memory mode.
+    pub disk_write_buffers: Option<DiskWriteBufferMemoryUsage>,
 }
 
 /// Shared registry for logical state retained outside the core document map.
@@ -853,7 +893,7 @@ impl Store {
         let (listeners, transactions) = self.memory_accounting.snapshot();
         match &self.backend {
             StoreBackend::Memory(inner) => {
-                lock(inner).memory_usage("memory", false, None, listeners, transactions)
+                lock(inner).memory_usage("memory", false, None, None, listeners, transactions)
             }
             StoreBackend::Disk(store) => store.memory_usage(listeners, transactions),
         }
@@ -1461,11 +1501,12 @@ impl State {
         backend: &'static str,
         wal_enabled: bool,
         disk_cache: Option<DiskCacheMemoryUsage>,
+        disk_write_buffers: Option<DiskWriteBufferMemoryUsage>,
         listeners: ListenerMemoryUsage,
         transactions: TransactionMemoryUsage,
     ) -> StoreMemoryUsage {
         StoreMemoryUsage {
-            schema_version: 2,
+            schema_version: 3,
             backend,
             revision: self.revision.get(),
             change_floor_revision: self.change_floor.get(),
@@ -1488,9 +1529,18 @@ impl State {
             },
             listeners,
             transactions,
-            wal_buffers: LogicalMemoryUsage::default(),
+            wal_buffers: disk_write_buffers.as_ref().map_or_else(
+                LogicalMemoryUsage::default,
+                |buffers| {
+                    LogicalMemoryUsage::new(
+                        buffers.wal_payloads.live_buffers,
+                        buffers.wal_payloads.live_capacity_bytes,
+                    )
+                },
+            ),
             wal_enabled,
             disk_cache,
+            disk_write_buffers,
         }
     }
 }
@@ -2427,8 +2477,9 @@ mod tests {
         }
 
         let usage = store.memory_usage();
-        assert_eq!(usage.schema_version, 2);
+        assert_eq!(usage.schema_version, 3);
         assert!(usage.disk_cache.is_none());
+        assert!(usage.disk_write_buffers.is_none());
         assert_eq!(usage.current_documents.entries, 1);
         assert_eq!(
             usage.change_log.entries,

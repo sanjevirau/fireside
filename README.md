@@ -41,7 +41,8 @@ throughput, latency, listener-churn, logical memory by retained subsystem,
 allocator statistics, stall, import, and recovery evidence under
 `endurance-results/`; those results are not claimed until the full run
 completes. A versioned internal accounting snapshot is also available from
-`GET /emulator/v1/debug/memory`.
+`GET /emulator/v1/debug/memory`; disk mode includes bounded redb-cache state and
+current/high-water lifetime counters for WAL and redb encoding buffers.
 
 ## Why this exists
 

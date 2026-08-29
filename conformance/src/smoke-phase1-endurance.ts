@@ -45,15 +45,44 @@ try {
       true,
     );
     const releasedMemory = await waitForReleasedRuntimeMemory(server);
-    assert.equal(Reflect.get(releasedMemory, "schemaVersion"), 2);
+    assert.equal(Reflect.get(releasedMemory, "schemaVersion"), 3);
     const diskCache = Reflect.get(releasedMemory, "diskCache") as unknown;
     if (kind === "fireside-disk") {
       assert.equal(
         Reflect.get(requiredObject(releasedMemory, "diskCache"), "configuredBytes"),
         67_108_864,
       );
+      const buffers = requiredObject(releasedMemory, "diskWriteBuffers");
+      const allBuffers = requiredObject(buffers, "all");
+      assert.equal(Reflect.get(allBuffers, "liveBuffers"), 0);
+      assert.equal(Reflect.get(allBuffers, "liveCapacityBytes"), 0);
+      assert.equal(
+        Reflect.get(allBuffers, "allocations"),
+        Reflect.get(allBuffers, "releases"),
+      );
+      assert.equal(
+        Reflect.get(allBuffers, "cumulativeAllocatedCapacityBytes"),
+        Reflect.get(allBuffers, "cumulativeReleasedCapacityBytes"),
+      );
+      assert.ok(
+        Number(
+          Reflect.get(
+            requiredObject(buffers, "walPayloads"),
+            "peakLiveCapacityBytes",
+          ),
+        ) > 0,
+      );
+      assert.ok(
+        Number(
+          Reflect.get(
+            requiredObject(buffers, "redbDocuments"),
+            "peakLiveCapacityBytes",
+          ),
+        ) > 0,
+      );
     } else {
       assert.equal(diskCache, null);
+      assert.equal(Reflect.get(releasedMemory, "diskWriteBuffers"), null);
     }
     const currentDocuments = requiredObject(releasedMemory, "currentDocuments");
     assert.equal(Reflect.get(currentDocuments, "entries"), 105);
@@ -70,7 +99,7 @@ try {
     assert.ok(Reflect.get(requiredObject(allocator, "statistics"), "process") !== undefined);
     assert.ok(Reflect.get(releasedMemory, "processResident") !== undefined);
     const logicalSeries = await readFile(resolve(output, "logical-memory.ndjson"), "utf8");
-    assert.match(logicalSeries, /"schemaVersion":2/u);
+    assert.match(logicalSeries, /"schemaVersion":3/u);
     await server.stop();
     server = undefined;
   }

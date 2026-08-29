@@ -6,6 +6,7 @@ use std::fmt::{self, Display, Formatter};
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write as _};
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use bincode::{Decode, Encode, config};
@@ -15,10 +16,11 @@ use redb::{
 };
 
 use super::{
-    Change, CommitError, CommitPlan, CommitResult, DatabaseName, DiskCacheMemoryUsage, Document,
-    DocumentKey, ListenerMemoryUsage, LogicalMemoryUsage, ResetRequired, Revision, Snapshot,
-    SnapshotError, State, StoreMemoryUsage, StoreOptions, Timestamp, TransactionMemoryUsage, Write,
-    document_entry_logical_bytes, usize_to_u64,
+    Change, CommitError, CommitPlan, CommitResult, DatabaseName, DiskCacheMemoryUsage,
+    DiskWriteBufferMemoryUsage, Document, DocumentKey, ListenerMemoryUsage, LogicalMemoryUsage,
+    ResetRequired, Revision, Snapshot, SnapshotError, State, StoreMemoryUsage, StoreOptions,
+    Timestamp, TransactionMemoryUsage, Write, WriteBufferMemoryUsage, document_entry_logical_bytes,
+    usize_to_u64,
 };
 
 const DOCUMENTS: TableDefinition<&[u8], &[u8]> = TableDefinition::new("documents_v1");
@@ -62,6 +64,7 @@ impl Default for DiskOptions {
 #[derive(Clone)]
 pub struct DiskStore {
     inner: Arc<Mutex<DiskState>>,
+    write_buffers: Arc<WriteBufferAccounting>,
 }
 
 impl DiskStore {
@@ -79,6 +82,7 @@ impl DiskStore {
             builder.create(&database_path).map_err(DiskError::redb)?
         };
         initialize_database(&database)?;
+        let write_buffers = Arc::new(WriteBufferAccounting::default());
 
         let mut journal = if options.journal {
             let (journal, records) = Journal::open(&directory.join(JOURNAL_FILE))?;
@@ -88,7 +92,7 @@ impl DiskStore {
         };
 
         if let Some((journal, records)) = &mut journal {
-            replay_records(&database, records)?;
+            replay_records(&database, records, &write_buffers)?;
             journal.checkpoint()?;
         }
 
@@ -109,6 +113,7 @@ impl DiskStore {
                 cache_size_bytes: options.cache_size_bytes,
                 requires_restart: false,
             })),
+            write_buffers,
         })
     }
 
@@ -172,13 +177,13 @@ impl DiskStore {
         let record = WalRecord::from_plan(&plan);
 
         if let Some(journal) = &mut state.journal
-            && let Err(error) = journal.append(&record)
+            && let Err(error) = journal.append(&record, &self.write_buffers)
         {
             state.requires_restart = true;
             return Err(error);
         }
 
-        if let Err(error) = persist_record(&state.database, &record) {
+        if let Err(error) = persist_record(&state.database, &record, &self.write_buffers) {
             state.requires_restart = true;
             return Err(error);
         }
@@ -232,6 +237,10 @@ impl DiskStore {
         listeners: ListenerMemoryUsage,
         transactions: TransactionMemoryUsage,
     ) -> StoreMemoryUsage {
+        // Snapshot the independent atomics before taking the store lock so a
+        // debug request arriving during a commit records its live buffers even
+        // though it waits for the commit's consistent logical-state snapshot.
+        let write_buffers = self.write_buffers.snapshot();
         let state = self.state();
         let cache = state.database.cache_stats();
         state.memory.memory_usage(
@@ -246,6 +255,7 @@ impl DiskStore {
                 write_hits: cache.write_hits(),
                 write_misses: cache.write_misses(),
             }),
+            Some(write_buffers),
             listeners,
             transactions,
         )
@@ -489,7 +499,11 @@ fn load_persisted_state(database: &Database) -> Result<PersistedState, DiskError
         )
 }
 
-fn persist_record(database: &Database, record: &WalRecord) -> Result<(), DiskError> {
+fn persist_record(
+    database: &Database,
+    record: &WalRecord,
+    write_buffers: &WriteBufferAccounting,
+) -> Result<(), DiskError> {
     let mut transaction = database.begin_write().map_err(DiskError::redb)?;
     transaction
         .set_durability(Durability::Immediate)
@@ -497,9 +511,10 @@ fn persist_record(database: &Database, record: &WalRecord) -> Result<(), DiskErr
     {
         let mut documents = transaction.open_table(DOCUMENTS).map_err(DiskError::redb)?;
         for mutation in &record.mutations {
-            let key = encode(&mutation.key)?;
+            let key = encode_write_buffer(&mutation.key, write_buffers, WriteBufferOwner::RedbKey)?;
             if let Some(document) = &mutation.document {
-                let value = encode(document)?;
+                let value =
+                    encode_write_buffer(document, write_buffers, WriteBufferOwner::RedbDocument)?;
                 documents
                     .insert(key.as_slice(), value.as_slice())
                     .map_err(DiskError::redb)?;
@@ -510,10 +525,14 @@ fn persist_record(database: &Database, record: &WalRecord) -> Result<(), DiskErr
     }
     {
         let mut metadata = transaction.open_table(METADATA).map_err(DiskError::redb)?;
-        let state = encode(&PersistedState {
-            revision: record.revision,
-            last_commit_time: record.commit_time,
-        })?;
+        let state = encode_write_buffer(
+            &PersistedState {
+                revision: record.revision,
+                last_commit_time: record.commit_time,
+            },
+            write_buffers,
+            WriteBufferOwner::RedbMetadata,
+        )?;
         metadata
             .insert(STATE_KEY, state.as_slice())
             .map_err(DiskError::redb)?;
@@ -521,7 +540,11 @@ fn persist_record(database: &Database, record: &WalRecord) -> Result<(), DiskErr
     transaction.commit().map_err(DiskError::redb)
 }
 
-fn replay_records(database: &Database, records: &[WalRecord]) -> Result<(), DiskError> {
+fn replay_records(
+    database: &Database,
+    records: &[WalRecord],
+    write_buffers: &WriteBufferAccounting,
+) -> Result<(), DiskError> {
     let mut state = load_persisted_state(database)?;
     for record in records {
         if record.revision <= state.revision {
@@ -544,7 +567,7 @@ fn replay_records(database: &Database, records: &[WalRecord]) -> Result<(), Disk
                 "journal commit timestamps are not strictly increasing".to_owned(),
             ));
         }
-        persist_record(database, record)?;
+        persist_record(database, record, write_buffers)?;
         state.revision = record.revision;
         state.last_commit_time = record.commit_time;
     }
@@ -554,6 +577,152 @@ fn replay_records(database: &Database, records: &[WalRecord]) -> Result<(), Disk
 fn encode<T: Encode>(value: &T) -> Result<Vec<u8>, DiskError> {
     bincode::encode_to_vec(value, config::standard())
         .map_err(|error| DiskError::Encoding(error.to_string()))
+}
+
+#[derive(Clone, Copy)]
+enum WriteBufferOwner {
+    WalPayload,
+    RedbKey,
+    RedbDocument,
+    RedbMetadata,
+}
+
+#[derive(Default)]
+struct WriteBufferAccounting {
+    all: WriteBufferOwnerAccounting,
+    wal_payloads: WriteBufferOwnerAccounting,
+    redb_keys: WriteBufferOwnerAccounting,
+    redb_documents: WriteBufferOwnerAccounting,
+    redb_metadata: WriteBufferOwnerAccounting,
+}
+
+impl WriteBufferAccounting {
+    fn register(&self, owner: WriteBufferOwner, capacity: usize) -> WriteBufferRegistration<'_> {
+        let capacity = usize_to_u64(capacity);
+        let owner = self.owner(owner);
+        self.all.allocate(capacity);
+        owner.allocate(capacity);
+        WriteBufferRegistration {
+            all: &self.all,
+            owner,
+            capacity,
+        }
+    }
+
+    fn owner(&self, owner: WriteBufferOwner) -> &WriteBufferOwnerAccounting {
+        match owner {
+            WriteBufferOwner::WalPayload => &self.wal_payloads,
+            WriteBufferOwner::RedbKey => &self.redb_keys,
+            WriteBufferOwner::RedbDocument => &self.redb_documents,
+            WriteBufferOwner::RedbMetadata => &self.redb_metadata,
+        }
+    }
+
+    fn snapshot(&self) -> DiskWriteBufferMemoryUsage {
+        DiskWriteBufferMemoryUsage {
+            all: self.all.snapshot(),
+            wal_payloads: self.wal_payloads.snapshot(),
+            redb_keys: self.redb_keys.snapshot(),
+            redb_documents: self.redb_documents.snapshot(),
+            redb_metadata: self.redb_metadata.snapshot(),
+        }
+    }
+}
+
+#[derive(Default)]
+struct WriteBufferOwnerAccounting {
+    live_buffers: AtomicU64,
+    live_capacity_bytes: AtomicU64,
+    peak_live_buffers: AtomicU64,
+    peak_live_capacity_bytes: AtomicU64,
+    allocations: AtomicU64,
+    releases: AtomicU64,
+    cumulative_allocated_capacity_bytes: AtomicU64,
+    cumulative_released_capacity_bytes: AtomicU64,
+}
+
+impl WriteBufferOwnerAccounting {
+    fn allocate(&self, capacity: u64) {
+        let live_buffers = self.live_buffers.fetch_add(1, Ordering::Relaxed) + 1;
+        let live_capacity_bytes = self
+            .live_capacity_bytes
+            .fetch_add(capacity, Ordering::Relaxed)
+            .saturating_add(capacity);
+        self.peak_live_buffers
+            .fetch_max(live_buffers, Ordering::Relaxed);
+        self.peak_live_capacity_bytes
+            .fetch_max(live_capacity_bytes, Ordering::Relaxed);
+        self.allocations.fetch_add(1, Ordering::Relaxed);
+        self.cumulative_allocated_capacity_bytes
+            .fetch_add(capacity, Ordering::Relaxed);
+    }
+
+    fn release(&self, capacity: u64) {
+        self.live_buffers.fetch_sub(1, Ordering::Relaxed);
+        self.live_capacity_bytes
+            .fetch_sub(capacity, Ordering::Relaxed);
+        self.releases.fetch_add(1, Ordering::Relaxed);
+        self.cumulative_released_capacity_bytes
+            .fetch_add(capacity, Ordering::Relaxed);
+    }
+
+    fn snapshot(&self) -> WriteBufferMemoryUsage {
+        WriteBufferMemoryUsage {
+            live_buffers: self.live_buffers.load(Ordering::Relaxed),
+            live_capacity_bytes: self.live_capacity_bytes.load(Ordering::Relaxed),
+            peak_live_buffers: self.peak_live_buffers.load(Ordering::Relaxed),
+            peak_live_capacity_bytes: self.peak_live_capacity_bytes.load(Ordering::Relaxed),
+            allocations: self.allocations.load(Ordering::Relaxed),
+            releases: self.releases.load(Ordering::Relaxed),
+            cumulative_allocated_capacity_bytes: self
+                .cumulative_allocated_capacity_bytes
+                .load(Ordering::Relaxed),
+            cumulative_released_capacity_bytes: self
+                .cumulative_released_capacity_bytes
+                .load(Ordering::Relaxed),
+        }
+    }
+}
+
+struct WriteBufferRegistration<'a> {
+    all: &'a WriteBufferOwnerAccounting,
+    owner: &'a WriteBufferOwnerAccounting,
+    capacity: u64,
+}
+
+impl Drop for WriteBufferRegistration<'_> {
+    fn drop(&mut self) {
+        self.owner.release(self.capacity);
+        self.all.release(self.capacity);
+    }
+}
+
+fn encode_write_buffer<'a, T: Encode>(
+    value: &T,
+    accounting: &'a WriteBufferAccounting,
+    owner: WriteBufferOwner,
+) -> Result<TrackedWriteBuffer<'a>, DiskError> {
+    let bytes = encode(value)?;
+    let registration = accounting.register(owner, bytes.capacity());
+    Ok(TrackedWriteBuffer {
+        bytes,
+        _registration: registration,
+    })
+}
+
+struct TrackedWriteBuffer<'a> {
+    bytes: Vec<u8>,
+    _registration: WriteBufferRegistration<'a>,
+}
+
+impl TrackedWriteBuffer<'_> {
+    fn as_slice(&self) -> &[u8] {
+        self.bytes.as_slice()
+    }
+
+    fn len(&self) -> usize {
+        self.bytes.len()
+    }
 }
 
 fn decode<T: Decode<()>>(bytes: &[u8]) -> Result<T, DiskError> {
@@ -594,8 +763,12 @@ impl Journal {
         Ok((Self { file }, records))
     }
 
-    fn append(&mut self, record: &WalRecord) -> Result<(), DiskError> {
-        let payload = encode(record)?;
+    fn append(
+        &mut self,
+        record: &WalRecord,
+        write_buffers: &WriteBufferAccounting,
+    ) -> Result<(), DiskError> {
+        let payload = encode_write_buffer(record, write_buffers, WriteBufferOwner::WalPayload)?;
         if payload.len() > MAX_WAL_RECORD_BYTES {
             return Err(DiskError::RecordTooLarge {
                 bytes: payload.len(),
@@ -609,11 +782,11 @@ impl Journal {
         let mut header = [0_u8; FRAME_HEADER_LEN];
         header[..8].copy_from_slice(&FRAME_MAGIC);
         header[8..12].copy_from_slice(&length.to_le_bytes());
-        header[12..16].copy_from_slice(&crc32c::crc32c(&payload).to_le_bytes());
+        header[12..16].copy_from_slice(&crc32c::crc32c(payload.as_slice()).to_le_bytes());
 
         self.file.seek(SeekFrom::End(0))?;
         self.file.write_all(&header)?;
-        self.file.write_all(&payload)?;
+        self.file.write_all(payload.as_slice())?;
         self.file.sync_all()?;
         Ok(())
     }
@@ -899,7 +1072,7 @@ mod tests {
             TransactionMemoryUsage::default(),
         );
         let cache = usage.disk_cache.expect("disk cache should be accounted");
-        assert_eq!(usage.schema_version, 2);
+        assert_eq!(usage.schema_version, 3);
         assert_eq!(
             cache.configured_bytes,
             u64::try_from(CACHE_BYTES).expect("cache bound should fit u64")
@@ -907,6 +1080,75 @@ mod tests {
         assert!(cache.used_bytes > 0);
         assert!(cache.used_bytes <= cache.configured_bytes);
         assert!(cache.read_hits + cache.read_misses + cache.write_hits + cache.write_misses > 0);
+        let buffers = usage
+            .disk_write_buffers
+            .expect("disk write buffers should be accounted");
+        assert_eq!(buffers.all.live_buffers, 0);
+        assert_eq!(buffers.all.live_capacity_bytes, 0);
+        assert_eq!(buffers.all.allocations, buffers.all.releases);
+        assert_eq!(
+            buffers.all.cumulative_allocated_capacity_bytes,
+            buffers.all.cumulative_released_capacity_bytes,
+        );
+        assert!(buffers.wal_payloads.peak_live_capacity_bytes > 0);
+        assert!(buffers.redb_documents.peak_live_capacity_bytes > 0);
+    }
+
+    #[test]
+    fn acknowledged_large_document_commits_release_every_write_buffer() {
+        let directory = TestDirectory::new();
+        let store = DiskStore::open(
+            directory.path(),
+            DiskOptions {
+                cache_size_bytes: 64 * 1024 * 1024,
+                ..DiskOptions::default()
+            },
+        )
+        .expect("disk store should open");
+
+        for (index, size_kib) in [100, 300, 500, 700, 900]
+            .into_iter()
+            .cycle()
+            .take(25)
+            .enumerate()
+        {
+            store
+                .commit(&[Write::Set {
+                    key: key(&format!("items/large-{index:02}")),
+                    fields: fields(Value::Bytes(Arc::from(vec![0x4c; size_kib * 1024]))),
+                    transforms: Vec::new(),
+                    precondition: Precondition::None,
+                }])
+                .expect("large document commit should be acknowledged");
+
+            let usage = store.memory_usage(
+                ListenerMemoryUsage::default(),
+                TransactionMemoryUsage::default(),
+            );
+            let buffers = usage
+                .disk_write_buffers
+                .expect("disk write buffers should be accounted");
+            assert_eq!(buffers.all.live_buffers, 0);
+            assert_eq!(buffers.all.live_capacity_bytes, 0);
+            assert_eq!(buffers.all.allocations, buffers.all.releases);
+            assert_eq!(
+                buffers.all.cumulative_allocated_capacity_bytes,
+                buffers.all.cumulative_released_capacity_bytes,
+            );
+            assert_eq!(usage.wal_buffers, LogicalMemoryUsage::default());
+        }
+
+        let buffers = store
+            .memory_usage(
+                ListenerMemoryUsage::default(),
+                TransactionMemoryUsage::default(),
+            )
+            .disk_write_buffers
+            .expect("disk write buffers should be accounted");
+        assert!(buffers.wal_payloads.peak_live_capacity_bytes >= 900 * 1024);
+        assert!(buffers.redb_documents.peak_live_capacity_bytes >= 900 * 1024);
+        assert!(buffers.redb_keys.peak_live_capacity_bytes > 0);
+        assert!(buffers.redb_metadata.peak_live_capacity_bytes > 0);
     }
 
     #[test]
@@ -928,7 +1170,7 @@ mod tests {
                 .journal
                 .as_mut()
                 .expect("journal should be enabled")
-                .append(&WalRecord::from_plan(&plan))
+                .append(&WalRecord::from_plan(&plan), &store.write_buffers)
                 .expect("journal should sync");
         }
 
@@ -958,9 +1200,10 @@ mod tests {
                 .journal
                 .as_mut()
                 .expect("journal should be enabled")
-                .append(&record)
+                .append(&record, &store.write_buffers)
                 .expect("journal should sync");
-            persist_record(&state.database, &record).expect("redb commit should complete");
+            persist_record(&state.database, &record, &store.write_buffers)
+                .expect("redb commit should complete");
         }
 
         let reopened = DiskStore::open(directory.path(), DiskOptions::default())
@@ -995,7 +1238,7 @@ mod tests {
                 .journal
                 .as_mut()
                 .expect("journal should be enabled")
-                .append(&WalRecord::from_plan(&plan))
+                .append(&WalRecord::from_plan(&plan), &store.write_buffers)
                 .expect("complete frame should sync");
         }
         OpenOptions::new()

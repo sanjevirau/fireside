@@ -631,7 +631,7 @@ async function sampleLogicalMemory(
   if (
     typeof accounting !== "object"
     || accounting === null
-    || Reflect.get(accounting, "schemaVersion") !== 2
+    || Reflect.get(accounting, "schemaVersion") !== 3
   ) {
     throw new Error("logical-memory endpoint returned an unsupported schema");
   }

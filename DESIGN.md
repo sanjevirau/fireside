@@ -189,11 +189,17 @@ proof that the bounded-memory invariant is fixed. The immutable endurance gate
 remains the only pass/fail evidence for the combined result.
 
 Fireside permanently exposes internal logical-memory accounting at
-`GET /emulator/v1/debug/memory`. Schema version 1 reports current document
+`GET /emulator/v1/debug/memory`. Schema version 3 reports current document
 versions, distinct document versions retained by the replay horizon,
 change-log and commit-index entries, active listener streams/targets and their
 visible documents, active transactions/read sets and referenced snapshots, and
-resident application WAL buffers. Logical bytes count deterministic
+resident application WAL buffers. Disk mode additionally reports the configured
+redb cache bound and live cache counters. It also reports current, high-water,
+allocation/release, and cumulative-capacity counters for every explicit
+transient disk write-path buffer, separated into WAL payloads, redb keys, redb
+document values, and redb metadata. Drop-based registrations couple each
+counter to the owning Rust `Vec`; a successfully acknowledged commit must have
+zero live buffers and equal allocation/release totals. Logical bytes count deterministic
 user-controlled resource-name and value bytes plus fixed-width scalars; they
 exclude allocator and container overhead. Replay-version bytes may overlap the
 current-document view and snapshot bytes are shared references, so the endpoint
@@ -201,7 +207,8 @@ does not present their sum as physical memory. Listen streams and transactions
 use drop-based registrations: normal close, commit, rollback, error, and client
 disconnect paths remove their accounting entries with the retained structures.
 The endurance harness samples this endpoint into `logical-memory.ndjson` beside
-each RSS sample.
+each RSS sample. Schema changes are explicit because the harness rejects an
+unknown version instead of silently ignoring missing attribution fields.
 
 The same endpoint also reports allocator-native process statistics and Linux
 resident-page categories. The serving binary exposes mimalloc's versioned JSON
