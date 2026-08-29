@@ -13,26 +13,23 @@ target, not the specification.
 > its two dedicated strict-index cases, and the first Enterprise pipeline case.
 > Import/export now round-trips bidirectionally through Java via the public CLI
 > and control API, and full backend conformance also runs in crash-safe disk
-> mode. The approved four-hour in-memory endurance rerun met every workload and
-> listener criterion but failed both RSS-flatness criteria. Its evidence is
-> published. A subsequent allocator-remediation diagnostic still measured a
-> 47.616 MiB/hour post-warm-up RSS slope. Permanent subsystem accounting then
-> showed a 26.559 MiB/hour RSS slope with bounded logical store, listener,
-> transaction, and WAL state. Allocator-page telemetry then localized the
-> remaining 23.573 MiB/hour signal to anonymous private-dirty active mimalloc
-> size-class pages, not abandoned pages or retained logical state. A controlled
-> one-worker run reduced the slope by 91.81% but still failed at 1.931 MiB/hour;
-> its sole growing page class tracks the frozen workload's short live string
-> values. The attributed runtime-worker and short-string fixes are under
-> verification. No new gate was launched and no performance gate is currently
-> claimed.
+> mode. The current frozen gate's four-hour in-memory stage passed, while its
+> disk stage exposed normal redb cache warming toward an inherited 1 GiB budget.
+> A controlled 64 MiB cache reduced that slope by 95.17%; permanent lifetime
+> counters then excluded WAL and redb encoding-buffer retention, and an
+> unchanged follow-up completed 180,000 writes with a -6.464 MiB/hour
+> post-warm-up RSS slope. Fireside now uses a deliberate, accounted 64 MiB disk
+> cache default. Production-default verification and the complete immutable gate
+> are still required, so no Phase 1 performance or release claim is made yet.
 
 The candidate runtime bounds its default worker pool to at most four threads;
 `--worker-threads <n>` is the explicit override. The selected count is visible
 in startup output and `GET /emulator/v1/debug/memory`. Firestore strings up to
 23 UTF-8 bytes are stored inline, with shared immutable heap storage for longer
-values. These are candidate memory fixes, not performance claims, until the
-unchanged verification and full gate pass.
+values. Disk mode bounds redb's combined cache to 64 MiB by default and exposes
+`--redb-cache-size` for explicit capacity planning. These are measured candidate
+memory fixes, not performance claims, until production-default verification and
+the full gate pass.
 
 The approved Phase 1 endurance gate is frozen in
 [`benchmarks/phase-1-endurance.json`](benchmarks/phase-1-endurance.json). Its

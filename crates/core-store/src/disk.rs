@@ -33,11 +33,13 @@ const FRAME_HEADER_LEN: usize = 16;
 const MAX_WAL_RECORD_BYTES: usize = 64 * 1024 * 1024;
 type LoadedDatabase = (Revision, Timestamp, LogicalMemoryUsage);
 
-/// redb 4.2.0's default combined read/write page-cache budget.
+/// Fireside's deliberate combined redb read/write page-cache budget.
 ///
-/// Fireside names the inherited value explicitly so it is visible in memory
-/// accounting and can be overridden for controlled diagnostics.
-pub const DEFAULT_REDB_CACHE_SIZE_BYTES: usize = 1024 * 1024 * 1024;
+/// redb 4.2.0 inherits a 1 GiB default. Controlled endurance measurements
+/// proved that normal cache warming toward that value violated Fireside's
+/// bounded-memory contract, so disk mode instead defaults to an accounted
+/// 64 MiB budget. Operators can override it explicitly for capacity planning.
+pub const DEFAULT_REDB_CACHE_SIZE_BYTES: usize = 64 * 1024 * 1024;
 
 /// Disk-store resource and durability settings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1092,6 +1094,11 @@ mod tests {
         );
         assert!(buffers.wal_payloads.peak_live_capacity_bytes > 0);
         assert!(buffers.redb_documents.peak_live_capacity_bytes > 0);
+    }
+
+    #[test]
+    fn disk_mode_defaults_to_the_deliberate_bounded_cache_budget() {
+        assert_eq!(DiskOptions::default().cache_size_bytes, 64 * 1024 * 1024,);
     }
 
     #[test]

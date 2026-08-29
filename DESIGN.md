@@ -338,11 +338,15 @@ startup fence the store and surface as gRPC/REST `UNAVAILABLE`; Firestore
 precondition errors retain their separately oracle-tested status codes.
 
 The disk backend names redb's combined read/write page-cache budget explicitly.
-The current inherited redb 4.2.0 default is 1 GiB; operators may set
-`--redb-cache-size <bytes>` in disk mode. The versioned debug-memory endpoint
-reports the configured budget, live used bytes, evictions, and read/write
-hit/miss counters so bounded-memory behavior can be attributed rather than
-inferred from process RSS.
+redb 4.2.0 inherits a 1 GiB budget, but controlled measurements proved that
+normal cache warming toward that value violated Fireside's bounded-memory
+contract. Fireside therefore uses a deliberate, accounted 64 MiB production
+default; operators may set `--redb-cache-size <bytes>` in disk mode. The
+versioned debug-memory endpoint reports the configured budget, live used bytes,
+evictions, and read/write hit/miss counters so bounded-memory behavior can be
+attributed rather than inferred from process RSS. The attribution and
+write-buffer exclusion evidence is published in the Phase 1 diagnostic reports;
+the complete immutable gate remains the release qualification.
 
 ## 5. Firestore behavior surfaces
 
