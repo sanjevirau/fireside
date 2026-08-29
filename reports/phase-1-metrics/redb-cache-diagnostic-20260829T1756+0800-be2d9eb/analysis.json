@@ -1,0 +1,57 @@
+{
+  "result": "failed",
+  "criterion": {
+    "maximumRssSlopeBytesPerHour": 1048576,
+    "observedRssSlopeBytesPerHour": 1204206.9404016775,
+    "overageBytesPerHour": 155630.9404016775
+  },
+  "postWarmup": {
+    "samples": 182,
+    "elapsedSeconds": [1800.054, 3600.34],
+    "rssSlopeBytesPerHour": 1204206.9404016775,
+    "pssSlopeBytesPerHour": 1019304.4387630933,
+    "anonymousBytesSlopePerHour": 1016232.9580696556,
+    "privateDirtyBytesSlopePerHour": 1016232.9580696556,
+    "cacheConfiguredBytes": 67108864,
+    "cacheUsedBytes": {
+      "minimum": 65483072,
+      "maximum": 67076416,
+      "median": 66468160,
+      "slopePerHour": 48083.47826086956,
+      "rssPearson": 0.10790412992478443,
+      "rssSpearman": 0.101484362443067
+    },
+    "cacheEvictions": {
+      "first": 118980,
+      "last": 191074,
+      "slopePerHour": 145257.13129093355
+    },
+    "allocatorCommittedBytesSlopePerHour": 0,
+    "allocatorReservedBytesSlopePerHour": 0,
+    "page256KiBCurrent": {
+      "minimum": 0,
+      "maximum": 0,
+      "slopePerHour": 0
+    },
+    "currentDocumentLogicalBytesSlopePerHour": 693008.7682473804,
+    "currentDocumentBytesRssPearson": 0.05112125312326968,
+    "replayDocumentLogicalBytesSlopePerHour": 2786.630543678137,
+    "changeLogBytesSlopePerHour": 0,
+    "walBufferBytesSlopePerHour": 0,
+    "processSwapBytesSlopePerHour": 0,
+    "systemSwapUsedBytesSlopePerHour": 0
+  },
+  "failedGateComparison": {
+    "rssSlopeBytesPerHour": 24936337.171834797,
+    "page256KiBCurrentSlopePagesPerHour": 4.864818846308212,
+    "page256KiBRssPearson": 0.9084011212629151,
+    "rssSlopeReductionPercent": 95.17087480770107,
+    "page256KiBSlopeReductionPercent": 100
+  },
+  "preservedHostState": {
+    "path": "/home/sanjevi/fireside-redb-cache-diagnostic-20260829T1756+0800-be2d9eb/state/fireside-soak/fireside.redb",
+    "bytes": 864030720,
+    "sha256": "b37208dc12ce8bf3f0efe81e074bf2b3df1baa3413dce7c2cf36f2f3ef86136e"
+  },
+  "method": "Theil-Sen median pairwise slope over samples at elapsedSeconds >= 1800; Pearson and average-rank Spearman correlations use aligned RSS and logical-memory samples."
+}

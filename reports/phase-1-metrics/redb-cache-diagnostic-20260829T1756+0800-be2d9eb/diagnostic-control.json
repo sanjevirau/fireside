@@ -1,0 +1,25 @@
+{
+  "hypothesis": "redb internal cache warming toward its configured bound",
+  "redbVersion": "4.2.0",
+  "productionBehaviorCacheBytes": 1073741824,
+  "diagnosticCacheBytes": 67108864,
+  "observationDurationSeconds": 3600,
+  "manifestDurationSeconds": 14400,
+  "manifestSha256": "00f8c4f40e209a89ac3b059d6c10269e997c501a1cb8df50003b2195beedad41",
+  "frozenThresholds": {
+    "slopeEstimator": "theil-sen",
+    "maximumRssSlopeBytesPerHour": 1048576,
+    "initialMedianWindowStartSeconds": 1800,
+    "initialMedianWindowEndSeconds": 3600,
+    "finalMedianWindowSeconds": 1800,
+    "maximumFinalMedianIncreaseFraction": 0.05,
+    "maximumFinalMedianIncreaseBytesFloor": 16777216,
+    "medianAllowanceRule": "max(five-percent-of-initial,16MiB)",
+    "failFast": {
+      "sustainedWindowSeconds": 3600,
+      "maximumSlopeMultiple": 10,
+      "rule": "abort Fireside soak when trailing post-warm-up Theil-Sen slope is greater than 10x the immutable limit for a full 60-minute window"
+    }
+  },
+  "onlyIntentionalRuntimeDifference": "--redb-cache-size"
+}

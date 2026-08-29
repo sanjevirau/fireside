@@ -1,0 +1,73 @@
+{
+  "kind": "fireside-disk",
+  "passed": false,
+  "startedAt": "2026-08-29T10:02:52.710Z",
+  "elapsedSeconds": 3600.348,
+  "startupMilliseconds": 107.47403399999996,
+  "manifestDurationSeconds": 14400,
+  "observationDurationSeconds": 3600,
+  "targetOperations": 180000,
+  "scheduled": 179584,
+  "completed": 179584,
+  "failed": 0,
+  "completionRatio": 0.9976888888888888,
+  "transactionAttempts": 35917,
+  "listenerChurns": 30,
+  "listenerMismatches": 0,
+  "stallEvents": 0,
+  "listenerExpected": [
+    179522,
+    179532,
+    179542,
+    179552,
+    179562,
+    179572,
+    179582,
+    179512
+  ],
+  "listenerObserved": [
+    179522,
+    179532,
+    179542,
+    179552,
+    179562,
+    179572,
+    179582,
+    179512
+  ],
+  "rss": {
+    "samples": 362,
+    "peakBytes": 725544960,
+    "slopeBytesPerHour": 1204206.9404016775,
+    "initialMedianBytes": 183552000,
+    "finalMedianBytes": 183465984,
+    "medianAllowanceBytes": 16777216
+  },
+  "failFastSlopeFailure": null,
+  "writeLatencyMilliseconds": {
+    "count": 179584,
+    "p50": 6.6118040001019835,
+    "p95": 11.244820000138134,
+    "p99": 277.93060599965975,
+    "max": 1565.702751999721
+  },
+  "listenerLatencyMilliseconds": {
+    "count": 17959,
+    "p50": 6.930994000285864,
+    "p95": 11.235929999966174,
+    "p99": 351.37443899997743,
+    "max": 1181.1808739998378
+  },
+  "criteria": {
+    "completionRatio": true,
+    "errors": true,
+    "listenerMismatches": true,
+    "listenerFinalState": true,
+    "noProgressStalls": true,
+    "failFastSlope": true,
+    "rssSlope": false,
+    "rssMedian": true,
+    "workingSetRss": true,
+    "serverAlive": true
+  }
+}
