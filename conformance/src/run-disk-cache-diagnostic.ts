@@ -24,17 +24,23 @@ import { runSoak } from "./endurance/soak.ts";
 const execute = promisify(execFile);
 const OBSERVATION_DURATION_SECONDS = 3_600;
 const REDB_4_2_DEFAULT_CACHE_BYTES = 1_024 * 1_024 * 1_024;
+const FIRESIDE_DEFAULT_CACHE_BYTES = 64 * 1_024 * 1_024;
 const WRITE_BUFFER_DIAGNOSTIC = process.argv.includes("--write-buffers");
-const DIAGNOSTIC_STAGE = WRITE_BUFFER_DIAGNOSTIC
-  ? "disk-write-buffer-lifetime-diagnostic"
-  : "redb-cache-bound-diagnostic";
+const PRODUCTION_DEFAULT_VERIFICATION = process.argv.includes("--production-default");
+const DIAGNOSTIC_STAGE = PRODUCTION_DEFAULT_VERIFICATION
+  ? "disk-production-default-verification"
+  : WRITE_BUFFER_DIAGNOSTIC
+    ? "disk-write-buffer-lifetime-diagnostic"
+    : "redb-cache-bound-diagnostic";
 
 await main();
 
 async function main(): Promise<void> {
   const manifest = await loadManifest();
   const outputDirectory = requiredEnvironment("ENDURANCE_OUTPUT_DIR");
-  const cacheSizeBytes = positiveIntegerEnvironment("ENDURANCE_REDB_CACHE_SIZE_BYTES");
+  const cacheSizeBytes = PRODUCTION_DEFAULT_VERIFICATION
+    ? undefined
+    : positiveIntegerEnvironment("ENDURANCE_REDB_CACHE_SIZE_BYTES");
   const revision = (await execute("git", ["rev-parse", "HEAD"], {
     cwd: repositoryRoot,
   })).stdout.trim();
@@ -62,19 +68,24 @@ async function main(): Promise<void> {
     await writeFile(
       resolve(outputDirectory, "diagnostic-control.json"),
       `${JSON.stringify({
-        hypothesis: WRITE_BUFFER_DIAGNOSTIC
-          ? "WAL and redb encoding buffers remain live after acknowledged commits"
-          : "redb internal cache warming toward its configured bound",
+        hypothesis: PRODUCTION_DEFAULT_VERIFICATION
+          ? "the deliberate Fireside production cache default satisfies the immutable bounded-memory criterion without a CLI override"
+          : WRITE_BUFFER_DIAGNOSTIC
+            ? "WAL and redb encoding buffers remain live after acknowledged commits"
+            : "redb internal cache warming toward its configured bound",
         redbVersion: "4.2.0",
         productionBehaviorCacheBytes: REDB_4_2_DEFAULT_CACHE_BYTES,
-        diagnosticCacheBytes: cacheSizeBytes,
+        firesideDefaultCacheBytes: FIRESIDE_DEFAULT_CACHE_BYTES,
+        diagnosticCacheBytes: cacheSizeBytes ?? null,
         observationDurationSeconds: OBSERVATION_DURATION_SECONDS,
         manifestDurationSeconds: manifest.soak.durationSeconds,
         manifestSha256,
         frozenThresholds: manifest.soak.memory,
-        onlyIntentionalRuntimeDifference: WRITE_BUFFER_DIAGNOSTIC
-          ? "permanent write-buffer lifetime accounting; cache bound and workload match the prior 64 MiB run"
-          : "--redb-cache-size",
+        onlyIntentionalRuntimeDifference: PRODUCTION_DEFAULT_VERIFICATION
+          ? "no --redb-cache-size override; exercise the production default with the frozen workload"
+          : WRITE_BUFFER_DIAGNOSTIC
+            ? "permanent write-buffer lifetime accounting; cache bound and workload match the prior 64 MiB run"
+            : "--redb-cache-size",
       }, null, 2)}\n`,
       "utf8",
     );
@@ -84,7 +95,7 @@ async function main(): Promise<void> {
       projectId: "demo-fireside-endurance",
       outputDirectory: stageDirectory,
       dataDirectory: resolve(outputDirectory, "state/fireside-soak"),
-      diskCacheSizeBytes: cacheSizeBytes,
+      ...(cacheSizeBytes === undefined ? {} : { diskCacheSizeBytes: cacheSizeBytes }),
     });
     await writeState(outputDirectory, {
       status: "running",
@@ -92,7 +103,7 @@ async function main(): Promise<void> {
       revision,
       manifestSha256,
       serverPid: server.pid,
-      cacheSizeBytes,
+      cacheSizeBytes: cacheSizeBytes ?? FIRESIDE_DEFAULT_CACHE_BYTES,
       observationDurationSeconds: OBSERVATION_DURATION_SECONDS,
       measurementStatus: "seeding-or-measuring",
       updatedAt: new Date().toISOString(),
@@ -109,7 +120,7 @@ async function main(): Promise<void> {
       stage: DIAGNOSTIC_STAGE,
       revision,
       manifestSha256,
-      cacheSizeBytes,
+      cacheSizeBytes: cacheSizeBytes ?? FIRESIDE_DEFAULT_CACHE_BYTES,
       completedAt: new Date().toISOString(),
       passed: result.passed,
       summaryPath: result.summaryPath,
