@@ -23,7 +23,7 @@ pub use smol_str::SmolStr as FirestoreString;
 
 mod disk;
 
-pub use disk::{DiskError, DiskOptions, DiskStore};
+pub use disk::{DEFAULT_REDB_CACHE_SIZE_BYTES, DiskError, DiskOptions, DiskStore};
 
 /// Firestore document fields in deterministic field-name order.
 pub type Fields = BTreeMap<String, Value>;
@@ -493,6 +493,26 @@ pub struct TransactionMemoryUsage {
     pub snapshot_logical_bytes: u64,
 }
 
+/// Internal redb cache budget and live usage for the disk backend.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiskCacheMemoryUsage {
+    /// Configured upper bound for redb's combined read and write page cache.
+    pub configured_bytes: u64,
+    /// Bytes currently attributed to cached redb pages.
+    pub used_bytes: u64,
+    /// Cache entries evicted because the configured bound was reached.
+    pub evictions: u64,
+    /// Unmodified page reads served from cache.
+    pub read_hits: u64,
+    /// Unmodified page reads that required storage access.
+    pub read_misses: u64,
+    /// Modified page reads served from the write cache.
+    pub write_hits: u64,
+    /// Modified page reads absent from the write cache.
+    pub write_misses: u64,
+}
+
 /// Permanent internal memory accounting exposed by the emulator debug API.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -528,6 +548,8 @@ pub struct StoreMemoryUsage {
     pub wal_buffers: LogicalMemoryUsage,
     /// Whether the application-level write-ahead journal is enabled.
     pub wal_enabled: bool,
+    /// redb page-cache state for the disk backend; `null` in memory mode.
+    pub disk_cache: Option<DiskCacheMemoryUsage>,
 }
 
 /// Shared registry for logical state retained outside the core document map.
@@ -831,7 +853,7 @@ impl Store {
         let (listeners, transactions) = self.memory_accounting.snapshot();
         match &self.backend {
             StoreBackend::Memory(inner) => {
-                lock(inner).memory_usage("memory", false, listeners, transactions)
+                lock(inner).memory_usage("memory", false, None, listeners, transactions)
             }
             StoreBackend::Disk(store) => store.memory_usage(listeners, transactions),
         }
@@ -1438,11 +1460,12 @@ impl State {
         &self,
         backend: &'static str,
         wal_enabled: bool,
+        disk_cache: Option<DiskCacheMemoryUsage>,
         listeners: ListenerMemoryUsage,
         transactions: TransactionMemoryUsage,
     ) -> StoreMemoryUsage {
         StoreMemoryUsage {
-            schema_version: 1,
+            schema_version: 2,
             backend,
             revision: self.revision.get(),
             change_floor_revision: self.change_floor.get(),
@@ -1467,6 +1490,7 @@ impl State {
             transactions,
             wal_buffers: LogicalMemoryUsage::default(),
             wal_enabled,
+            disk_cache,
         }
     }
 }
@@ -2403,6 +2427,8 @@ mod tests {
         }
 
         let usage = store.memory_usage();
+        assert_eq!(usage.schema_version, 2);
+        assert!(usage.disk_cache.is_none());
         assert_eq!(usage.current_documents.entries, 1);
         assert_eq!(
             usage.change_log.entries,

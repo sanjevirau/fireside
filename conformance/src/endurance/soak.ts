@@ -20,6 +20,12 @@ export interface SoakResult {
   readonly summary: Record<string, unknown>;
 }
 
+export interface SoakRunOptions {
+  /// Measured diagnostic window. The frozen manifest remains the source for
+  /// workload shape, warm-up, thresholds, and full-gate duration.
+  readonly observationDurationSeconds?: number;
+}
+
 interface ListenerState {
   unsubscribe: () => void;
   ready: Promise<void>;
@@ -44,7 +50,17 @@ export async function runSoak(
   server: ServerHandle,
   kind: ServerKind,
   outputDirectory: string,
+  options: SoakRunOptions = {},
 ): Promise<SoakResult> {
+  const observationDurationSeconds = options.observationDurationSeconds
+    ?? manifest.soak.durationSeconds;
+  if (
+    !Number.isInteger(observationDurationSeconds)
+    || observationDurationSeconds <= manifest.soak.warmupSeconds
+    || observationDurationSeconds > manifest.soak.durationSeconds
+  ) {
+    throw new Error("soak observation duration must be an integer after warm-up and no longer than the frozen run");
+  }
   await mkdir(outputDirectory, { recursive: true });
   const files = manifest.telemetry.files;
   const events = new DurableLog(resolve(outputDirectory, requiredFile(files, "events")));
@@ -130,7 +146,8 @@ export async function runSoak(
     measurementStart = Date.now();
     lastCompletionAt = measurementStart;
     events.json(event("soak-start", {
-      durationSeconds: manifest.soak.durationSeconds,
+      durationSeconds: observationDurationSeconds,
+      manifestDurationSeconds: manifest.soak.durationSeconds,
       targetWritesPerSecond: manifest.soak.targetWritesPerSecond,
     }));
 
@@ -146,10 +163,10 @@ export async function runSoak(
     );
     await recordRss();
 
-    const totalOperations = manifest.soak.durationSeconds
+    const totalOperations = observationDurationSeconds
       * manifest.soak.targetWritesPerSecond;
     const intervalMilliseconds = 1_000 / manifest.soak.targetWritesPerSecond;
-    const deadline = measurementStart + manifest.soak.durationSeconds * 1_000;
+    const deadline = measurementStart + observationDurationSeconds * 1_000;
     const inFlight = new Set<Promise<void>>();
 
     for (let index = 0; index < totalOperations; index += 1) {
@@ -216,7 +233,7 @@ export async function runSoak(
         sample.elapsedSeconds >= manifest.soak.memory.initialMedianWindowStartSeconds
         && sample.elapsedSeconds < manifest.soak.memory.initialMedianWindowEndSeconds,
     );
-    const finalWindowStart = manifest.soak.durationSeconds
+    const finalWindowStart = observationDurationSeconds
       - manifest.soak.memory.finalMedianWindowSeconds;
     const finalSamples = rssSamples.filter(
       (sample) => sample.elapsedSeconds >= finalWindowStart,
@@ -271,6 +288,8 @@ export async function runSoak(
       startedAt: new Date(measurementStart).toISOString(),
       elapsedSeconds,
       startupMilliseconds: server.startupMilliseconds,
+      manifestDurationSeconds: manifest.soak.durationSeconds,
+      observationDurationSeconds,
       targetOperations: totalOperations,
       scheduled,
       completed,
@@ -612,7 +631,7 @@ async function sampleLogicalMemory(
   if (
     typeof accounting !== "object"
     || accounting === null
-    || Reflect.get(accounting, "schemaVersion") !== 1
+    || Reflect.get(accounting, "schemaVersion") !== 2
   ) {
     throw new Error("logical-memory endpoint returned an unsupported schema");
   }

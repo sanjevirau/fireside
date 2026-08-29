@@ -32,7 +32,10 @@ try {
       projectId: "demo-fireside-endurance",
       outputDirectory: output,
       ...(kind === "fireside-disk"
-        ? { dataDirectory: resolve(directory, "disk-soak-state") }
+        ? {
+          dataDirectory: resolve(directory, "disk-soak-state"),
+          diskCacheSizeBytes: 67_108_864,
+        }
         : {}),
     });
     const result = await runSoak(manifest, server, kind, output);
@@ -42,7 +45,16 @@ try {
       true,
     );
     const releasedMemory = await waitForReleasedRuntimeMemory(server);
-    assert.equal(Reflect.get(releasedMemory, "schemaVersion"), 1);
+    assert.equal(Reflect.get(releasedMemory, "schemaVersion"), 2);
+    const diskCache = Reflect.get(releasedMemory, "diskCache") as unknown;
+    if (kind === "fireside-disk") {
+      assert.equal(
+        Reflect.get(requiredObject(releasedMemory, "diskCache"), "configuredBytes"),
+        67_108_864,
+      );
+    } else {
+      assert.equal(diskCache, null);
+    }
     const currentDocuments = requiredObject(releasedMemory, "currentDocuments");
     assert.equal(Reflect.get(currentDocuments, "entries"), 105);
     const changeLog = requiredObject(releasedMemory, "changeLog");
@@ -58,7 +70,7 @@ try {
     assert.ok(Reflect.get(requiredObject(allocator, "statistics"), "process") !== undefined);
     assert.ok(Reflect.get(releasedMemory, "processResident") !== undefined);
     const logicalSeries = await readFile(resolve(output, "logical-memory.ndjson"), "utf8");
-    assert.match(logicalSeries, /"schemaVersion":1/u);
+    assert.match(logicalSeries, /"schemaVersion":2/u);
     await server.stop();
     server = undefined;
   }

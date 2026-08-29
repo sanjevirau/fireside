@@ -14,6 +14,7 @@ export interface StartServerOptions {
   readonly projectId: string;
   readonly outputDirectory: string;
   readonly dataDirectory?: string;
+  readonly diskCacheSizeBytes?: number;
   readonly importMetadata?: string;
   readonly javaToolOptions?: string;
   readonly onSpawn?: (pid: number, child: ChildProcess) => void;
@@ -117,6 +118,9 @@ function serverCommand(
       throw new Error("fireside disk mode requires a data directory");
     }
     arguments_.push("--data-dir", options.dataDirectory);
+    if (options.diskCacheSizeBytes !== undefined) {
+      arguments_.push("--redb-cache-size", String(options.diskCacheSizeBytes));
+    }
   }
   if (options.importMetadata !== undefined) {
     arguments_.push("--seed_from_export", options.importMetadata);

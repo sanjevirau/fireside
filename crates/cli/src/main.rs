@@ -8,7 +8,8 @@ use std::sync::Arc;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use fireside_core_store::{
-    DatabaseName, DiskOptions, DocumentKey, Precondition, Store, StoreOptions, Write,
+    DEFAULT_REDB_CACHE_SIZE_BYTES, DatabaseName, DiskOptions, DocumentKey, Precondition, Store,
+    StoreOptions, Write,
 };
 use fireside_export_format::ExportReader;
 use fireside_grpc_front::FirestoreService;
@@ -113,6 +114,9 @@ struct FirestoreArgs {
     /// Disable the default-on write-ahead journal in disk mode.
     #[arg(long = "no-wal", requires = "data_dir")]
     no_wal: bool,
+    /// Override redb's combined read/write cache budget in disk mode, in bytes.
+    #[arg(long = "redb-cache-size", requires = "data_dir")]
+    redb_cache_size: Option<usize>,
     /// Tokio worker threads. Defaults to at most four to bound per-worker allocator pages.
     #[arg(long = "worker-threads", default_value_t = default_worker_threads())]
     worker_threads: usize,
@@ -210,8 +214,11 @@ async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
             "write-ahead journal enabled"
         };
         eprintln!(
-            "fireside Firestore persistence: {} ({journal})",
-            data_dir.display()
+            "fireside Firestore persistence: {} ({journal}, redb cache {} bytes)",
+            data_dir.display(),
+            arguments
+                .redb_cache_size
+                .unwrap_or(DEFAULT_REDB_CACHE_SIZE_BYTES),
         );
     }
     eprintln!(
@@ -240,10 +247,15 @@ fn open_store(arguments: &FirestoreArgs) -> Result<Store, String> {
             DiskOptions {
                 store: StoreOptions::default(),
                 journal: !arguments.no_wal,
+                cache_size_bytes: arguments
+                    .redb_cache_size
+                    .unwrap_or(DEFAULT_REDB_CACHE_SIZE_BYTES),
             },
         )
         .map_err(|error| error.to_string()),
-        None if arguments.no_wal => Err("--no-wal requires --data-dir <path>".to_owned()),
+        None if arguments.no_wal || arguments.redb_cache_size.is_some() => {
+            Err("disk-only options require --data-dir <path>".to_owned())
+        }
         None => Ok(Store::new(StoreOptions::default())),
     }
 }
@@ -452,6 +464,37 @@ mod tests {
         };
         assert_eq!(arguments.data_dir, Some(PathBuf::from("state")));
         assert!(!arguments.no_wal);
+        assert_eq!(arguments.redb_cache_size, None);
+    }
+
+    #[test]
+    fn redb_cache_budget_is_an_explicit_disk_mode_override() {
+        let arguments = normalize_arguments([
+            OsString::from("fireside"),
+            OsString::from("--data-dir"),
+            OsString::from("state"),
+            OsString::from("--redb-cache-size"),
+            OsString::from("67108864"),
+        ]);
+        let cli = Cli::try_parse_from(arguments).expect("cache override should parse");
+        let Command::Firestore(arguments) = cli.command else {
+            panic!("expected Firestore command");
+        };
+        assert_eq!(arguments.redb_cache_size, Some(67_108_864));
+    }
+
+    #[test]
+    fn redb_cache_budget_requires_disk_mode() {
+        let arguments = normalize_arguments([
+            OsString::from("fireside"),
+            OsString::from("--redb-cache-size"),
+            OsString::from("67108864"),
+        ]);
+        let error = Cli::try_parse_from(arguments).expect_err("memory mode has no redb cache");
+        assert_eq!(
+            error.kind(),
+            clap::error::ErrorKind::MissingRequiredArgument
+        );
     }
 
     #[test]

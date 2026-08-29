@@ -10,14 +10,15 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use bincode::{Decode, Encode, config};
 use redb::{
-    Database, Durability, ReadTransaction, ReadableDatabase, ReadableTable, TableDefinition,
+    Builder, Database, Durability, ReadTransaction, ReadableDatabase, ReadableTable,
+    TableDefinition,
 };
 
 use super::{
-    Change, CommitError, CommitPlan, CommitResult, DatabaseName, Document, DocumentKey,
-    ListenerMemoryUsage, LogicalMemoryUsage, ResetRequired, Revision, Snapshot, SnapshotError,
-    State, StoreMemoryUsage, StoreOptions, Timestamp, TransactionMemoryUsage, Write,
-    document_entry_logical_bytes,
+    Change, CommitError, CommitPlan, CommitResult, DatabaseName, DiskCacheMemoryUsage, Document,
+    DocumentKey, ListenerMemoryUsage, LogicalMemoryUsage, ResetRequired, Revision, Snapshot,
+    SnapshotError, State, StoreMemoryUsage, StoreOptions, Timestamp, TransactionMemoryUsage, Write,
+    document_entry_logical_bytes, usize_to_u64,
 };
 
 const DOCUMENTS: TableDefinition<&[u8], &[u8]> = TableDefinition::new("documents_v1");
@@ -30,6 +31,12 @@ const FRAME_HEADER_LEN: usize = 16;
 const MAX_WAL_RECORD_BYTES: usize = 64 * 1024 * 1024;
 type LoadedDatabase = (Revision, Timestamp, LogicalMemoryUsage);
 
+/// redb 4.2.0's default combined read/write page-cache budget.
+///
+/// Fireside names the inherited value explicitly so it is visible in memory
+/// accounting and can be overridden for controlled diagnostics.
+pub const DEFAULT_REDB_CACHE_SIZE_BYTES: usize = 1024 * 1024 * 1024;
+
 /// Disk-store resource and durability settings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DiskOptions {
@@ -37,6 +44,8 @@ pub struct DiskOptions {
     pub store: StoreOptions,
     /// Write and sync an application-level journal before each redb commit.
     pub journal: bool,
+    /// Maximum bytes used by redb's combined read/write page cache.
+    pub cache_size_bytes: usize,
 }
 
 impl Default for DiskOptions {
@@ -44,6 +53,7 @@ impl Default for DiskOptions {
         Self {
             store: StoreOptions::default(),
             journal: true,
+            cache_size_bytes: DEFAULT_REDB_CACHE_SIZE_BYTES,
         }
     }
 }
@@ -61,10 +71,12 @@ impl DiskStore {
         let directory = directory.as_ref();
         fs::create_dir_all(directory)?;
         let database_path = directory.join(DATABASE_FILE);
+        let mut builder = Builder::new();
+        builder.set_cache_size(options.cache_size_bytes);
         let database = if database_path.exists() {
-            Database::open(&database_path).map_err(DiskError::redb)?
+            builder.open(&database_path).map_err(DiskError::redb)?
         } else {
-            Database::create(&database_path).map_err(DiskError::redb)?
+            builder.create(&database_path).map_err(DiskError::redb)?
         };
         initialize_database(&database)?;
 
@@ -94,6 +106,7 @@ impl DiskStore {
                 memory,
                 database,
                 journal: journal.map(|(journal, _)| journal),
+                cache_size_bytes: options.cache_size_bytes,
                 requires_restart: false,
             })),
         })
@@ -220,9 +233,22 @@ impl DiskStore {
         transactions: TransactionMemoryUsage,
     ) -> StoreMemoryUsage {
         let state = self.state();
-        state
-            .memory
-            .memory_usage("disk", state.journal.is_some(), listeners, transactions)
+        let cache = state.database.cache_stats();
+        state.memory.memory_usage(
+            "disk",
+            state.journal.is_some(),
+            Some(DiskCacheMemoryUsage {
+                configured_bytes: usize_to_u64(state.cache_size_bytes),
+                used_bytes: usize_to_u64(cache.used_bytes()),
+                evictions: cache.evictions(),
+                read_hits: cache.read_hits(),
+                read_misses: cache.read_misses(),
+                write_hits: cache.write_hits(),
+                write_misses: cache.write_misses(),
+            }),
+            listeners,
+            transactions,
+        )
     }
 
     fn state(&self) -> MutexGuard<'_, DiskState> {
@@ -353,6 +379,7 @@ struct DiskState {
     memory: State,
     database: Database,
     journal: Option<Journal>,
+    cache_size_bytes: usize,
     requires_restart: bool,
 }
 
@@ -844,6 +871,42 @@ mod tests {
                 .len(),
             0
         );
+    }
+
+    #[test]
+    fn disk_memory_accounting_reports_the_configured_redb_cache() {
+        const CACHE_BYTES: usize = 64 * 1024 * 1024;
+        let directory = TestDirectory::new();
+        let store = DiskStore::open(
+            directory.path(),
+            DiskOptions {
+                cache_size_bytes: CACHE_BYTES,
+                ..DiskOptions::default()
+            },
+        )
+        .expect("disk store should open");
+        store
+            .commit(&[Write::Set {
+                key: key("items/cache-accounting"),
+                fields: fields(Value::Bytes(Arc::from(vec![0x4c; 256 * 1024]))),
+                transforms: Vec::new(),
+                precondition: Precondition::None,
+            }])
+            .expect("commit should populate redb cache metrics");
+
+        let usage = store.memory_usage(
+            ListenerMemoryUsage::default(),
+            TransactionMemoryUsage::default(),
+        );
+        let cache = usage.disk_cache.expect("disk cache should be accounted");
+        assert_eq!(usage.schema_version, 2);
+        assert_eq!(
+            cache.configured_bytes,
+            u64::try_from(CACHE_BYTES).expect("cache bound should fit u64")
+        );
+        assert!(cache.used_bytes > 0);
+        assert!(cache.used_bytes <= cache.configured_bytes);
+        assert!(cache.read_hits + cache.read_misses + cache.write_hits + cache.write_misses > 0);
     }
 
     #[test]

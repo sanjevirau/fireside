@@ -1428,7 +1428,7 @@ mod tests {
             allocator_memory_reporter: None,
         };
         let Json(usage) = debug_memory(State(state)).await;
-        assert_eq!(usage.store.schema_version, 1);
+        assert_eq!(usage.store.schema_version, 2);
         assert_eq!(usage.store.backend, "memory");
         assert_eq!(usage.store.current_documents.entries, 0);
         assert_eq!(usage.store.listeners.streams, 0);
