@@ -1,0 +1,148 @@
+{
+  "result": "failed",
+  "criterion": {
+    "maximumRssSlopeBytesPerHour": 1048576,
+    "observedRssSlopeBytesPerHour": 16649671.708182096,
+    "excessBytesPerHour": 15601095.708182096
+  },
+  "postWarmup": {
+    "samples": 181,
+    "elapsedSeconds": [
+      1800.035,
+      3600.007
+    ],
+    "rssSlopeBytesPerHour": 16649671.708182096,
+    "pssSlopeBytesPerHour": 16871292.052545726,
+    "anonymousBytesSlopePerHour": 16871477.00307996,
+    "privateDirtyBytesSlopePerHour": 16871477.00307996,
+    "rssBytes": {
+      "minimum": 169635840,
+      "maximum": 191774720,
+      "median": 180363264
+    },
+    "fiveMinuteRssMediansBytes": [
+      176930816,
+      177690624,
+      180725760,
+      183570432,
+      187224064,
+      178057216
+    ],
+    "cacheUsedBytes": {
+      "minimum": 65474880,
+      "maximum": 67084608,
+      "median": 66474304,
+      "slopePerHour": 173475.0959544712,
+      "evictions": [
+        119605,
+        192103
+      ],
+      "pearsonWithRss": 0.11709487329888771
+    },
+    "logicalSlopesBytesPerHour": {
+      "currentDocuments": 693002.3760857336,
+      "replayDocumentVersions": 0,
+      "changeLog": 0,
+      "listeners": 0
+    },
+    "allocator": {
+      "committedBytesSlopePerHour": 0,
+      "reservedBytesSlopePerHour": 0,
+      "pagesSlopePerHour": 149.29671120250035,
+      "abandonedPagesSlopePerHour": 135.97167217706104,
+      "pagesPearsonWithRss": 0.7475701076983218,
+      "abandonedPagesPearsonWithRss": 0.6863544693617343,
+      "page5120First": 463,
+      "page5120Last": 496,
+      "page5120SlopePerHour": 129.13080032140488,
+      "page5120PearsonWithRss": 0.771737050801872
+    },
+    "writeBuffers": {
+      "all": {
+        "postWarmupNonzeroLiveSamples": 3,
+        "allRunNonzeroLiveSamples": 5,
+        "maximumLiveBuffers": 1,
+        "maximumLiveCapacityBytes": 1211,
+        "peakLiveBuffers": 2,
+        "peakLiveCapacityBytes": 921783,
+        "allocations": 1120000,
+        "releases": 1120000,
+        "cumulativeAllocatedCapacityBytes": 3531639794,
+        "cumulativeReleasedCapacityBytes": 3531639794,
+        "finalBalanced": true
+      },
+      "walPayloads": {
+        "postWarmupNonzeroLiveSamples": 3,
+        "allRunNonzeroLiveSamples": 5,
+        "maximumLiveBuffers": 1,
+        "maximumLiveCapacityBytes": 1211,
+        "peakLiveBuffers": 1,
+        "peakLiveCapacityBytes": 921783,
+        "allocations": 280000,
+        "releases": 280000,
+        "cumulativeAllocatedCapacityBytes": 1766099897,
+        "cumulativeReleasedCapacityBytes": 1766099897,
+        "finalBalanced": true
+      },
+      "redbKeys": {
+        "postWarmupNonzeroLiveSamples": 0,
+        "allRunNonzeroLiveSamples": 0,
+        "maximumLiveBuffers": 0,
+        "maximumLiveCapacityBytes": 0,
+        "peakLiveBuffers": 1,
+        "peakLiveCapacityBytes": 67,
+        "allocations": 280000,
+        "releases": 280000,
+        "cumulativeAllocatedCapacityBytes": 18760000,
+        "cumulativeReleasedCapacityBytes": 18760000,
+        "finalBalanced": true
+      },
+      "redbDocuments": {
+        "postWarmupNonzeroLiveSamples": 0,
+        "allRunNonzeroLiveSamples": 0,
+        "maximumLiveBuffers": 0,
+        "maximumLiveCapacityBytes": 0,
+        "peakLiveBuffers": 1,
+        "peakLiveCapacityBytes": 921699,
+        "allocations": 280000,
+        "releases": 280000,
+        "cumulativeAllocatedCapacityBytes": 1742711477,
+        "cumulativeReleasedCapacityBytes": 1742711477,
+        "finalBalanced": true
+      },
+      "redbMetadata": {
+        "postWarmupNonzeroLiveSamples": 0,
+        "allRunNonzeroLiveSamples": 0,
+        "maximumLiveBuffers": 0,
+        "maximumLiveCapacityBytes": 0,
+        "peakLiveBuffers": 1,
+        "peakLiveCapacityBytes": 15,
+        "allocations": 280000,
+        "releases": 280000,
+        "cumulativeAllocatedCapacityBytes": 4068420,
+        "cumulativeReleasedCapacityBytes": 4068420,
+        "finalBalanced": true
+      }
+    }
+  },
+  "workload": {
+    "elapsedSeconds": 3600.012,
+    "completed": 180000,
+    "failed": 0,
+    "transactionAttempts": 36000,
+    "listenerChurns": 29,
+    "listenerMismatches": 0,
+    "stallEvents": 0,
+    "writeP99Milliseconds": 272.1120639999863,
+    "listenerP99Milliseconds": 339.75925500004087,
+    "initialMedianRssBytes": 180357120,
+    "finalMedianRssBytes": 180363264,
+    "peakRssBytes": 726114304
+  },
+  "comparison": {
+    "prior64MiBDiagnosticRssSlopeBytesPerHour": 1204206.9404016775,
+    "writeBufferDiagnosticRssSlopeBytesPerHour": -6463647.529024225,
+    "writeBufferDiagnosticPage5120SlopePerHour": 127.63810421672736
+  },
+  "method": "Theil-Sen median pairwise slope over samples at elapsedSeconds >= 1800; the immutable production-verification verdict is taken from summary.json."
+}
