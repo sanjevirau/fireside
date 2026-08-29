@@ -1,0 +1,120 @@
+{
+  "generatedAt": "2026-08-29T15:18:56.413Z",
+  "metric": "process RSS sampled every approximately 10 seconds",
+  "population": "three controlled one-hour Fireside disk/WAL runs after the frozen 30-minute warm-up",
+  "thresholdBytesPerHour": 1048576,
+  "combinedEnvelope": {
+    "minimumRssBytes": 169635840,
+    "maximumRssBytes": 191774720,
+    "medianRssBytes": 181090304
+  },
+  "jointHarmonic": {
+    "periodSeconds": 728,
+    "normalizedResidualScore": 2.188786985305219,
+    "fits": [
+      {
+        "label": "cache",
+        "amplitudeBytes": 1928234.6364547568,
+        "rSquared": 0.1923863444769286,
+        "phaseRadians": -1.1418442079001383,
+        "trendBytesPerHour": 303067.17739534343
+      },
+      {
+        "label": "buffers",
+        "amplitudeBytes": 1687562.0699872787,
+        "rSquared": 0.19467493708085126,
+        "phaseRadians": -1.6894805430180135,
+        "trendBytesPerHour": -6363963.495531672
+      },
+      {
+        "label": "production",
+        "amplitudeBytes": 3263502.5655226912,
+        "rSquared": 0.42415173313700116,
+        "phaseRadians": -1.9068282881765752,
+        "trendBytesPerHour": 13190552.454110915
+      }
+    ],
+    "limitation": "The shared harmonic is descriptive. Its modest R-squared values and the short observation windows do not establish a stable allocator period."
+  },
+  "runs": [
+    {
+      "label": "cache",
+      "samples": 182,
+      "elapsedSeconds": [
+        1800.054,
+        3600.34
+      ],
+      "slopeBytesPerHour": 1204206.9404016775,
+      "rssBytes": {
+        "minimum": 175190016,
+        "maximum": 190980096,
+        "median": 183465984,
+        "p05": 177835622.4,
+        "p95": 187983257.6,
+        "central90PercentPeakToPeak": 10147635.199999988
+      },
+      "circularPhaseSensitivity": {
+        "minimumSlopeBytesPerHour": -10565985.103448275,
+        "p05SlopeBytesPerHour": -9429094.673515512,
+        "medianSlopeBytesPerHour": 932109.1976783886,
+        "p95SlopeBytesPerHour": 8219175.266165412,
+        "maximumSlopeBytesPerHour": 9571705.263157895,
+        "passingFraction": 0.5164835164835165,
+        "assumption": "The observed bounded sequence is treated as circular; this is a phase sensitivity, not proof of a stationary periodic process."
+      }
+    },
+    {
+      "label": "buffers",
+      "samples": 181,
+      "elapsedSeconds": [
+        1800.036,
+        3600.007
+      ],
+      "slopeBytesPerHour": -6463647.529024225,
+      "rssBytes": {
+        "minimum": 170647552,
+        "maximum": 187850752,
+        "median": 179339264,
+        "p05": 173273088,
+        "p95": 185430016,
+        "central90PercentPeakToPeak": 12156928
+      },
+      "circularPhaseSensitivity": {
+        "minimumSlopeBytesPerHour": -9584640,
+        "p05SlopeBytesPerHour": -8947562.899799908,
+        "medianSlopeBytesPerHour": 752054.8571428572,
+        "p95SlopeBytesPerHour": 7746391.208791209,
+        "maximumSlopeBytesPerHour": 8683588.840336133,
+        "passingFraction": 0.5524861878453039,
+        "assumption": "The observed bounded sequence is treated as circular; this is a phase sensitivity, not proof of a stationary periodic process."
+      }
+    },
+    {
+      "label": "production",
+      "samples": 181,
+      "elapsedSeconds": [
+        1800.035,
+        3600.007
+      ],
+      "slopeBytesPerHour": 16649671.708182096,
+      "rssBytes": {
+        "minimum": 169635840,
+        "maximum": 191774720,
+        "median": 180363264,
+        "p05": 174620672,
+        "p95": 188674048,
+        "central90PercentPeakToPeak": 14053376
+      },
+      "circularPhaseSensitivity": {
+        "minimumSlopeBytesPerHour": -14013714.637047956,
+        "p05SlopeBytesPerHour": -12453194.049586777,
+        "medianSlopeBytesPerHour": -836022.857142857,
+        "p95SlopeBytesPerHour": 22757534.29951691,
+        "maximumSlopeBytesPerHour": 23667962.55319149,
+        "passingFraction": 0.5193370165745856,
+        "assumption": "The observed bounded sequence is treated as circular; this is a phase sensitivity, not proof of a stationary periodic process."
+      }
+    }
+  ],
+  "conclusion": "The three windows occupy different phases of a bounded resident-page envelope, making the 30-minute slope phase-sensitive. A deterministic eager-decommit experiment is justified, but the traces do not prove a single stable period or an accumulating logical owner."
+}

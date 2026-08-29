@@ -3,6 +3,11 @@ import test from "node:test";
 
 import { GateFailure, requireGate } from "../src/endurance/gate.ts";
 import { loadManifest } from "../src/endurance/manifest.ts";
+import {
+  circularPhaseSlopes,
+  findJointHarmonicPeriod,
+  interpolatedQuantile,
+} from "../src/endurance/oscillation.ts";
 import { parseSmapsRollup } from "../src/endurance/process-metrics.ts";
 import {
   median,
@@ -75,6 +80,21 @@ test("endurance statistics use nearest-rank percentiles and Theil-Sen slope", ()
     ]),
     1_048_576,
   );
+});
+
+test("oscillation analysis recovers a shared period and exposes phase sensitivity", () => {
+  const samples = Array.from({ length: 181 }, (_, index) => ({
+    elapsedSeconds: index * 10,
+    rssBytes: 200_000_000 + 4_000_000 * Math.sin(2 * Math.PI * index * 10 / 300),
+  }));
+  const fit = findJointHarmonicPeriod([samples, samples], 240, 360);
+  assert.equal(fit.periodSeconds, 300);
+  assert.ok(fit.fits.every((run) => run.rSquared > 0.999));
+  const phaseSlopes = circularPhaseSlopes(samples);
+  assert.equal(phaseSlopes.length, samples.length);
+  assert.ok(Math.min(...phaseSlopes) < 0);
+  assert.ok(Math.max(...phaseSlopes) > 0);
+  assert.equal(interpolatedQuantile([0, 10], 0.25), 2.5);
 });
 
 test("Linux process telemetry separates resident-page categories", () => {
