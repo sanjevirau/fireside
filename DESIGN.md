@@ -271,6 +271,28 @@ layout. Unit tests pin inline eligibility, long Unicode behavior, enum size,
 and disk serialization; differential and endurance verification remain
 mandatory before this candidate is accepted.
 
+Three later one-hour disk/WAL runs with the bounded 64 MiB redb cache measured
+post-warm-up RSS slopes of 1.148, -6.164, and 15.878 MiB/hour even though their
+logical state, cache usage, write-buffer balances, and steady-state medians were
+bounded. A checked-in joint harmonic search finds its strongest shared
+descriptive period at 728 seconds, while circularly rotating each unchanged
+sample sequence produces both passing and failing slopes for roughly half of
+the possible starting offsets. The per-run central 90% RSS bands are only
+9.68 to 13.40 MiB. The modest harmonic R-squared values do not prove a stable
+single period, but the rotation result demonstrates that the one-hour
+statistic is phase-sensitive within the observed resident-page envelope.
+
+The eligible allocator experiment therefore sets mimalloc's purge delay to
+zero and keeps purge decommit enabled. Fireside applies those defaults before
+allocator initialization by replacing its initial Unix process image once;
+there is no supervising process. Explicit `MIMALLOC_PURGE_DELAY` and
+`MIMALLOC_PURGE_DECOMMITS` environment values remain operational overrides and
+are validated at startup. The debug-memory allocator object reports the active
+`purgeDelayMilliseconds` and `purgeDecommits` values, and the endurance smoke
+test pins the production defaults. Immediate decommit can trade CPU and page
+fault work for a flatter resident set, so throughput and p99 latency remain
+part of the unchanged verification rather than being assumed harmless.
+
 Phase 1 must measure resident memory during a multi-hour torture run with
 thousands of writes per minute, multiple active listeners, and mixed
 transactions. The gate requires a flat post-warmup trend, evidence that old

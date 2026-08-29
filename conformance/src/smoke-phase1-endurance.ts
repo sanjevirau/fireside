@@ -95,6 +95,8 @@ try {
     const allocator = requiredObject(releasedMemory, "allocator");
     assert.equal(Reflect.get(allocator, "name"), "mimalloc");
     assert.ok(Number(Reflect.get(allocator, "version")) > 0);
+    assert.equal(Reflect.get(allocator, "purgeDelayMilliseconds"), 0);
+    assert.equal(Reflect.get(allocator, "purgeDecommits"), true);
     assert.ok(Reflect.get(allocator, "error") === undefined);
     assert.ok(Reflect.get(requiredObject(allocator, "statistics"), "process") !== undefined);
     assert.ok(Reflect.get(releasedMemory, "processResident") !== undefined);

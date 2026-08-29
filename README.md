@@ -24,7 +24,11 @@ target, not the specification.
 
 The candidate runtime bounds its default worker pool to at most four threads;
 `--worker-threads <n>` is the explicit override. The selected count is visible
-in startup output and `GET /emulator/v1/debug/memory`. Firestore strings up to
+in startup output and `GET /emulator/v1/debug/memory`. Mimalloc purges freed
+pages immediately and decommits them by default; the active purge delay and
+decommit mode are also reported by that endpoint. The standard
+`MIMALLOC_PURGE_DELAY` and `MIMALLOC_PURGE_DECOMMITS` environment variables are
+explicit operational overrides. Firestore strings up to
 23 UTF-8 bytes are stored inline, with shared immutable heap storage for longer
 values. Disk mode bounds redb's combined cache to 64 MiB by default and exposes
 `--redb-cache-size` for explicit capacity planning. These are measured candidate

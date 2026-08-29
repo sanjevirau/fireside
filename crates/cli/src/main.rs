@@ -6,6 +6,11 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::Arc;
 
+#[cfg(unix)]
+use std::os::unix::process::CommandExt;
+#[cfg(unix)]
+use std::process::Command as ProcessCommand;
+
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use fireside_core_store::{
     DEFAULT_REDB_CACHE_SIZE_BYTES, DatabaseName, DiskOptions, DocumentKey, Precondition, Store,
@@ -27,6 +32,7 @@ static GLOBAL_ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
 #[derive(Debug)]
 struct MimallocMemoryReporter {
     runtime_worker_threads: usize,
+    runtime_config: MimallocRuntimeConfig,
 }
 
 impl AllocatorMemoryReporter for MimallocMemoryReporter {
@@ -45,6 +51,8 @@ impl AllocatorMemoryReporter for MimallocMemoryReporter {
             name: "mimalloc".to_owned(),
             version: mimalloc::MiMalloc.version(),
             runtime_worker_threads: self.runtime_worker_threads,
+            purge_delay_milliseconds: self.runtime_config.purge_delay_milliseconds,
+            purge_decommits: self.runtime_config.purge_decommits,
             statistics,
             error,
         }
@@ -54,6 +62,25 @@ impl AllocatorMemoryReporter for MimallocMemoryReporter {
 const INDEX_CONFIG_PATH: &str = "firestore.indexes.json";
 const IMPORT_BATCH_SIZE: usize = 500;
 const DEFAULT_MAX_WORKER_THREADS: usize = 4;
+const MIMALLOC_PURGE_DELAY_ENV: &str = "MIMALLOC_PURGE_DELAY";
+const MIMALLOC_PURGE_DECOMMITS_ENV: &str = "MIMALLOC_PURGE_DECOMMITS";
+const DEFAULT_MIMALLOC_PURGE_DELAY_MILLISECONDS: i64 = 0;
+const DEFAULT_MIMALLOC_PURGE_DECOMMITS: bool = true;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct MimallocRuntimeConfig {
+    purge_delay_milliseconds: i64,
+    purge_decommits: bool,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+enum AllocatorBootstrapPlan {
+    Ready(MimallocRuntimeConfig),
+    Reexec {
+        purge_delay_milliseconds: i64,
+        purge_decommits: bool,
+    },
+}
 
 #[derive(Debug, Parser)]
 #[command(
@@ -123,9 +150,16 @@ struct FirestoreArgs {
 }
 
 fn main() -> ExitCode {
+    let allocator_config = match ensure_allocator_environment() {
+        Ok(config) => config,
+        Err(error) => {
+            eprintln!("allocator configuration failed: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
     let cli = Cli::parse_from(normalize_arguments(std::env::args_os()));
     match cli.command {
-        Command::Firestore(arguments) => run_firestore_runtime(&arguments),
+        Command::Firestore(arguments) => run_firestore_runtime(&arguments, allocator_config),
         Command::CaptureProxy => {
             eprintln!("fireside capture proxy is not implemented yet");
             ExitCode::FAILURE
@@ -133,7 +167,10 @@ fn main() -> ExitCode {
     }
 }
 
-fn run_firestore_runtime(arguments: &FirestoreArgs) -> ExitCode {
+fn run_firestore_runtime(
+    arguments: &FirestoreArgs,
+    allocator_config: MimallocRuntimeConfig,
+) -> ExitCode {
     if arguments.worker_threads == 0 {
         eprintln!("--worker-threads must be at least 1");
         return ExitCode::FAILURE;
@@ -149,7 +186,92 @@ fn run_firestore_runtime(arguments: &FirestoreArgs) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    runtime.block_on(run_firestore(arguments))
+    runtime.block_on(run_firestore(arguments, allocator_config))
+}
+
+fn allocator_bootstrap_plan(
+    purge_delay: Option<&std::ffi::OsStr>,
+    purge_decommits: Option<&std::ffi::OsStr>,
+) -> Result<AllocatorBootstrapPlan, String> {
+    let parse_delay = |value: &std::ffi::OsStr| {
+        value
+            .to_str()
+            .ok_or_else(|| format!("{MIMALLOC_PURGE_DELAY_ENV} must be valid UTF-8"))?
+            .parse::<i64>()
+            .map_err(|_| format!("{MIMALLOC_PURGE_DELAY_ENV} must be an integer"))
+    };
+    let parse_decommits = |value: &std::ffi::OsStr| match value.to_str() {
+        Some("0") => Ok(false),
+        Some("1") => Ok(true),
+        _ => Err(format!("{MIMALLOC_PURGE_DECOMMITS_ENV} must be 0 or 1")),
+    };
+
+    let delay = purge_delay
+        .map(parse_delay)
+        .transpose()?
+        .unwrap_or(DEFAULT_MIMALLOC_PURGE_DELAY_MILLISECONDS);
+    let decommits = purge_decommits
+        .map(parse_decommits)
+        .transpose()?
+        .unwrap_or(DEFAULT_MIMALLOC_PURGE_DECOMMITS);
+    let config = MimallocRuntimeConfig {
+        purge_delay_milliseconds: delay,
+        purge_decommits: decommits,
+    };
+    if purge_delay.is_some() && purge_decommits.is_some() {
+        Ok(AllocatorBootstrapPlan::Ready(config))
+    } else {
+        Ok(AllocatorBootstrapPlan::Reexec {
+            purge_delay_milliseconds: delay,
+            purge_decommits: decommits,
+        })
+    }
+}
+
+fn ensure_allocator_environment() -> Result<MimallocRuntimeConfig, String> {
+    match allocator_bootstrap_plan(
+        std::env::var_os(MIMALLOC_PURGE_DELAY_ENV).as_deref(),
+        std::env::var_os(MIMALLOC_PURGE_DECOMMITS_ENV).as_deref(),
+    )? {
+        AllocatorBootstrapPlan::Ready(config) => Ok(config),
+        AllocatorBootstrapPlan::Reexec {
+            purge_delay_milliseconds,
+            purge_decommits,
+        } => reexec_with_allocator_environment(purge_delay_milliseconds, purge_decommits),
+    }
+}
+
+#[cfg(unix)]
+fn reexec_with_allocator_environment(
+    purge_delay_milliseconds: i64,
+    purge_decommits: bool,
+) -> Result<MimallocRuntimeConfig, String> {
+    let executable = std::env::current_exe()
+        .map_err(|error| format!("cannot resolve current executable: {error}"))?;
+    let error = ProcessCommand::new(executable)
+        .args(std::env::args_os().skip(1))
+        .env(
+            MIMALLOC_PURGE_DELAY_ENV,
+            purge_delay_milliseconds.to_string(),
+        )
+        .env(
+            MIMALLOC_PURGE_DECOMMITS_ENV,
+            if purge_decommits { "1" } else { "0" },
+        )
+        .exec();
+    Err(format!(
+        "cannot restart with allocator defaults before allocator initialization: {error}"
+    ))
+}
+
+#[cfg(not(unix))]
+fn reexec_with_allocator_environment(
+    _purge_delay_milliseconds: i64,
+    _purge_decommits: bool,
+) -> Result<MimallocRuntimeConfig, String> {
+    Err(format!(
+        "set {MIMALLOC_PURGE_DELAY_ENV} and {MIMALLOC_PURGE_DECOMMITS_ENV} explicitly on this platform"
+    ))
 }
 
 fn default_worker_threads() -> usize {
@@ -158,7 +280,10 @@ fn default_worker_threads() -> usize {
         .min(DEFAULT_MAX_WORKER_THREADS)
 }
 
-async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
+async fn run_firestore(
+    arguments: &FirestoreArgs,
+    allocator_config: MimallocRuntimeConfig,
+) -> ExitCode {
     let address = match resolve_address(&arguments.host, arguments.port) {
         Ok(address) => address,
         Err(error) => {
@@ -204,6 +329,7 @@ async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
         query_policy,
         Some(Arc::new(MimallocMemoryReporter {
             runtime_worker_threads: arguments.worker_threads,
+            runtime_config: allocator_config,
         })),
     ))
     .add_service(service);
@@ -222,8 +348,10 @@ async fn run_firestore(arguments: &FirestoreArgs) -> ExitCode {
         );
     }
     eprintln!(
-        "fireside Firestore listening on {address} with {} runtime worker thread(s)",
-        arguments.worker_threads
+        "fireside Firestore listening on {address} with {} runtime worker thread(s); mimalloc purge delay {} ms, decommit {}",
+        arguments.worker_threads,
+        allocator_config.purge_delay_milliseconds,
+        allocator_config.purge_decommits,
     );
     let result = tonic::transport::Server::builder()
         .accept_http1(true)
@@ -389,16 +517,58 @@ mod tests {
     fn allocator_reporter_returns_versioned_native_statistics() {
         let usage = MimallocMemoryReporter {
             runtime_worker_threads: 3,
+            runtime_config: MimallocRuntimeConfig {
+                purge_delay_milliseconds: 0,
+                purge_decommits: true,
+            },
         }
         .memory_usage();
         assert_eq!(usage.name, "mimalloc");
         assert!(usage.version > 0);
         assert_eq!(usage.runtime_worker_threads, 3);
+        assert_eq!(usage.purge_delay_milliseconds, 0);
+        assert!(usage.purge_decommits);
         assert!(usage.error.is_none());
         assert!(usage.statistics.get("stat_version").is_some());
         assert!(usage.statistics.get("process").is_some());
         assert!(usage.statistics.get("committed").is_some());
         assert!(usage.statistics.get("reserved").is_some());
+    }
+
+    #[test]
+    fn allocator_defaults_require_reexec_before_initialization() {
+        assert_eq!(
+            allocator_bootstrap_plan(None, None).expect("defaults should be valid"),
+            AllocatorBootstrapPlan::Reexec {
+                purge_delay_milliseconds: 0,
+                purge_decommits: true,
+            }
+        );
+    }
+
+    #[test]
+    fn allocator_explicit_environment_is_reported_without_reexec() {
+        assert_eq!(
+            allocator_bootstrap_plan(
+                Some(std::ffi::OsStr::new("250")),
+                Some(std::ffi::OsStr::new("0")),
+            )
+            .expect("explicit values should be valid"),
+            AllocatorBootstrapPlan::Ready(MimallocRuntimeConfig {
+                purge_delay_milliseconds: 250,
+                purge_decommits: false,
+            })
+        );
+    }
+
+    #[test]
+    fn allocator_environment_rejects_ambiguous_values() {
+        let error = allocator_bootstrap_plan(
+            Some(std::ffi::OsStr::new("immediate")),
+            Some(std::ffi::OsStr::new("true")),
+        )
+        .expect_err("invalid allocator settings must fail startup");
+        assert!(error.contains(MIMALLOC_PURGE_DELAY_ENV));
     }
 
     #[test]
@@ -541,7 +711,16 @@ mod tests {
         let Command::Firestore(arguments) = cli.command else {
             panic!("expected Firestore command");
         };
-        assert_eq!(run_firestore_runtime(&arguments), ExitCode::FAILURE);
+        assert_eq!(
+            run_firestore_runtime(
+                &arguments,
+                MimallocRuntimeConfig {
+                    purge_delay_milliseconds: 0,
+                    purge_decommits: true,
+                },
+            ),
+            ExitCode::FAILURE
+        );
     }
 
     #[test]

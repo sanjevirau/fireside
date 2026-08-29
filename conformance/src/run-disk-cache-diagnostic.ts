@@ -25,6 +25,8 @@ const execute = promisify(execFile);
 const OBSERVATION_DURATION_SECONDS = 3_600;
 const REDB_4_2_DEFAULT_CACHE_BYTES = 1_024 * 1_024 * 1_024;
 const FIRESIDE_DEFAULT_CACHE_BYTES = 64 * 1_024 * 1_024;
+const FIRESIDE_DEFAULT_PURGE_DELAY_MILLISECONDS = 0;
+const FIRESIDE_DEFAULT_PURGE_DECOMMITS = true;
 const WRITE_BUFFER_DIAGNOSTIC = process.argv.includes("--write-buffers");
 const PRODUCTION_DEFAULT_VERIFICATION = process.argv.includes("--production-default");
 const DIAGNOSTIC_STAGE = PRODUCTION_DEFAULT_VERIFICATION
@@ -69,20 +71,23 @@ async function main(): Promise<void> {
       resolve(outputDirectory, "diagnostic-control.json"),
       `${JSON.stringify({
         hypothesis: PRODUCTION_DEFAULT_VERIFICATION
-          ? "the deliberate Fireside production cache default satisfies the immutable bounded-memory criterion without a CLI override"
+          ? "the deliberate Fireside production cache and eager-decommit allocator defaults satisfy the immutable bounded-memory criterion without overrides"
           : WRITE_BUFFER_DIAGNOSTIC
             ? "WAL and redb encoding buffers remain live after acknowledged commits"
             : "redb internal cache warming toward its configured bound",
         redbVersion: "4.2.0",
         productionBehaviorCacheBytes: REDB_4_2_DEFAULT_CACHE_BYTES,
         firesideDefaultCacheBytes: FIRESIDE_DEFAULT_CACHE_BYTES,
+        firesideDefaultPurgeDelayMilliseconds:
+          FIRESIDE_DEFAULT_PURGE_DELAY_MILLISECONDS,
+        firesideDefaultPurgeDecommits: FIRESIDE_DEFAULT_PURGE_DECOMMITS,
         diagnosticCacheBytes: cacheSizeBytes ?? null,
         observationDurationSeconds: OBSERVATION_DURATION_SECONDS,
         manifestDurationSeconds: manifest.soak.durationSeconds,
         manifestSha256,
         frozenThresholds: manifest.soak.memory,
         onlyIntentionalRuntimeDifference: PRODUCTION_DEFAULT_VERIFICATION
-          ? "no --redb-cache-size override; exercise the production default with the frozen workload"
+          ? "exercise the shipped 64 MiB cache and eager-decommit allocator defaults with the frozen workload; no cache or allocator override"
           : WRITE_BUFFER_DIAGNOSTIC
             ? "permanent write-buffer lifetime accounting; cache bound and workload match the prior 64 MiB run"
             : "--redb-cache-size",
@@ -97,6 +102,7 @@ async function main(): Promise<void> {
       dataDirectory: resolve(outputDirectory, "state/fireside-soak"),
       ...(cacheSizeBytes === undefined ? {} : { diskCacheSizeBytes: cacheSizeBytes }),
     });
+    await assertProductionAllocatorConfiguration(server);
     await writeState(outputDirectory, {
       status: "running",
       stage: DIAGNOSTIC_STAGE,
@@ -156,6 +162,11 @@ async function preflightHost(): Promise<Record<string, unknown>> {
   if (swapUsedBytes !== 0) {
     throw new Error(`controlled venue requires zero swap use at start, found ${String(swapUsedBytes)}`);
   }
+  for (const name of ["MIMALLOC_PURGE_DELAY", "MIMALLOC_PURGE_DECOMMITS"]) {
+    if (process.env[name] !== undefined) {
+      throw new Error(`controlled venue requires ${name} to be unset`);
+    }
+  }
   const [rust, node, npm, git] = await Promise.all([
     version("rustc", ["--version"]),
     version("node", ["--version"]),
@@ -175,6 +186,34 @@ async function preflightHost(): Promise<Record<string, unknown>> {
     swapUsedBytes,
     toolchain: { rust, node, npm, git },
   };
+}
+
+async function assertProductionAllocatorConfiguration(
+  server: ServerHandle,
+): Promise<void> {
+  const response = await fetch(
+    `http://${server.host}:${String(server.port)}/emulator/v1/debug/memory`,
+  );
+  if (!response.ok) {
+    throw new Error(
+      `allocator configuration endpoint returned HTTP ${String(response.status)}`,
+    );
+  }
+  const memory = await response.json() as Record<string, unknown>;
+  const allocator = memory.allocator;
+  if (allocator === null || typeof allocator !== "object") {
+    throw new Error("allocator configuration is missing from debug memory");
+  }
+  const configured = allocator as Record<string, unknown>;
+  if (
+    configured.purgeDelayMilliseconds
+      !== FIRESIDE_DEFAULT_PURGE_DELAY_MILLISECONDS
+    || configured.purgeDecommits !== FIRESIDE_DEFAULT_PURGE_DECOMMITS
+  ) {
+    throw new Error(
+      `unexpected allocator configuration: ${JSON.stringify(configured)}`,
+    );
+  }
 }
 
 async function writeState(

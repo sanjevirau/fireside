@@ -101,6 +101,10 @@ pub struct AllocatorMemoryUsage {
     pub version: u32,
     /// Tokio runtime worker threads serving this process.
     pub runtime_worker_threads: usize,
+    /// Delay before freed allocator pages are purged, in milliseconds.
+    pub purge_delay_milliseconds: i64,
+    /// Whether allocator purges decommit pages instead of marking them reusable.
+    pub purge_decommits: bool,
     /// Allocator-native statistics, or `null` if collection failed.
     pub statistics: JsonValue,
     /// Collection error when allocator-native statistics are unavailable.
