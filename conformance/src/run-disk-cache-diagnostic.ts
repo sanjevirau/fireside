@@ -24,6 +24,10 @@ import { runSoak } from "./endurance/soak.ts";
 const execute = promisify(execFile);
 const OBSERVATION_DURATION_SECONDS = 3_600;
 const REDB_4_2_DEFAULT_CACHE_BYTES = 1_024 * 1_024 * 1_024;
+const WRITE_BUFFER_DIAGNOSTIC = process.argv.includes("--write-buffers");
+const DIAGNOSTIC_STAGE = WRITE_BUFFER_DIAGNOSTIC
+  ? "disk-write-buffer-lifetime-diagnostic"
+  : "redb-cache-bound-diagnostic";
 
 await main();
 
@@ -41,7 +45,7 @@ async function main(): Promise<void> {
   await copyFile(manifestPath, resolve(outputDirectory, basename(manifestPath)));
   await writeState(outputDirectory, {
     status: "preflight",
-    stage: "redb-cache-bound-diagnostic",
+    stage: DIAGNOSTIC_STAGE,
     revision,
     manifestSha256,
     startedAt: new Date().toISOString(),
@@ -58,7 +62,9 @@ async function main(): Promise<void> {
     await writeFile(
       resolve(outputDirectory, "diagnostic-control.json"),
       `${JSON.stringify({
-        hypothesis: "redb internal cache warming toward its configured bound",
+        hypothesis: WRITE_BUFFER_DIAGNOSTIC
+          ? "WAL and redb encoding buffers remain live after acknowledged commits"
+          : "redb internal cache warming toward its configured bound",
         redbVersion: "4.2.0",
         productionBehaviorCacheBytes: REDB_4_2_DEFAULT_CACHE_BYTES,
         diagnosticCacheBytes: cacheSizeBytes,
@@ -66,7 +72,9 @@ async function main(): Promise<void> {
         manifestDurationSeconds: manifest.soak.durationSeconds,
         manifestSha256,
         frozenThresholds: manifest.soak.memory,
-        onlyIntentionalRuntimeDifference: "--redb-cache-size",
+        onlyIntentionalRuntimeDifference: WRITE_BUFFER_DIAGNOSTIC
+          ? "permanent write-buffer lifetime accounting; cache bound and workload match the prior 64 MiB run"
+          : "--redb-cache-size",
       }, null, 2)}\n`,
       "utf8",
     );
@@ -80,7 +88,7 @@ async function main(): Promise<void> {
     });
     await writeState(outputDirectory, {
       status: "running",
-      stage: "redb-cache-bound-diagnostic",
+      stage: DIAGNOSTIC_STAGE,
       revision,
       manifestSha256,
       serverPid: server.pid,
@@ -98,7 +106,7 @@ async function main(): Promise<void> {
     );
     await writeState(outputDirectory, {
       status: result.passed ? "complete" : "failed",
-      stage: "redb-cache-bound-diagnostic",
+      stage: DIAGNOSTIC_STAGE,
       revision,
       manifestSha256,
       cacheSizeBytes,
@@ -113,7 +121,7 @@ async function main(): Promise<void> {
     const message = error instanceof Error ? error.stack ?? error.message : String(error);
     await writeState(outputDirectory, {
       status: "failed",
-      stage: "redb-cache-bound-diagnostic",
+      stage: DIAGNOSTIC_STAGE,
       revision,
       manifestSha256,
       failedAt: new Date().toISOString(),
