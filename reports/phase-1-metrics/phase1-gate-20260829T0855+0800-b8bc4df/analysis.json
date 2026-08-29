@@ -1,0 +1,78 @@
+{
+  "outcome": "fail",
+  "failedStage": "fireside-disk-soak",
+  "revision": "b8bc4df200633f3f575f5afc59ba24f818c97b19",
+  "manifestSha256": "00f8c4f40e209a89ac3b059d6c10269e997c501a1cb8df50003b2195beedad41",
+  "inMemory": {
+    "passed": true,
+    "completedOperations": 720000,
+    "failedOperations": 0,
+    "transactionAttempts": 144000,
+    "listenerChurns": 119,
+    "rssSlopeBytesPerHour": -1025852.8642797039,
+    "initialMedianBytes": 847923200,
+    "finalMedianBytes": 845230080,
+    "peakRssBytes": 866541568
+  },
+  "disk": {
+    "passed": false,
+    "failFastElapsedSeconds": 5400.108,
+    "sustainedWindowSeconds": 3600,
+    "failFastSlopeBytesPerHour": 25010688.315377913,
+    "failFastMaximumBytesPerHour": 10485760,
+    "overallPostWarmupSlopeBytesPerHour": 24936337.171834797,
+    "pssSlopeBytesPerHour": 24941562.662617408,
+    "anonymousPrivateDirtySlopeBytesPerHour": 24941562.662617408,
+    "initialMedianBytes": 1071171584,
+    "peakRssBytes": 1665347584,
+    "completedOperations": 270006,
+    "failedOperations": 0,
+    "transactionAttempts": 54001,
+    "listenerChurns": 45,
+    "listenerMismatches": 0,
+    "stalls": 0,
+    "maximumProcessSwapBytes": 0,
+    "maximumSystemSwapBytes": 520192,
+    "logicalSlopesPerHour": {
+      "currentDocumentEntries": 0,
+      "currentDocumentBytes": 591671.3730837519,
+      "replayDocumentVersionEntries": 0,
+      "replayDocumentVersionBytes": 12324.213295375717,
+      "changeLogEntries": 0,
+      "changeLogBytes": 0,
+      "commitTimeIndexEntries": 0,
+      "commitTimeIndexBytes": 0,
+      "listenerStreams": 0,
+      "listenerTargets": 0,
+      "listenerBytes": 0,
+      "transactionEntries": 0,
+      "transactionBytes": 0,
+      "walEntries": 0,
+      "walBytes": 0
+    },
+    "allocatorAttribution": {
+      "blockSizeBytes": 262144,
+      "pageSizeBytes": 4194304,
+      "firstPages": 4,
+      "lastPages": 8,
+      "pageSlopePerHour": 4.864818846308212,
+      "pageCapacitySlopeBytesPerHour": 20404529.146345917,
+      "rssPearsonCorrelation": 0.9076707480728552,
+      "rssSpearmanCorrelation": 0.9122299077927828,
+      "allocatorReservedBytesSlopePerHour": 0,
+      "allocatorAbandonedPagesSlopePerHour": -8.044517465820578
+    }
+  },
+  "preservedDiskState": {
+    "remotePath": "/home/sanjevi/fireside-phase1-gate-results/phase1-gate-20260829T0855+0800-b8bc4df/state/fireside-soak/fireside.redb",
+    "logicalBytes": 1149243392,
+    "sha256": "f65d119d563f8720d57f2e573e0eaca316a2b3df5b6a0865d2ce408463536941"
+  },
+  "stagesNotRun": [
+    "fireside-2gib-import",
+    "fireside-sigkill-recovery",
+    "java-default-soak",
+    "java-2gib-import",
+    "java-crash-observation"
+  ]
+}
