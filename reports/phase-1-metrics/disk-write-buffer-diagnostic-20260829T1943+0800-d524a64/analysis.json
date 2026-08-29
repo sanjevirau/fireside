@@ -1,0 +1,117 @@
+{
+  "result": "passed",
+  "criterion": {
+    "maximumRssSlopeBytesPerHour": 1048576,
+    "observedRssSlopeBytesPerHour": -6463647.529024225,
+    "marginBytesPerHour": 7512223.529024225
+  },
+  "postWarmup": {
+    "samples": 181,
+    "elapsedSeconds": [1800.036, 3600.007],
+    "rssSlopeBytesPerHour": -6463647.529024225,
+    "pssSlopeBytesPerHour": -6156818.584601083,
+    "anonymousBytesSlopePerHour": -6156818.584601083,
+    "privateDirtyBytesSlopePerHour": -6156818.584601083,
+    "rssBytes": {
+      "minimum": 170647552,
+      "maximum": 187850752,
+      "median": 179339264
+    },
+    "cacheUsedBytes": {
+      "minimum": 65458496,
+      "maximum": 67072320,
+      "median": 66445632,
+      "slopePerHour": -19538.04087230443
+    },
+    "writeBuffers": {
+      "all": {
+        "samples": 361,
+        "postWarmupNonzeroLiveSamples": 2,
+        "allRunNonzeroLiveSamples": 6,
+        "maximumLiveBuffers": 1,
+        "maximumLiveCapacityBytes": 1210,
+        "peakLiveBuffers": 2,
+        "peakLiveCapacityBytes": 921783,
+        "allocations": 1120000,
+        "releases": 1120000,
+        "cumulativeAllocatedCapacityBytes": 3531639730,
+        "cumulativeReleasedCapacityBytes": 3531639730,
+        "finalBalanced": true
+      },
+      "walPayloads": {
+        "samples": 361,
+        "postWarmupNonzeroLiveSamples": 2,
+        "allRunNonzeroLiveSamples": 6,
+        "maximumLiveBuffers": 1,
+        "maximumLiveCapacityBytes": 1210,
+        "peakLiveBuffers": 1,
+        "peakLiveCapacityBytes": 921783,
+        "allocations": 280000,
+        "releases": 280000,
+        "cumulativeAllocatedCapacityBytes": 1766099865,
+        "cumulativeReleasedCapacityBytes": 1766099865,
+        "finalBalanced": true
+      },
+      "redbKeys": {
+        "samples": 361,
+        "postWarmupNonzeroLiveSamples": 0,
+        "allRunNonzeroLiveSamples": 0,
+        "maximumLiveBuffers": 0,
+        "maximumLiveCapacityBytes": 0,
+        "peakLiveBuffers": 1,
+        "peakLiveCapacityBytes": 67,
+        "allocations": 280000,
+        "releases": 280000,
+        "cumulativeAllocatedCapacityBytes": 18760000,
+        "cumulativeReleasedCapacityBytes": 18760000,
+        "finalBalanced": true
+      },
+      "redbDocuments": {
+        "samples": 361,
+        "postWarmupNonzeroLiveSamples": 0,
+        "allRunNonzeroLiveSamples": 0,
+        "maximumLiveBuffers": 0,
+        "maximumLiveCapacityBytes": 0,
+        "peakLiveBuffers": 1,
+        "peakLiveCapacityBytes": 921699,
+        "allocations": 280000,
+        "releases": 280000,
+        "cumulativeAllocatedCapacityBytes": 1742711457,
+        "cumulativeReleasedCapacityBytes": 1742711457,
+        "finalBalanced": true
+      },
+      "redbMetadata": {
+        "samples": 361,
+        "postWarmupNonzeroLiveSamples": 0,
+        "allRunNonzeroLiveSamples": 0,
+        "maximumLiveBuffers": 0,
+        "maximumLiveCapacityBytes": 0,
+        "peakLiveBuffers": 1,
+        "peakLiveCapacityBytes": 15,
+        "allocations": 280000,
+        "releases": 280000,
+        "cumulativeAllocatedCapacityBytes": 4068408,
+        "cumulativeReleasedCapacityBytes": 4068408,
+        "finalBalanced": true
+      }
+    }
+  },
+  "workload": {
+    "elapsedSeconds": 3600.012,
+    "completed": 180000,
+    "failed": 0,
+    "transactionAttempts": 36000,
+    "listenerChurns": 29,
+    "listenerMismatches": 0,
+    "stallEvents": 0,
+    "writeP99Milliseconds": 269.52128300000913,
+    "listenerP99Milliseconds": 332.4259009999223,
+    "initialMedianRssBytes": 179376128,
+    "finalMedianRssBytes": 179339264
+  },
+  "comparison": {
+    "prior64MiBDiagnosticRssSlopeBytesPerHour": 1204206.9404016775,
+    "slopeDeltaBytesPerHour": -7667854.469425902
+  },
+  "method": "Theil-Sen median pairwise slope over samples at elapsedSeconds >= 1800; transient write buffers are owned by RAII registrations and final balance requires zero live capacity plus exact allocation/release and cumulative-capacity equality."
+}
