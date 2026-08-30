@@ -45,6 +45,16 @@ oracle for identity encoding. This capture-only normalization makes frames in
 still-open streaming responses independently decodable; it is not evidence
 that Cloud Firestore disables compression for ordinary clients.
 
+The exact pinned source revisions were also read before implementation. The
+Firebase Firestore browser adapter supplies `gsessionid`, encoded initial
+headers, and the long-poll/proxy-detection options. The Closure transport uses
+JavaScript string indices for frame lengths, promotes concurrent forward
+requests after an `h2`/`spdy`/`quic` advertisement, copies the returned HTTP
+session header into subsequent queries, and recognizes an unknown session only
+when `Unknown SID` occurs after offset zero in an HTTP 400 response. These are
+structural source confirmations; values that can vary remain locked by the
+captured Java and cloud artifacts instead.
+
 Dynamic SID, RID, nonce, timestamp, resume-token, stream-token, Origin, and
 Date values are observations in the raw fixture, not constants for Fireside.
 The replay tests assert structural invariants and use the decoded contract.

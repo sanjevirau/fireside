@@ -927,6 +927,32 @@ observed CJK/emoji frames declared 787 or 1,321 UTF-16 code units while using
 `Accept-Encoding` but requests identity encoding upstream solely so a partial,
 still-open capture can be decoded without waiting for a gzip trailer.
 
+### 7.6 Pinned client-source confirmation
+
+The pinned open-source chain was checked at the exact revisions in the Phase 2
+manifest before product implementation. In
+`packages/firestore/src/platform/browser/webchannel_connection.ts`, the
+Firestore browser adapter sets `httpSessionIdParam` to `gsessionid`, requests
+body-encoded initial headers, and forwards the forced-long-polling and
+buffering-proxy-detection settings to WebChannel. The checked
+`firebase/webchannel_blob_es2018.js` then confirms that a handshake response
+whose `X-Client-Wire-Protocol` contains `spdy`, `quic`, or `h2` raises the
+concurrent-forward limit, and that `X-HTTP-Session-Id` is copied into the named
+session query parameter.
+
+The readable Closure Library reference independently fixes three server-facing
+details. `goog/net/channelrequest.js` parses each application chunk by applying
+JavaScript `String.indexOf`, `substring`, and `slice` to `responseText`, so the
+decimal length is necessarily decoded UTF-16 code units. Its unknown-session
+branch requires HTTP 400 and the literal `Unknown SID` at a nonzero position in
+the response text; a body consisting only of that literal at offset zero would
+not take the specialized client path. Finally,
+`goog/net/browserchannel.js` treats a forward response as the triple
+`[backchannelPresent,lastArrayId,outstandingBytes]`, and teardown increments RID
+and sends `SID`, `RID`, and `TYPE=terminate` without an application body. These
+source observations explain the captured behavior; the production captures
+remain authoritative for concrete response bytes and headers.
+
 ## 8. Export and import contract
 
 Firestore export data under
