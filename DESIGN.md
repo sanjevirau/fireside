@@ -1020,6 +1020,14 @@ equivalent `+00:00` spelling to the cloud-observed `Z` spelling only for known
 protobuf timestamp fields; ordinary Firestore string values are never
 rewritten.
 
+The shared Write engine treats its token as the protobuf contract describes:
+an acknowledgement of a response position. It accepts any well-formed token
+that this stream has already issued, including the same token on multiple
+requests already in flight, and advances one response token per processed
+request. A token from the future or another stream remains a failed
+precondition. The captured Java/cloud `write-overlap` fixture and an engine
+unit test lock this distinction.
+
 ## 8. Export and import contract
 
 Firestore export data under
