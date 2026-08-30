@@ -1,0 +1,227 @@
+{
+  "generatedAt": "2026-08-31T02:09:36+08:00",
+  "revision": "dc3438f8c99e1b3d695cb45c2d8831dd24d81e2b",
+  "manifestSha256": "00f8c4f40e209a89ac3b059d6c10269e997c501a1cb8df50003b2195beedad41",
+  "estimator": "conformance/src/endurance/statistics.ts::theilSenBytesPerHour",
+  "warmupSeconds": 1800,
+  "maximumFiresideRssSlopeBytesPerHour": 1048576,
+  "verdict": "FIRESIDE_PHASE_1_PASS",
+  "firesideMemorySoak": {
+    "durationSeconds": 14400.08,
+    "scheduled": 720000,
+    "completed": 720000,
+    "failed": 0,
+    "averageCompletedPerSecond": 49.999722223765424,
+    "transactionAttempts": 144000,
+    "listenerChurns": 119,
+    "listenerMismatches": 0,
+    "stalls": 0,
+    "rss": {
+      "postWarmupSamples": 1261,
+      "slopeBytesPerHour": 584706.1764697884,
+      "initialMedianBytes": 840103936,
+      "finalMedianBytes": 841752576,
+      "medianDriftBytes": 1648640,
+      "medianAllowanceBytes": 42005196.800000004,
+      "minimumBytes": 836341760,
+      "maximumBytes": 847654912,
+      "envelopeBytes": 11313152,
+      "p05Bytes": 838770688,
+      "p95Bytes": 846307328,
+      "central90PercentAmplitudeBytes": 7536640,
+      "entireRunPeakBytes": 847654912,
+      "processSwapMaximumBytes": 0,
+      "systemSwapMaximumBytes": 0
+    },
+    "processResident": {
+      "rssSlopeBytesPerHour": 594045.7644387144,
+      "pssSlopeBytesPerHour": 594045.7644387144,
+      "anonymousSlopeBytesPerHour": 594045.7644387144,
+      "privateDirtySlopeBytesPerHour": 594045.7644387144
+    },
+    "allocatorPurge": {
+      "name": "mimalloc",
+      "version": 30302,
+      "runtimeWorkerThreads": 4,
+      "purgeDelayMilliseconds": 0,
+      "purgeDecommits": true,
+      "postWarmupPurgeCalls": 49149,
+      "postWarmupPurgedBytes": 24385093632
+    },
+    "criteria": {
+      "completionRatio": true,
+      "errors": true,
+      "listenerMismatches": true,
+      "listenerFinalState": true,
+      "noProgressStalls": true,
+      "failFastSlope": true,
+      "rssSlope": true,
+      "rssMedian": true,
+      "workingSetRss": true,
+      "serverAlive": true
+    }
+  },
+  "firesideDiskSoak": {
+    "durationSeconds": 14400.066,
+    "scheduled": 720000,
+    "completed": 720000,
+    "failed": 0,
+    "averageCompletedPerSecond": 49.999770834383675,
+    "transactionAttempts": 144000,
+    "listenerChurns": 119,
+    "listenerMismatches": 0,
+    "stalls": 0,
+    "rss": {
+      "postWarmupSamples": 1261,
+      "slopeBytesPerHour": 89920.17233357503,
+      "initialMedianBytes": 178046976,
+      "finalMedianBytes": 178192384,
+      "medianDriftBytes": 145408,
+      "medianAllowanceBytes": 16777216,
+      "minimumBytes": 168628224,
+      "maximumBytes": 190160896,
+      "envelopeBytes": 21532672,
+      "p05Bytes": 173162496,
+      "p95Bytes": 184233984,
+      "central90PercentAmplitudeBytes": 11071488,
+      "entireRunPeakBytes": 689680384,
+      "processSwapMaximumBytes": 0,
+      "systemSwapMaximumBytes": 0
+    },
+    "processResident": {
+      "rssSlopeBytesPerHour": 90278.3545866335,
+      "pssSlopeBytesPerHour": 90278.3545866335,
+      "anonymousSlopeBytesPerHour": 90278.3545866335,
+      "privateDirtySlopeBytesPerHour": 90278.3545866335
+    },
+    "allocatorPurge": {
+      "name": "mimalloc",
+      "version": 30302,
+      "runtimeWorkerThreads": 4,
+      "purgeDelayMilliseconds": 0,
+      "purgeDecommits": true,
+      "postWarmupPurgeCalls": 135712,
+      "postWarmupPurgedBytes": 51467714560
+    },
+    "diskCache": {
+      "configuredBytes": 67108864,
+      "minimumUsedBytes": 65036608,
+      "maximumUsedBytes": 67080512,
+      "medianUsedBytes": 66470208,
+      "firstUsedBytes": 66097472,
+      "lastUsedBytes": 66994496,
+      "lastMinusFirstBytes": 897024,
+      "slopeBytesPerHour": 8882.814434081205
+    },
+    "diskWriteBuffers": {
+      "finalLiveBuffers": 0,
+      "finalLiveCapacityBytes": 0,
+      "allocations": 3280000,
+      "releases": 3280000,
+      "allocationBalance": 0,
+      "cumulativeAllocatedCapacityBytes": 10352141882,
+      "cumulativeReleasedCapacityBytes": 10352141882,
+      "capacityBalanceBytes": 0,
+      "ownerBalancesAllZero": true
+    },
+    "criteria": {
+      "completionRatio": true,
+      "errors": true,
+      "listenerMismatches": true,
+      "listenerFinalState": true,
+      "noProgressStalls": true,
+      "failFastSlope": true,
+      "rssSlope": true,
+      "rssMedian": true,
+      "workingSetRss": true,
+      "serverAlive": true
+    }
+  },
+  "firesideImport": {
+    "passed": true,
+    "artifactBytes": 2158807055,
+    "artifactDocumentCount": 65536,
+    "elapsedMilliseconds": 37219,
+    "startupMilliseconds": 34001.9419499971,
+    "peakRssBytes": 272490496,
+    "verificationReads": 10000,
+    "readErrors": 0,
+    "criteria": {
+      "artifactWithinBounds": true,
+      "serverReady": true,
+      "randomReads": true,
+      "peakRss": true
+    }
+  },
+  "firesideRecovery": {
+    "passed": true,
+    "elapsedMilliseconds": 178760,
+    "completedRounds": 100,
+    "acknowledgedCommits": 10220,
+    "attemptedCommits": 10320,
+    "recoveredDocuments": 20528,
+    "lostAcknowledged": 0,
+    "partialCommits": 0,
+    "criteria": {
+      "rounds": true,
+      "acknowledgedCommits": true,
+      "acknowledgedWritesLost": true,
+      "partialAtomicCommits": true
+    }
+  },
+  "javaComparison": {
+    "gating": false,
+    "defaultSoak": {
+      "passedAsComparison": true,
+      "durationSeconds": 14400.098,
+      "completed": 720000,
+      "failed": 0,
+      "listenerMismatches": 0,
+      "stalls": 0,
+      "rssSlopeBytesPerHour": 255172372.979549,
+      "initialMedianBytes": 3190853632,
+      "finalMedianBytes": 4397887488,
+      "medianDriftBytes": 1207033856,
+      "medianAllowanceBytes": 159542681.6,
+      "peakRssBytes": 4401262592,
+      "rssSlopeCriterion": false,
+      "rssMedianCriterion": false
+    },
+    "defaultImport": {
+      "passed": false,
+      "elapsedMilliseconds": 5960253,
+      "startupMilliseconds": 5255.935133002698,
+      "peakRssBytes": 4516773888,
+      "verificationReads": 10000,
+      "readErrors": 10000,
+      "outOfMemory": true
+    },
+    "heapCappedImport": {
+      "javaToolOptions": "-Xmx8g",
+      "passed": true,
+      "elapsedMilliseconds": 22955,
+      "startupMilliseconds": 5050.863384000957,
+      "peakRssBytes": 8376537088,
+      "verificationReads": 10000,
+      "readErrors": 0
+    },
+    "crashObservation": {
+      "documentsBeforeKill": 100,
+      "documentsAfterRestart": 0,
+      "dataLost": 100,
+      "error": null,
+      "classification": "expected non-persistent design difference"
+    }
+  },
+  "completionMonitor": {
+    "observedAt": "2026-08-31T01:58:53+08:00",
+    "systemState": "running",
+    "sshState": "active",
+    "failedUnits": 0,
+    "resourceEvents": 0,
+    "tmuxPaneDead": true,
+    "tmuxExitStatus": 0,
+    "swapUsedBytes": 1466368
+  },
+  "method": "Checked-in Theil-Sen median pairwise slope over samples at elapsedSeconds >= 1800; checked-in nearest-rank percentiles for the p05/p95 envelope; immutable verdicts are taken from each stage summary.json."
+}

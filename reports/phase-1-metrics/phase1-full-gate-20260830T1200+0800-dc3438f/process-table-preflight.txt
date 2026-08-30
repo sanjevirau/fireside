@@ -1,0 +1,354 @@
+    PID    PPID USER     STAT   RSS COMMAND         COMMAND
+      1       0 root     Ss   16788 systemd         /usr/lib/systemd/systemd --switched-root --system --deserialize=53 splash
+      2       0 root     S        0 kthreadd        [kthreadd]
+      3       2 root     S        0 pool_workqueue_ [pool_workqueue_release]
+      4       2 root     I<       0 kworker/R-rcu_g [kworker/R-rcu_gp]
+      5       2 root     I<       0 kworker/R-sync_ [kworker/R-sync_wq]
+      6       2 root     I<       0 kworker/R-kvfre [kworker/R-kvfree_rcu_reclaim]
+      7       2 root     I<       0 kworker/R-slub_ [kworker/R-slub_flushwq]
+      8       2 root     I<       0 kworker/R-netns [kworker/R-netns]
+     10       2 root     I<       0 kworker/0:0H-kb [kworker/0:0H-kblockd]
+     11       2 root     I        0 kworker/0:1-cgr [kworker/0:1-cgroup_free]
+     13       2 root     I<       0 kworker/R-mm_pe [kworker/R-mm_percpu_wq]
+     14       2 root     S        0 ksoftirqd/0     [ksoftirqd/0]
+     15       2 root     I        0 rcu_preempt     [rcu_preempt]
+     16       2 root     S        0 rcu_exp_par_gp_ [rcu_exp_par_gp_kthread_worker/0]
+     17       2 root     S        0 rcu_exp_gp_kthr [rcu_exp_gp_kthread_worker]
+     18       2 root     S        0 migration/0     [migration/0]
+     19       2 root     S        0 kprobe-optimize [kprobe-optimizer]
+     20       2 root     S        0 idle_inject/0   [idle_inject/0]
+     21       2 root     S        0 cpuhp/0         [cpuhp/0]
+     22       2 root     S        0 cpuhp/1         [cpuhp/1]
+     23       2 root     S        0 idle_inject/1   [idle_inject/1]
+     24       2 root     S        0 migration/1     [migration/1]
+     25       2 root     S        0 ksoftirqd/1     [ksoftirqd/1]
+     27       2 root     I<       0 kworker/1:0H-kb [kworker/1:0H-kblockd]
+     28       2 root     S        0 cpuhp/2         [cpuhp/2]
+     29       2 root     S        0 idle_inject/2   [idle_inject/2]
+     30       2 root     S        0 migration/2     [migration/2]
+     31       2 root     S        0 ksoftirqd/2     [ksoftirqd/2]
+     33       2 root     I<       0 kworker/2:0H-kb [kworker/2:0H-kblockd]
+     34       2 root     S        0 cpuhp/3         [cpuhp/3]
+     35       2 root     S        0 idle_inject/3   [idle_inject/3]
+     36       2 root     S        0 migration/3     [migration/3]
+     37       2 root     S        0 ksoftirqd/3     [ksoftirqd/3]
+     39       2 root     I<       0 kworker/3:0H-kb [kworker/3:0H-kblockd]
+     40       2 root     S        0 cpuhp/4         [cpuhp/4]
+     41       2 root     S        0 idle_inject/4   [idle_inject/4]
+     42       2 root     S        0 migration/4     [migration/4]
+     43       2 root     S        0 ksoftirqd/4     [ksoftirqd/4]
+     45       2 root     I<       0 kworker/4:0H-kb [kworker/4:0H-kblockd]
+     46       2 root     S        0 cpuhp/5         [cpuhp/5]
+     47       2 root     S        0 idle_inject/5   [idle_inject/5]
+     48       2 root     S        0 migration/5     [migration/5]
+     49       2 root     S        0 ksoftirqd/5     [ksoftirqd/5]
+     50       2 root     I        0 kworker/5:0-mm_ [kworker/5:0-mm_percpu_wq]
+     51       2 root     I<       0 kworker/5:0H-kb [kworker/5:0H-kblockd]
+     52       2 root     S        0 cpuhp/6         [cpuhp/6]
+     53       2 root     S        0 idle_inject/6   [idle_inject/6]
+     54       2 root     S        0 migration/6     [migration/6]
+     55       2 root     S        0 ksoftirqd/6     [ksoftirqd/6]
+     57       2 root     I<       0 kworker/6:0H-kb [kworker/6:0H-kblockd]
+     58       2 root     S        0 cpuhp/7         [cpuhp/7]
+     59       2 root     S        0 idle_inject/7   [idle_inject/7]
+     60       2 root     S        0 migration/7     [migration/7]
+     61       2 root     S        0 ksoftirqd/7     [ksoftirqd/7]
+     63       2 root     I<       0 kworker/7:0H-kb [kworker/7:0H-kblockd]
+     64       2 root     S        0 cpuhp/8         [cpuhp/8]
+     65       2 root     S        0 idle_inject/8   [idle_inject/8]
+     66       2 root     S        0 migration/8     [migration/8]
+     67       2 root     S        0 ksoftirqd/8     [ksoftirqd/8]
+     69       2 root     I<       0 kworker/8:0H-kb [kworker/8:0H-kblockd]
+     70       2 root     S        0 cpuhp/9         [cpuhp/9]
+     71       2 root     S        0 idle_inject/9   [idle_inject/9]
+     72       2 root     S        0 migration/9     [migration/9]
+     73       2 root     S        0 ksoftirqd/9     [ksoftirqd/9]
+     75       2 root     I<       0 kworker/9:0H-kb [kworker/9:0H-kblockd]
+     76       2 root     S        0 cpuhp/10        [cpuhp/10]
+     77       2 root     S        0 idle_inject/10  [idle_inject/10]
+     78       2 root     S        0 migration/10    [migration/10]
+     79       2 root     S        0 ksoftirqd/10    [ksoftirqd/10]
+     81       2 root     I<       0 kworker/10:0H-k [kworker/10:0H-kblockd]
+     82       2 root     S        0 cpuhp/11        [cpuhp/11]
+     83       2 root     S        0 idle_inject/11  [idle_inject/11]
+     84       2 root     S        0 migration/11    [migration/11]
+     85       2 root     S        0 ksoftirqd/11    [ksoftirqd/11]
+     87       2 root     I<       0 kworker/11:0H-k [kworker/11:0H-kblockd]
+     90       2 root     S        0 kdevtmpfs       [kdevtmpfs]
+     91       2 root     I<       0 kworker/R-inet_ [kworker/R-inet_frag_wq]
+     92       2 root     I        0 rcu_tasks_kthre [rcu_tasks_kthread]
+     93       2 root     I        0 rcu_tasks_rude_ [rcu_tasks_rude_kthread]
+     94       2 root     S        0 kauditd         [kauditd]
+     95       2 root     S        0 khungtaskd      [khungtaskd]
+     96       2 root     S        0 oom_reaper      [oom_reaper]
+    100       2 root     I<       0 kworker/R-write [kworker/R-writeback]
+    101       2 root     S        0 kcompactd0      [kcompactd0]
+    102       2 root     SN       0 ksmd            [ksmd]
+    103       2 root     SN       0 khugepaged      [khugepaged]
+    104       2 root     I<       0 kworker/R-kbloc [kworker/R-kblockd]
+    105       2 root     I<       0 kworker/R-blkcg [kworker/R-blkcg_punt_bio]
+    106       2 root     I<       0 kworker/R-kinte [kworker/R-kintegrityd]
+    107       2 root     S        0 irq/9-acpi      [irq/9-acpi]
+    108       2 root     I<       0 kworker/R-tpm_d [kworker/R-tpm_dev_wq]
+    109       2 root     I<       0 kworker/R-ata_s [kworker/R-ata_sff]
+    110       2 root     I<       0 kworker/R-md_bi [kworker/R-md_bitmap]
+    111       2 root     I<       0 kworker/R-md_ll [kworker/R-md_llbitmap_io]
+    112       2 root     I<       0 kworker/R-md_ll [kworker/R-md_llbitmap_unplug]
+    113       2 root     I<       0 kworker/R-edac- [kworker/R-edac-poller]
+    115       2 root     I<       0 kworker/R-devfr [kworker/R-devfreq_wq]
+    116       2 root     S        0 watchdogd       [watchdogd]
+    117       2 root     I<       0 kworker/R-quota [kworker/R-quota_events_unbound]
+    121       2 root     S        0 kswapd0         [kswapd0]
+    122       2 root     S        0 ecryptfs-kthrea [ecryptfs-kthread]
+    124       2 root     I<       0 kworker/R-kthro [kworker/R-kthrotld]
+    125       2 root     I<       0 kworker/u51:0-h [kworker/u51:0-hci0]
+    126       2 root     I<       0 kworker/R-acpi_ [kworker/R-acpi_thermal_pm]
+    127       2 root     I        0 kworker/10:1-cg [kworker/10:1-cgroup_free]
+    131       2 root     I<       0 kworker/R-mld   [kworker/R-mld]
+    132       2 root     I<       0 kworker/R-ipv6_ [kworker/R-ipv6_addrconf]
+    133       2 root     I<       0 kworker/R-kstrp [kworker/R-kstrp]
+    139       2 root     I<       0 kworker/u52:0-t [kworker/u52:0-ttm]
+    151       2 root     I<       0 kworker/R-charg [kworker/R-charger_manager]
+    365       2 root     S        0 ccp-1-q2        [ccp-1-q2]
+    366       2 root     S        0 ccp-1-q3        [ccp-1-q3]
+    367       2 root     S        0 ccp-1-q4        [ccp-1-q4]
+    368       2 root     S        0 hwrng           [hwrng]
+    369       2 root     S        0 scsi_eh_0       [scsi_eh_0]
+    370       2 root     I<       0 kworker/R-scsi_ [kworker/R-scsi_tmf_0]
+    371       2 root     S        0 scsi_eh_1       [scsi_eh_1]
+    372       2 root     I<       0 kworker/R-scsi_ [kworker/R-scsi_tmf_1]
+    373       2 root     S        0 scsi_eh_2       [scsi_eh_2]
+    374       2 root     I<       0 kworker/R-scsi_ [kworker/R-scsi_tmf_2]
+    375       2 root     S        0 scsi_eh_3       [scsi_eh_3]
+    376       2 root     I<       0 kworker/R-scsi_ [kworker/R-scsi_tmf_3]
+    377       2 root     S        0 scsi_eh_4       [scsi_eh_4]
+    378       2 root     I<       0 kworker/R-scsi_ [kworker/R-scsi_tmf_4]
+    379       2 root     S        0 scsi_eh_5       [scsi_eh_5]
+    380       2 root     I<       0 kworker/R-scsi_ [kworker/R-scsi_tmf_5]
+    381       2 root     S        0 scsi_eh_6       [scsi_eh_6]
+    382       2 root     I<       0 kworker/R-scsi_ [kworker/R-scsi_tmf_6]
+    383       2 root     S        0 scsi_eh_7       [scsi_eh_7]
+    384       2 root     I<       0 kworker/R-scsi_ [kworker/R-scsi_tmf_7]
+    385       2 root     I<       0 kworker/R-nvme- [kworker/R-nvme-wq]
+    387       2 root     I<       0 kworker/R-nvme- [kworker/R-nvme-reset-wq]
+    390       2 root     I<       0 kworker/R-nvme- [kworker/R-nvme-delete-wq]
+    395       2 root     I<       0 kworker/R-nvme- [kworker/R-nvme-auth-wq]
+    396       2 root     S        0 scsi_eh_8       [scsi_eh_8]
+    397       2 root     I<       0 kworker/R-scsi_ [kworker/R-scsi_tmf_8]
+    398       2 root     S        0 scsi_eh_9       [scsi_eh_9]
+    399       2 root     I<       0 kworker/R-scsi_ [kworker/R-scsi_tmf_9]
+    402       2 root     S        0 scsi_eh_10      [scsi_eh_10]
+    403       2 root     I<       0 kworker/R-scsi_ [kworker/R-scsi_tmf_10]
+    424       2 root     I<       0 kworker/1:1H-kb [kworker/1:1H-kblockd]
+    440       2 root     S        0 jbd2/nvme0n1p2- [jbd2/nvme0n1p2-8]
+    441       2 root     I<       0 kworker/R-ext4- [kworker/R-ext4-rsv-conversion]
+    491       2 root     S        0 psimon          [psimon]
+    497       1 root     S<s  21468 systemd-journal /usr/lib/systemd/systemd-journald
+    536       2 root     I<       0 kworker/3:1H-kb [kworker/3:1H-kblockd]
+    542       2 root     I<       0 kworker/8:1H-kb [kworker/8:1H-kblockd]
+    545       1 root     Ss   14880 systemd-udevd   /usr/lib/systemd/systemd-udevd
+    549       1 systemd+ Ss   14516 systemd-resolve /usr/lib/systemd/systemd-resolved
+    550       2 root     I<       0 kworker/6:1H-kb [kworker/6:1H-kblockd]
+    555       2 root     S        0 psimon          [psimon]
+    601       2 root     I<       0 kworker/7:1H-kb [kworker/7:1H-kblockd]
+    908       2 root     I<       0 kworker/u51:1-h [kworker/u51:1-hci0]
+    912       2 root     I<       0 kworker/0:1H-kb [kworker/0:1H-kblockd]
+    952       2 root     I<       0 kworker/11:1H-k [kworker/11:1H-kblockd]
+   1001       2 root     I<       0 kworker/2:1H-kb [kworker/2:1H-kblockd]
+   1010       2 root     I<       0 kworker/5:1H-kb [kworker/5:1H-kblockd]
+   1024       2 root     I<       0 kworker/9:1H-kb [kworker/9:1H-kblockd]
+   1025       2 root     S        0 jbd2/sdb1-8     [jbd2/sdb1-8]
+   1026       2 root     I<       0 kworker/R-ext4- [kworker/R-ext4-rsv-conversion]
+   1039       2 root     I<       0 kworker/10:1H-k [kworker/10:1H-kblockd]
+   1044       2 root     I        0 kworker/u50:6-e [kworker/u50:6-events_power_efficient]
+   1074       1 systemd+ Ss    7580 systemd-oomd    /usr/lib/systemd/systemd-oomd
+   1352       2 root     I<       0 kworker/R-amdgp [kworker/R-amdgpu-reset-dev]
+   1378       2 root     I<       0 kworker/R-ttm   [kworker/R-ttm]
+   1455       2 root     I<       0 kworker/4:1H-kb [kworker/4:1H-kblockd]
+   1481       1 avahi    Ss    4716 avahi-daemon    avahi-daemon: running [sanjevi-linux.local]
+   1482       1 root     Ss    7208 bluetoothd      /usr/libexec/bluetooth/bluetoothd
+   1484       1 root     Ss    1936 chronyd-starter /bin/sh /usr/lib/systemd/scripts/chronyd-starter.sh -n -F 1
+   1485       1 message+ Ss    8812 dbus-daemon     @dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+   1490       1 gnome-r+ Ssl  23664 gnome-remote-de /usr/libexec/gnome-remote-desktop-daemon --system
+   1496       1 root     Ss   29660 networkd-dispat /usr/bin/python3 /usr/bin/networkd-dispatcher --run-startup-triggers
+   1502       1 polkitd  Ssl  12336 polkitd         /usr/lib/polkit-1/polkitd --no-debug --log-level=notice
+   1510       1 root     Ssl  42168 snapd           /snap/snapd/current/usr/lib/snapd/snapd
+   1513       1 root     Ssl   8248 accounts-daemon /usr/libexec/accounts-daemon
+   1516       1 root     Ss    3276 cron            /usr/sbin/cron -f -P
+   1517       1 root     Ssl   7692 switcheroo-cont /usr/libexec/switcheroo-control
+   1522       1 root     Ss   10092 systemd-logind  /usr/lib/systemd/systemd-logind
+   1524       1 root     Ssl  16476 udisksd         /usr/libexec/udisks2/udisksd
+   1537    1481 avahi    S     1644 avahi-daemon    avahi-daemon: chroot helper
+   1564       1 syslog   Ssl   5996 rsyslogd        /usr/sbin/rsyslogd -n -iNONE
+   1568    1484 _chrony  S    11044 chronyd         /usr/sbin/chronyd -n -F 1
+   1617    1568 _chrony  S     3340 chronyd         /usr/sbin/chronyd -n -F 1
+   1637       1 root     Ssl  22184 NetworkManager  /usr/sbin/NetworkManager --no-daemon
+   1639       1 root     Ss    6768 wpa_supplicant  /usr/sbin/wpa_supplicant -u -s -O DIR=/run/wpa_supplicant GROUP=netdev
+   1677       1 root     Ssl  13824 ModemManager    /usr/sbin/ModemManager
+   1721       2 root     S        0 jbd2/sda1-8     [jbd2/sda1-8]
+   1722       2 root     I<       0 kworker/R-ext4- [kworker/R-ext4-rsv-conversion]
+   1734       1 root     Ssl  54708 tailscaled      /usr/sbin/tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/run/tailscale/tailscaled.sock --port=41641
+   1735       1 root     Ssl  32456 unattended-upgr /usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal
+   1756       1 sanjevi  Ss   15184 systemd         /usr/lib/systemd/systemd --user
+   1758       1 root     Ssl  43228 containerd      /usr/bin/containerd
+   1764       1 root     Ss    7564 sshd            sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+   1779    1756 sanjevi  S     4200 (sd-pam)        (sd-pam)
+   1787       1 root     Ssl  10428 gdm3            /usr/sbin/gdm3
+   1880    1756 sanjevi  Ss    6612 dbus-daemon     /usr/bin/dbus-daemon --session --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+   1881    1756 sanjevi  Ssl  76568 node            node /home/sanjevi/.local/bin/portless proxy start --foreground --no-tls -p 1355
+   1882    1756 sanjevi  Ssl  25328 rootlesskit     rootlesskit --state-dir=/run/user/1000/dockerd-rootless --net=slirp4netns --mtu=65520 --slirp4netns-sandbox=auto --slirp4netns-seccomp=auto --disable-host-loopback --port-driver=builtin --copy-up=/etc --copy-up=/run --propagation=rslave --detach-netns /usr/bin/dockerd-rootless.sh
+   1883    1756 sanjevi  Ssl  10896 pipewire        /usr/bin/pipewire
+   1905    1756 sanjevi  Ss    3984 mpris-proxy     /usr/bin/mpris-proxy
+   1906    1756 sanjevi  Ssl  23552 wireplumber     /usr/bin/wireplumber
+   1907    1756 sanjevi  Ssl   5580 pipewire        /usr/bin/pipewire -c filter-chain.conf
+   1908       1 rtkit    SNsl  3508 rtkit-daemon    /usr/libexec/rtkit-daemon
+   1910    1756 sanjevi  Ssl  11500 pipewire-pulse  /usr/bin/pipewire-pulse
+   1925    1882 sanjevi  Sl   25100 exe             /proc/self/exe --state-dir=/run/user/1000/dockerd-rootless --net=slirp4netns --mtu=65520 --slirp4netns-sandbox=auto --slirp4netns-seccomp=auto --disable-host-loopback --port-driver=builtin --copy-up=/etc --copy-up=/run --propagation=rslave --detach-netns /usr/bin/dockerd-rootless.sh
+   1976    1882 sanjevi  S     3888 slirp4netns     slirp4netns --mtu 65520 -r 3 --disable-host-loopback --enable-seccomp --userns-path=/proc/1925/ns/user --netns-type=path /proc/1925/root/run/user/1000/dockerd-rootless/netns tap0
+   1984    1925 sanjevi  Sl   84776 dockerd         dockerd
+   2014    1984 sanjevi  Ssl  49964 containerd      containerd --config /run/user/1000/docker/containerd/containerd.toml
+   2184    1756 sanjevi  Ssl   7664 xdg-document-po /usr/libexec/xdg-document-portal
+   2194    1756 sanjevi  Ssl   6656 xdg-permission- /usr/libexec/xdg-permission-store
+   2203    2184 root     Ss    2200 fusermount3     fusermount3 -o rw,nosuid,nodev,fsname=portal,auto_unmount,subtype=portal -- /run/user/1000/doc
+   2439       2 root     I<       0 kworker/R-amdgp [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+   2440       2 root     I<       0 kworker/R-amdgp [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+   2441       2 root     I<       0 kworker/R-amdgp [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+   2442       2 root     I<       0 kworker/R-amdgp [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+   2443       2 root     I<       0 kworker/R-amdgp [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+   2444       2 root     I<       0 kworker/R-dm_vb [kworker/R-dm_vblank_control_workqueue]
+   2445       2 root     S        0 card1-crtc0     [card1-crtc0]
+   2446       2 root     S        0 card1-crtc1     [card1-crtc1]
+   2447       2 root     S        0 card1-crtc2     [card1-crtc2]
+   2448       2 root     S        0 card1-crtc3     [card1-crtc3]
+   2449       2 root     S        0 card1-crtc4     [card1-crtc4]
+   2451       2 root     I<       0 kworker/R-gfx_0 [kworker/R-gfx_0.0.0]
+   2452       2 root     I<       0 kworker/R-gfx_0 [kworker/R-gfx_0.1.0]
+   2453       2 root     I<       0 kworker/R-comp_ [kworker/R-comp_1.0.0]
+   2454       2 root     I<       0 kworker/R-comp_ [kworker/R-comp_1.1.0]
+   2455       2 root     I<       0 kworker/R-comp_ [kworker/R-comp_1.2.0]
+   2456       2 root     I<       0 kworker/R-comp_ [kworker/R-comp_1.3.0]
+   2457       2 root     I<       0 kworker/R-comp_ [kworker/R-comp_1.0.1]
+   2458       2 root     I<       0 kworker/R-comp_ [kworker/R-comp_1.1.1]
+   2459       2 root     I<       0 kworker/R-comp_ [kworker/R-comp_1.2.1]
+   2460       2 root     I<       0 kworker/R-comp_ [kworker/R-comp_1.3.1]
+   2461       2 root     I<       0 kworker/R-sdma0 [kworker/R-sdma0]
+   2462       2 root     I<       0 kworker/R-sdma1 [kworker/R-sdma1]
+   2463       2 root     I<       0 kworker/R-vcn_d [kworker/R-vcn_dec_0]
+   2464       2 root     I<       0 kworker/R-vcn_e [kworker/R-vcn_enc_0.0]
+   2465       2 root     I<       0 kworker/R-vcn_e [kworker/R-vcn_enc_0.1]
+   2466       2 root     I<       0 kworker/R-jpeg_ [kworker/R-jpeg_dec]
+   2474       2 root     I        0 kworker/u48:2-d [kworker/u48:2-dm_vblank_control_workqueue]
+   3086       2 root     S<       0 krfcommd        [krfcommd]
+   3162       2 root     I<       0 kworker/u52:1   [kworker/u52:1]
+   3175       1 colord   Ssl  16552 colord          /usr/libexec/colord
+   3232       1 root     Ssl  11992 upowerd         /usr/libexec/upowerd
+   4160       1 root     Ssl  78672 node            node /home/sanjevi/.local/bin/portless proxy start --foreground -p 443
+   4214       1 root     Ssl   7800 power-profiles- /usr/libexec/power-profiles-daemon
+   4364    1787 root     Sl   10796 gdm-session-wor gdm-session-worker [pam/gdm-password]
+   4542    1756 sanjevi  SLsl 10820 gnome-keyring-d /usr/bin/gnome-keyring-daemon --foreground --components=pkcs11,secrets --control-directory=/run/user/1000/keyring
+   4618    4364 sanjevi  Ssl+  6576 gdm-wayland-ses /usr/libexec/gdm-wayland-session /usr/bin/gnome-session --session=ubuntu
+   4629    4618 sanjevi  Sl+   9372 gnome-session-i /usr/libexec/gnome-session-init-worker ubuntu
+   4870    1756 sanjevi  Ssl   7860 gcr-ssh-agent   /usr/libexec/gcr-ssh-agent --base-dir /run/user/1000/gcr
+   4871    1756 sanjevi  Ssl   5700 gnome-session-c /usr/libexec/gnome-session-ctl --monitor
+   4872    1756 sanjevi  Ss    6692 ssh-agent       /usr/bin/ssh-agent -D
+   4884    1756 sanjevi  Ssl   8816 gvfsd           /usr/libexec/gvfsd
+   4890    1756 sanjevi  Sl    7736 gvfsd-fuse      /usr/libexec/gvfsd-fuse /run/user/1000/gvfs -f
+   4893    1756 sanjevi  Ssl  11176 gnome-session-s /usr/libexec/gnome-session-service --session=ubuntu
+   4905    1756 sanjevi  Ssl  256396 gnome-shell    /usr/bin/gnome-shell --mode=ubuntu
+   4972    1756 sanjevi  Ssl   8048 at-spi-bus-laun /usr/libexec/at-spi-bus-launcher
+   4979    4972 sanjevi  S     5068 dbus-daemon     /usr/bin/dbus-daemon --config-file=/usr/share/defaults/at-spi2/accessibility.conf --nofork --print-address 11 --address=unix:path=/run/user/1000/at-spi/bus
+   4981    1756 sanjevi  Sl    7584 at-spi2-registr /usr/libexec/at-spi2-registryd --use-gnome-session
+   5200    1756 sanjevi  Sl   19320 gnome-shell-cal /usr/libexec/gnome-shell-calendar-server
+   5208    1756 sanjevi  Ssl  46456 evolution-sourc /usr/libexec/evolution-source-registry
+   5226    1756 sanjevi  Sl   32140 gjs             /usr/bin/gjs -m /usr/share/gnome-shell/org.gnome.Shell.Notifications
+   5247    1756 sanjevi  Ssl  11752 ibus-daemon     /usr/bin/ibus-daemon --panel disable
+   5250    1756 sanjevi  Ssl  10560 gsd-a11y-settin /usr/libexec/gsd-a11y-settings
+   5252    1756 sanjevi  Sl   32032 goa-daemon      /usr/libexec/goa-daemon
+   5254    1756 sanjevi  Ssl  10416 gsd-color       /usr/libexec/gsd-color
+   5255    1756 sanjevi  Ssl  12604 gsd-datetime    /usr/libexec/gsd-datetime
+   5260    1756 sanjevi  Ssl  10808 gsd-housekeepin /usr/libexec/gsd-housekeeping
+   5263    1756 sanjevi  Ssl   7968 gsd-keyboard    /usr/libexec/gsd-keyboard
+   5266    1756 sanjevi  Ssl  14656 gsd-media-keys  /usr/libexec/gsd-media-keys
+   5268    1756 sanjevi  Ssl  11656 gsd-power       /usr/libexec/gsd-power
+   5270    1756 sanjevi  Ssl  14520 gsd-print-notif /usr/libexec/gsd-print-notifications
+   5277    1756 sanjevi  Ssl   8152 gsd-rfkill      /usr/libexec/gsd-rfkill
+   5281    1756 sanjevi  Sl   32924 update-notifier /usr/bin/update-notifier
+   5282    1756 sanjevi  Ssl   7460 gsd-screensaver /usr/libexec/gsd-screensaver-proxy
+   5288    1756 sanjevi  Sl   64084 evolution-alarm /usr/libexec/evolution-data-server/evolution-alarm-notify
+   5294    1756 sanjevi  Sl    9896 gsd-disk-utilit /usr/libexec/gsd-disk-utility-notify
+   5297    1756 sanjevi  Ssl  12972 gsd-sharing     /usr/libexec/gsd-sharing
+   5325    1756 sanjevi  Ssl   9848 gsd-smartcard   /usr/libexec/gsd-smartcard
+   5331    1756 sanjevi  Ssl  10524 gsd-sound       /usr/libexec/gsd-sound
+   5339    1756 sanjevi  Ssl  10100 gsd-usb-protect /usr/libexec/gsd-usb-protection
+   5342    1756 sanjevi  Ssl  10600 gsd-wwan        /usr/libexec/gsd-wwan
+   5357    1756 sanjevi  Sl   10316 goa-identity-se /usr/libexec/goa-identity-service
+   5400    5247 sanjevi  Sl    8088 ibus-dconf      /usr/libexec/ibus-dconf
+   5404    5247 sanjevi  Sl   35344 ibus-extension- /usr/libexec/ibus-extension-gtk3
+   5416    1756 sanjevi  Sl    7904 ibus-portal     /usr/libexec/ibus-portal
+   5464    1756 sanjevi  Sl   31968 gjs             /usr/bin/gjs -m /usr/share/gnome-shell/org.gnome.ScreenSaver
+   5465    1756 sanjevi  Sl   12712 gsd-printer     /usr/libexec/gsd-printer
+   5495    1756 sanjevi  Ssl  26192 evolution-calen /usr/libexec/evolution-calendar-factory
+   5500    1756 sanjevi  SNsl 44100 localsearch-3   /usr/libexec/localsearch-3
+   5508    1756 sanjevi  Ssl  20504 xdg-desktop-por /usr/libexec/xdg-desktop-portal
+   5524    1756 sanjevi  Ssl  45216 xdg-desktop-por /usr/libexec/xdg-desktop-portal-gnome
+   5545    1756 sanjevi  Ssl  30944 evolution-addre /usr/libexec/evolution-addressbook-factory
+   5548    1756 sanjevi  Ssl  11164 gvfs-udisks2-vo /usr/libexec/gvfs-udisks2-volume-monitor
+   5565    5247 sanjevi  Sl    7956 ibus-engine-sim /usr/libexec/ibus-engine-simple
+   5572    1756 sanjevi  Ssl   9524 gvfs-afc-volume /usr/libexec/gvfs-afc-volume-monitor
+   5582    1756 sanjevi  Ssl   7344 gvfs-mtp-volume /usr/libexec/gvfs-mtp-volume-monitor
+   5587    1756 sanjevi  Ssl   7860 gvfs-gphoto2-vo /usr/libexec/gvfs-gphoto2-volume-monitor
+   5592    1756 sanjevi  Ssl   7176 gvfs-goa-volume /usr/libexec/gvfs-goa-volume-monitor
+   5660    1756 sanjevi  Ssl   7184 gvfsd-metadata  /usr/libexec/gvfsd-metadata
+   5755    1756 sanjevi  Ssl   6588 dconf-service   /usr/libexec/dconf-service
+   5852    4884 sanjevi  Sl    9924 gvfsd-trash     /usr/libexec/gvfsd-trash --spawner :1.22 /org/gtk/gvfs/exec_spaw/0
+   5966    4905 sanjevi  Sl   73232 gjs             gjs /usr/share/gnome-shell/extensions/ding@rastersoft.com/app/ding.js -E -P /usr/share/gnome-shell/extensions/ding@rastersoft.com/app
+   5982       2 root     I<       0 kworker/u53:2-t [kworker/u53:2-ttm]
+   5984       2 root     I<       0 kworker/u53:3-t [kworker/u53:3-ttm]
+   6001    1756 sanjevi  Ssl  27464 xdg-desktop-por /usr/libexec/xdg-desktop-portal-gtk
+   6136    1756 sanjevi  Ssl   6360 user-session-he /snap/snapd-desktop-integration/391/usr/bin/user-session-helper /snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration
+   6333    6136 sanjevi  Sl   36064 snapd-desktop-i /snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration
+  17435       2 root     I        0 kworker/6:0-cgr [kworker/6:0-cgroup_free]
+  22208    1764 root     Ss   12320 sshd-session    sshd-session: sanjevi [priv]
+  22242   22208 sanjevi  S    10752 sshd-session    sshd-session: sanjevi@notty
+  29825       1 sanjevi  Sl   49584 MainThread      node /home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/codex -c features.code_mode_host=true app-server --listen unix://
+  29850   29825 sanjevi  Sl   155312 codex          /home/sanjevi/.local/share/mise/installs/node/24.20.0/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex -c features.code_mode_host=true app-server --listen unix://
+  29882   22242 sanjevi  Ssl  49568 MainThread      node /home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/codex app-server proxy
+  29983   29882 sanjevi  Sl   24156 codex           /home/sanjevi/.local/share/mise/installs/node/24.20.0/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex app-server proxy
+  31107       2 root     I        0 kworker/8:0-mm_ [kworker/8:0-mm_percpu_wq]
+  31148       1 root     Ss   13096 cupsd           /usr/sbin/cupsd -l
+  31149   31148 lp       S     7292 dbus            /usr/lib/cups/notifier/dbus dbus://
+  31150       1 cups-br+ Ssl  22468 cups-browsed    /usr/sbin/cups-browsed
+  31167       2 root     I        0 kworker/2:1     [kworker/2:1]
+  34852       1 sanjevi  Ss    4676 tmux: server    tmux new-session -d -s fireside-allocator-purge-verification-rerun -c /home/sanjevi/fireside-allocator-purge-verification-abfd8eb-rerun env -u MIMALLOC_PURGE_DELAY -u MIMALLOC_PURGE_DECOMMITS -u ENDURANCE_REDB_CACHE_SIZE_BYTES ENDURANCE_OUTPUT_DIR='/home/sanjevi/fireside-allocator-purge-verification-rerun-20260830T1017+0800-abfd8eb' npm run test:endurance:disk-production-default-verification --prefix conformance >>'/home/sanjevi/fireside-allocator-purge-verification-rerun-20260830T1017+0800-abfd8eb/setup-and-run.log' 2>&1
+  34998       2 root     I        0 kworker/5:2-cgr [kworker/5:2-cgroup_free]
+  35031       2 root     I        0 kworker/1:2-eve [kworker/1:2-events]
+  35074       1 root     Ssl  47604 fwupd           /usr/libexec/fwupd/fwupd
+  35091       2 root     I        0 kworker/9:0-cgr [kworker/9:0-cgroup_free]
+  35093       2 root     I        0 kworker/u49:3-f [kworker/u49:3-flush-259:0]
+  35114       2 root     I        0 kworker/u50:1-e [kworker/u50:1-ext4-rsv-conversion]
+  35384       2 root     I        0 kworker/7:1-eve [kworker/7:1-events]
+  35570       2 root     I        0 kworker/2:0-eve [kworker/2:0-events]
+  35573       2 root     I        0 kworker/u49:2-e [kworker/u49:2-ext4-rsv-conversion]
+  35751       2 root     I        0 kworker/1:1     [kworker/1:1]
+  35752       2 root     I        0 kworker/3:1-cgr [kworker/3:1-cgroup_release]
+  35895       2 root     I        0 kworker/8:1     [kworker/8:1]
+  35896       2 root     I        0 kworker/10:2-mm [kworker/10:2-mm_percpu_wq]
+  36039       2 root     I        0 kworker/u48:1-g [kworker/u48:1-gfx_0.1.0]
+  36106       2 root     I        0 kworker/7:0-cgr [kworker/7:0-cgroup_free]
+  36107       2 root     I        0 kworker/11:2-mm [kworker/11:2-mm_percpu_wq]
+  36161       2 root     I        0 kworker/4:0-eve [kworker/4:0-events]
+  36163       2 root     I        0 kworker/u50:0-e [kworker/u50:0-events_power_efficient]
+  36262       2 root     I        0 kworker/0:2-mm_ [kworker/0:2-mm_percpu_wq]
+  36274       2 root     I        0 kworker/6:2-mm_ [kworker/6:2-mm_percpu_wq]
+  36275       2 root     I        0 kworker/4:1     [kworker/4:1]
+  36331       2 root     I        0 kworker/9:1-mm_ [kworker/9:1-mm_percpu_wq]
+  36357       2 root     I        0 kworker/u49:0-f [kworker/u49:0-flush-259:0]
+  36380       2 root     I        0 kworker/11:0    [kworker/11:0]
+  36429       2 root     I        0 kworker/3:2     [kworker/3:2]
+  36469       2 root     I        0 kworker/u48:0-g [kworker/u48:0-gfx_0.1.0]
+  36489       2 root     I        0 kworker/3:0-mm_ [kworker/3:0-mm_percpu_wq]
+  36500       2 root     I        0 kworker/0:0     [kworker/0:0]
+  36524   22242 sanjevi  Ss    4240 bash            bash -s
+  36527   36524 sanjevi  S     7328 tee             tee -a /home/sanjevi/fireside-phase1-full-gate-20260830T1200+0800-dc3438f/launch.log
+  36533    5500 sanjevi  SNl  46516 localsearch-ext /usr/libexec/localsearch-extractor-3 --socket-fd 3
+  36556   36524 sanjevi  R     4516 ps              ps -eo pid,ppid,user,stat,rss,comm,args --sort=pid
