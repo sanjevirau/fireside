@@ -6,8 +6,14 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use axum::body::Body;
 use axum::extract::{OriginalUri, Path, Query, State};
-use axum::http::{Method, StatusCode};
+use axum::http::header::{
+    ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS,
+    ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_REQUEST_HEADERS, CONTENT_TYPE, ORIGIN,
+};
+use axum::http::{HeaderValue, Method, Request, StatusCode};
+use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
@@ -36,6 +42,9 @@ const TRIGGER_ROUTE: &str = "/emulator/v1/projects/{project}/triggers/{key}";
 const EVENTARC_ROUTE: &str = "/emulator/v1/projects/{project}/eventarcTrigger";
 const CLEAR_ROUTE: &str = "/emulator/v1/projects/{project}/databases/{database}/documents";
 const DEBUG_MEMORY_ROUTE: &str = "/emulator/v1/debug/memory";
+const CORS_ALLOWED_METHODS: HeaderValue =
+    HeaderValue::from_static("DELETE,GET,HEAD,PATCH,POST,PUT");
+const JSON_CONTENT_TYPE: HeaderValue = HeaderValue::from_static("application/json");
 
 /// Creates the HTTP/1 router that shares the Firestore store with gRPC.
 pub fn router(store: Store) -> Router {
@@ -83,6 +92,45 @@ pub fn router_with_query_policy_and_memory_reporter(
             control: Arc::new(Mutex::new(ControlState::default())),
             allocator_memory_reporter,
         })
+        .layer(middleware::from_fn(browser_cors))
+}
+
+async fn browser_cors(mut request: Request<Body>, next: Next) -> Response {
+    let origin = request.headers().get(ORIGIN).cloned();
+    let requested_headers = request
+        .headers()
+        .get(ACCESS_CONTROL_REQUEST_HEADERS)
+        .cloned();
+    let is_preflight = request.method() == Method::OPTIONS;
+    if request
+        .headers()
+        .get(CONTENT_TYPE)
+        .is_some_and(|value| value.as_bytes().eq_ignore_ascii_case(b"text/plain"))
+    {
+        request
+            .headers_mut()
+            .insert(CONTENT_TYPE, JSON_CONTENT_TYPE);
+    }
+    let mut response = if is_preflight {
+        StatusCode::OK.into_response()
+    } else {
+        next.run(request).await
+    };
+
+    if let Some(origin) = origin {
+        let headers = response.headers_mut();
+        headers.insert(ACCESS_CONTROL_ALLOW_ORIGIN, origin);
+        headers.insert(ACCESS_CONTROL_ALLOW_METHODS, CORS_ALLOWED_METHODS);
+        headers.insert(
+            ACCESS_CONTROL_ALLOW_CREDENTIALS,
+            HeaderValue::from_static("true"),
+        );
+        if is_preflight && let Some(requested_headers) = requested_headers {
+            headers.insert(ACCESS_CONTROL_ALLOW_HEADERS, requested_headers);
+        }
+    }
+
+    response
 }
 
 /// Supplies allocator-owned process statistics to the debug-memory endpoint.
@@ -1417,10 +1465,84 @@ impl IntoResponse for RestError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tower::ServiceExt as _;
+
+    const JAVA_CORS_FIXTURE: &str = include_str!(
+        "../../../conformance/fixtures/rest-v1/java-v1.22.0/cors-preflight/fixture.json"
+    );
 
     #[test]
     fn control_and_document_routes_can_share_one_router() {
         let _router = router(Store::default());
+    }
+
+    #[tokio::test]
+    async fn browser_cors_matches_the_java_fixture() {
+        let fixture: JsonValue =
+            serde_json::from_str(JAVA_CORS_FIXTURE).expect("CORS fixture should be valid JSON");
+        let exchanges = fixture["exchanges"]
+            .as_array()
+            .expect("CORS fixture should contain exchanges");
+        let application = router(Store::default());
+
+        for exchange in exchanges {
+            let method = Method::from_bytes(
+                exchange["request"]["method"]
+                    .as_str()
+                    .expect("fixture method")
+                    .as_bytes(),
+            )
+            .expect("fixture method should be valid");
+            let path = exchange["request"]["path"].as_str().expect("fixture path");
+            let mut request = Request::builder().method(method).uri(path);
+            for header in exchange["request"]["headers"]
+                .as_array()
+                .expect("fixture request headers")
+            {
+                request = request.header(
+                    header["name"].as_str().expect("fixture header name"),
+                    header["value"].as_str().expect("fixture header value"),
+                );
+            }
+            let body = exchange["request"]
+                .get("body")
+                .and_then(JsonValue::as_str)
+                .unwrap_or_default();
+            let response = application
+                .clone()
+                .oneshot(
+                    request
+                        .body(Body::from(body.to_owned()))
+                        .expect("fixture request should build"),
+                )
+                .await
+                .expect("REST router should respond");
+
+            assert_eq!(
+                response.status().as_u16(),
+                u16::try_from(
+                    exchange["response"]["status"]
+                        .as_u64()
+                        .expect("fixture response status")
+                )
+                .expect("fixture status should fit HTTP status width")
+            );
+            for header in exchange["response"]["headers"]
+                .as_array()
+                .expect("fixture response headers")
+                .iter()
+                .filter(|header| header["name"] != "content-length")
+            {
+                assert_eq!(
+                    response
+                        .headers()
+                        .get(header["name"].as_str().expect("fixture header name"))
+                        .and_then(|value| value.to_str().ok()),
+                    header["value"].as_str(),
+                    "response header should match the Java fixture"
+                );
+            }
+        }
     }
 
     #[tokio::test]
