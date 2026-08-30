@@ -8,6 +8,7 @@
 #![forbid(unsafe_code)]
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
+use std::convert::Infallible;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -21,6 +22,7 @@ use axum::http::header::{
 };
 use axum::http::{HeaderMap, HeaderName, HeaderValue, Response, StatusCode};
 use axum::routing::get;
+use futures_util::stream;
 use serde_json::{Value as JsonValue, json};
 use tokio::sync::{Notify, mpsc};
 
@@ -329,11 +331,15 @@ async fn get_channel<B: Backend>(
     let aid = parse_u64_parameter(&query, "AID").unwrap_or(0);
     session.acknowledge(aid);
     let ci = parse_u64_parameter(&query, "CI").unwrap_or(0);
+    if ci == 0 {
+        if let Err(error) = session.enqueue(json!(["noop"])) {
+            return protocol_error_response(error, origin.as_deref());
+        }
+        return streaming_response(session, aid, origin.as_deref());
+    }
     if ci != 1 {
         return protocol_error_response(
-            ProtocolError::BadRequest(
-                "streaming CI=0 is enabled by the next implementation slice".to_owned(),
-            ),
+            ProtocolError::BadRequest("CI must be 0 or 1".to_owned()),
             origin.as_deref(),
         );
     }
@@ -348,6 +354,47 @@ async fn get_channel<B: Backend>(
         origin.as_deref(),
         &[],
     )
+}
+
+fn streaming_response(
+    session: Arc<Session>,
+    after_id: u64,
+    origin: Option<&str>,
+) -> Response<Body> {
+    let state = StreamingBackchannel {
+        cursor: after_id,
+        session: Arc::clone(&session),
+        _guard: BackchannelGuard::new(session),
+    };
+    let body = Body::from_stream(stream::unfold(state, |mut state| async move {
+        loop {
+            let arrays = state.session.arrays_after(state.cursor);
+            if let Some(last) = arrays.last() {
+                state.cursor = last.id;
+                let frame = encode_arrays_frame(&arrays);
+                return Some((Ok::<Bytes, Infallible>(Bytes::from(frame)), state));
+            }
+            if tokio::time::timeout(
+                Duration::from_millis(KEEPALIVE_MILLISECONDS),
+                state.session.notify.notified(),
+            )
+            .await
+            .is_err()
+            {
+                let _ = state.session.enqueue(json!(["noop"]));
+            }
+        }
+    }));
+    let mut response = Response::new(body);
+    *response.status_mut() = StatusCode::OK;
+    apply_common_headers(response.headers_mut(), "text/plain; charset=utf-8", origin);
+    response
+}
+
+struct StreamingBackchannel {
+    cursor: u64,
+    session: Arc<Session>,
+    _guard: BackchannelGuard,
 }
 
 async fn long_poll(session: &Arc<Session>, after_id: u64, timeout: Duration) -> Vec<ArrayRecord> {
@@ -755,7 +802,16 @@ fn response(
 ) -> Response<Body> {
     let mut response = Response::new(Body::from(body));
     *response.status_mut() = status;
-    let headers = response.headers_mut();
+    apply_common_headers(response.headers_mut(), content_type, origin);
+    for (name, value) in extra_headers {
+        if let (Ok(name), Ok(value)) = (HeaderName::try_from(*name), HeaderValue::from_str(value)) {
+            response.headers_mut().insert(name, value);
+        }
+    }
+    response
+}
+
+fn apply_common_headers(headers: &mut HeaderMap, content_type: &'static str, origin: Option<&str>) {
     headers.insert(CONTENT_TYPE, HeaderValue::from_static(content_type));
     headers.insert(
         CACHE_CONTROL,
@@ -781,12 +837,6 @@ fn response(
             HeaderValue::from_static("true"),
         );
     }
-    for (name, value) in extra_headers {
-        if let (Ok(name), Ok(value)) = (HeaderName::try_from(*name), HeaderValue::from_str(value)) {
-            headers.insert(name, value);
-        }
-    }
-    response
 }
 
 fn request_origin(headers: &HeaderMap) -> Option<String> {
@@ -806,6 +856,7 @@ fn mutex_lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 mod tests {
     use super::*;
     use axum::http::Request;
+    use futures_util::StreamExt as _;
     use http_body_util::BodyExt as _;
     use tower::ServiceExt as _;
 
@@ -835,6 +886,48 @@ mod tests {
                 responses,
             }
         }
+    }
+
+    async fn open_echo_session(application: &Router) -> (String, String) {
+        let handshake_body = "headers=Authorization%3ABearer+owner%0D%0Ax-goog-api-key%3Akey%0D%0A&count=1&ofs=0&req0___data__=%7B%22database%22%3A%22projects%2Fdemo%2Fdatabases%2F(default)%22%7D";
+        let handshake = application
+            .clone()
+            .oneshot(
+                Request::post(format!(
+                    "{LISTEN_CHANNEL_PATH}?VER=8&RID=123&CVER=22&X-HTTP-Session-Id=gsessionid&database=projects%2Fdemo%2Fdatabases%2F(default)"
+                ))
+                .header(ORIGIN, "http://127.0.0.1:5000")
+                .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body(Body::from(handshake_body))
+                .expect("handshake request should build"),
+            )
+            .await
+            .expect("router should answer");
+        assert_eq!(handshake.status(), StatusCode::OK);
+        let gsession_id = handshake
+            .headers()
+            .get("x-http-session-id")
+            .expect("handshake should return gsessionid")
+            .to_str()
+            .expect("gsessionid is text")
+            .to_owned();
+        let handshake_body = handshake
+            .into_body()
+            .collect()
+            .await
+            .expect("handshake body should read")
+            .to_bytes();
+        let handshake_text = String::from_utf8(handshake_body.to_vec()).expect("body is UTF-8");
+        let (_, handshake_json) = handshake_text
+            .split_once('\n')
+            .expect("handshake is framed");
+        let handshake_json: JsonValue =
+            serde_json::from_str(handshake_json).expect("handshake is JSON");
+        let sid = handshake_json[0][1][1]
+            .as_str()
+            .expect("handshake contains SID")
+            .to_owned();
+        (sid, gsession_id)
     }
 
     #[test]
@@ -1083,5 +1176,95 @@ mod tests {
             .expect("unknown body should read")
             .to_bytes();
         assert_eq!(unknown_body.as_ref(), UNKNOWN_SID_BODY.as_bytes());
+    }
+
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)]
+    async fn streaming_flushes_noop_tracks_overlap_and_replays_after_loss() {
+        let application = router(EchoBackend::default());
+        let (sid, gsession_id) = open_echo_session(&application).await;
+        let streaming = application
+            .clone()
+            .oneshot(
+                Request::get(format!(
+                    "{LISTEN_CHANNEL_PATH}?VER=8&RID=rpc&SID={sid}&AID=0&CI=0&TYPE=xmlhttp&t=1&gsessionid={gsession_id}"
+                ))
+                .header(ORIGIN, "http://127.0.0.1:5000")
+                .body(Body::empty())
+                .expect("streaming request should build"),
+            )
+            .await
+            .expect("router should answer");
+        assert_eq!(streaming.status(), StatusCode::OK);
+        assert_eq!(
+            streaming.headers().get("x-accel-buffering"),
+            Some(&HeaderValue::from_static("no"))
+        );
+        assert!(streaming.headers().get("content-encoding").is_none());
+        let mut stream = streaming.into_body().into_data_stream();
+        let first = tokio::time::timeout(Duration::from_millis(250), stream.next())
+            .await
+            .expect("first streaming chunk should flush immediately")
+            .expect("stream should yield")
+            .expect("stream chunk should succeed");
+        let first = String::from_utf8(first.to_vec()).expect("chunk is UTF-8");
+        assert!(first.contains("\"noop\""));
+
+        let forward_body = "count=1&ofs=1&req0___data__=%7B%22forward%22%3A%22overlap%22%7D";
+        let forward = application
+            .clone()
+            .oneshot(
+                Request::post(format!(
+                    "{LISTEN_CHANNEL_PATH}?VER=8&RID=124&SID={sid}&AID=0&t=1&gsessionid={gsession_id}"
+                ))
+                .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body(Body::from(forward_body))
+                .expect("forward request should build"),
+            )
+            .await
+            .expect("router should answer");
+        assert_eq!(forward.status(), StatusCode::OK);
+        let forward = forward
+            .into_body()
+            .collect()
+            .await
+            .expect("forward body should read")
+            .to_bytes();
+        let forward = String::from_utf8(forward.to_vec()).expect("body is UTF-8");
+        let (_, acknowledgement) = forward.split_once('\n').expect("ack is framed");
+        let acknowledgement: JsonValue =
+            serde_json::from_str(acknowledgement).expect("ack is JSON");
+        assert_eq!(acknowledgement[0], 1);
+        drop(stream);
+
+        let retry = application
+            .oneshot(
+                Request::get(format!(
+                    "{LISTEN_CHANNEL_PATH}?VER=8&RID=rpc&SID={sid}&AID=0&CI=0&TYPE=xmlhttp&t=2&gsessionid={gsession_id}"
+                ))
+                .body(Body::empty())
+                .expect("retry request should build"),
+            )
+            .await
+            .expect("router should answer");
+        let mut retry = retry.into_body().into_data_stream();
+        let replay = tokio::time::timeout(Duration::from_millis(250), retry.next())
+            .await
+            .expect("replay should flush immediately")
+            .expect("stream should yield")
+            .expect("stream chunk should succeed");
+        let replay = String::from_utf8(replay.to_vec()).expect("chunk is UTF-8");
+        let (_, replay) = replay.split_once('\n').expect("replay is framed");
+        let replay: JsonValue = serde_json::from_str(replay).expect("replay is JSON");
+        let ids = replay
+            .as_array()
+            .expect("replay is an array")
+            .iter()
+            .map(|array| array[0].as_u64().expect("array ID is numeric"))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            ids,
+            (1..=u64::try_from(ids.len()).expect("length fits u64")).collect::<Vec<_>>()
+        );
     }
 }

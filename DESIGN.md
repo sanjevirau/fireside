@@ -976,8 +976,13 @@ the nonzero-offset `Unknown SID` literal required by Closure.
 All framed responses compute their decimal prefixes from Rust UTF-16 encoding
 units after JSON serialization. CORS echoes the request origin and exposes both
 session/protocol response headers. Responses carry `no-transform`, no content
-encoding, and `X-Accel-Buffering: no`; the streaming slice additionally owns
-flush timing and its immediate `noop`.
+encoding, and `X-Accel-Buffering: no`. A `CI=0` backchannel returns its headers
+and a body stream immediately after allocating a consecutive `noop` array; the
+first chunk therefore arrives within the frozen 250 ms proxy-detection bound.
+The stream keeps its own sent cursor without discarding unacknowledged session
+arrays. Dropping it releases live-backchannel accounting, and a replacement
+with an older `AID` replays the retained consecutive prefix before continuing
+to stream new notifications and 30-second `noop` keepalives.
 
 ## 8. Export and import contract
 
