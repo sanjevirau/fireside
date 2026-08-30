@@ -28,6 +28,7 @@ pub mod google {
         #[allow(clippy::all, clippy::pedantic)]
         pub mod v1 {
             tonic::include_proto!("google.firestore.v1");
+            include!(concat!(env!("OUT_DIR"), "/google.firestore.v1.serde.rs"));
         }
     }
 
@@ -35,12 +36,14 @@ pub mod google {
     #[allow(clippy::all, clippy::pedantic)]
     pub mod rpc {
         tonic::include_proto!("google.rpc");
+        include!(concat!(env!("OUT_DIR"), "/google.rpc.serde.rs"));
     }
 
     /// Shared Google geographic types.
     #[allow(clippy::all, clippy::pedantic)]
     pub mod r#type {
         tonic::include_proto!("google.r#type");
+        include!(concat!(env!("OUT_DIR"), "/google.r#type.serde.rs"));
     }
 }
 

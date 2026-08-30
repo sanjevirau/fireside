@@ -7,6 +7,8 @@
 
 #![forbid(unsafe_code)]
 
+mod firestore_json;
+
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::convert::Infallible;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
@@ -22,7 +24,8 @@ use axum::http::header::{
 };
 use axum::http::{HeaderMap, HeaderName, HeaderValue, Response, StatusCode};
 use axum::routing::get;
-use futures_util::stream;
+use fireside_grpc_front::FirestoreService;
+use futures_util::{StreamExt as _, stream};
 use serde_json::{Value as JsonValue, json};
 use tokio::sync::{Notify, mpsc};
 
@@ -77,6 +80,132 @@ pub struct BackendChannel {
 pub trait Backend: Clone + Send + Sync + 'static {
     /// Opens one Listen or Write stream for a new `WebChannel` session.
     fn open(&self, kind: ChannelKind, request: &OpenRequest) -> BackendChannel;
+}
+
+/// Firestore backend that bridges `WebChannel` JSON maps into the shared gRPC
+/// Listen and Write engines.
+#[derive(Clone)]
+pub struct FirestoreBackend {
+    service: FirestoreService,
+}
+
+impl FirestoreBackend {
+    /// Creates a `WebChannel` backend over an existing Firestore service.
+    #[must_use]
+    pub const fn new(service: FirestoreService) -> Self {
+        Self { service }
+    }
+}
+
+impl Backend for FirestoreBackend {
+    fn open(&self, kind: ChannelKind, _request: &OpenRequest) -> BackendChannel {
+        let (json_requests, mut request_receiver) = mpsc::channel(128);
+        let (response_sender, json_responses) = mpsc::channel(128);
+        match kind {
+            ChannelKind::Listen => {
+                let (typed_requests, mut typed_responses) = self.service.open_listen_channel();
+                let request_errors = response_sender.clone();
+                tokio::spawn(async move {
+                    while let Some(value) = request_receiver.recv().await {
+                        let request = match firestore_json::decode_listen_request(value) {
+                            Ok(request) => request,
+                            Err(error) => {
+                                let _ = request_errors.send(Err(error)).await;
+                                return;
+                            }
+                        };
+                        if typed_requests.send(request).await.is_err() {
+                            let _ = request_errors
+                                .send(Err(BackendError::new(
+                                    "CANCELLED",
+                                    "Firestore Listen stream is closed",
+                                )))
+                                .await;
+                            return;
+                        }
+                    }
+                });
+                tokio::spawn(async move {
+                    while let Some(response) = typed_responses.next().await {
+                        let response = match response {
+                            Ok(response) => firestore_json::encode_listen_response(response),
+                            Err(error) => Err(backend_status(&error)),
+                        };
+                        let terminal = response.is_err();
+                        if response_sender.send(response).await.is_err() || terminal {
+                            return;
+                        }
+                    }
+                });
+            }
+            ChannelKind::Write => {
+                let (typed_requests, mut typed_responses) = self.service.open_write_channel();
+                let request_errors = response_sender.clone();
+                tokio::spawn(async move {
+                    while let Some(value) = request_receiver.recv().await {
+                        let request = match firestore_json::decode_write_request(value) {
+                            Ok(request) => request,
+                            Err(error) => {
+                                let _ = request_errors.send(Err(error)).await;
+                                return;
+                            }
+                        };
+                        if typed_requests.send(request).await.is_err() {
+                            let _ = request_errors
+                                .send(Err(BackendError::new(
+                                    "CANCELLED",
+                                    "Firestore Write stream is closed",
+                                )))
+                                .await;
+                            return;
+                        }
+                    }
+                });
+                tokio::spawn(async move {
+                    while let Some(response) = typed_responses.next().await {
+                        let response = match response {
+                            Ok(response) => firestore_json::encode_write_response(response),
+                            Err(error) => Err(backend_status(&error)),
+                        };
+                        let terminal = response.is_err();
+                        if response_sender.send(response).await.is_err() || terminal {
+                            return;
+                        }
+                    }
+                });
+            }
+        }
+        BackendChannel {
+            requests: json_requests,
+            responses: json_responses,
+        }
+    }
+}
+
+fn backend_status(status: &tonic::Status) -> BackendError {
+    BackendError::new(canonical_code(status.code()), status.message())
+}
+
+const fn canonical_code(code: tonic::Code) -> &'static str {
+    match code {
+        tonic::Code::Ok => "OK",
+        tonic::Code::Cancelled => "CANCELLED",
+        tonic::Code::Unknown => "UNKNOWN",
+        tonic::Code::InvalidArgument => "INVALID_ARGUMENT",
+        tonic::Code::DeadlineExceeded => "DEADLINE_EXCEEDED",
+        tonic::Code::NotFound => "NOT_FOUND",
+        tonic::Code::AlreadyExists => "ALREADY_EXISTS",
+        tonic::Code::PermissionDenied => "PERMISSION_DENIED",
+        tonic::Code::ResourceExhausted => "RESOURCE_EXHAUSTED",
+        tonic::Code::FailedPrecondition => "FAILED_PRECONDITION",
+        tonic::Code::Aborted => "ABORTED",
+        tonic::Code::OutOfRange => "OUT_OF_RANGE",
+        tonic::Code::Unimplemented => "UNIMPLEMENTED",
+        tonic::Code::Internal => "INTERNAL",
+        tonic::Code::Unavailable => "UNAVAILABLE",
+        tonic::Code::DataLoss => "DATA_LOSS",
+        tonic::Code::Unauthenticated => "UNAUTHENTICATED",
+    }
 }
 
 /// A backend error encoded into the channel rather than exposed as an HTTP
@@ -856,7 +985,6 @@ fn mutex_lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 mod tests {
     use super::*;
     use axum::http::Request;
-    use futures_util::StreamExt as _;
     use http_body_util::BodyExt as _;
     use tower::ServiceExt as _;
 
@@ -888,13 +1016,13 @@ mod tests {
         }
     }
 
-    async fn open_echo_session(application: &Router) -> (String, String) {
+    async fn open_session(application: &Router, path: &str) -> (String, String) {
         let handshake_body = "headers=Authorization%3ABearer+owner%0D%0Ax-goog-api-key%3Akey%0D%0A&count=1&ofs=0&req0___data__=%7B%22database%22%3A%22projects%2Fdemo%2Fdatabases%2F(default)%22%7D";
         let handshake = application
             .clone()
             .oneshot(
                 Request::post(format!(
-                    "{LISTEN_CHANNEL_PATH}?VER=8&RID=123&CVER=22&X-HTTP-Session-Id=gsessionid&database=projects%2Fdemo%2Fdatabases%2F(default)"
+                    "{path}?VER=8&RID=123&CVER=22&X-HTTP-Session-Id=gsessionid&database=projects%2Fdemo%2Fdatabases%2F(default)"
                 ))
                 .header(ORIGIN, "http://127.0.0.1:5000")
                 .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -928,6 +1056,42 @@ mod tests {
             .expect("handshake contains SID")
             .to_owned();
         (sid, gsession_id)
+    }
+
+    #[tokio::test]
+    async fn firestore_backend_routes_write_handshakes_through_the_shared_engine() {
+        let application = router(FirestoreBackend::new(FirestoreService::default()));
+        let (sid, gsession_id) = open_session(&application, WRITE_CHANNEL_PATH).await;
+        let response = application
+            .oneshot(
+                Request::get(format!(
+                    "{WRITE_CHANNEL_PATH}?VER=8&RID=rpc&SID={sid}&AID=0&CI=1&TO=1000&TYPE=xmlhttp&t=1&gsessionid={gsession_id}"
+                ))
+                .body(Body::empty())
+                .expect("backchannel request should build"),
+            )
+            .await
+            .expect("router should answer");
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = response
+            .into_body()
+            .collect()
+            .await
+            .expect("backchannel body should read")
+            .to_bytes();
+        let body = String::from_utf8(body.to_vec()).expect("body is UTF-8");
+        let (_, payload) = body.split_once('\n').expect("backchannel is framed");
+        let payload: JsonValue = serde_json::from_str(payload).expect("payload is JSON");
+        assert!(
+            payload[0][1][0]["streamId"]
+                .as_str()
+                .is_some_and(|stream_id| !stream_id.is_empty())
+        );
+        assert!(
+            payload[0][1][0]["streamToken"]
+                .as_str()
+                .is_some_and(|token| !token.is_empty())
+        );
     }
 
     #[test]
@@ -1182,7 +1346,7 @@ mod tests {
     #[allow(clippy::too_many_lines)]
     async fn streaming_flushes_noop_tracks_overlap_and_replays_after_loss() {
         let application = router(EchoBackend::default());
-        let (sid, gsession_id) = open_echo_session(&application).await;
+        let (sid, gsession_id) = open_session(&application, LISTEN_CHANNEL_PATH).await;
         let streaming = application
             .clone()
             .oneshot(

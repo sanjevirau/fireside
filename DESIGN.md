@@ -992,6 +992,16 @@ across transports. The shared Listen handler already owns a target-ID map, so
 one browser channel can multiplex independent document and query targets while
 retaining target-local remove and resume semantics.
 
+The JSON bridge is generated from the same vendored Firestore descriptors as
+the tonic service using the protobuf JSON mapping. It therefore preserves
+string-encoded `int64`, base64 bytes, symbolic enum names, well-known wrapper
+types, and RFC 3339 timestamps instead of maintaining a handwritten parallel
+schema. Captured production Listen and Unicode Write maps are decoded directly
+in the unit suite. Response timestamps are normalized from the serializer's
+equivalent `+00:00` spelling to the cloud-observed `Z` spelling only for known
+protobuf timestamp fields; ordinary Firestore string values are never
+rewritten.
+
 ## 8. Export and import contract
 
 Firestore export data under

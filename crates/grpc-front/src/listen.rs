@@ -183,7 +183,10 @@ async fn add_target(
     database: DatabaseName,
     target: Target,
 ) -> Result<(), Status> {
-    let expected_count = target.expected_count.filter(|count| *count > 0);
+    let expected_count = target
+        .expected_count
+        .filter(|count| count.value > 0)
+        .map(|count| count.value);
     let id = assign_target_id(target.target_id, next_assigned_id);
     if id <= 0 {
         return Err(Status::invalid_argument(

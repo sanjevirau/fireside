@@ -494,7 +494,7 @@ impl Firestore for FirestoreService {
     async fn delete_document(
         &self,
         request: Request<DeleteDocumentRequest>,
-    ) -> Result<Response<()>, Status> {
+    ) -> Result<Response<pbjson_types::Empty>, Status> {
         let request = request.into_inner();
         let decoded = decode_write(proto::Write {
             current_document: request.current_document,
@@ -503,7 +503,7 @@ impl Firestore for FirestoreService {
         })?;
         let _guard = self.write_lock();
         self.apply_writes(&[decoded])?;
-        Ok(Response::new(()))
+        Ok(Response::new(pbjson_types::Empty {}))
     }
 
     type BatchGetDocumentsStream = ResponseStream<BatchGetDocumentsResponse>;
@@ -644,7 +644,10 @@ impl Firestore for FirestoreService {
         Ok(Response::new(self.apply_writes(&decoded)?))
     }
 
-    async fn rollback(&self, request: Request<RollbackRequest>) -> Result<Response<()>, Status> {
+    async fn rollback(
+        &self,
+        request: Request<RollbackRequest>,
+    ) -> Result<Response<pbjson_types::Empty>, Status> {
         let request = request.into_inner();
         let database = decode_database_name(&request.database)?;
         let transaction = self
@@ -656,7 +659,7 @@ impl Firestore for FirestoreService {
                 "transaction belongs to a different database",
             ));
         }
-        Ok(Response::new(()))
+        Ok(Response::new(pbjson_types::Empty {}))
     }
 
     type RunQueryStream = ResponseStream<RunQueryResponse>;
@@ -1278,8 +1281,8 @@ fn query_plan_summary(query: &proto::StructuredQuery) -> proto::PlanSummary {
             .unwrap_or("ASC");
         properties.push(format!("__name__ {direction}"));
     }
-    let index = prost_types::Struct {
-        fields: BTreeMap::from([
+    let index = pbjson_types::Struct {
+        fields: HashMap::from([
             ("query_scope".to_owned(), struct_string(query_scope)),
             (
                 "properties".to_owned(),
@@ -1302,13 +1305,13 @@ fn query_explain_metrics(
             let results = i64::try_from(results).unwrap_or(i64::MAX);
             proto::ExecutionStats {
                 results_returned: results,
-                execution_duration: Some(prost_types::Duration {
+                execution_duration: Some(pbjson_types::Duration {
                     seconds: i64::try_from(elapsed.as_secs()).unwrap_or(i64::MAX),
                     nanos: i32::try_from(elapsed.subsec_nanos()).unwrap_or(i32::MAX),
                 }),
                 read_operations: results.max(1),
-                debug_stats: Some(prost_types::Struct {
-                    fields: BTreeMap::from([
+                debug_stats: Some(pbjson_types::Struct {
+                    fields: HashMap::from([
                         (
                             "execution_engine".to_owned(),
                             struct_string("fireside-mvcc"),
@@ -1378,9 +1381,9 @@ fn aggregate_query_result(
     })
 }
 
-fn struct_string(value: impl Into<String>) -> prost_types::Value {
-    prost_types::Value {
-        kind: Some(prost_types::value::Kind::StringValue(value.into())),
+fn struct_string(value: impl Into<String>) -> pbjson_types::Value {
+    pbjson_types::Value {
+        kind: Some(pbjson_types::value::Kind::StringValue(value.into())),
     }
 }
 
@@ -1671,7 +1674,7 @@ mod tests {
             .and_then(|value| value.kind.as_ref());
         assert!(matches!(
             properties,
-            Some(prost_types::value::Kind::StringValue(value))
+            Some(pbjson_types::value::Kind::StringValue(value))
                 if value == "(score DESC, __name__ DESC)"
         ));
 

@@ -6,7 +6,7 @@ use fireside_core_store::{
     Timestamp, TransformOperation, Value, Write,
 };
 use fireside_query_engine::FieldPath as QueryFieldPath;
-use prost_types::Timestamp as ProtoTimestamp;
+use pbjson_types::Timestamp as ProtoTimestamp;
 use tonic::Status;
 
 use crate::google::firestore::v1 as proto;

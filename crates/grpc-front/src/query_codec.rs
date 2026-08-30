@@ -95,7 +95,7 @@ pub(crate) fn decode_query(
         .map_err(|_| Status::invalid_argument("query offset cannot be negative"))?;
     query = query.offset(offset);
     if let Some(limit) = structured.limit {
-        let limit = usize::try_from(limit)
+        let limit = usize::try_from(limit.value)
             .map_err(|_| Status::invalid_argument("query limit cannot be negative"))?;
         query = query.limit(Limit::First(limit));
     }
@@ -137,7 +137,7 @@ fn decode_nearest(query: Query, nearest: FindNearest) -> Result<Query, Status> {
     let limit = nearest
         .limit
         .ok_or_else(|| Status::invalid_argument("vector query limit is required"))?;
-    let limit = usize::try_from(limit)
+    let limit = usize::try_from(limit.value)
         .map_err(|_| Status::invalid_argument("vector query limit must be positive"))?;
     let distance_result_field = (!nearest.distance_result_field.is_empty())
         .then(|| FieldPath::parse_wire(&nearest.distance_result_field))
@@ -150,7 +150,7 @@ fn decode_nearest(query: Query, nearest: FindNearest) -> Result<Query, Status> {
             distance_measure,
             limit,
             distance_result_field,
-            nearest.distance_threshold,
+            nearest.distance_threshold.map(|threshold| threshold.value),
         )
         .map_err(|error| query_status(&error))
 }
@@ -182,7 +182,7 @@ pub(crate) fn decode_aggregation(
         let aggregation = match operation.operator {
             Some(AggregationOperator::Count(count)) => {
                 if let Some(up_to) = count.up_to {
-                    let up_to = usize::try_from(up_to).map_err(|_| {
+                    let up_to = usize::try_from(up_to.value).map_err(|_| {
                         Status::invalid_argument("count upper bound must be positive")
                     })?;
                     if up_to == 0 {
@@ -341,7 +341,7 @@ mod tests {
                     }),
                     direction: ProtoDirection::Descending as i32,
                 }],
-                limit: Some(10),
+                limit: Some(pbjson_types::Int32Value { value: 10 }),
                 ..StructuredQuery::default()
             },
         )
@@ -386,9 +386,9 @@ mod tests {
                         .expect("vector should encode"),
                     ),
                     distance_measure: ProtoDistanceMeasure::Cosine as i32,
-                    limit: Some(10),
+                    limit: Some(pbjson_types::Int32Value { value: 10 }),
                     distance_result_field: "distance".to_owned(),
-                    distance_threshold: Some(0.5),
+                    distance_threshold: Some(pbjson_types::DoubleValue { value: 0.5 }),
                 }),
                 ..StructuredQuery::default()
             },
