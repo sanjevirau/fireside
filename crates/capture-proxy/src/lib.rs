@@ -53,8 +53,6 @@ const SENSITIVE_QUERY_OR_FORM_FIELDS: &[&str] =
 
 const HOP_BY_HOP_HEADERS: &[&str] = &[
     "connection",
-    "content-length",
-    "host",
     "keep-alive",
     "proxy-authenticate",
     "proxy-authorization",
@@ -213,10 +211,13 @@ async fn proxy_request_inner(
     let upstream_url = upstream_url(&state.upstream, &uri);
     let mut upstream_request = state.client.request(method.clone(), upstream_url);
     for (name, value) in &request_headers {
-        if !is_hop_by_hop(name.as_str()) {
+        if !is_request_forward_excluded(name.as_str())
+            && !name.as_str().eq_ignore_ascii_case("accept-encoding")
+        {
             upstream_request = upstream_request.header(name, value);
         }
     }
+    upstream_request = upstream_request.header("accept-encoding", "identity");
     let upstream_response = upstream_request
         .body(body)
         .send()
@@ -524,7 +525,7 @@ fn redact_headers(headers: &mut [Header]) {
 fn capture_headers(headers: &HeaderMap, omit_hop_by_hop: bool) -> Vec<Header> {
     let mut captured = headers
         .iter()
-        .filter(|(name, _)| !omit_hop_by_hop || !is_hop_by_hop(name.as_str()))
+        .filter(|(name, _)| !omit_hop_by_hop || !is_request_forward_excluded(name.as_str()))
         .map(|(name, value)| Header {
             name: name.as_str().to_owned(),
             value: value
@@ -628,6 +629,10 @@ fn is_hop_by_hop(name: &str) -> bool {
     HOP_BY_HOP_HEADERS
         .iter()
         .any(|hop_by_hop| name.eq_ignore_ascii_case(hop_by_hop))
+}
+
+fn is_request_forward_excluded(name: &str) -> bool {
+    name.eq_ignore_ascii_case("host") || is_hop_by_hop(name)
 }
 
 fn encode_body(body: &[u8]) -> Option<String> {
