@@ -12,7 +12,7 @@ mod query_codec;
 mod service;
 mod write_stream;
 
-pub use service::FirestoreService;
+pub use service::{FirestoreService, ResponseStream};
 
 /// Generated Google API protocol types and Firestore client/server contracts.
 pub mod google {

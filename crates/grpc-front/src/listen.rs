@@ -13,7 +13,8 @@ use md5::{Digest as _, Md5};
 use tokio::sync::mpsc;
 use tokio::time::{MissedTickBehavior, interval};
 use tokio_stream::wrappers::ReceiverStream;
-use tonic::{Code, Status, Streaming};
+use tokio_stream::{Stream, StreamExt as _};
+use tonic::{Code, Status};
 
 use crate::codec::{
     ReadTimeClass, classify_read_time, decode_database_name, decode_document_name, decode_parent,
@@ -55,24 +56,29 @@ struct InitialTarget {
     filter: InitialFilter,
 }
 
-pub(crate) fn stream(
+pub(crate) fn stream<S>(
     store: Store,
     query_policy: QueryPolicy,
     memory_accounting: RuntimeMemoryAccounting,
-    input: Streaming<ListenRequest>,
-) -> ResponseStream<ListenResponse> {
+    input: S,
+) -> ResponseStream<ListenResponse>
+where
+    S: Stream<Item = Result<ListenRequest, Status>> + Send + Unpin + 'static,
+{
     let (sender, receiver) = mpsc::channel(RESPONSE_BUFFER);
     tokio::spawn(run(store, query_policy, memory_accounting, input, sender));
     Box::pin(ReceiverStream::new(receiver))
 }
 
-async fn run(
+async fn run<S>(
     store: Store,
     query_policy: QueryPolicy,
     memory_accounting: RuntimeMemoryAccounting,
-    mut input: Streaming<ListenRequest>,
+    mut input: S,
     sender: mpsc::Sender<Result<ListenResponse, Status>>,
-) {
+) where
+    S: Stream<Item = Result<ListenRequest, Status>> + Send + Unpin,
+{
     let mut targets = BTreeMap::<i32, WatchTarget>::new();
     let memory_registration = memory_accounting.register_listener_stream();
     let mut next_assigned_id = 1;
@@ -81,9 +87,9 @@ async fn run(
 
     loop {
         tokio::select! {
-            request = input.message() => {
+            request = input.next() => {
                 match request {
-                    Ok(Some(request)) => {
+                    Some(Ok(request)) => {
                         if let Err(error) = handle_request(
                             &store,
                             &sender,
@@ -97,8 +103,8 @@ async fn run(
                         }
                         record_target_memory(&memory_registration, &targets);
                     }
-                    Ok(None) => break,
-                    Err(error) => {
+                    None => break,
+                    Some(Err(error)) => {
                         let _ = sender.send(Err(error)).await;
                         break;
                     }

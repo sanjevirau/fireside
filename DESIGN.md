@@ -984,6 +984,14 @@ arrays. Dropping it releases live-backchannel accounting, and a replacement
 with an older `AID` replays the retained consecutive prefix before continuing
 to stream new notifications and 30-second `noop` keepalives.
 
+WebChannel does not implement a second Firestore stream engine. The gRPC
+frontend exposes bounded in-process request channels for Listen and Write, and
+both tonic streams and WebChannel feed the same handlers. This keeps target
+add/remove/resume behavior, write tokens, commit ordering, and errors identical
+across transports. The shared Listen handler already owns a target-ID map, so
+one browser channel can multiplex independent document and query targets while
+retaining target-local remove and resume semantics.
+
 ## 8. Export and import contract
 
 Firestore export data under

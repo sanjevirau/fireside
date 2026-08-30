@@ -14,7 +14,9 @@ use fireside_query_engine::{
     Query as StructuredQuery, QueryDocument, QueryPolicy, QueryScope, aggregate, compare_values,
     execute, partition,
 };
-use tokio_stream::{Stream, iter};
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReceiverStream;
+use tokio_stream::{Stream, StreamExt as _, iter};
 use tonic::{Request, Response, Status};
 
 use crate::codec::{
@@ -50,7 +52,10 @@ use crate::query_codec::{decode_aggregation, decode_query, query_status};
 
 const MAXIMUM_REQUEST_BYTES: usize = 10 * 1024 * 1024;
 
-pub(crate) type ResponseStream<T> = Pin<Box<dyn Stream<Item = Result<T, Status>> + Send + 'static>>;
+/// A response stream produced by one of Firestore's streaming RPC engines.
+pub type ResponseStream<T> = Pin<Box<dyn Stream<Item = Result<T, Status>> + Send + 'static>>;
+
+const STREAM_REQUEST_BUFFER: usize = 128;
 
 /// Handwritten Firestore v1 service adapter over the MVCC store.
 #[derive(Clone)]
@@ -97,6 +102,35 @@ impl FirestoreService {
     #[must_use]
     pub const fn store(&self) -> &Store {
         &self.store
+    }
+
+    /// Opens an in-process Listen channel backed by the same engine as the
+    /// public gRPC streaming RPC.
+    #[must_use]
+    pub fn open_listen_channel(
+        &self,
+    ) -> (mpsc::Sender<ListenRequest>, ResponseStream<ListenResponse>) {
+        let (sender, receiver) = mpsc::channel(STREAM_REQUEST_BUFFER);
+        let input = ReceiverStream::new(receiver).map(Ok);
+        let responses = crate::listen::stream(
+            self.store.clone(),
+            self.query_policy.clone(),
+            self.store.runtime_memory_accounting(),
+            input,
+        );
+        (sender, responses)
+    }
+
+    /// Opens an in-process Write channel backed by the same engine as the
+    /// public gRPC streaming RPC.
+    #[must_use]
+    pub fn open_write_channel(
+        &self,
+    ) -> (mpsc::Sender<WriteRequest>, ResponseStream<WriteResponse>) {
+        let (sender, receiver) = mpsc::channel(STREAM_REQUEST_BUFFER);
+        let input = ReceiverStream::new(receiver).map(Ok);
+        let responses = crate::write_stream::stream(self.clone(), input);
+        (sender, responses)
     }
 
     fn begin_transaction_inner(
@@ -1666,6 +1700,64 @@ mod tests {
             )]),
             ..proto::Document::default()
         }
+    }
+
+    #[tokio::test]
+    async fn in_process_channels_share_the_grpc_stream_engines() {
+        use tokio_stream::StreamExt as _;
+
+        let service = FirestoreService::default();
+        let (write_requests, mut write_responses) = service.open_write_channel();
+        write_requests
+            .send(WriteRequest {
+                database: DATABASE.to_owned(),
+                ..WriteRequest::default()
+            })
+            .await
+            .expect("write handshake should reach the engine");
+        let write_handshake = write_responses
+            .next()
+            .await
+            .expect("write engine should answer the handshake")
+            .expect("write handshake should succeed");
+        assert!(write_handshake.stream_id.starts_with("fireside-write-"));
+        assert!(!write_handshake.stream_token.is_empty());
+
+        let (listen_requests, mut listen_responses) = service.open_listen_channel();
+        listen_requests
+            .send(ListenRequest {
+                database: DATABASE.to_owned(),
+                target_change: Some(proto::listen_request::TargetChange::AddTarget(
+                    proto::Target {
+                        target_type: Some(proto::target::TargetType::Documents(
+                            proto::target::DocumentsTarget {
+                                documents: vec![DOCUMENT.to_owned()],
+                            },
+                        )),
+                        target_id: 37,
+                        once: true,
+                        ..proto::Target::default()
+                    },
+                )),
+                ..ListenRequest::default()
+            })
+            .await
+            .expect("listen target should reach the engine");
+        let listen_add = listen_responses
+            .next()
+            .await
+            .expect("listen engine should acknowledge the target")
+            .expect("listen target should succeed");
+        let Some(proto::listen_response::ResponseType::TargetChange(change)) =
+            listen_add.response_type
+        else {
+            panic!("first listen response should be a target change");
+        };
+        assert_eq!(change.target_ids, vec![37]);
+        assert_eq!(
+            change.target_change_type,
+            proto::target_change::TargetChangeType::Add as i32
+        );
     }
 
     #[tokio::test]

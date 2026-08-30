@@ -1,6 +1,7 @@
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use tonic::{Status, Streaming};
+use tokio_stream::{Stream, StreamExt as _};
+use tonic::Status;
 
 use crate::codec::decode_database_name;
 use crate::google::firestore::v1::{WriteRequest, WriteResponse};
@@ -8,32 +9,37 @@ use crate::service::{FirestoreService, ResponseStream};
 
 const RESPONSE_BUFFER: usize = 128;
 
-pub(crate) fn stream(
-    service: FirestoreService,
-    input: Streaming<WriteRequest>,
-) -> ResponseStream<WriteResponse> {
+pub(crate) fn stream<S>(service: FirestoreService, input: S) -> ResponseStream<WriteResponse>
+where
+    S: Stream<Item = Result<WriteRequest, Status>> + Send + Unpin + 'static,
+{
     let (sender, receiver) = mpsc::channel(RESPONSE_BUFFER);
     tokio::spawn(run(service, input, sender));
     Box::pin(ReceiverStream::new(receiver))
 }
 
-async fn run(
+async fn run<S>(
     service: FirestoreService,
-    mut input: Streaming<WriteRequest>,
+    mut input: S,
     sender: mpsc::Sender<Result<WriteResponse, Status>>,
-) {
+) where
+    S: Stream<Item = Result<WriteRequest, Status>> + Send + Unpin,
+{
     let result = run_inner(&service, &mut input, &sender).await;
     if let Err(error) = result {
         let _ = sender.send(Err(error)).await;
     }
 }
 
-async fn run_inner(
+async fn run_inner<S>(
     service: &FirestoreService,
-    input: &mut Streaming<WriteRequest>,
+    input: &mut S,
     sender: &mpsc::Sender<Result<WriteResponse, Status>>,
-) -> Result<(), Status> {
-    let Some(first) = input.message().await? else {
+) -> Result<(), Status>
+where
+    S: Stream<Item = Result<WriteRequest, Status>> + Send + Unpin,
+{
+    let Some(first) = input.next().await.transpose()? else {
         return Err(Status::invalid_argument(
             "streaming Write requires a handshake request",
         ));
@@ -62,7 +68,7 @@ async fn run_inner(
     )
     .await?;
 
-    while let Some(request) = input.message().await? {
+    while let Some(request) = input.next().await.transpose()? {
         if !request.database.is_empty() && decode_database_name(&request.database)? != database {
             return Err(Status::invalid_argument(
                 "streaming Write request changed databases",
