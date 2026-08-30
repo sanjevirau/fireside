@@ -134,6 +134,16 @@ cloud unknown-SID body remains byte-for-byte exact. This complements the real
 browser executable: fixture replay detects wire-contract drift without an
 external oracle being live.
 
+The deterministic HTTP session-chaos test uses the frozen
+`fireside-phase-2-webchannel-v1` seed and, independently for `CI=1` and
+`CI=0`, injects 50 dropped backchannels, 50 retried forward POSTs, 50
+duplicate map deliveries, and 50 overlapping forward pairs. It verifies each
+backend effect exactly once and consumes every replay array consecutively;
+25 unknown-SID requests per variant must retain the cloud-compatible body.
+The five frozen ASCII/CJK/emoji/combining/mixed payloads ride those same paths,
+and every decoded frame is checked against its declared UTF-16 code-unit
+length.
+
 ### 3.2 Workspace responsibilities
 
 | Crate | Responsibility |
