@@ -797,6 +797,15 @@ required Java and cloud fixtures. The three live oracle inputs are pinned as:
 | closure-net blob | revision `6f48f578d3e80fe7a85e530a5d95b9351433d135` | readable compiled client state machine used by the pinned SDK |
 | closure-library | revision `b312823ec5f84239ff1db7526f4a75cba0420a33` | reference semantics behind the WebChannel transport |
 
+The capture proxy is a streaming reverse proxy rather than a buffering HTTP
+recorder: oracle response chunks are forwarded as they arrive while a bounded
+synthetic capture is accumulated. `GET /__fireside_capture/fixture` exposes a
+read-only snapshot and is never included in that snapshot. Redaction happens
+before capture state is mutated. It covers ordinary request/response headers,
+credential-like query and form fields, and sensitive header values folded into
+WebChannel's URL-encoded `headers` form field. The original request remains
+unchanged on its way to the oracle.
+
 The packet shapes below are required contract hypotheses until their checked-in
 fixture records the exact value. Captures lock request/form fields, folded
 headers, response headers, frame boundaries, acknowledgements, replay,

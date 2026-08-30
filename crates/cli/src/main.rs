@@ -97,8 +97,8 @@ struct Cli {
 enum Command {
     /// Start the Firestore-compatible service.
     Firestore(FirestoreArgs),
-    /// Start fixture capture (network interception lands after Phase 0).
-    CaptureProxy,
+    /// Capture redacted browser-SDK traffic through a streaming reverse proxy.
+    CaptureProxy(CaptureProxyArgs),
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ValueEnum)]
@@ -149,6 +149,28 @@ struct FirestoreArgs {
     worker_threads: usize,
 }
 
+#[derive(Debug, Args, PartialEq, Eq)]
+struct CaptureProxyArgs {
+    #[arg(long, default_value = "127.0.0.1")]
+    host: String,
+    #[arg(long, default_value_t = 9091)]
+    port: u16,
+    /// HTTP or HTTPS base URL of the Java or cloud oracle.
+    #[arg(long)]
+    upstream: String,
+    #[arg(long)]
+    hypothesis: String,
+    #[arg(long)]
+    target: String,
+    #[arg(long = "target-version")]
+    target_version: String,
+    #[arg(long)]
+    sdk: String,
+    /// RFC 3339 timestamp supplied by the deterministic capture harness.
+    #[arg(long = "recorded-at")]
+    recorded_at: String,
+}
+
 fn main() -> ExitCode {
     let allocator_config = match ensure_allocator_environment() {
         Ok(config) => config,
@@ -160,8 +182,56 @@ fn main() -> ExitCode {
     let cli = Cli::parse_from(normalize_arguments(std::env::args_os()));
     match cli.command {
         Command::Firestore(arguments) => run_firestore_runtime(&arguments, allocator_config),
-        Command::CaptureProxy => {
-            eprintln!("fireside capture proxy is not implemented yet");
+        Command::CaptureProxy(arguments) => run_capture_proxy_runtime(&arguments),
+    }
+}
+
+fn run_capture_proxy_runtime(arguments: &CaptureProxyArgs) -> ExitCode {
+    let listen_address = match resolve_address(&arguments.host, arguments.port) {
+        Ok(address) => address,
+        Err(error) => {
+            eprintln!("capture proxy address is invalid: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let upstream = match arguments.upstream.parse() {
+        Ok(upstream) => upstream,
+        Err(error) => {
+            eprintln!("capture proxy upstream is invalid: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let config = fireside_capture_proxy::CaptureProxyConfig {
+        listen_address,
+        upstream,
+        metadata: fireside_capture_proxy::FixtureMetadata {
+            hypothesis: arguments.hypothesis.clone(),
+            target: arguments.target.clone(),
+            target_version: arguments.target_version.clone(),
+            sdk: arguments.sdk.clone(),
+            recorded_at: arguments.recorded_at.clone(),
+            transport: fireside_capture_proxy::Transport::WebChannel,
+        },
+    };
+    let runtime = match tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime,
+        Err(error) => {
+            eprintln!("capture proxy runtime failed to start: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
+    eprintln!(
+        "capture proxy listening on {listen_address}; fixture endpoint {}",
+        fireside_capture_proxy::CAPTURE_FIXTURE_PATH
+    );
+    match runtime.block_on(fireside_capture_proxy::serve(config)) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("capture proxy failed: {error}");
             ExitCode::FAILURE
         }
     }
@@ -509,8 +579,28 @@ mod tests {
 
     #[test]
     fn parses_capture_proxy_command() {
-        let cli = Cli::try_parse_from(["fireside", "capture-proxy"]).expect("command should parse");
-        assert_eq!(cli.command, Command::CaptureProxy);
+        let cli = Cli::try_parse_from([
+            "fireside",
+            "capture-proxy",
+            "--upstream",
+            "http://127.0.0.1:8081",
+            "--hypothesis",
+            "handshake",
+            "--target",
+            "java",
+            "--target-version",
+            "1.22.0",
+            "--sdk",
+            "firebase@12.18.0",
+            "--recorded-at",
+            "2026-08-31T00:00:00Z",
+        ])
+        .expect("command should parse");
+        let Command::CaptureProxy(arguments) = cli.command else {
+            panic!("expected capture proxy command");
+        };
+        assert_eq!(arguments.port, 9091);
+        assert_eq!(arguments.target, "java");
     }
 
     #[test]
