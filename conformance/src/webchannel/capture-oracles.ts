@@ -32,7 +32,8 @@ type BrowserScenario =
   | "reconnect-replay"
   | "unicode-framing"
   | "unknown-sid"
-  | "write";
+  | "write"
+  | "write-overlap";
 type TransportVariant = "long-poll" | "streaming";
 
 interface CaptureCase {
@@ -79,6 +80,14 @@ const CAPTURE_CASES: readonly CaptureCase[] = [
     runs: [{ scenario: "write", variant: "streaming" }],
   },
   {
+    directory: "write-overlap",
+    hypothesis: "Two writes may be in flight with the last acknowledged stream token",
+    runs: [
+      { scenario: "write-overlap", variant: "long-poll" },
+      { scenario: "write-overlap", variant: "streaming" },
+    ],
+  },
+  {
     directory: "backchannel-reconnect-replay",
     hypothesis: "A lost streaming Listen backchannel reopens with replay bookkeeping",
     runs: [
@@ -106,6 +115,7 @@ const CAPTURE_CASES: readonly CaptureCase[] = [
 
 async function main(): Promise<void> {
   const target = parseTarget(process.argv.slice(2));
+  const requestedCase = parseCaptureCase(process.argv.slice(2));
   const scriptDirectory = dirname(fileURLToPath(import.meta.url));
   const repositoryRoot = resolve(scriptDirectory, "../../..");
   const conformanceRoot = join(repositoryRoot, "conformance");
@@ -140,7 +150,9 @@ async function main(): Promise<void> {
       headless: true,
     });
 
-    for (const captureCase of CAPTURE_CASES) {
+    for (const captureCase of CAPTURE_CASES.filter((value) =>
+      requestedCase === undefined || value.directory === requestedCase
+    )) {
       await captureCaseAgainstTarget({
         browser,
         captureCase,
@@ -389,11 +401,13 @@ async function prepareSyntheticDocument(
 }
 
 async function deleteSyntheticDocument(runtime: TargetRuntime): Promise<void> {
-  const response = await firestoreRestRequest(runtime, "DELETE");
-  if (!response.ok && response.status !== 404) {
-    throw new Error(
-      `synthetic cleanup failed with HTTP ${String(response.status)}: ${await response.text()}`,
-    );
+  for (const document of [DOCUMENT, "oracle-first", "oracle-second"]) {
+    const response = await firestoreRestRequest(runtime, "DELETE", undefined, document);
+    if (!response.ok && response.status !== 404) {
+      throw new Error(
+        `synthetic cleanup failed with HTTP ${String(response.status)}: ${await response.text()}`,
+      );
+    }
   }
 }
 
@@ -401,9 +415,10 @@ async function firestoreRestRequest(
   runtime: TargetRuntime,
   method: "DELETE" | "PATCH",
   body?: unknown,
+  document = DOCUMENT,
 ): Promise<Response> {
   const url =
-    `${runtime.upstreamOrigin}/v1/projects/${runtime.projectId}/databases/(default)/documents/${COLLECTION}/${DOCUMENT}`;
+    `${runtime.upstreamOrigin}/v1/projects/${runtime.projectId}/databases/(default)/documents/${COLLECTION}/${document}`;
   const headers = new Headers();
   if (body !== undefined) {
     headers.set("content-type", "application/json");
@@ -513,6 +528,18 @@ function parseTarget(arguments_: readonly string[]): CaptureTarget {
     return target;
   }
   throw new Error("capture requires --target java or --target cloud");
+}
+
+function parseCaptureCase(arguments_: readonly string[]): string | undefined {
+  const caseIndex = arguments_.indexOf("--case");
+  if (caseIndex < 0) {
+    return undefined;
+  }
+  const requestedCase = arguments_[caseIndex + 1];
+  if (CAPTURE_CASES.some((value) => value.directory === requestedCase)) {
+    return requestedCase;
+  }
+  throw new Error(`unknown capture case: ${String(requestedCase)}`);
 }
 
 function startProcess(

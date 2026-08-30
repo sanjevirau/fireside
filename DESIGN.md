@@ -936,6 +936,15 @@ observed CJK/emoji frames declared 787 or 1,321 UTF-16 code units while using
 `Accept-Encoding` but requests identity encoding upstream solely so a partial,
 still-open capture can be decoded without waiting for a gzip trailer.
 
+A supplementary Java-and-cloud capture was taken when the first live browser
+run exposed an ambiguity already covered by the frozen overlapping-forward
+gate. The SDK sent two Write maps before receiving either write result; both
+maps carried the same last-acknowledged stream token. Both oracles accepted the
+requests in order and returned a newly advanced token for each response. A
+Write token therefore identifies an acknowledged resume position, not a
+single-use compare-and-swap capability, and multiple in-flight requests may
+legitimately reuse it.
+
 ### 7.6 Pinned client-source confirmation
 
 The pinned open-source chain was checked at the exact revisions in the Phase 2

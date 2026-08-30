@@ -13,7 +13,8 @@ type CaptureScenario =
   | "reconnect-replay"
   | "unicode-framing"
   | "unknown-sid"
-  | "write";
+  | "write"
+  | "write-overlap";
 
 type TransportVariant = "long-poll" | "streaming";
 
@@ -99,6 +100,22 @@ window.firesideRunWebChannelCapture = async (
         });
         await waitForPendingWrites(firestore);
         observations.push("write-acknowledged");
+        break;
+      case "write-overlap":
+        await Promise.all([
+          setDoc(doc(firestore, COLLECTION, "oracle-first"), {
+            capture: "write-overlap",
+            sequence: 1,
+            synthetic: true,
+          }),
+          setDoc(doc(firestore, COLLECTION, "oracle-second"), {
+            capture: "write-overlap",
+            sequence: 2,
+            synthetic: true,
+          }),
+        ]);
+        await waitForPendingWrites(firestore);
+        observations.push("overlapping-writes-acknowledged");
         break;
       default:
         configuration.scenario satisfies never;

@@ -15,6 +15,7 @@ const CASES = [
   "listen-streaming",
   "write-long-poll",
   "write-streaming",
+  "write-overlap",
   "backchannel-reconnect-replay",
   "unicode-framing",
   "unknown-sid",
@@ -195,6 +196,28 @@ test("Java and cloud forward acknowledgements pin open and active backchannels",
             value[2] === 7;
         })
       ),
+    );
+  }
+});
+
+test("Java and cloud accept overlapping writes that reuse the last acknowledged stream token", async () => {
+  for (const target of TARGETS) {
+    const overlap = await readContract(target.directory, "write-overlap");
+    const writeMaps = overlap.exchanges.flatMap((exchange) =>
+      (exchange.request.form ?? []).flatMap(([name, value]) =>
+        name.endsWith("___data__") && value.includes("\"writes\"")
+          ? [JSON.parse(value) as { readonly streamToken?: string }]
+          : []
+      )
+    );
+    assert.ok(writeMaps.length >= 4);
+    const repeatedTokens = writeMaps.map((value) => value.streamToken ?? "");
+    assert.ok(new Set(repeatedTokens).size < repeatedTokens.length);
+    assert.ok(
+      overlap.exchanges.flatMap((exchange) => exchange.response.frames)
+        .flatMap((frame) => Array.isArray(frame.json) ? frame.json : [])
+        .filter((value) => Array.isArray(value) && value[1]?.[0]?.writeResults !== undefined)
+        .length >= 4,
     );
   }
 });
