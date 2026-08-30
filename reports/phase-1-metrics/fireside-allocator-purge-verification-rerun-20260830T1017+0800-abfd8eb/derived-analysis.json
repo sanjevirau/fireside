@@ -1,0 +1,253 @@
+{
+  "generatedAt": "2026-08-30T03:39:33.270Z",
+  "revision": "abfd8eb4d75841914021658f3f5dc47139829d61",
+  "estimator": "conformance/src/endurance/statistics.ts::theilSenBytesPerHour",
+  "warmupSeconds": 1800,
+  "thresholdBytesPerHour": 1048576,
+  "verdict": "PASS",
+  "residentMemory": {
+    "rss": {
+      "samples": 182,
+      "slopeBytesPerHour": 909299.8760016529,
+      "minimumBytes": 167313408,
+      "maximumBytes": 184602624,
+      "peakToPeakBytes": 17289216,
+      "medianBytes": 175046656,
+      "p05Bytes": 170401177.6,
+      "p95Bytes": 180380672,
+      "central90PercentPeakToPeakBytes": 9979494.400000006
+    },
+    "pss": {
+      "samples": 182,
+      "slopeBytesPerHour": 938356.3636363635,
+      "minimumBytes": 164844544,
+      "maximumBytes": 182125568,
+      "peakToPeakBytes": 17281024,
+      "medianBytes": 172594176,
+      "p05Bytes": 167793049.6,
+      "p95Bytes": 177954816,
+      "central90PercentPeakToPeakBytes": 10161766.400000006
+    },
+    "anonymous": {
+      "samples": 182,
+      "slopeBytesPerHour": 938356.3636363635,
+      "minimumBytes": 159498240,
+      "maximumBytes": 176779264,
+      "peakToPeakBytes": 17281024,
+      "medianBytes": 167247872,
+      "p05Bytes": 162446745.6,
+      "p95Bytes": 172608512,
+      "central90PercentPeakToPeakBytes": 10161766.400000006
+    },
+    "privateDirty": {
+      "samples": 182,
+      "slopeBytesPerHour": 938356.3636363635,
+      "minimumBytes": 159498240,
+      "maximumBytes": 176779264,
+      "peakToPeakBytes": 17281024,
+      "medianBytes": 167247872,
+      "p05Bytes": 162446745.6,
+      "p95Bytes": 172608512,
+      "central90PercentPeakToPeakBytes": 10161766.400000006
+    },
+    "lazyFree": {
+      "samples": 182,
+      "slopeBytesPerHour": 0,
+      "minimumBytes": 0,
+      "maximumBytes": 0,
+      "peakToPeakBytes": 0,
+      "medianBytes": 0,
+      "p05Bytes": 0,
+      "p95Bytes": 0,
+      "central90PercentPeakToPeakBytes": 0
+    },
+    "anonymousHugePages": {
+      "samples": 182,
+      "slopeBytesPerHour": 0,
+      "minimumBytes": 0,
+      "maximumBytes": 0,
+      "peakToPeakBytes": 0,
+      "medianBytes": 0,
+      "p05Bytes": 0,
+      "p95Bytes": 0,
+      "central90PercentPeakToPeakBytes": 0
+    },
+    "firstThirtyMinuteMedianBytes": 176183296,
+    "trailingThirtyMinuteMedianBytes": 175046656,
+    "nonOverlappingMedianDriftBytes": -1136640,
+    "entireRunPeakRssBytes": 687546368,
+    "processSwapMaximumBytes": 0,
+    "systemSwapMaximumBytes": 0
+  },
+  "diskCache": {
+    "configuredBytes": 67108864,
+    "postWarmupSamples": 182,
+    "usedBytes": {
+      "minimum": 65364288,
+      "maximum": 67088704,
+      "median": 66423104,
+      "first": 66462016,
+      "final": 65835328,
+      "delta": -626688,
+      "slopeBytesPerHour": 84259.60846161756
+    },
+    "finalCounters": {
+      "configuredBytes": 67108864,
+      "usedBytes": 65835328,
+      "evictions": 190362,
+      "readHits": 23383294,
+      "readMisses": 143145,
+      "writeHits": 8343411,
+      "writeMisses": 125
+    }
+  },
+  "allocatorPurge": {
+    "name": "mimalloc",
+    "version": 30302,
+    "runtimeWorkerThreads": 4,
+    "purgeDelayMilliseconds": 0,
+    "purgeDecommits": true,
+    "totalPurgeCalls": 55848,
+    "totalPurgedBytes": 22439526400,
+    "postWarmupPurgeCalls": 18926,
+    "postWarmupPurgedBytes": 7530610688
+  },
+  "diskWriteBuffers": {
+    "all": {
+      "liveBuffers": 0,
+      "liveCapacityBytes": 0,
+      "allocations": 1118484,
+      "releases": 1118484,
+      "allocationBalance": 0,
+      "cumulativeAllocatedCapacityBytes": 3526430730,
+      "cumulativeReleasedCapacityBytes": 3526430730,
+      "cumulativeCapacityBalanceBytes": 0
+    },
+    "walPayloads": {
+      "liveBuffers": 0,
+      "liveCapacityBytes": 0,
+      "allocations": 279621,
+      "releases": 279621,
+      "allocationBalance": 0,
+      "cumulativeAllocatedCapacityBytes": 1763494986,
+      "cumulativeReleasedCapacityBytes": 1763494986,
+      "cumulativeCapacityBalanceBytes": 0
+    },
+    "redbKeys": {
+      "liveBuffers": 0,
+      "liveCapacityBytes": 0,
+      "allocations": 279621,
+      "releases": 279621,
+      "allocationBalance": 0,
+      "cumulativeAllocatedCapacityBytes": 18734607,
+      "cumulativeReleasedCapacityBytes": 18734607,
+      "cumulativeCapacityBalanceBytes": 0
+    },
+    "redbDocuments": {
+      "liveBuffers": 0,
+      "liveCapacityBytes": 0,
+      "allocations": 279621,
+      "releases": 279621,
+      "allocationBalance": 0,
+      "cumulativeAllocatedCapacityBytes": 1740138558,
+      "cumulativeReleasedCapacityBytes": 1740138558,
+      "cumulativeCapacityBalanceBytes": 0
+    },
+    "redbMetadata": {
+      "liveBuffers": 0,
+      "liveCapacityBytes": 0,
+      "allocations": 279621,
+      "releases": 279621,
+      "allocationBalance": 0,
+      "cumulativeAllocatedCapacityBytes": 4062579,
+      "cumulativeReleasedCapacityBytes": 4062579,
+      "cumulativeCapacityBalanceBytes": 0
+    }
+  },
+  "workload": {
+    "measuredSeconds": 3600.325,
+    "scheduled": 179621,
+    "completed": 179621,
+    "failed": 0,
+    "completionRatio": 0.9978944444444444,
+    "averageCompletedPerSecond": 49.89021824418629,
+    "transactions": 35924,
+    "listenerChurns": 30,
+    "listenerMismatches": 0,
+    "stalls": 0,
+    "errorRecords": 0,
+    "stallRecords": 0,
+    "finalThroughput": {
+      "timestamp": "2026-08-30T03:27:29.592Z",
+      "elapsed_seconds": 3600.293,
+      "scheduled": 179621,
+      "completed": 179621,
+      "failed": 0,
+      "interval_completed": 11,
+      "interval_failed": 0,
+      "transaction_attempts": 35924,
+      "interval_transaction_attempts": 0
+    },
+    "writeLatencyMilliseconds": {
+      "count": 179621,
+      "p50": 6.577762000262737,
+      "p95": 11.022444000001997,
+      "p99": 211.12388899968937,
+      "max": 1673.5421250001527
+    },
+    "listenerLatencyMilliseconds": {
+      "count": 17962,
+      "p50": 10.61688100034371,
+      "p95": 15.706199999898672,
+      "p99": 277.0734929998871,
+      "max": 1328.9067370002158
+    },
+    "intervalWriteP99": {
+      "median": 15.31086099985987,
+      "maximum": 1287.5311270002276
+    },
+    "intervalListenerP99": {
+      "median": 20.686745999846607,
+      "maximum": 1328.9067370002158
+    },
+    "finalListenerExpected": [
+      179602,
+      179612,
+      179542,
+      179552,
+      179562,
+      179572,
+      179582,
+      179592
+    ],
+    "finalListenerObserved": [
+      179602,
+      179612,
+      179542,
+      179552,
+      179562,
+      179572,
+      179582,
+      179592
+    ],
+    "soakCompleteEvent": {
+      "timestamp": "2026-08-30T03:27:29.928Z",
+      "type": "soak-complete",
+      "passed": true,
+      "completed": 179621,
+      "failed": 0
+    }
+  },
+  "immutableCriteria": {
+    "completionRatio": true,
+    "errors": true,
+    "listenerMismatches": true,
+    "listenerFinalState": true,
+    "noProgressStalls": true,
+    "failFastSlope": true,
+    "rssSlope": true,
+    "rssMedian": true,
+    "workingSetRss": true,
+    "serverAlive": true
+  }
+}
