@@ -1067,6 +1067,9 @@ official Java v1.22.0 emulator pins that REST surface's CORS contract in
 preflight returns HTTP 200, echoes `Origin`, echoes the requested header list,
 allows `DELETE,GET,HEAD,PATCH,POST,PUT`, and permits credentials. Actual REST
 responses echo the origin, allowed-method list, and credential permission.
+The pinned SDK source deliberately carries its serialized JSON as
+`Content-Type: text/plain` to avoid preflight; the Java fixture independently
+confirms that this media type is accepted and still returns JSON.
 This is transport compatibility required by the unchanged upstream suite; it
 does not add rules enforcement or relax the Phase 3 boundary.
 
