@@ -60,6 +60,10 @@ jobs:
         run: npm run check --prefix conformance
       - name: Run harness unit tests
         run: npm test --prefix conformance
+      - name: Run WebChannel browser demo
+        run: npm run test:webchannel:browser --prefix conformance
+      - name: Run WebChannel browser demo in disk/WAL mode
+        run: npm run test:webchannel:browser:disk --prefix conformance
       - name: Run Fireside conformance
         run: npm run test:fireside --prefix conformance
       - name: Run Fireside disk-mode conformance

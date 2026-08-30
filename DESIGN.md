@@ -114,6 +114,17 @@ REST request and a WebChannel handshake through the composed HTTP router; the
 existing gRPC conformance matrix continues through the surrounding tonic route
 set.
 
+The Phase 2 browser executable bundles the pinned vanilla Firebase SDK and
+runs it without a transport wrapper against that same listener in memory and
+disk/WAL modes. For forced long polling, streaming, and auto-detection it
+asserts Write traffic, a live query, two simultaneous listener target IDs,
+Unicode updates, recovery after one injected backchannel reset, and sendBeacon
+termination of both channels. The auto-detection scenario additionally delays
+one replacement backchannel before allowing the server's immediate `noop` to
+arrive, modeling the no-progress interval a buffering intermediary creates;
+the SDK must start in streaming mode, fall back to long polling, and keep the
+application healthy.
+
 ### 3.2 Workspace responsibilities
 
 | Crate | Responsibility |
