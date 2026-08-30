@@ -18,6 +18,7 @@ import {
   manifestPath,
   repositoryRoot,
 } from "./endurance/manifest.ts";
+import { preflightControlledHostHealth } from "./endurance/host-health.ts";
 import { startServer, type ServerHandle } from "./endurance/server.ts";
 import { runSoak } from "./endurance/soak.ts";
 
@@ -167,6 +168,7 @@ async function preflightHost(): Promise<Record<string, unknown>> {
       throw new Error(`controlled venue requires ${name} to be unset`);
     }
   }
+  const hostHealth = await preflightControlledHostHealth();
   const [rust, node, npm, git] = await Promise.all([
     version("rustc", ["--version"]),
     version("node", ["--version"]),
@@ -184,6 +186,7 @@ async function preflightHost(): Promise<Record<string, unknown>> {
     memAvailableBytes: meminfoBytes(memory, "MemAvailable"),
     swapTotalBytes,
     swapUsedBytes,
+    hostHealth,
     toolchain: { rust, node, npm, git },
   };
 }

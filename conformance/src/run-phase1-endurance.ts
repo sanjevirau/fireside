@@ -16,6 +16,7 @@ import { createHash } from "node:crypto";
 
 import { runImportGate } from "./endurance/import-gate.ts";
 import { requireGate } from "./endurance/gate.ts";
+import { preflightControlledHostHealth } from "./endurance/host-health.ts";
 import { observeJavaCrash } from "./endurance/java-crash.ts";
 import {
   loadManifest,
@@ -258,6 +259,7 @@ async function preflightHost(
   if (swapUsed !== 0) {
     throw new Error(`frozen venue requires zero swap use at start, found ${String(swapUsed)}`);
   }
+  const hostHealth = await preflightControlledHostHealth();
   const [rust, node, npm, java, git] = await Promise.all([
     version("rustc", ["--version"]),
     version("node", ["--version"]),
@@ -276,6 +278,7 @@ async function preflightHost(
     memAvailableBytes: meminfoBytes(memory, "MemAvailable"),
     swapTotalBytes: swapTotal,
     swapUsedBytes: swapUsed,
+    hostHealth,
     artifactBytes: artifact.size,
     toolchain: { rust, node, npm, java, git },
   };

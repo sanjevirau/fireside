@@ -1,0 +1,74 @@
+Fireside allocator-purge verification host attribution and recovery
+==================================================================
+
+Classification: INVALID-EXTERNAL (neither pass nor Fireside failure)
+
+Invalid-run facts
+-----------------
+- Candidate: f4f0b693b8e477b31adbb7cb7630663dcd235310
+- Frozen manifest SHA-256: 00f8c4f40e209a89ac3b059d6c10269e997c501a1cb8df50003b2195beedad41
+- Setup began: 2026-08-29T23:40:25+08:00
+- Server and seeding began: 2026-08-29T23:41:17+08:00
+- Last prior-boot journal record: 2026-08-29T23:41:49+08:00
+- RSS, latency, and throughput CSVs contain their header only.
+- events.ndjson contains only seed-start.
+- Fireside's server log records a successful disk/WAL startup with the shipped
+  67,108,864-byte cache, four workers, purge delay 0 ms, and decommit enabled.
+- There is no Fireside crash or runner failure record.
+- Partial state remains preserved on the host and in the pulled working copy:
+  redb SHA-256 777cacbed013d54a4bedaa6fe1c2e37979e435156dbe1b243059ed7a635fdc6c;
+  WAL SHA-256 caf3a73e1e9715009b82143cb5ba77f40dbe1163435a041f03c24d0d7214352a.
+  These mutable database files are not repository artifacts.
+
+Host evidence
+-------------
+- Prior boot ID: 165c8a2a3d964a89a00b7a61c17296ba
+- Current boot ID: e8175868fc11405aa539d39471ab9db8
+- Prior-boot sshd journal counts: 38,782 accepted public keys, 38,782 PAM
+  session opens, and 38,694 PAM session closes.
+- The 23:30-23:41 outage window contains 295 accepted public keys from the Mac
+  Tailscale address, between 20 and 29 authentications per minute.
+- The sessions created systemd-logind scopes and frequently launched im-config;
+  the last recorded session number is 38850 and the last sshd-session PID is
+  2557962.
+- Live post-reboot observation while the Mac Devhost bridge was active counted
+  9 new accepted SSH sessions in 20 seconds. The Mac process was
+  `devhost bridge run --host sanjevi-linux`, and its error log repeatedly
+  recorded bridge sync/forward SSH calls and bridge exits.
+- The bridge's launchd job was disabled. SSH multiplexing was enabled for the
+  host, and the later five-minute observation counted zero new authentications.
+- No OOM, NVMe error, or EXT4 error was present in the durable prior-boot
+  kernel journal before journald stopped.
+- Physical-console evidence later showed systemd repeatedly failing to spawn
+  executors with `Input/output error` at monotonic time about 160971 seconds,
+  approximately 2026-08-30T09:46:22+08:00. sshd reset new handshakes on both
+  the Tailscale and LAN routes until the physical reboot.
+- The journal gap prevents a defensible attribution of the final system-wide
+  executor failure to OOM, storage, or the known process churn. The SSH churn
+  is a proven orchestration defect and source of avoidable pressure, not proof
+  of the final kernel-level cause.
+
+Recovery state at 2026-08-30T10:06:06+08:00
+------------------------------------------------
+- systemd system state: running
+- ssh.service: active
+- failed systemd units: 0
+- current-boot kernel OOM lines: 0
+- accepted SSH sessions in the preceding 300 seconds: 0
+- memory available: 14,253,162,496 bytes
+- swap used: 0 bytes of 21,474,828,288 bytes
+- The forced power-off left `/boot/grub/grubenv` invalid. The invalid file and
+  its checksum were preserved under `post-reboot-grub-repair/`, the environment
+  block was recreated, and grub2-common.service subsequently completed with
+  Result=success.
+
+Required prevention
+-------------------
+- Keep the faulty Devhost bridge disabled for controlled endurance runs.
+- Run the venue preflight locally on the host before any server/workload.
+- Reject an inactive ssh.service, any current-boot OOM evidence, any failed
+  systemd unit, current-boot host resource failures, or more than 30 accepted
+  SSH authentications in five minutes (also reject at least 10 sessions above
+  6/minute on a younger boot).
+- Preserve the frozen workload and thresholds. The one authorized clean rerun
+  is permissible only after this prevention is committed and validated.

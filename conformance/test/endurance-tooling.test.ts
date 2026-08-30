@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { GateFailure, requireGate } from "../src/endurance/gate.ts";
+import {
+  assertControlledHostHealth,
+  evaluateControlledHostHealth,
+} from "../src/endurance/host-health.ts";
 import { loadManifest } from "../src/endurance/manifest.ts";
 import {
   circularPhaseSlopes,
@@ -133,5 +137,40 @@ test("a failed endurance criterion raises a durable gate failure", () => {
       assert.match(error.message, /"rssSlope":false/u);
       return true;
     },
+  );
+});
+
+test("controlled host health accepts a quiet current boot", () => {
+  const health = evaluateControlledHostHealth({
+    bootId: "boot-id",
+    uptimeSeconds: 600,
+    sshServiceState: "active",
+    kernelJournal: "kernel started\n",
+    errorJournal: "",
+    sshJournal: "Accepted publickey\nAccepted publickey\n",
+    failedUnits: "",
+  });
+  assert.equal(health.recentSshWindowSeconds, 300);
+  assert.equal(health.recentSshAcceptedSessions, 2);
+  assert.doesNotThrow(() => assertControlledHostHealth(health));
+});
+
+test("controlled host health rejects OOMs and runaway SSH login churn", () => {
+  const sshJournal = Array.from(
+    { length: 31 },
+    () => "sshd-session: Accepted publickey for test",
+  ).join("\n");
+  const health = evaluateControlledHostHealth({
+    bootId: "boot-id",
+    uptimeSeconds: 600,
+    sshServiceState: "active",
+    kernelJournal: "kernel: worker invoked oom-killer",
+    errorJournal: "systemd: Failed to spawn executor: Input/output error",
+    sshJournal,
+    failedUnits: "broken.service loaded failed failed Broken",
+  });
+  assert.throws(
+    () => assertControlledHostHealth(health),
+    /failed systemd units.*OOM evidence.*host resource failures.*SSH login churn/iu,
   );
 });

@@ -34,6 +34,15 @@ frozen sequence. Production runs must execute it detached under `tmux`; the
 short `npm run test:endurance:smoke --prefix conformance` command validates
 tooling only and is never gate evidence.
 
+Before starting a controlled diagnostic or the full sequence, the runner also
+requires a healthy measurement host: active sshd, no failed systemd units, no
+current-boot OOM or executor/resource/I/O failure evidence, zero swap use, and
+no runaway SSH authentication churn. The SSH guard rejects more than 30
+accepted sessions in five minutes (and at least 10 sessions above six per
+minute on a younger boot). These are venue-validity checks prompted by the
+preserved August 2026 external host failure; they do not change the frozen
+workload, duration, or pass thresholds.
+
 The runner stops on the first Fireside gate failure and preserves every file.
 It does not tune or retry a failed gate. The Java comparison begins only after
 all Fireside criteria pass, is reported separately, and permits one documented
