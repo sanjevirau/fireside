@@ -105,6 +105,15 @@ upgrade headers. TLS termination is out of scope until evidence requires it.
 This behavior is non-negotiable: separate ports may be useful internally for
 tests but cannot be the drop-in default.
 
+The executable composes REST and the two WebChannel paths into one Axum router,
+then adds the generated Firestore gRPC service to the same tonic route set with
+HTTP/1 acceptance enabled. The WebChannel adapter receives a clone of that
+same `FirestoreService`, so all three transports share the store, query policy,
+transaction state, stream engines, and listener. A CLI regression test sends a
+REST request and a WebChannel handshake through the composed HTTP router; the
+existing gRPC conformance matrix continues through the surrounding tonic route
+set.
+
 ### 3.2 Workspace responsibilities
 
 | Crate | Responsibility |

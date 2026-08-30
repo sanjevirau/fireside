@@ -419,6 +419,7 @@ checksum = "d45db016d36b838f563236e9193d0ee6ce38f3f68b6c94e914b4929c96bbb890"
 name = "fireside"
 version = "0.0.1"
 dependencies = [
+ "axum",
  "clap",
  "fireside-capture-proxy",
  "fireside-core-store",
@@ -426,10 +427,12 @@ dependencies = [
  "fireside-grpc-front",
  "fireside-query-engine",
  "fireside-rest-front",
+ "fireside-webchannel-front",
  "mimalloc",
  "serde_json",
  "tokio",
  "tonic",
+ "tower",
 ]
 
 [[package]]

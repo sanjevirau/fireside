@@ -12,6 +12,7 @@ keywords = ["emulator", "firestore", "development", "testing"]
 categories = ["command-line-utilities", "development-tools::testing"]
 
 [dependencies]
+axum.workspace = true
 clap.workspace = true
 fireside-capture-proxy = { path = "../capture-proxy" }
 fireside-core-store = { path = "../core-store" }
@@ -19,10 +20,14 @@ fireside-export-format = { path = "../export-format" }
 fireside-grpc-front = { path = "../grpc-front" }
 fireside-query-engine = { path = "../query-engine" }
 fireside-rest-front = { path = "../rest-front" }
+fireside-webchannel-front = { path = "../webchannel-front" }
 mimalloc.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 tonic.workspace = true
+
+[dev-dependencies]
+tower = { version = "0.5.3", features = ["util"] }
 
 [lints]
 workspace = true

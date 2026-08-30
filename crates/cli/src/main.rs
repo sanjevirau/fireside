@@ -23,6 +23,7 @@ use fireside_rest_front::{
     AllocatorMemoryReporter, AllocatorMemoryUsage,
     router_with_query_policy_and_memory_reporter as rest_router,
 };
+use fireside_webchannel_front::{FirestoreBackend, router as webchannel_router};
 
 // Snapshot and protobuf churn repeatedly frees similarly sized allocations.
 // Mimalloc returns empty pages instead of leaving them resident in glibc arenas.
@@ -392,17 +393,17 @@ async fn run_firestore(
             return ExitCode::FAILURE;
         }
     };
-    let service =
-        FirestoreService::new_with_query_policy(store.clone(), query_policy.clone()).into_server();
-    let routes = tonic::service::Routes::from(rest_router(
+    let service = FirestoreService::new_with_query_policy(store.clone(), query_policy.clone());
+    let http_routes = firestore_http_router(
         store,
         query_policy,
         Some(Arc::new(MimallocMemoryReporter {
             runtime_worker_threads: arguments.worker_threads,
             runtime_config: allocator_config,
         })),
-    ))
-    .add_service(service);
+        service.clone(),
+    );
+    let routes = tonic::service::Routes::from(http_routes).add_service(service.into_server());
     if let Some(data_dir) = &arguments.data_dir {
         let journal = if arguments.no_wal {
             "write-ahead journal disabled"
@@ -436,6 +437,16 @@ async fn run_firestore(
             ExitCode::FAILURE
         }
     }
+}
+
+fn firestore_http_router(
+    store: Store,
+    query_policy: QueryPolicy,
+    allocator_memory_reporter: Option<Arc<dyn AllocatorMemoryReporter>>,
+    service: FirestoreService,
+) -> axum::Router {
+    rest_router(store, query_policy, allocator_memory_reporter)
+        .merge(webchannel_router(FirestoreBackend::new(service)))
 }
 
 fn open_store(arguments: &FirestoreArgs) -> Result<Store, String> {
@@ -538,12 +549,54 @@ fn normalize_arguments(arguments: impl IntoIterator<Item = OsString>) -> Vec<OsS
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode, header::CONTENT_TYPE};
     use fireside_core_store::Value;
     use std::fs;
     use std::path::Path;
     use std::sync::atomic::{AtomicU64, Ordering};
+    use tower::ServiceExt as _;
 
     static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+    #[tokio::test]
+    async fn one_http_router_serves_rest_and_webchannel() {
+        let store = Store::default();
+        let query_policy = QueryPolicy::default();
+        let service = FirestoreService::new_with_query_policy(store.clone(), query_policy.clone());
+        let application = firestore_http_router(store, query_policy, None, service);
+
+        let rest = application
+            .clone()
+            .oneshot(
+                Request::get("/emulator/v1/debug/memory")
+                    .body(Body::empty())
+                    .expect("REST request should build"),
+            )
+            .await
+            .expect("REST route should answer");
+        assert_eq!(rest.status(), StatusCode::OK);
+
+        let handshake_body = "headers=Authorization%3ABearer+owner%0D%0A&count=1&ofs=0&req0___data__=%7B%22database%22%3A%22projects%2Fdemo%2Fdatabases%2F(default)%22%7D";
+        let webchannel = application
+            .oneshot(
+                Request::post("/google.firestore.v1.Firestore/Listen/channel?VER=8&RID=123&CVER=22&X-HTTP-Session-Id=gsessionid&database=projects%2Fdemo%2Fdatabases%2F(default)")
+                    .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+                    .body(Body::from(handshake_body))
+                    .expect("WebChannel request should build"),
+            )
+            .await
+            .expect("WebChannel route should answer");
+        assert_eq!(webchannel.status(), StatusCode::OK);
+        assert_eq!(
+            webchannel
+                .headers()
+                .get("x-client-wire-protocol")
+                .and_then(|value| value.to_str().ok()),
+            Some("h2")
+        );
+        assert!(webchannel.headers().contains_key("x-http-session-id"));
+    }
 
     struct TestDirectory(PathBuf);
 
