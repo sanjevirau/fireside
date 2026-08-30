@@ -804,6 +804,10 @@ read-only snapshot of exchanges whose upstream response headers have arrived;
 still-pending long polls are omitted, and the control request is never included
 in that snapshot. Completed responses retain both their combined body and the
 ordered upstream body chunks so observed flush segmentation is reviewable.
+The browser's original `Accept-Encoding` remains in the fixture, while the
+proxy requests `identity` from the oracle; this deliberate capture-only
+normalization prevents a still-open gzip stream from obscuring decoded frame
+boundaries and does not claim that cloud itself forbids compression.
 Redaction happens before capture state is mutated. It covers ordinary request/response headers,
 credential-like query and form fields, and sensitive header values folded into
 WebChannel's URL-encoded `headers` form field. The original request remains
@@ -881,6 +885,47 @@ Two easily missed wire invariants are mandatory tests:
 
 Wire version 8 is provisionally stable across JS SDK v6 through v12, but that
 claim remains version-matrix evidence, not a reason to remove fixtures.
+
+### 7.4 Java v1.22.0 deviation ledger
+
+The pinned vanilla `firebase@12.18.0` browser capture against the exact Java
+v1.22.0 jar was committed on 2026-08-31. It confirms the version-8 handshake,
+folded request headers, `CI=1`/`CI=0`, forward acknowledgement triples,
+consecutive replay arrays after an injected backchannel loss, termination POST,
+and UTF-16 length accounting. Java did not emit `X-Client-Wire-Protocol` or an
+`X-HTTP-Session-Id` response header in these HTTP/1.1 captures. Its unknown-SID
+response was HTTP 400 with an empty body. These are Java observations, not the
+Fireside target: the production cloud fixture remains authoritative where it
+differs, including the exact unknown-SID body and concurrent-forward
+advertisement.
+
+### 7.5 Production-cloud observations
+
+The corresponding 2026-08-31 capture used the same pinned vanilla browser
+bundle and tiny synthetic data in the allowlisted `fireside-conformance`
+project. It required no project configuration mutation. The capture confirms
+the Java request shape but returns server version 14 in the `c` array,
+`X-HTTP-Session-Id` on the handshake with the same value subsequently carried
+as `gsessionid`, and `X-Client-Wire-Protocol: h2` when the capture proxy's
+upstream negotiated HTTP/2. These response headers define Fireside's target;
+the Java omissions above remain documented design differences.
+
+Cloud used `CI=1` and `CI=0` for forced long polling and streaming,
+respectively. An injected first-backchannel loss reopened with `t=2`, `AID=0`,
+and consecutive replay arrays. Its long-poll Write acknowledgement was
+`[0,1,7]`; the streaming capture was `[1,1,7]`, demonstrating that the second
+field reflects timing rather than a fixed constant. An empty-body
+`TYPE=terminate` POST returned HTTP 200. Cloud's HTTP 400 unknown-session
+response used its generic HTML error document containing the literal
+`Unknown SID`, whereas Java returned no body. The raw fixture preserves the
+exact redacted cloud bytes and the regression test pins the client-matched
+literal.
+
+The non-ASCII cloud responses independently confirm decoded-text framing:
+observed CJK/emoji frames declared 787 or 1,321 UTF-16 code units while using
+820 or 1,354 UTF-8 bytes. The proxy records the browser's original
+`Accept-Encoding` but requests identity encoding upstream solely so a partial,
+still-open capture can be decoded without waiting for a gzip trailer.
 
 ## 8. Export and import contract
 
