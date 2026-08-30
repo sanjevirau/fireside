@@ -52,3 +52,20 @@ The frozen fail-fast observation rule can shorten a clearly failing Fireside
 soak without changing its pass threshold: after the 30-minute warm-up, a full
 trailing 60-minute Theil-Sen slope strictly above 10 MiB/hour records a failure
 and stops the sequence. It cannot fire before minute 90.
+
+# Phase 2 WebChannel gate
+
+[`phase-2-webchannel.json`](phase-2-webchannel.json) freezes the browser gate
+before product implementation. It pins Firebase JS SDK 12.18.0 and its exact
+upstream revision, Java emulator v1.22.0 and jar digest, the closure-net and
+closure-library source revisions, the authorized cloud project, required
+captures, transport variants, bounded session resources, upstream integration
+suite, browser-demo scenarios, UTF-16 fixtures, chaos counts, listener-delivery
+p99 thresholds, existing regression matrix, evidence files, and stop policy.
+
+The capture-proxy and oracle fixtures precede `webchannel-front` implementation.
+Every required case is recorded against both Java and production Cloud
+Firestore using tiny synthetic data. A fixture locks the exact observed wire
+value; the manifest locks which facts and gates must exist. Cloud wins when an
+observed Java behavior differs, and the difference is recorded rather than
+silently normalized.

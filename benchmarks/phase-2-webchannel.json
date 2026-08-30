@@ -1,0 +1,292 @@
+{
+  "schemaVersion": 1,
+  "name": "phase-2-webchannel",
+  "frozen": true,
+  "frozenAt": "2026-08-31T05:15:00+08:00",
+  "phase1Baseline": {
+    "tag": "phase-1",
+    "candidateRevision": "dc3438f8c99e1b3d695cb45c2d8831dd24d81e2b",
+    "gateReport": "reports/phase-1-full-gate.md",
+    "manifestSha256": "00f8c4f40e209a89ac3b059d6c10269e997c501a1cb8df50003b2195beedad41"
+  },
+  "toolchain": {
+    "rust": "1.98.0",
+    "node": "24.20.0",
+    "npm": "12.0.2",
+    "java": "26",
+    "officialFirestoreEmulator": "1.22.0",
+    "officialFirestoreEmulatorJarSha256": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c",
+    "firebase": "12.18.0",
+    "firebaseFirestore": "4.17.1",
+    "firebaseWebchannelWrapper": "1.0.7",
+    "playwright": "1.62.1",
+    "esbuild": "0.28.2"
+  },
+  "oracles": {
+    "precedence": [
+      "production-cloud-firestore",
+      "official-java-emulator",
+      "open-source-client-chain"
+    ],
+    "classificationRule": "when Java and cloud differ, record the Java deviation and match cloud",
+    "cloud": {
+      "projectId": "fireside-conformance",
+      "databaseId": "(default)",
+      "allowlistEnvironmentVariable": "CONFORMANCE_CLOUD_ALLOWLIST",
+      "maximumDocumentsPerCaptureRun": 32,
+      "maximumWritesPerCaptureRun": 128,
+      "syntheticDataOnly": true,
+      "cleanupRequired": true
+    },
+    "java": {
+      "version": "1.22.0",
+      "jarSha256": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c"
+    },
+    "clientChain": {
+      "firebaseJsSdk": {
+        "tag": "firebase@12.18.0",
+        "revision": "6cde0c0230b4c1da01d4a058333daa7663322fd1"
+      },
+      "closureNet": {
+        "revision": "6f48f578d3e80fe7a85e530a5d95b9351433d135",
+        "artifact": "firebase/webchannel_blob_es2018.js"
+      },
+      "closureLibrary": {
+        "revision": "b312823ec5f84239ff1db7526f4a75cba0420a33"
+      }
+    }
+  },
+  "capture": {
+    "requiredBeforeProductImplementation": true,
+    "fixtureSchemaVersion": 1,
+    "root": "conformance/fixtures/webchannel-v8",
+    "sensitiveHeadersRedacted": true,
+    "syntheticPayloadsOnly": true,
+    "targets": [
+      "java-v1.22.0",
+      "production-cloud-firestore"
+    ],
+    "requiredCasesPerTarget": [
+      "listen-long-poll",
+      "listen-streaming",
+      "write-long-poll",
+      "write-streaming",
+      "backchannel-reconnect-replay",
+      "unicode-framing",
+      "unknown-sid"
+    ],
+    "requiredArtifacts": [
+      "fixture.json",
+      "decoded-contract.json",
+      "SHA256SUMS"
+    ],
+    "contractFields": [
+      "request query and form fields",
+      "folded authentication headers",
+      "handshake status headers and body",
+      "forward acknowledgement triple",
+      "backchannel frame boundaries and array identifiers",
+      "UTF-16 decoded-text length prefixes",
+      "termination request",
+      "unknown-SID status and exact body",
+      "concurrent-forward protocol advertisement",
+      "Java-versus-cloud deviations"
+    ]
+  },
+  "transport": {
+    "endpoints": [
+      "/google.firestore.v1.Firestore/Listen/channel",
+      "/google.firestore.v1.Firestore/Write/channel"
+    ],
+    "variants": [
+      {
+        "name": "long-polling",
+        "ci": 1,
+        "implementationOrder": 1
+      },
+      {
+        "name": "streaming",
+        "ci": 0,
+        "implementationOrder": 2
+      },
+      {
+        "name": "buffering-proxy-auto-detection",
+        "ci": 0,
+        "implementationOrder": 3,
+        "maximumInitialNoopMilliseconds": 250,
+        "initialPayload": "[\"noop\"]",
+        "contentEncodingAllowed": false,
+        "bufferingAllowed": false
+      }
+    ],
+    "singlePortRequired": true,
+    "sharedWith": [
+      "grpc-h2c",
+      "rest-http1"
+    ],
+    "concurrentForwardChannelsRequired": true
+  },
+  "sessionBounds": {
+    "maximumConcurrentSessions": 4096,
+    "idleTimeoutSeconds": 1800,
+    "maximumUnacknowledgedArraysPerSession": 4096,
+    "maximumUnacknowledgedBytesPerSession": 67108864,
+    "maximumForwardBodyBytes": 33554432,
+    "maximumMapsPerForwardRequest": 1000,
+    "forwardDedupeKey": "ofs-plus-map-id",
+    "arrayIdsConsecutive": true,
+    "replayAllArraysAboveAid": true,
+    "unknownSidStatus": 400,
+    "unknownSidBodyLockedByFixture": true
+  },
+  "firestore": {
+    "streams": [
+      "Listen",
+      "Write"
+    ],
+    "listenTargets": {
+      "multiplexed": true,
+      "add": true,
+      "remove": true,
+      "resumeToken": true,
+      "readTime": true,
+      "independentTargetErrors": true
+    },
+    "rulesMode": "current open and owner behavior",
+    "rulesEnforcement": false
+  },
+  "gates": {
+    "firebaseJsSdkIntegration": {
+      "sourceRevision": "6cde0c0230b4c1da01d4a058333daa7663322fd1",
+      "upstreamBootstrap": "packages/firestore/test/integration/bootstrap.ts",
+      "upstreamCommand": "yarn --cwd packages/firestore karma start --integration --targetBackend=emulator --single-run",
+      "modes": [
+        "memory",
+        "disk-wal"
+      ],
+      "requiredExitCode": 0,
+      "unexpectedFailuresAllowed": 0,
+      "addedExclusionsAllowed": 0,
+      "upstreamNativeSkipsMustBeReported": true,
+      "runsInCi": true
+    },
+    "browserDemo": {
+      "sdk": "firebase@12.18.0",
+      "wrappersAllowed": false,
+      "modes": [
+        "memory",
+        "disk-wal"
+      ],
+      "variants": [
+        "long-polling",
+        "streaming",
+        "buffering-proxy-auto-detection"
+      ],
+      "requiredScenarios": [
+        "write",
+        "live-query-initial-snapshot",
+        "realtime-listener-update",
+        "multiplexed-listener-targets",
+        "forced-backchannel-loss-and-reconnect",
+        "sendBeacon-termination"
+      ],
+      "unexpectedFailuresAllowed": 0
+    },
+    "fixtureReplay": {
+      "targets": [
+        "java-v1.22.0",
+        "production-cloud-firestore"
+      ],
+      "requiredCases": "all capture.requiredCasesPerTarget",
+      "unexpectedMismatchesAllowed": 0
+    },
+    "unicodeFraming": {
+      "lengthUnit": "UTF-16-code-unit",
+      "variants": [
+        "long-polling",
+        "streaming"
+      ],
+      "payloads": [
+        "ASCII",
+        "火側",
+        "🔥",
+        "A火🔥éZ",
+        "文書/emoji-😀/mixed-火"
+      ],
+      "unexpectedFailuresAllowed": 0
+    },
+    "sessionChaos": {
+      "deterministicSeed": "fireside-phase-2-webchannel-v1",
+      "variants": [
+        "long-polling",
+        "streaming"
+      ],
+      "droppedBackchannelsPerVariant": 50,
+      "retriedForwardPostsPerVariant": 50,
+      "duplicateMapDeliveriesPerVariant": 50,
+      "overlappingForwardPostPairsPerVariant": 50,
+      "unknownSidRequestsPerVariant": 25,
+      "duplicateFirestoreEffectsAllowed": 0,
+      "lostAcknowledgedArraysAllowed": 0,
+      "nonConsecutiveReplayArraysAllowed": 0,
+      "unknownSidMismatchesAllowed": 0
+    },
+    "listenerDeliveryBenchmark": {
+      "samplesPerVariantAndMode": 100,
+      "percentile": 0.99,
+      "maximumMilliseconds": {
+        "streaming": 1000,
+        "long-polling": 1500,
+        "buffering-proxy-auto-detection": 2000
+      },
+      "maximumReconnectMilliseconds": 5000,
+      "recordRawSamples": true
+    },
+    "existingConformance": {
+      "commands": [
+        "cargo fmt --all -- --check",
+        "cargo clippy --workspace --all-targets --all-features -- -D warnings",
+        "cargo test --workspace --all-targets --all-features",
+        "npm run check --prefix conformance",
+        "npm test --prefix conformance",
+        "npm run test:fireside --prefix conformance",
+        "npm run test:fireside:disk --prefix conformance",
+        "npm run test:fireside:strict --prefix conformance",
+        "npm run test:fireside:enterprise --prefix conformance",
+        "npm run test:fireside:enterprise:disk --prefix conformance",
+        "npm run test:fireside-disk-recovery --prefix conformance",
+        "npm run test:fireside-import --prefix conformance",
+        "npm run test:official --prefix conformance",
+        "npm run test:official:enterprise --prefix conformance",
+        "npm run test:official-export-import --prefix conformance",
+        "npm run test:fireside-export-java-import --prefix conformance"
+      ],
+      "unexpectedFailuresAllowed": 0
+    }
+  },
+  "evidence": {
+    "root": "reports/phase-2-metrics",
+    "report": "reports/phase-2-gate.md",
+    "requiredFiles": [
+      "manifest.json",
+      "fixture-replay.json",
+      "firebase-js-sdk-memory.json",
+      "firebase-js-sdk-disk-wal.json",
+      "browser-demo.json",
+      "session-chaos.json",
+      "listener-delivery.csv",
+      "existing-conformance.json",
+      "deviations.json",
+      "SHA256SUMS"
+    ]
+  },
+  "failurePolicy": {
+    "preserveAllEvidence": true,
+    "automaticThresholdChange": false,
+    "automaticOracleSubstitution": false,
+    "automaticRetuneOrSilentRerun": false,
+    "tagBeforeCompletePass": false,
+    "startPhase3": false,
+    "stopForMaintainerReviewAfterGate": true
+  }
+}

@@ -1,7 +1,7 @@
 # fireside design and compatibility contract
 
-Status: Phase 0 living specification
-Last updated: 2026-08-28
+Status: Phase 2 living specification
+Last updated: 2026-08-31
 
 This document is normative for project process and architecture, but not for
 Google Cloud behavior. Every behavioral assertion must be promoted from a
@@ -784,6 +784,26 @@ channel endpoints are:
 Requests carry `database=projects/{p}/databases/{db}`, a random `zx`, and retry
 counter `t`.
 
+Phase 2 is frozen in
+[`benchmarks/phase-2-webchannel.json`](benchmarks/phase-2-webchannel.json).
+Product implementation cannot begin until the capture-proxy has committed all
+required Java and cloud fixtures. The three live oracle inputs are pinned as:
+
+| Oracle input | Pinned source | Role |
+| --- | --- | --- |
+| Production Cloud Firestore | allowlisted `fireside-conformance`, `(default)` database | authoritative browser wire behavior; tiny synthetic captures only |
+| Official Java emulator | v1.22.0, jar SHA-256 `9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c` | local comparison and jar-compatibility behavior |
+| Firebase JS SDK | tag `firebase@12.18.0`, revision `6cde0c0230b4c1da01d4a058333daa7663322fd1` | real browser client and upstream integration suite |
+| closure-net blob | revision `6f48f578d3e80fe7a85e530a5d95b9351433d135` | readable compiled client state machine used by the pinned SDK |
+| closure-library | revision `b312823ec5f84239ff1db7526f4a75cba0420a33` | reference semantics behind the WebChannel transport |
+
+The packet shapes below are required contract hypotheses until their checked-in
+fixture records the exact value. Captures lock request/form fields, folded
+headers, response headers, frame boundaries, acknowledgements, replay,
+termination, unknown-SID text, concurrent-forward advertisement, and Java/cloud
+deviations. When Java and cloud differ, the deviations ledger records Java and
+fireside matches cloud.
+
 ### 7.1 Handshake
 
 The client posts with `VER=8`, random `RID`, `CVER=22`, and
@@ -1018,6 +1038,36 @@ Deliver browser Listen and Write, streaming and long-polling, immediate
 unbuffered flushing, replay, acknowledgements, and reconnect behavior. Gate:
 Google’s Firestore JS integration tests pass against fireside and a vanilla
 browser demo proves realtime updates plus offline/reconnect.
+
+The immutable Phase 2 gate is executable, not a prose-only acceptance test. It
+requires all of the following in both in-memory and disk/WAL modes where the
+manifest specifies both:
+
+1. the pinned Firebase JS SDK Firestore browser integration bootstrap exits
+   successfully with no Fireside-specific exclusions;
+2. a wrapper-free vanilla Firebase JS SDK demo passes writes, live-query
+   snapshots, realtime updates, multiplexed listeners, forced backchannel loss
+   and reconnect, and sendBeacon termination in long-polling, streaming, and
+   buffering-proxy-detection scenarios;
+3. every Java and cloud capture fixture replays without a mismatch;
+4. ASCII, CJK, emoji, combining-character, and mixed-path fixtures prove that
+   frame lengths count decoded UTF-16 code units in both transport variants;
+5. deterministic chaos covers 50 dropped backchannels, 50 retried forward
+   posts, 50 duplicate maps, and 50 overlapping forward-channel pairs per
+   variant, plus 25 unknown-SID requests, with no duplicate Firestore effect,
+   lost acknowledged array, or non-consecutive replay;
+6. the full pre-Phase-2 conformance matrix remains green;
+7. 100 listener-delivery samples per variant and storage mode record p99. The
+   maximum is 1,000 ms for streaming, 1,500 ms for forced long-polling, and
+   2,000 ms under buffering-proxy detection; reconnect completes within
+   5,000 ms.
+
+The server bounds each session as frozen in the manifest: at most 4,096 active
+sessions, a 30-minute idle lifetime, 4,096 or 64 MiB of unacknowledged arrays,
+a 32 MiB forward body, and 1,000 maps per forward request. These are resource
+bounds, not permission to change observed wire behavior. Any gate failure
+preserves evidence and blocks a tag. A complete pass is reported without a tag
+and work stops for maintainer review before Phase 3.
 
 ### Phase 3 — Rules engine
 
