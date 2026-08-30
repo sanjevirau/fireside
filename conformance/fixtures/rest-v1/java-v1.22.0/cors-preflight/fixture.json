@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "metadata": {
+    "hypothesis": "Browser Firestore REST v1 calls require an origin-echoing credentialed CORS preflight and matching actual-response headers",
+    "target": "java-v1.22.0",
+    "targetVersion": "1.22.0",
+    "targetJarSha256": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c",
+    "recordedAt": "2026-08-30T23:41:13Z",
+    "transport": "rest-v1"
+  },
+  "exchanges": [
+    {
+      "sequence": 1,
+      "request": {
+        "method": "OPTIONS",
+        "path": "/v1/projects/demo-fireside-phase2/databases/(default)/documents:commit",
+        "headers": [
+          {
+            "name": "origin",
+            "value": "http://localhost:8089"
+          },
+          {
+            "name": "access-control-request-method",
+            "value": "POST"
+          },
+          {
+            "name": "access-control-request-headers",
+            "value": "authorization,content-type,x-goog-api-client"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://localhost:8089"
+          },
+          {
+            "name": "access-control-allow-methods",
+            "value": "DELETE,GET,HEAD,PATCH,POST,PUT"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "access-control-allow-headers",
+            "value": "authorization,content-type,x-goog-api-client"
+          },
+          {
+            "name": "content-length",
+            "value": "0"
+          }
+        ],
+        "body": ""
+      }
+    },
+    {
+      "sequence": 2,
+      "request": {
+        "method": "POST",
+        "path": "/v1/projects/demo-fireside-phase2/databases/(default)/documents:commit",
+        "headers": [
+          {
+            "name": "origin",
+            "value": "http://localhost:8089"
+          },
+          {
+            "name": "content-type",
+            "value": "application/json"
+          }
+        ],
+        "body": "{\"writes\":[]}"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "content-type",
+            "value": "application/json"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://localhost:8089"
+          },
+          {
+            "name": "access-control-allow-methods",
+            "value": "DELETE,GET,HEAD,PATCH,POST,PUT"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          }
+        ],
+        "body": "{\r\n}\r\n"
+      }
+    }
+  ]
+}

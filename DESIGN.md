@@ -1058,6 +1058,18 @@ request. A token from the future or another stream remains a failed
 precondition. The captured Java/cloud `write-overlap` fixture and an engine
 unit test lock this distinction.
 
+### 7.8 Browser REST CORS
+
+The pinned Firebase integration bootstrap also exercises unary Firestore RPCs
+through browser `fetch`, outside WebChannel. A direct observation of the
+official Java v1.22.0 emulator pins that REST surface's CORS contract in
+`conformance/fixtures/rest-v1/java-v1.22.0/cors-preflight`: an `OPTIONS`
+preflight returns HTTP 200, echoes `Origin`, echoes the requested header list,
+allows `DELETE,GET,HEAD,PATCH,POST,PUT`, and permits credentials. Actual REST
+responses echo the origin, allowed-method list, and credential permission.
+This is transport compatibility required by the unchanged upstream suite; it
+does not add rules enforcement or relax the Phase 3 boundary.
+
 ## 8. Export and import contract
 
 Firestore export data under
