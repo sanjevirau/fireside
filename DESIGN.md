@@ -125,6 +125,15 @@ arrive, modeling the no-progress interval a buffering intermediary creates;
 the SDK must start in streaming mode, fall back to long polling, and keep the
 application healthy.
 
+The captured-fixture replay gate deserializes every permanent Java and cloud
+request recording and drives its ordered form fields and query contract
+through the WebChannel router. Captured session identifiers are substituted
+only with the fresh handshake values. Backchannels must flush a valid framed
+array, forward requests must return the three-value acknowledgement, and the
+cloud unknown-SID body remains byte-for-byte exact. This complements the real
+browser executable: fixture replay detects wire-contract drift without an
+external oracle being live.
+
 ### 3.2 Workspace responsibilities
 
 | Crate | Responsibility |
