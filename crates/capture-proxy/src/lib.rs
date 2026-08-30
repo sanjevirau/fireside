@@ -95,7 +95,7 @@ pub async fn serve_listener(listener: TcpListener, config: CaptureProxyConfig) -
         upstream: config.upstream,
         capture: Arc::new(Mutex::new(CaptureState {
             fixture: CaptureFixture::new(config.metadata),
-            response_bodies: BTreeMap::new(),
+            response_chunks: BTreeMap::new(),
             captured_body_bytes: 0,
             capture_error: None,
         })),
@@ -143,7 +143,7 @@ struct ProxyState {
 
 struct CaptureState {
     fixture: CaptureFixture,
-    response_bodies: BTreeMap<u64, Vec<u8>>,
+    response_chunks: BTreeMap<u64, Vec<Vec<u8>>>,
     captured_body_bytes: usize,
     capture_error: Option<String>,
 }
@@ -158,10 +158,17 @@ async fn snapshot_fixture(State(state): State<ProxyState>) -> Response<Body> {
         .exchanges
         .retain(|exchange| exchange.response.status != 0);
     for exchange in &mut fixture.exchanges {
-        exchange.response.body_base64 = capture
-            .response_bodies
-            .get(&exchange.sequence)
-            .and_then(|body| encode_body(body));
+        let chunks = capture.response_chunks.get(&exchange.sequence);
+        exchange.response.body_base64 = chunks.and_then(|chunks| {
+            let body = chunks.concat();
+            encode_body(&body)
+        });
+        exchange.response.body_chunks_base64 = chunks.map_or_else(Vec::new, |chunks| {
+            chunks
+                .iter()
+                .filter_map(|chunk| encode_body(chunk))
+                .collect()
+        });
     }
     Json(fixture).into_response()
 }
@@ -198,6 +205,7 @@ async fn proxy_request_inner(
             status: 0,
             headers: Vec::new(),
             body_base64: None,
+            body_chunks_base64: Vec::new(),
         },
     };
     record_exchange(&state.capture, captured_exchange, captured_body.len());
@@ -274,10 +282,10 @@ fn append_response_body(capture: &Mutex<CaptureState>, sequence: u64, bytes: &By
     }
     capture.captured_body_bytes = next_size;
     capture
-        .response_bodies
+        .response_chunks
         .entry(sequence)
         .or_default()
-        .extend_from_slice(bytes);
+        .push(bytes.to_vec());
 }
 
 fn record_exchange(
@@ -461,6 +469,9 @@ pub struct CapturedResponse {
     pub headers: Vec<Header>,
     /// Base64-encoded body, if present.
     pub body_base64: Option<String>,
+    /// Base64-encoded upstream response chunks in observed arrival order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub body_chunks_base64: Vec<String>,
 }
 
 /// An ordered, case-preserving header pair.
@@ -657,6 +668,7 @@ mod tests {
                 status: 200,
                 headers: Vec::new(),
                 body_base64: Some("W10=".to_owned()),
+                body_chunks_base64: vec!["W10=".to_owned()],
             },
         }
     }
@@ -717,7 +729,7 @@ mod tests {
     fn capture_bounds_fail_the_snapshot_instead_of_truncating_silently() {
         let capture = Mutex::new(CaptureState {
             fixture: CaptureFixture::new(metadata()),
-            response_bodies: BTreeMap::new(),
+            response_chunks: BTreeMap::new(),
             captured_body_bytes: 0,
             capture_error: None,
         });
@@ -858,6 +870,7 @@ mod tests {
                 .expect("response body should be base64"),
             b"firstsecond"
         );
+        assert_eq!(exchange.response.body_chunks_base64.len(), 2);
 
         proxy_task.abort();
         upstream_task.abort();

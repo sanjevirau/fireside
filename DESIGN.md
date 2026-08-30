@@ -802,7 +802,9 @@ recorder: oracle response chunks are forwarded as they arrive while a bounded
 synthetic capture is accumulated. `GET /__fireside_capture/fixture` exposes a
 read-only snapshot of exchanges whose upstream response headers have arrived;
 still-pending long polls are omitted, and the control request is never included
-in that snapshot. Redaction happens before capture state is mutated. It covers ordinary request/response headers,
+in that snapshot. Completed responses retain both their combined body and the
+ordered upstream body chunks so observed flush segmentation is reviewable.
+Redaction happens before capture state is mutated. It covers ordinary request/response headers,
 credential-like query and form fields, and sensitive header values folded into
 WebChannel's URL-encoded `headers` form field. The original request remains
 unchanged on its way to the oracle.
