@@ -33,6 +33,7 @@ npm run test:fireside:strict
 npm run test:fireside-import
 npm run test:official-export-import
 npm run test:fireside-export-java-import
+npm run capture:webchannel:java
 ```
 
 `test:official` reserves an available loopback port, creates an isolated
@@ -45,6 +46,16 @@ asserts every captured value through the Admin SDK.
 `test:fireside-import` boots the actual binary with `--seed_from_export`.
 `test:fireside-export-java-import` exercises the reverse path through the
 running Fireside control API and imports its output into Java.
+
+`capture:webchannel:java` builds a pinned vanilla `firebase@12.18.0` browser
+client, runs the frozen WebChannel v8 cases through the official Java v1.22.0
+emulator and the Fireside streaming capture proxy, then emits redacted raw
+fixtures, decoded contracts, and SHA-256 manifests under
+`fixtures/webchannel-v8/java-v1.22.0`. `capture:webchannel:cloud` uses the same
+browser cases against `firestore.googleapis.com`; it additionally requires the
+two exact cloud allowlist variables, Application Default Credentials, and
+`FIREBASE_WEB_API_KEY`. Both commands use only the synthetic
+`fireside_webchannel_capture/oracle` document and delete it after each case.
 
 The `cloud` target has a hard safety interlock: both
 `CONFORMANCE_CLOUD_PROJECT` and `CONFORMANCE_CLOUD_ALLOWLIST` must be exactly
