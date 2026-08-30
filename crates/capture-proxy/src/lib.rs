@@ -154,6 +154,9 @@ async fn snapshot_fixture(State(state): State<ProxyState>) -> Response<Body> {
         return (StatusCode::INSUFFICIENT_STORAGE, error.clone()).into_response();
     }
     let mut fixture = capture.fixture.clone();
+    fixture
+        .exchanges
+        .retain(|exchange| exchange.response.status != 0);
     for exchange in &mut fixture.exchanges {
         exchange.response.body_base64 = capture
             .response_bodies
