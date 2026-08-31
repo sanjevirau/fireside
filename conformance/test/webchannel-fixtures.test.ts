@@ -104,6 +104,15 @@ test("pinned Firebase JS SDK gate mirrors Google's minified integration workflow
     readonly localEmulatorProcessPartition: {
       readonly browserProcessPlan: typeof BROWSER_PROCESS_PLAN;
       readonly excludedSourceFiles: readonly string[];
+      readonly nativeSkipOnlyPartition: {
+        readonly acceptanceInvariant: string;
+        readonly classification: string;
+        readonly completedTests: number;
+        readonly karmaExitCode: number;
+        readonly nativeSkips: number;
+        readonly observedCiRun: number;
+        readonly suite: string;
+      };
       readonly sourcePartitions: readonly {
         readonly name: string;
         readonly sourceFiles: readonly string[];
@@ -160,6 +169,19 @@ test("pinned Firebase JS SDK gate mirrors Google's minified integration workflow
       "pipeline.query.test.ts",
       "snapshot_listener_source.test.ts",
     ],
+  );
+  assert.deepEqual(
+    fixture.localEmulatorProcessPartition.nativeSkipOnlyPartition,
+    {
+      observedCiRun: 33421790001,
+      suite: "Large Documents",
+      completedTests: 0,
+      nativeSkips: 8,
+      karmaExitCode: 1,
+      classification: "passed-upstream-native-skip-only",
+      acceptanceInvariant:
+        "Accept a nonzero Karma exit only when the captured output reports TOTAL: 0 SUCCESS, at least one explicitly named native skip, no failed-test total, and no browser disconnect or infrastructure error. Preserve the partition and every native skip in evidence.",
+    },
   );
 
   const manifest = JSON.parse(

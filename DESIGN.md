@@ -1357,7 +1357,13 @@ Chrome HTTP/1.1 six-connection transport-pool stall reproduced against both
 official Java v1.22.0 and Fireside, including within a 120-test isolated
 Database source partition. The gate records every partition name, generated
 coverage filter, completed count, and native skip, and forbids a user-supplied
-filter.
+filter. The pinned `Large Documents` suite is an upstream-native skip-only
+partition in this emulator workload: Karma reports `TOTAL: 0 SUCCESS`, names
+all eight skipped tests, and exits 1 solely because no test executed. Such a
+partition is accepted only when its captured output contains at least one
+explicit native skip and contains no failed-test total, browser disconnect, or
+infrastructure error. It remains in the frozen process plan and every skip is
+reported; all other nonzero Karma exits remain failures.
 `firebase-admin-node` follows. CI generates a per-area README scoreboard from
 machine-readable results; manual claims are prohibited.
 

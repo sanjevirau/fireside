@@ -73,7 +73,16 @@
       "snapshot_listener_source.test.ts"
     ],
     "coverageInvariant": "Every top-level suite copied by the pinned integration/firestore build is matched by the frozen process-plan digest. Listener-heavy sources use consecutive groups of at most five immediate test or suite registrations, pipeline immediate suites are isolated, scoped suites run once per outer persistence mode, and unscoped suites run once per client build. No user-supplied gate filter is allowed.",
-    "diagnosticControl": "Chrome 151 exhausted its six HTTP/1.1 connections in long single-browser runs against both official Java v1.22.0 and Fireside. The exact mixed-persistence rejection/cursor sequence failed against both servers, the isolated Fireside memory sequence passed 11/11, and an isolated 120-test Database source partition again exhausted all six sockets. Fresh browser processes partition transport lifetime only; test sources, modes, assertions, native skips, and thresholds are unchanged."
+    "diagnosticControl": "Chrome 151 exhausted its six HTTP/1.1 connections in long single-browser runs against both official Java v1.22.0 and Fireside. The exact mixed-persistence rejection/cursor sequence failed against both servers, the isolated Fireside memory sequence passed 11/11, and an isolated 120-test Database source partition again exhausted all six sockets. Fresh browser processes partition transport lifetime only; test sources, modes, assertions, native skips, and thresholds are unchanged.",
+    "nativeSkipOnlyPartition": {
+      "observedCiRun": 33421790001,
+      "suite": "Large Documents",
+      "completedTests": 0,
+      "nativeSkips": 8,
+      "karmaExitCode": 1,
+      "classification": "passed-upstream-native-skip-only",
+      "acceptanceInvariant": "Accept a nonzero Karma exit only when the captured output reports TOTAL: 0 SUCCESS, at least one explicitly named native skip, no failed-test total, and no browser disconnect or infrastructure error. Preserve the partition and every native skip in evidence."
+    }
   },
   "observations": [
     "The official workflow builds and runs the minified integration package, not the packages/firestore legacy source bootstrap.",
