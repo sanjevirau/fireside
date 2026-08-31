@@ -15,3 +15,5 @@ response envelope, recursive composite-filter shape, and maximum-operation
 validation independently from the WebChannel transport fixtures. The cloud
 composite-filter fixture intentionally preserves its index-required response;
 the Java fixture preserves successful emulator execution of the same request.
+The `transaction-commit` cases pin the SDK's same-document validation,
+verify-only writes, and quoted field paths in update masks.

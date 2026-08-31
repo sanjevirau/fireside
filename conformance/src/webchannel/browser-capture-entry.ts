@@ -3,11 +3,14 @@ import {
   collection,
   count,
   doc,
+  FieldPath,
   getAggregateFromServer,
   getCountFromServer,
+  getDoc,
   initializeFirestore,
   onSnapshot,
   query,
+  runTransaction,
   setDoc,
   sum,
   terminate,
@@ -21,6 +24,7 @@ type CaptureScenario =
   | "aggregation-limit-error"
   | "listen"
   | "reconnect-replay"
+  | "transaction-commit"
   | "unicode-framing"
   | "unknown-sid"
   | "write"
@@ -119,6 +123,36 @@ window.firesideRunWebChannelCapture = async (
         } catch (error) {
           observations.push(observeError(error));
         }
+        break;
+      case "transaction-commit":
+        try {
+          await runTransaction(firestore, async (transaction) => {
+            await transaction.get(reference);
+            transaction.delete(reference);
+            transaction.update(reference, { sequence: 3 });
+          });
+          throw new Error("delete followed by update unexpectedly succeeded");
+        } catch (error) {
+          observations.push(observeError(error));
+        }
+        await runTransaction(firestore, async (transaction) => {
+          await transaction.get(reference);
+        });
+        await runTransaction(firestore, async (transaction) => {
+          transaction.set(reference, {
+            desc: "Description",
+            "is.admin": false,
+            owner: { name: "Jonny" },
+          });
+          transaction.update(
+            reference,
+            "owner.name",
+            "Sebastian",
+            new FieldPath("is.admin"),
+            true,
+          );
+        });
+        observations.push((await getDoc(reference)).data());
         break;
       case "listen":
       case "reconnect-replay":

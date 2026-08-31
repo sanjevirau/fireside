@@ -33,6 +33,7 @@ type BrowserScenario =
   | "aggregation-limit-error"
   | "listen"
   | "reconnect-replay"
+  | "transaction-commit"
   | "unicode-framing"
   | "unknown-sid"
   | "write"
@@ -83,6 +84,13 @@ const CAPTURE_CASES: readonly CaptureCase[] = [
     fixtureRoot: "rest-v1",
     hypothesis: "Browser observes the maximum-aggregation validation response",
     runs: [{ scenario: "aggregation-limit-error", variant: "long-poll" }],
+    transport: "http1",
+  },
+  {
+    directory: "transaction-commit",
+    fixtureRoot: "rest-v1",
+    hypothesis: "Browser transactions pin multi-write validation, verify writes, and quoted update masks",
+    runs: [{ scenario: "transaction-commit", variant: "long-poll" }],
     transport: "http1",
   },
   {
@@ -408,7 +416,11 @@ async function prepareSyntheticDocument(
   captureCase: CaptureCase,
 ): Promise<void> {
   await deleteSyntheticDocument(runtime);
-  if (captureCase.runs.some((run) => run.scenario.startsWith("aggregation-"))) {
+  if (
+    captureCase.runs.some((run) =>
+      run.scenario.startsWith("aggregation-") || run.scenario === "transaction-commit"
+    )
+  ) {
     for (const [document, sequence] of [[DOCUMENT, 1], ["oracle-second", 2]] as const) {
       const response = await firestoreRestRequest(runtime, "PATCH", {
         fields: {

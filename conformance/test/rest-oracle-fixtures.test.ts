@@ -81,11 +81,44 @@ for (const target of oracleTargets) {
       assert.match(exchange?.response.bodyText ?? "", /FAILED_PRECONDITION/u);
     }
   });
+
+  test(`${target.directory} transaction fixture pins commit validation and masks`, async () => {
+    const { contract } = await readOracleFixture(
+      target,
+      "transaction-commit",
+      target.directory === "java-v1.22.0" ? 10 : 9,
+    );
+    const commits = contract.exchanges.filter((exchange) =>
+      exchange.request.method === "POST" && exchange.request.path.endsWith(":commit")
+    );
+    assert.equal(commits.length, 3);
+
+    const invalid = commits.find((exchange) => exchange.response.status === 400);
+    assert.match(invalid?.request.bodyText ?? "", /"delete":/u);
+    assert.match(invalid?.request.bodyText ?? "", /"update":/u);
+    assert.match(
+      invalid?.response.bodyText ?? "",
+      /Cannot delete then update an entity in the same request\./u,
+    );
+
+    const verify = commits.find((exchange) =>
+      (exchange.request.bodyText ?? "").includes('"verify":')
+    );
+    assert.equal(verify?.response.status, 200);
+    assert.match(verify?.response.bodyText ?? "", /writeResults/u);
+
+    const nested = commits.find((exchange) =>
+      (exchange.request.bodyText ?? "").includes('"`is.admin`"')
+    );
+    assert.equal(nested?.response.status, 200);
+    assert.match(nested?.request.bodyText ?? "", /"owner.name"/u);
+  });
 }
 
 async function readOracleFixture(
   target: (typeof oracleTargets)[number],
   scenario: string,
+  expectedExchanges = 2,
 ): Promise<{
   contract: DecodedCaptureContract;
   fixture: CaptureFixture;
@@ -105,8 +138,8 @@ async function readOracleFixture(
   assert.equal(fixture.metadata.targetVersion, target.targetVersion);
   assert.equal(fixture.metadata.sdk, "firebase@12.18.0");
   assert.equal(fixture.metadata.transport, "http1");
-  assert.equal(fixture.exchanges.length, 2);
-  assert.equal(contract.exchanges.length, 2);
+  assert.equal(fixture.exchanges.length, expectedExchanges);
+  assert.equal(contract.exchanges.length, expectedExchanges);
   assert.ok(!/Bearer\s+(?!\[REDACTED\])/iu.test(fixtureText));
   assert.equal(
     sums,
@@ -117,13 +150,15 @@ async function readOracleFixture(
     exchange.request.method === "OPTIONS"
   );
   assert.equal(preflight?.response.status, 200);
-  const exchange = contract.exchanges.find((candidate) =>
-    candidate.request.method === "POST"
-  );
-  assert.equal(
-    exchange?.request.path,
-    `/v1/projects/${target.projectId}/databases/(default)/documents:runAggregationQuery`,
-  );
+  if (scenario.startsWith("aggregation-")) {
+    const exchange = contract.exchanges.find((candidate) =>
+      candidate.request.method === "POST"
+    );
+    assert.equal(
+      exchange?.request.path,
+      `/v1/projects/${target.projectId}/databases/(default)/documents:runAggregationQuery`,
+    );
+  }
 
   return { contract, fixture };
 }

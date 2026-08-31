@@ -1104,6 +1104,20 @@ deployment/index design difference, not a wire-format difference. Fireside's
 default emulator mode follows Java and accepts the query without requiring an
 index; strict-index behavior remains separately configurable.
 
+### 7.10 Browser transaction commit envelope
+
+The `conformance/fixtures/rest-v1/*/transaction-commit` captures run the same
+vanilla SDK transaction sequence against Java v1.22.0 and production. Both
+oracles reject a delete followed by an update of the same document with HTTP
+400 `INVALID_ARGUMENT` and the exact message `Cannot delete then update an
+entity in the same request.` before applying either write. A read-only
+transaction commits a `verify` write carrying the observed `updateTime` and
+returns one write result. A set followed by a nested update serializes the
+literal dotted field as `` `is.admin` `` while the nested map path remains
+`owner.name`; both writes share one commit timestamp. These unary REST writes
+are part of the browser integration surface even though Listen and streaming
+Write use WebChannel.
+
 ## 8. Export and import contract
 
 Firestore export data under
