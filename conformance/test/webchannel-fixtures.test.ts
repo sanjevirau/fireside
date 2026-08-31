@@ -16,8 +16,11 @@ const CASES = [
   "bundle-nanosecond-read-time",
   "write-long-poll",
   "write-streaming",
+  "write-cross-client-update",
+  "write-missing-update-error",
   "write-overlap",
   "multiple-inequality-query",
+  "reserved-resource-id-error",
   "backchannel-reconnect-replay",
   "unicode-framing",
   "unknown-sid",
@@ -249,6 +252,24 @@ for (const target of TARGETS) {
 }
 
 for (const target of TARGETS) {
+  test(`${target.name} reserved resource ID fixture pins the exact browser-visible error`, async () => {
+    const contract = await readContract(
+      target.directory,
+      "reserved-resource-id-error",
+    );
+    const encoded = JSON.stringify(contract);
+
+    assert.ok(hasQueryValue(contract, "CI", "0"));
+    assert.ok(hasQueryValue(contract, "CI", "1"));
+    assert.match(encoded, /documents\/a\/__badpath__/u);
+    assert.match(encoded, /"code":3/u);
+    assert.ok(
+      encoded.includes(
+        'Resource id \\"__badpath__\\" is invalid because it is reserved.',
+      ),
+    );
+  });
+
   test(`${target.name} fixtures distinguish long polling, streaming, retry, and UTF-16 framing`, async () => {
     const longPoll = await readContract(target.directory, "listen-long-poll");
     const streaming = await readContract(target.directory, "listen-streaming");

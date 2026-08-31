@@ -36,11 +36,14 @@ type BrowserScenario =
   | "listen"
   | "multiple-inequality-query"
   | "reconnect-replay"
+  | "reserved-resource-id-error"
   | "transaction-commit"
   | "transaction-noop-write"
   | "unicode-framing"
   | "unknown-sid"
   | "write"
+  | "write-cross-client-update"
+  | "write-missing-update-error"
   | "write-overlap";
 type TransportVariant = "long-poll" | "streaming";
 
@@ -130,6 +133,15 @@ const CAPTURE_CASES: readonly CaptureCase[] = [
     runs: [{ scenario: "multiple-inequality-query", variant: "long-poll" }],
   },
   {
+    directory: "reserved-resource-id-error",
+    hypothesis:
+      "A reserved resource ID in a query parent returns the browser-visible INVALID_ARGUMENT contract",
+    runs: [
+      { scenario: "reserved-resource-id-error", variant: "long-poll" },
+      { scenario: "reserved-resource-id-error", variant: "streaming" },
+    ],
+  },
+  {
     directory: "write-long-poll",
     hypothesis: "Write handshake and acknowledgement in forced long-polling mode",
     runs: [{ scenario: "write", variant: "long-poll" }],
@@ -145,6 +157,24 @@ const CAPTURE_CASES: readonly CaptureCase[] = [
     runs: [
       { scenario: "write-overlap", variant: "long-poll" },
       { scenario: "write-overlap", variant: "streaming" },
+    ],
+  },
+  {
+    directory: "write-cross-client-update",
+    hypothesis:
+      "A second browser client may update a server document absent from its local cache",
+    runs: [
+      { scenario: "write-cross-client-update", variant: "long-poll" },
+      { scenario: "write-cross-client-update", variant: "streaming" },
+    ],
+  },
+  {
+    directory: "write-missing-update-error",
+    hypothesis:
+      "A missing-document update returns the browser-visible Firestore Write stream error envelope",
+    runs: [
+      { scenario: "write-missing-update-error", variant: "long-poll" },
+      { scenario: "write-missing-update-error", variant: "streaming" },
     ],
   },
   {
@@ -503,7 +533,13 @@ async function prepareSyntheticDocument(
 }
 
 async function deleteSyntheticDocument(runtime: TargetRuntime): Promise<void> {
-  for (const document of [DOCUMENT, "oracle-first", "oracle-second"]) {
+  for (const document of [
+    DOCUMENT,
+    "oracle-first",
+    "oracle-second",
+    "oracle-cross-client",
+    "oracle-missing-update",
+  ]) {
     const response = await firestoreRestRequest(runtime, "DELETE", undefined, document);
     if (!response.ok && response.status !== 404) {
       throw new Error(

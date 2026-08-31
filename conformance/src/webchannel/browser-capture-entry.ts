@@ -19,6 +19,7 @@ import {
   setDoc,
   sum,
   terminate,
+  updateDoc,
   waitForPendingWrites,
   where,
 } from "firebase/firestore";
@@ -31,11 +32,14 @@ type CaptureScenario =
   | "listen"
   | "multiple-inequality-query"
   | "reconnect-replay"
+  | "reserved-resource-id-error"
   | "transaction-commit"
   | "transaction-noop-write"
   | "unicode-framing"
   | "unknown-sid"
   | "write"
+  | "write-cross-client-update"
+  | "write-missing-update-error"
   | "write-overlap";
 
 type TransportVariant = "long-poll" | "streaming";
@@ -255,6 +259,14 @@ window.firesideRunWebChannelCapture = async (
           }
         }
         break;
+      case "reserved-resource-id-error":
+        try {
+          await getDocs(collection(firestore, "a/__badpath__/b"));
+          throw new Error("reserved resource id query unexpectedly succeeded");
+        } catch (error) {
+          observations.push(observeError(error));
+        }
+        break;
       case "unicode-framing":
         {
           const observation = observeOneSnapshot(reference);
@@ -277,6 +289,51 @@ window.firesideRunWebChannelCapture = async (
         });
         await waitForPendingWrites(firestore);
         observations.push("write-acknowledged");
+        break;
+      case "write-cross-client-update":
+        {
+          const readerApp = initializeApp(
+            {
+              apiKey: configuration.apiKey,
+              appId: "1:123456789:web:fireside-webchannel-capture-reader",
+              projectId: configuration.projectId,
+            },
+            `capture-reader-${configuration.variant}-${crypto.randomUUID()}`,
+          );
+          const reader = initializeFirestore(readerApp, settings);
+          const writerReference = doc(
+            firestore,
+            COLLECTION,
+            "oracle-cross-client",
+          );
+          const readerReference = doc(
+            reader,
+            COLLECTION,
+            "oracle-cross-client",
+          );
+          try {
+            await setDoc(writerReference, { a: "a" });
+            await updateDoc(readerReference, { b: "b" });
+            observations.push({
+              reader: (await getDoc(readerReference)).data(),
+              writer: (await getDoc(writerReference)).data(),
+            });
+          } finally {
+            await terminate(reader);
+            await deleteApp(readerApp);
+          }
+        }
+        break;
+      case "write-missing-update-error":
+        try {
+          await updateDoc(
+            doc(firestore, COLLECTION, "oracle-missing-update"),
+            { b: "b" },
+          );
+          throw new Error("missing-document update unexpectedly succeeded");
+        } catch (error) {
+          observations.push(observeError(error));
+        }
         break;
       case "write-overlap":
         await Promise.all([
