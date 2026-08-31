@@ -1323,11 +1323,24 @@ oracle for invocation: it builds the minified `integration/firestore` package
 and runs client memory and IndexedDB persistence in separate processes. The
 Fireside gate crosses those two unmodified upstream workloads with both memory
 and disk/WAL server modes (four required cells, zero added exclusions).
-For local plaintext emulator runs, the persistence build's memory and IndexedDB
-describes execute in separate browser processes. This preserves every test
-selected by the official build while avoiding a Chrome HTTP/1.1 transport-pool
-stall reproduced against both official Java v1.22.0 and Fireside; the gate
-records both partition filters and forbids user-supplied filters.
+For local plaintext emulator runs, every frozen transport-lifetime partition
+executes in a fresh browser process. Before launching a server, the runner
+verifies that the 22 included source files and all 28 top-level suites match the
+pinned source fixture exactly, including the three source files excluded by
+Google's own integration package build. Top-level suites are isolated by
+default; `database`, `queries`, and `query-to-pipeline` are divided into
+consecutive groups of at most five immediate test or suite registrations, and
+each immediate `pipelines` suite is isolated. Scoped suites run separately for
+each outer persistence mode, while the unscoped provider suite runs once. The
+resulting plans contain 66 browser processes for the memory build and 131 for
+the persistence build and are locked by SHA-256.
+
+This preserves every test selected by the official build while avoiding a
+Chrome HTTP/1.1 six-connection transport-pool stall reproduced against both
+official Java v1.22.0 and Fireside, including within a 120-test isolated
+Database source partition. The gate records every partition name, generated
+coverage filter, completed count, and native skip, and forbids a user-supplied
+filter.
 `firebase-admin-node` follows. CI generates a per-area README scoreboard from
 machine-readable results; manual claims are prohibited.
 

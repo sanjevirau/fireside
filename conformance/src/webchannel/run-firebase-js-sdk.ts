@@ -25,6 +25,27 @@ interface Arguments {
   readonly sdkDirectory: string;
 }
 
+interface SdkGateFixture {
+  readonly firebaseJsSdkRevision: string;
+}
+
+interface BrowserProcessPartition {
+  readonly coverageFilter: string;
+  readonly partitionName: string;
+}
+
+interface BrowserProcessPlans {
+  readonly plans: Readonly<
+    Record<
+      "memory" | "persistence",
+      {
+        readonly partitionPlanSha256: string;
+        readonly partitions: readonly BrowserProcessPartition[];
+      }
+    >
+  >;
+}
+
 async function main(): Promise<void> {
   const arguments_ = parseArguments(process.argv.slice(2));
   const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -43,6 +64,32 @@ async function main(): Promise<void> {
       `firebase-js-sdk revision ${sdkRevision} does not match ${FIREBASE_JS_SDK_REVISION}`,
     );
   }
+  const gateFixturePath = join(
+    repositoryRoot,
+    "conformance",
+    "fixtures",
+    "webchannel-v8",
+    "firebase-js-sdk-integration-gate.json",
+  );
+  const gateFixture = JSON.parse(
+    await readFile(gateFixturePath, "utf8"),
+  ) as SdkGateFixture;
+  if (gateFixture.firebaseJsSdkRevision !== FIREBASE_JS_SDK_REVISION) {
+    throw new Error("firebase-js-sdk gate fixture revision is not pinned");
+  }
+  const browserProcessPlans = JSON.parse(
+    await capturedCommand(
+      "node",
+      [
+        join(scriptDirectory, "build-firebase-js-sdk-partitions.cjs"),
+        sdkDirectory,
+        gateFixturePath,
+      ],
+      repositoryRoot,
+    ),
+  ) as BrowserProcessPlans;
+  const browserProcessPlan =
+    browserProcessPlans.plans[arguments_.clientPersistence];
 
   const generatedMetadataPaths = [
     join(sdkDirectory, "packages", "app", "package.json"),
@@ -111,12 +158,8 @@ async function main(): Promise<void> {
 
     try {
       await waitUntilListening(server, PORT);
-      const coverageFilters =
-        arguments_.clientPersistence === "memory"
-          ? [undefined]
-          : ["\\(Persistence=memory_lru_gc\\)", "\\(Persistence=indexeddb\\)"];
       const processPartitions = [];
-      for (const coverageFilter of coverageFilters) {
+      for (const partition of browserProcessPlan.partitions) {
         const karmaArguments = [
           "--cwd",
           integrationDirectory,
@@ -125,10 +168,11 @@ async function main(): Promise<void> {
           join(scriptDirectory, "firebase-js-sdk-karma.conf.cjs"),
           "--single-run",
         ];
-        const effectiveFilter = combineFilters(coverageFilter, arguments_.grep);
-        if (effectiveFilter !== undefined) {
-          karmaArguments.push("--grep", effectiveFilter);
-        }
+        const effectiveFilter = combineFilters(
+          partition.coverageFilter,
+          arguments_.grep,
+        );
+        karmaArguments.push("--grep", effectiveFilter);
         const karmaOutput = await runObservedCommand(
           "yarn",
           karmaArguments,
@@ -141,8 +185,9 @@ async function main(): Promise<void> {
           },
         );
         processPartitions.push({
-          coverageFilter: coverageFilter ?? null,
-          effectiveFilter: effectiveFilter ?? null,
+          coverageFilter: partition.coverageFilter,
+          effectiveFilter,
+          partitionName: partition.partitionName,
           ...parseKarmaEvidence(karmaOutput),
         });
       }
@@ -168,6 +213,7 @@ async function main(): Promise<void> {
           0,
         ),
         passed: true,
+        partitionPlanSha256: browserProcessPlan.partitionPlanSha256,
         processPartitions,
         projectId: PROJECT_ID,
         schemaVersion: 1,
@@ -199,16 +245,13 @@ async function main(): Promise<void> {
 }
 
 function combineFilters(
-  coverageFilter: string | undefined,
+  coverageFilter: string,
   userFilter: string | undefined,
-): string | undefined {
-  if (coverageFilter === undefined) {
-    return userFilter;
-  }
+): string {
   if (userFilter === undefined) {
     return coverageFilter;
   }
-  return `(?=.*${coverageFilter})(?=.*${userFilter})`;
+  return `(?=${coverageFilter})(?=.*(?:${userFilter}))`;
 }
 
 function parseArguments(arguments_: readonly string[]): Arguments {

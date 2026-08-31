@@ -54,6 +54,19 @@ interface BrowserVariantEvidence {
   };
 }
 
+interface FirebaseSdkBrowserProcessPlan {
+  readonly chunkedSourcePartitions: readonly string[];
+  readonly expectedPlanSha256: Readonly<Record<string, string>>;
+  readonly expectedProcessPartitions: Readonly<Record<string, number>>;
+  readonly isolatedImmediateSuiteSourcePartitions: readonly string[];
+  readonly maximumImmediateChildrenPerProcess: number;
+  readonly outerPersistenceModes: Readonly<
+    Record<string, readonly string[]>
+  >;
+  readonly strategy: string;
+  readonly unscopedSuitePolicy: string;
+}
+
 interface Phase2Manifest {
   readonly evidence: {
     readonly requiredFiles: readonly string[];
@@ -64,9 +77,7 @@ interface Phase2Manifest {
       readonly commands: readonly string[];
     };
     readonly firebaseJsSdkIntegration: {
-      readonly browserProcessPartitions: Readonly<
-        Record<string, readonly (string | null)[]>
-      >;
+      readonly browserProcessPlan: FirebaseSdkBrowserProcessPlan;
       readonly clientPersistenceModes: readonly string[];
       readonly requiredMatrixCells: number;
       readonly serverModes: readonly string[];
@@ -133,6 +144,27 @@ const existingConformanceCommands = [
   "npm run test:official-export-import --prefix conformance",
   "npm run test:fireside-export-java-import --prefix conformance",
 ] as const;
+
+const firebaseSdkBrowserProcessPlan = {
+  strategy: "top-level-suite-with-immediate-child-chunks",
+  maximumImmediateChildrenPerProcess: 5,
+  chunkedSourcePartitions: ["database", "queries", "query-to-pipeline"],
+  isolatedImmediateSuiteSourcePartitions: ["pipelines"],
+  outerPersistenceModes: {
+    memory: ["memory_lru_gc"],
+    persistence: ["memory_lru_gc", "indexeddb"],
+  },
+  unscopedSuitePolicy: "once-per-client-build",
+  expectedProcessPartitions: {
+    memory: 66,
+    persistence: 131,
+  },
+  expectedPlanSha256: {
+    memory: "dc34ccdf301afa74aa9eb83e2c944dc9b7614cd8d01d494c706601b123ed8c11",
+    persistence:
+      "80688193a06f9f1dca791ca1e84905a8ba6d1f61ee7d24832eaa14a367ab0a11",
+  },
+} as const;
 
 async function main(): Promise<void> {
   const arguments_ = parseArguments(process.argv.slice(2));
@@ -304,9 +336,11 @@ async function runFirebaseSdkGate(
         nativeSkipNames?: readonly string[];
         nativeSkips?: number;
         passed?: boolean;
+        partitionPlanSha256?: string;
         processPartitions?: readonly {
-          readonly coverageFilter?: string | null;
+          readonly coverageFilter?: string;
           readonly completedTests?: number;
+          readonly partitionName?: string;
         }[];
         sourcePackage?: string;
       };
@@ -321,7 +355,14 @@ async function runFirebaseSdkGate(
         (result.completedTests ?? 0) <= 0 ||
         !Number.isInteger(result.nativeSkips) ||
         !Array.isArray(result.nativeSkipNames) ||
-        !validSdkProcessPartitions(clientPersistence, result.processPartitions)
+        result.partitionPlanSha256 !==
+          manifest.gates.firebaseJsSdkIntegration.browserProcessPlan
+            .expectedPlanSha256[clientPersistence] ||
+        !validSdkProcessPartitions(
+          manifest.gates.firebaseJsSdkIntegration.browserProcessPlan
+            .expectedProcessPartitions[clientPersistence],
+          result.processPartitions,
+        )
       ) {
         throw new Error(
           `${mode}/${clientPersistence} firebase-js-sdk evidence is incomplete`,
@@ -605,17 +646,10 @@ function assertFrozenPlan(manifest: Phase2Manifest): void {
       "firebase-js-sdk gate runner does not match the frozen matrix",
     );
   }
-  const expectedPartitions = {
-    memory: [null],
-    persistence: [
-      "\\(Persistence=memory_lru_gc\\)",
-      "\\(Persistence=indexeddb\\)",
-    ],
-  };
   if (
     JSON.stringify(
-      manifest.gates.firebaseJsSdkIntegration.browserProcessPartitions,
-    ) !== JSON.stringify(expectedPartitions)
+      manifest.gates.firebaseJsSdkIntegration.browserProcessPlan,
+    ) !== JSON.stringify(firebaseSdkBrowserProcessPlan)
   ) {
     throw new Error(
       "firebase-js-sdk process partitions do not match the frozen manifest",
@@ -624,26 +658,30 @@ function assertFrozenPlan(manifest: Phase2Manifest): void {
 }
 
 function validSdkProcessPartitions(
-  clientPersistence: "memory" | "persistence",
+  expectedPartitionCount: number | undefined,
   partitions:
     | readonly {
-        readonly coverageFilter?: string | null;
+        readonly coverageFilter?: string;
         readonly completedTests?: number;
+        readonly partitionName?: string;
       }[]
     | undefined,
 ): boolean {
-  if (partitions === undefined) {
+  if (
+    partitions === undefined ||
+    expectedPartitionCount === undefined ||
+    partitions.length !== expectedPartitionCount
+  ) {
     return false;
   }
-  const expectedFilters =
-    clientPersistence === "memory"
-      ? [null]
-      : ["\\(Persistence=memory_lru_gc\\)", "\\(Persistence=indexeddb\\)"];
+  const partitionNames = partitions.map(({ partitionName }) => partitionName);
   return (
-    JSON.stringify(partitions.map((partition) => partition.coverageFilter)) ===
-      JSON.stringify(expectedFilters) &&
+    partitionNames.every((name): name is string => typeof name === "string") &&
+    new Set(partitionNames).size === partitionNames.length &&
     partitions.every(
       (partition) =>
+        typeof partition.coverageFilter === "string" &&
+        partition.coverageFilter.length > 0 &&
         Number.isInteger(partition.completedTests) &&
         (partition.completedTests ?? 0) > 0,
     )
