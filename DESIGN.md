@@ -1195,6 +1195,20 @@ Firestore `Value` oneof while decoding. A rejected Listen target is an in-band
 bidirectional stream stays open so rejection of one target cannot terminate
 other multiplexed targets.
 
+### 7.12 Reserved resource identifiers and numeric Datastore IDs
+
+The paired `reserved-resource-id-error` captures prove that both official Java
+v1.22.0 and production reject a query parent containing `__badpath__` with
+`INVALID_ARGUMENT` and the exact browser-visible message
+`Resource id "__badpath__" is invalid because it is reserved.` The reserved
+namespace is not an unconditional `__.*__` ban, however. The
+`numeric-resource-id-ordering` captures exercise signed 64-bit numeric
+Datastore identifiers including `__id-2__`, `__id7__`, and both integer bounds
+through the vanilla SDK in long-polling and streaming modes. Both live oracles
+accept those identifiers and order them by their embedded signed integer before
+ordinary string document IDs. Fireside must preserve that exception while
+continuing to reject other reserved identifiers.
+
 ## 8. Export and import contract
 
 Firestore export data under

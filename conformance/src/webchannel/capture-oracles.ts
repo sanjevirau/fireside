@@ -35,6 +35,7 @@ type BrowserScenario =
   | "bundle-nanosecond-read-time"
   | "listen"
   | "multiple-inequality-query"
+  | "numeric-resource-id-ordering"
   | "reconnect-replay"
   | "reserved-resource-id-error"
   | "transaction-commit"
@@ -139,6 +140,15 @@ const CAPTURE_CASES: readonly CaptureCase[] = [
     runs: [
       { scenario: "reserved-resource-id-error", variant: "long-poll" },
       { scenario: "reserved-resource-id-error", variant: "streaming" },
+    ],
+  },
+  {
+    directory: "numeric-resource-id-ordering",
+    hypothesis:
+      "Signed 64-bit Datastore numeric resource IDs are accepted and sort numerically before ordinary string IDs",
+    runs: [
+      { scenario: "numeric-resource-id-ordering", variant: "long-poll" },
+      { scenario: "numeric-resource-id-ordering", variant: "streaming" },
     ],
   },
   {

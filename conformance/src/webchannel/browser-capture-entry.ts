@@ -2,6 +2,7 @@ import { deleteApp, initializeApp } from "firebase/app";
 import {
   collection,
   count,
+  deleteDoc,
   doc,
   documentId,
   FieldPath,
@@ -31,6 +32,7 @@ type CaptureScenario =
   | "bundle-nanosecond-read-time"
   | "listen"
   | "multiple-inequality-query"
+  | "numeric-resource-id-ordering"
   | "reconnect-replay"
   | "reserved-resource-id-error"
   | "transaction-commit"
@@ -256,6 +258,42 @@ window.firesideRunWebChannelCapture = async (
             } catch (error) {
               observations.push(observeError(error));
             }
+          }
+        }
+        break;
+      case "numeric-resource-id-ordering":
+        {
+          const numericIdCollection = collection(
+            firestore,
+            "fireside_webchannel_capture_numeric_ids",
+          );
+          const numericIds = [
+            "__id-9223372036854775808__",
+            "__id-2__",
+            "__id7__",
+            "__id9223372036854775807__",
+          ] as const;
+          try {
+            for (const identifier of numericIds) {
+              await setDoc(doc(numericIdCollection, identifier), {
+                identifier,
+                synthetic: true,
+              });
+            }
+            await setDoc(doc(numericIdCollection, "plain"), {
+              identifier: "plain",
+              synthetic: true,
+            });
+            observations.push(
+              (await getDocs(query(numericIdCollection, orderBy(documentId()))))
+                .docs.map((snapshot) => snapshot.id),
+            );
+          } finally {
+            await Promise.allSettled(
+              [...numericIds, "plain"].map((identifier) =>
+                deleteDoc(doc(numericIdCollection, identifier))
+              ),
+            );
           }
         }
         break;

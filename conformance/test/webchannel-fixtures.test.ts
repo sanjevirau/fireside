@@ -20,6 +20,7 @@ const CASES = [
   "write-missing-update-error",
   "write-overlap",
   "multiple-inequality-query",
+  "numeric-resource-id-ordering",
   "reserved-resource-id-error",
   "backchannel-reconnect-replay",
   "unicode-framing",
@@ -252,6 +253,26 @@ for (const target of TARGETS) {
 }
 
 for (const target of TARGETS) {
+  test(`${target.name} numeric resource ID fixture pins the reserved-namespace exception`, async () => {
+    const contract = await readContract(
+      target.directory,
+      "numeric-resource-id-ordering",
+    );
+    const encoded = JSON.stringify(contract);
+
+    assert.ok(hasQueryValue(contract, "CI", "0"));
+    assert.ok(hasQueryValue(contract, "CI", "1"));
+    for (const identifier of [
+      "__id-9223372036854775808__",
+      "__id-2__",
+      "__id7__",
+      "__id9223372036854775807__",
+    ]) {
+      assert.ok(encoded.includes(identifier), `missing ${identifier}`);
+    }
+    assert.doesNotMatch(encoded, /invalid because it is reserved/u);
+  });
+
   test(`${target.name} reserved resource ID fixture pins the exact browser-visible error`, async () => {
     const contract = await readContract(
       target.directory,
