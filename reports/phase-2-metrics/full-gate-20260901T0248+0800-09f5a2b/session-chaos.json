@@ -1,0 +1,35 @@
+{
+  "command": {
+    "command": "cargo test --locked -p fireside-webchannel-front --test session_chaos",
+    "completedAt": "2026-08-31T19:20:25.858Z",
+    "durationMilliseconds": 1947,
+    "exitCode": 0,
+    "log": "logs/session-chaos.log",
+    "passed": true,
+    "signal": null,
+    "startedAt": "2026-08-31T19:20:23.911Z"
+  },
+  "deterministicSeed": "fireside-phase-2-webchannel-v1",
+  "droppedBackchannelsPerVariant": 50,
+  "duplicateFirestoreEffects": 0,
+  "duplicateMapDeliveriesPerVariant": 50,
+  "lostAcknowledgedArrays": 0,
+  "nonConsecutiveReplayArrays": 0,
+  "overlappingForwardPostPairsPerVariant": 50,
+  "passed": true,
+  "retriedForwardPostsPerVariant": 50,
+  "schemaVersion": 1,
+  "unicodePayloads": [
+    "ASCII",
+    "火側",
+    "🔥",
+    "A火🔥éZ",
+    "文書/emoji-😀/mixed-火"
+  ],
+  "unknownSidMismatches": 0,
+  "unknownSidRequestsPerVariant": 25,
+  "variants": [
+    "long-polling",
+    "streaming"
+  ]
+}

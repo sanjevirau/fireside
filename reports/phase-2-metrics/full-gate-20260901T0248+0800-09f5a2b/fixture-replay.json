@@ -1,0 +1,39 @@
+{
+  "capturedCasesPerTarget": 10,
+  "commands": [
+    {
+      "command": "cargo test --locked -p fireside-webchannel-front --test oracle_replay",
+      "completedAt": "2026-08-31T18:50:12.699Z",
+      "durationMilliseconds": 34139,
+      "exitCode": 0,
+      "log": "logs/fixture-rust-replay.log",
+      "passed": true,
+      "signal": null,
+      "startedAt": "2026-08-31T18:49:38.560Z"
+    },
+    {
+      "command": "node --import tsx --test test/webchannel-capture.test.ts test/webchannel-fixtures.test.ts",
+      "completedAt": "2026-08-31T18:50:13.080Z",
+      "durationMilliseconds": 380,
+      "exitCode": 0,
+      "log": "logs/fixture-typescript-replay.log",
+      "passed": true,
+      "signal": null,
+      "startedAt": "2026-08-31T18:50:12.700Z"
+    }
+  ],
+  "mismatches": 0,
+  "passed": true,
+  "schemaVersion": 1,
+  "targets": [
+    "java-v1.22.0",
+    "production-cloud-firestore"
+  ],
+  "unicodePayloads": [
+    "ASCII",
+    "火側",
+    "🔥",
+    "A火🔥éZ",
+    "文書/emoji-😀/mixed-火"
+  ]
+}
