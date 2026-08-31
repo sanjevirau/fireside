@@ -109,6 +109,26 @@ enum DatabaseEdition {
     Enterprise,
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ValueEnum)]
+enum CaptureTransport {
+    Http1,
+    Http2,
+    #[default]
+    WebChannel,
+    WebSocket,
+}
+
+impl From<CaptureTransport> for fireside_capture_proxy::Transport {
+    fn from(transport: CaptureTransport) -> Self {
+        match transport {
+            CaptureTransport::Http1 => Self::Http1,
+            CaptureTransport::Http2 => Self::Http2,
+            CaptureTransport::WebChannel => Self::WebChannel,
+            CaptureTransport::WebSocket => Self::WebSocket,
+        }
+    }
+}
+
 #[derive(Debug, Args, PartialEq, Eq)]
 struct FirestoreArgs {
     #[arg(long, default_value = "127.0.0.1")]
@@ -170,6 +190,9 @@ struct CaptureProxyArgs {
     /// RFC 3339 timestamp supplied by the deterministic capture harness.
     #[arg(long = "recorded-at")]
     recorded_at: String,
+    /// Wire transport represented by the captured fixture.
+    #[arg(long, value_enum, default_value_t)]
+    transport: CaptureTransport,
 }
 
 fn main() -> ExitCode {
@@ -211,7 +234,7 @@ fn run_capture_proxy_runtime(arguments: &CaptureProxyArgs) -> ExitCode {
             target_version: arguments.target_version.clone(),
             sdk: arguments.sdk.clone(),
             recorded_at: arguments.recorded_at.clone(),
-            transport: fireside_capture_proxy::Transport::WebChannel,
+            transport: arguments.transport.into(),
         },
     };
     let runtime = match tokio::runtime::Builder::new_multi_thread()
@@ -654,6 +677,7 @@ mod tests {
         };
         assert_eq!(arguments.port, 9091);
         assert_eq!(arguments.target, "java");
+        assert_eq!(arguments.transport, CaptureTransport::WebChannel);
     }
 
     #[test]

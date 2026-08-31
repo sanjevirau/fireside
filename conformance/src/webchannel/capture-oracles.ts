@@ -28,6 +28,7 @@ const JAVA_JAR_SHA256 =
 
 type CaptureTarget = "cloud" | "java";
 type BrowserScenario =
+  | "aggregation-count"
   | "listen"
   | "reconnect-replay"
   | "unicode-framing"
@@ -38,8 +39,10 @@ type TransportVariant = "long-poll" | "streaming";
 
 interface CaptureCase {
   readonly directory: string;
+  readonly fixtureRoot?: "rest-v1" | "webchannel-v8";
   readonly hypothesis: string;
   readonly runs: readonly BrowserRun[];
+  readonly transport?: "http1" | "web-channel";
 }
 
 interface BrowserRun {
@@ -59,6 +62,13 @@ interface TargetRuntime {
 }
 
 const CAPTURE_CASES: readonly CaptureCase[] = [
+  {
+    directory: "aggregation-count",
+    fixtureRoot: "rest-v1",
+    hypothesis: "Browser RunAggregationQuery count request and response envelope",
+    runs: [{ scenario: "aggregation-count", variant: "long-poll" }],
+    transport: "http1",
+  },
   {
     directory: "listen-long-poll",
     hypothesis: "Listen handshake and backchannel in forced long-polling mode",
@@ -207,6 +217,8 @@ async function captureCaseAgainstTarget(options: {
       FIREBASE_SDK,
       "--recorded-at",
       recordedAt,
+      "--transport",
+      captureCase.transport ?? "web-channel",
     ],
     repositoryRoot,
   );
@@ -273,7 +285,7 @@ async function captureCaseAgainstTarget(options: {
     const contract = decodeCaptureFixture(fixture);
     const outputDirectory = join(
       conformanceRoot,
-      "fixtures/webchannel-v8",
+      `fixtures/${captureCase.fixtureRoot ?? "webchannel-v8"}`,
       runtime.outputName,
       captureCase.directory,
     );
@@ -380,6 +392,23 @@ async function prepareSyntheticDocument(
   captureCase: CaptureCase,
 ): Promise<void> {
   await deleteSyntheticDocument(runtime);
+  if (captureCase.runs.some((run) => run.scenario === "aggregation-count")) {
+    for (const [document, sequence] of [[DOCUMENT, 1], ["oracle-second", 2]] as const) {
+      const response = await firestoreRestRequest(runtime, "PATCH", {
+        fields: {
+          capture: { stringValue: captureCase.directory },
+          sequence: { integerValue: String(sequence) },
+          synthetic: { booleanValue: true },
+        },
+      }, document);
+      if (!response.ok) {
+        throw new Error(
+          `synthetic aggregate seed failed with HTTP ${String(response.status)}: ${await response.text()}`,
+        );
+      }
+    }
+    return;
+  }
   if (!captureCase.runs.some((run) =>
     run.scenario === "listen" || run.scenario === "reconnect-replay"
   )) {

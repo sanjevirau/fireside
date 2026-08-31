@@ -1073,6 +1073,22 @@ confirms that this media type is accepted and still returns JSON.
 This is transport compatibility required by the unchanged upstream suite; it
 does not add rules enforcement or relax the Phase 3 boundary.
 
+### 7.9 Browser aggregation REST envelope
+
+The capture proxy records the pinned vanilla SDK's count request against both
+official Java v1.22.0 and production Cloud Firestore in
+`conformance/fixtures/rest-v1/*/aggregation-count`. After the browser CORS
+preflight, both oracles receive `POST .../documents:runAggregationQuery` with
+`Content-Type: text/plain` and a `structuredAggregationQuery` whose count alias
+is `aggregate_0`. Both return a JSON array containing a result with
+`aggregateFields.aggregate_0.integerValue` encoded as a decimal string and an
+RFC 3339 `readTime`.
+
+Java also emits `done: true`; production omits that field. Fireside follows the
+production envelope and records Java's extra completion marker as an observed
+design difference. The capture used exactly two expiring synthetic documents
+in the authorized cloud project and removed both after recording.
+
 ## 8. Export and import contract
 
 Firestore export data under

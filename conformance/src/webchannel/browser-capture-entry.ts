@@ -1,6 +1,8 @@
 import { deleteApp, initializeApp } from "firebase/app";
 import {
+  collection,
   doc,
+  getCountFromServer,
   initializeFirestore,
   onSnapshot,
   setDoc,
@@ -9,6 +11,7 @@ import {
 } from "firebase/firestore";
 
 type CaptureScenario =
+  | "aggregation-count"
   | "listen"
   | "reconnect-replay"
   | "unicode-framing"
@@ -74,6 +77,11 @@ window.firesideRunWebChannelCapture = async (
 
   try {
     switch (configuration.scenario) {
+      case "aggregation-count":
+        observations.push(
+          (await getCountFromServer(collection(firestore, COLLECTION))).data(),
+        );
+        break;
       case "listen":
       case "reconnect-replay":
         observations.push(await observeOneSnapshot(reference));
