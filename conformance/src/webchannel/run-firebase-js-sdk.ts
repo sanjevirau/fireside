@@ -12,6 +12,11 @@ import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  isAcceptedKarmaProcess,
+  parseKarmaEvidence,
+} from "./firebase-js-sdk-karma-evidence.ts";
+
 const FIREBASE_JS_SDK_REVISION = "6cde0c0230b4c1da01d4a058333daa7663322fd1";
 const HOST = "127.0.0.1";
 const PORT = 8080;
@@ -173,7 +178,7 @@ async function main(): Promise<void> {
           arguments_.grep,
         );
         karmaArguments.push("--grep", effectiveFilter);
-        const karmaOutput = await runObservedCommand(
+        const karmaProcess = await runObservedCommand(
           "yarn",
           karmaArguments,
           sdkDirectory,
@@ -184,11 +189,20 @@ async function main(): Promise<void> {
             FIRESTORE_EMULATOR_PROJECT_ID: PROJECT_ID,
           },
         );
+        const karmaEvidence = parseKarmaEvidence(karmaProcess.output);
+        if (!isAcceptedKarmaProcess(karmaProcess, karmaEvidence)) {
+          throw new Error(
+            `upstream Karma partition ${partition.partitionName} exited with code ${String(karmaProcess.exitCode)} and signal ${String(karmaProcess.signal)}`,
+          );
+        }
         processPartitions.push({
           coverageFilter: partition.coverageFilter,
           effectiveFilter,
+          exitCode: karmaProcess.exitCode,
+          nativeSkipOnly: karmaProcess.exitCode !== 0,
           partitionName: partition.partitionName,
-          ...parseKarmaEvidence(karmaOutput),
+          signal: karmaProcess.signal,
+          ...karmaEvidence,
         });
       }
       const summary = {
@@ -308,30 +322,6 @@ function parseArguments(arguments_: readonly string[]): Arguments {
   };
 }
 
-function parseKarmaEvidence(output: string): {
-  readonly completedTests: number;
-  readonly nativeSkipNames: readonly string[];
-  readonly nativeSkips: number;
-} {
-  const plain = output.replaceAll(/\u001b\[[0-9;]*m/gu, "");
-  const completed = /TOTAL:\s+(\d+)\s+SUCCESS/gu.exec(plain)?.[1];
-  if (completed === undefined) {
-    throw new Error(
-      "upstream Karma output did not report its completed test count",
-    );
-  }
-  const nativeSkipNames = [
-    ...plain.matchAll(/^\s*✖\s+(.+?)\s+\(skipped\)\s*$/gmu),
-  ]
-    .map((match) => match[1])
-    .filter((name): name is string => name !== undefined);
-  return {
-    completedTests: Number.parseInt(completed, 10),
-    nativeSkipNames: [...new Set(nativeSkipNames)].sort(),
-    nativeSkips: nativeSkipNames.length,
-  };
-}
-
 async function capturedCommand(
   command: string,
   arguments_: readonly string[],
@@ -392,8 +382,12 @@ async function runObservedCommand(
   arguments_: readonly string[],
   cwd: string,
   environment: NodeJS.ProcessEnv,
-): Promise<string> {
-  return await new Promise<string>((resolvePromise, reject) => {
+): Promise<{
+  readonly exitCode: number | null;
+  readonly output: string;
+  readonly signal: NodeJS.Signals | null;
+}> {
+  return await new Promise((resolvePromise, reject) => {
     const child = spawn(command, arguments_, {
       cwd,
       env: environment,
@@ -410,15 +404,11 @@ async function runObservedCommand(
     });
     child.once("error", reject);
     child.once("exit", (code, signal) => {
-      if (code === 0) {
-        resolvePromise(Buffer.concat(chunks).toString("utf8"));
-        return;
-      }
-      reject(
-        new Error(
-          `${command} exited with code ${String(code)} and signal ${String(signal)}`,
-        ),
-      );
+      resolvePromise({
+        exitCode: code,
+        output: Buffer.concat(chunks).toString("utf8"),
+        signal,
+      });
     });
   });
 }

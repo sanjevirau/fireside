@@ -340,7 +340,12 @@ async function runFirebaseSdkGate(
         processPartitions?: readonly {
           readonly coverageFilter?: string;
           readonly completedTests?: number;
+          readonly exitCode?: number;
+          readonly failedTests?: number;
+          readonly nativeSkipOnly?: boolean;
+          readonly nativeSkips?: number;
           readonly partitionName?: string;
+          readonly signal?: string | null;
         }[];
         sourcePackage?: string;
       };
@@ -664,7 +669,12 @@ function validSdkProcessPartitions(
     | readonly {
         readonly coverageFilter?: string;
         readonly completedTests?: number;
+        readonly exitCode?: number;
+        readonly failedTests?: number;
+        readonly nativeSkipOnly?: boolean;
+        readonly nativeSkips?: number;
         readonly partitionName?: string;
+        readonly signal?: string | null;
       }[]
     | undefined,
 ): boolean {
@@ -679,13 +689,28 @@ function validSdkProcessPartitions(
   return (
     partitionNames.every((name): name is string => typeof name === "string") &&
     new Set(partitionNames).size === partitionNames.length &&
-    partitions.every(
-      (partition) =>
+    partitions.every((partition) => {
+      const completedTests = partition.completedTests ?? -1;
+      const failedTests = partition.failedTests ?? -1;
+      const nativeSkips = partition.nativeSkips ?? -1;
+      const executionOutcomeIsValid =
+        (completedTests > 0 &&
+          partition.exitCode === 0 &&
+          partition.nativeSkipOnly === false) ||
+        (completedTests === 0 &&
+          nativeSkips > 0 &&
+          partition.exitCode === 1 &&
+          partition.nativeSkipOnly === true);
+      return (
         typeof partition.coverageFilter === "string" &&
         partition.coverageFilter.length > 0 &&
-        Number.isInteger(partition.completedTests) &&
-        (partition.completedTests ?? 0) > 0,
-    )
+        Number.isInteger(completedTests) &&
+        failedTests === 0 &&
+        Number.isInteger(nativeSkips) &&
+        partition.signal === null &&
+        executionOutcomeIsValid
+      );
+    })
   );
 }
 
