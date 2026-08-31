@@ -27,6 +27,12 @@ const ORACLE_FIXTURES: &[(&str, &str)] = &[
         ),
     ),
     (
+        "java/bundle-nanosecond-read-time",
+        include_str!(
+            "../../../conformance/fixtures/webchannel-v8/java-v1.22.0/bundle-nanosecond-read-time/decoded-contract.json"
+        ),
+    ),
+    (
         "java/write-long-poll",
         include_str!(
             "../../../conformance/fixtures/webchannel-v8/java-v1.22.0/write-long-poll/decoded-contract.json"
@@ -78,6 +84,12 @@ const ORACLE_FIXTURES: &[(&str, &str)] = &[
         "cloud/listen-streaming",
         include_str!(
             "../../../conformance/fixtures/webchannel-v8/production-cloud-firestore/listen-streaming/decoded-contract.json"
+        ),
+    ),
+    (
+        "cloud/bundle-nanosecond-read-time",
+        include_str!(
+            "../../../conformance/fixtures/webchannel-v8/production-cloud-firestore/bundle-nanosecond-read-time/decoded-contract.json"
         ),
     ),
     (
