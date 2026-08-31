@@ -1,6 +1,7 @@
 use fireside_grpc_front::google::firestore::v1::{
     ListenRequest, ListenResponse, WriteRequest, WriteResponse,
 };
+use fireside_grpc_front::google::firestore::v1::{listen_response, value};
 use serde_json::Value as JsonValue;
 
 use crate::BackendError;
@@ -14,17 +15,117 @@ pub(crate) fn decode_write_request(value: JsonValue) -> Result<WriteRequest, Bac
 }
 
 pub(crate) fn encode_listen_response(response: ListenResponse) -> Result<JsonValue, BackendError> {
-    encode_response(response)
+    let mut encoded = encode_response(&response)?;
+    if let Some(listen_response::ResponseType::DocumentChange(change)) =
+        response.response_type.as_ref()
+        && let Some(document) = change.document.as_ref()
+        && let Some(fields) = encoded
+            .get_mut("documentChange")
+            .and_then(|change| change.get_mut("document"))
+            .and_then(|document| document.get_mut("fields"))
+    {
+        normalize_field_special_doubles(&document.fields, fields);
+    }
+    Ok(encoded)
 }
 
 pub(crate) fn encode_write_response(response: WriteResponse) -> Result<JsonValue, BackendError> {
-    encode_response(response)
+    let mut encoded = encode_response(&response)?;
+    if let Some(write_results) = encoded
+        .get_mut("writeResults")
+        .and_then(JsonValue::as_array_mut)
+    {
+        for (result, encoded_result) in response.write_results.iter().zip(write_results) {
+            let Some(transform_results) = encoded_result
+                .get_mut("transformResults")
+                .and_then(JsonValue::as_array_mut)
+            else {
+                continue;
+            };
+            for (transform, encoded_transform) in
+                result.transform_results.iter().zip(transform_results)
+            {
+                normalize_value_special_doubles(transform, encoded_transform);
+            }
+        }
+    }
+    Ok(encoded)
 }
 
-fn encode_response(response: impl serde::Serialize) -> Result<JsonValue, BackendError> {
+fn encode_response(response: &impl serde::Serialize) -> Result<JsonValue, BackendError> {
     let mut value = serde_json::to_value(response).map_err(|error| internal_json(&error))?;
     normalize_timestamp_offsets(&mut value);
     Ok(value)
+}
+
+fn normalize_field_special_doubles(
+    fields: &std::collections::HashMap<String, fireside_grpc_front::google::firestore::v1::Value>,
+    encoded: &mut JsonValue,
+) {
+    let Some(encoded) = encoded.as_object_mut() else {
+        return;
+    };
+    for (name, value) in fields {
+        if let Some(encoded_value) = encoded.get_mut(name) {
+            normalize_value_special_doubles(value, encoded_value);
+        }
+    }
+}
+
+fn normalize_value_special_doubles(
+    value: &fireside_grpc_front::google::firestore::v1::Value,
+    encoded: &mut JsonValue,
+) {
+    match value.value_type.as_ref() {
+        Some(value::ValueType::DoubleValue(number)) if !number.is_finite() => {
+            encoded["doubleValue"] = JsonValue::String(
+                if number.is_nan() {
+                    "NaN"
+                } else if number.is_sign_positive() {
+                    "Infinity"
+                } else {
+                    "-Infinity"
+                }
+                .to_owned(),
+            );
+        }
+        Some(value::ValueType::ArrayValue(array)) => {
+            let Some(encoded_values) = encoded
+                .get_mut("arrayValue")
+                .and_then(|array| array.get_mut("values"))
+                .and_then(JsonValue::as_array_mut)
+            else {
+                return;
+            };
+            for (value, encoded_value) in array.values.iter().zip(encoded_values) {
+                normalize_value_special_doubles(value, encoded_value);
+            }
+        }
+        Some(value::ValueType::MapValue(map)) => {
+            if let Some(encoded_fields) = encoded
+                .get_mut("mapValue")
+                .and_then(|map| map.get_mut("fields"))
+            {
+                normalize_field_special_doubles(&map.fields, encoded_fields);
+            }
+        }
+        Some(
+            value::ValueType::NullValue(_)
+            | value::ValueType::BooleanValue(_)
+            | value::ValueType::IntegerValue(_)
+            | value::ValueType::DoubleValue(_)
+            | value::ValueType::TimestampValue(_)
+            | value::ValueType::StringValue(_)
+            | value::ValueType::BytesValue(_)
+            | value::ValueType::ReferenceValue(_)
+            | value::ValueType::GeoPointValue(_)
+            | value::ValueType::FieldReferenceValue(_)
+            | value::ValueType::VariableReferenceValue(_)
+            | value::ValueType::FunctionValue(_)
+            | value::ValueType::PipelineValue(_),
+        )
+        | None => {}
+    }
 }
 
 fn normalize_timestamp_offsets(value: &mut JsonValue) {
@@ -177,6 +278,83 @@ mod tests {
             update.fields["nullable"].value_type,
             Some(ValueType::NullValue(0))
         );
+    }
+
+    #[test]
+    fn vector_special_doubles_round_trip_through_protobuf_json() {
+        let request = decode_write_request(json!({
+            "database": DATABASE,
+            "writes": [{
+                "update": {
+                    "name": DOCUMENT,
+                    "fields": {
+                        "embedding": {
+                            "mapValue": {
+                                "fields": {
+                                    "__type__": {"stringValue": "__vector__"},
+                                    "value": {
+                                        "arrayValue": {
+                                            "values": [
+                                                {"doubleValue": "-Infinity"},
+                                                {"doubleValue": "NaN"},
+                                                {"doubleValue": "Infinity"}
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }]
+        }))
+        .expect("special vector doubles should decode");
+        let update = request.writes[0]
+            .operation
+            .as_ref()
+            .and_then(|operation| match operation {
+                fireside_grpc_front::google::firestore::v1::write::Operation::Update(update) => {
+                    Some(update)
+                }
+                _ => None,
+            })
+            .expect("request should update a document");
+        let embedding = update.fields["embedding"].clone();
+        let Some(ValueType::MapValue(vector)) = embedding.value_type.as_ref() else {
+            panic!("embedding should remain a map value");
+        };
+        let Some(ValueType::ArrayValue(values)) = vector.fields["value"].value_type.as_ref() else {
+            panic!("vector components should remain an array value");
+        };
+        let components = values
+            .values
+            .iter()
+            .map(|value| match value.value_type {
+                Some(ValueType::DoubleValue(value)) => value,
+                _ => panic!("vector component should remain a double"),
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(components[0], f64::NEG_INFINITY);
+        assert!(components[1].is_nan());
+        assert_eq!(components[2], f64::INFINITY);
+
+        let document_change = encode_listen_response(ListenResponse {
+            response_type: Some(ResponseType::DocumentChange(DocumentChange {
+                document: Some(Document {
+                    name: DOCUMENT.to_owned(),
+                    fields: HashMap::from([("embedding".to_owned(), embedding)]),
+                    ..Document::default()
+                }),
+                target_ids: vec![1002],
+                removed_target_ids: Vec::new(),
+            })),
+        })
+        .expect("special vector doubles should encode");
+        let encoded = &document_change["documentChange"]["document"]["fields"]["embedding"]["mapValue"]
+            ["fields"]["value"]["arrayValue"]["values"];
+        assert_eq!(encoded[0]["doubleValue"], "-Infinity");
+        assert_eq!(encoded[1]["doubleValue"], "NaN");
+        assert_eq!(encoded[2]["doubleValue"], "Infinity");
     }
 
     #[test]
