@@ -23,6 +23,7 @@ They establish these Java-specific observations:
 | Concurrent forward advertisement | Java did not return `X-Client-Wire-Protocol` in these HTTP/1.1 browser captures. Cloud remains authoritative for the production advertisement. |
 | Overlapping Write requests | In both variants, two forward maps were sent before either write response and both carried the same last-acknowledged token `MA==`; Java accepted both and returned distinct next tokens `MQ==` and `Mg==`. |
 | Inequality queries | A numeric `<= 2` range excluded null, NaN, and missing fields while returning numeric 0 and 1. The multiple-range query returned the two matching documents. Invalid document-key ordering and equality combinations returned `INVALID_ARGUMENT` with stable client-visible diagnostics. |
+| Bundle read time | A named query loaded by the SDK sent `readTime=1970-01-01T00:16:40.000009999Z`. Both `CI=1` and `CI=0` accepted the nanosecond-precision expired checkpoint, emitted `RESET`, and returned the current limited result. |
 
 The production captures used the same pinned browser bundle and tiny synthetic
 collection in the allowlisted `fireside-conformance` project. Application
@@ -43,6 +44,7 @@ fixture entered capture state. No cloud project configuration was changed.
 | Unknown SID | Cloud returned HTTP 400 with its generic HTML error body containing the literal `Unknown SID`; the checked-in raw fixture preserves the exact redacted bytes. |
 | Overlapping Write requests | In both variants, two forward maps were sent before either write response and reused the same opaque last-acknowledged token. Cloud accepted both and advanced the returned token independently for each response. |
 | Inequality queries | The numeric range and both document-key validation errors agree with Java. The multiple-range query itself returned `FAILED_PRECONDITION` with an index-creation diagnostic because the tiny capture project deliberately has no matching composite index; Java's successful result is therefore the permissive-emulator oracle for default mode. |
+| Bundle read time | Cloud accepted the same SDK-generated `readTime=1970-01-01T00:16:40.000009999Z` in both `CI=1` and `CI=0` and returned the current limited result. The long-poll capture later emitted a `RESET`; the streaming capture completed without one, so Fireside treats acceptance and current-state delivery—not a variant-independent RESET position—as the production invariant. |
 
 The proxy records the browser's original `Accept-Encoding` header but asks the
 oracle for identity encoding. This capture-only normalization makes frames in
@@ -65,4 +67,7 @@ The replay tests assert structural invariants and use the decoded contract.
 The supplementary `write-overlap` case was added after the first real Fireside
 browser run exposed a stale-token rejection. It is an oracle fixture for the
 already-frozen overlapping-forward-channel gate, not an expansion or weakening
-of that gate.
+of that gate. The supplementary `bundle-nanosecond-read-time` case similarly
+pins a contract exposed by Google's own integration suite: historical unary
+selectors still reject sub-microsecond precision, while the browser bundle
+path legitimately sends a nanosecond-precision Listen checkpoint.

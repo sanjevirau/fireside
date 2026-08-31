@@ -10,6 +10,8 @@ import {
   getDoc,
   getDocs,
   initializeFirestore,
+  loadBundle,
+  namedQuery,
   onSnapshot,
   orderBy,
   query,
@@ -25,6 +27,7 @@ type CaptureScenario =
   | "aggregation-count"
   | "aggregation-composite-filter"
   | "aggregation-limit-error"
+  | "bundle-nanosecond-read-time"
   | "listen"
   | "multiple-inequality-query"
   | "reconnect-replay"
@@ -62,6 +65,7 @@ declare global {
 
 const COLLECTION = "fireside_webchannel_capture";
 const DOCUMENT = "oracle";
+const BUNDLE_COLLECTION = "fireside_webchannel_bundle_capture";
 
 window.firesideRunWebChannelCapture = async (
   configuration,
@@ -127,6 +131,37 @@ window.firesideRunWebChannelCapture = async (
           throw new Error("six aggregations unexpectedly succeeded");
         } catch (error) {
           observations.push(observeError(error));
+        }
+        break;
+      case "bundle-nanosecond-read-time":
+        await Promise.all([
+          setDoc(doc(firestore, BUNDLE_COLLECTION, "oracle-first"), {
+            bar: 0,
+            key: "first",
+          }),
+          setDoc(doc(firestore, BUNDLE_COLLECTION, "oracle-second"), {
+            bar: 0,
+            key: "second",
+          }),
+        ]);
+        await loadBundle(
+          firestore,
+          nanosecondReadTimeBundle(configuration.projectId),
+        );
+        {
+          const bundledQuery = await namedQuery(
+            firestore,
+            "nanosecond-read-time-limit",
+          );
+          if (bundledQuery === null) {
+            throw new Error("loaded bundle did not expose its named query");
+          }
+          observations.push(
+            (await getDocs(bundledQuery)).docs.map((snapshot) => ({
+              data: snapshot.data(),
+              id: snapshot.id,
+            })),
+          );
         }
         break;
       case "transaction-commit":
@@ -274,6 +309,67 @@ window.firesideRunWebChannelCapture = async (
     observations,
   };
 };
+
+function nanosecondReadTimeBundle(projectId: string): string {
+  const database = `projects/${projectId}/databases/(default)`;
+  const metadata = {
+    metadata: {
+      createTime: { nanos: 9999, seconds: 1001 },
+      id: "fireside-nanosecond-read-time",
+      totalBytes: 0,
+      totalDocuments: 2,
+      version: 1,
+    },
+  };
+  const elements = [
+    {
+      namedQuery: {
+        bundledQuery: {
+          limitType: "FIRST",
+          parent: `${database}/documents`,
+          structuredQuery: {
+            from: [{ collectionId: BUNDLE_COLLECTION }],
+            limit: { value: 1 },
+            orderBy: [
+              { direction: "DESCENDING", field: { fieldPath: "bar" } },
+              { direction: "DESCENDING", field: { fieldPath: "__name__" } },
+            ],
+          },
+        },
+        name: "nanosecond-read-time-limit",
+        readTime: { nanos: 9999, seconds: 1000 },
+      },
+    },
+    ...(["oracle-first", "oracle-second"] as const).flatMap((document, index) => [
+      {
+        documentMetadata: {
+          exists: true,
+          name: `${database}/documents/${BUNDLE_COLLECTION}/${document}`,
+          readTime: { nanos: 9999, seconds: 1000 },
+        },
+      },
+      {
+        document: {
+          createTime: { nanos: 9, seconds: 1 },
+          fields: {
+            bar: { integerValue: index + 1 },
+            key: { stringValue: index === 0 ? "first" : "second" },
+          },
+          name: `${database}/documents/${BUNDLE_COLLECTION}/${document}`,
+          updateTime: { nanos: 9, seconds: 1 },
+        },
+      },
+    ]),
+  ];
+  const encoder = new TextEncoder();
+  const encodedElements = elements.map((element) => JSON.stringify(element));
+  const bundleBody = encodedElements
+    .map((element) => `${String(encoder.encode(element).byteLength)}${element}`)
+    .join("");
+  metadata.metadata.totalBytes = encoder.encode(bundleBody).byteLength;
+  const encodedMetadata = JSON.stringify(metadata);
+  return `${String(encoder.encode(encodedMetadata).byteLength)}${encodedMetadata}${bundleBody}`;
+}
 
 function observeError(error: unknown): { code?: string; message: string } {
   const code = typeof error === "object" && error !== null && "code" in error

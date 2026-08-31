@@ -749,6 +749,19 @@ back to the complete current target, sends an existence filter whose
 the complete target, then `CURRENT`, extending its documented resume-path
 deviation.
 
+The browser bundle oracle adds a precision distinction that does not apply to
+the historical unary selectors above. Firebase JS SDK 12.18.0 loads a named
+query whose Listen target carries
+`readTime=1970-01-01T00:16:40.000009999Z`. Production Cloud Firestore and Java
+v1.22.0 accept that full nanosecond value in both forced long-polling and
+streaming modes and return the current limited result. Java emits `RESET`
+before the current snapshot in both captures. Cloud delivered the current
+snapshot directly in both variants and emitted a later `RESET` only in the
+long-poll capture, so RESET placement is not treated as a cross-variant
+constant. Fireside accepts full protobuf nanosecond precision specifically for
+Listen resume points while retaining the production-pinned microsecond limit
+for unary historical reads.
+
 A malformed three-byte opaque resume token has a separate production contract:
 the server sends a target-local `REMOVE` for the requested ID with status 3
 (`INVALID_ARGUMENT`) and exact message `bad resume token`, while keeping the

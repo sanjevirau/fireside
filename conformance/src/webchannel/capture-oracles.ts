@@ -32,6 +32,7 @@ type BrowserScenario =
   | "aggregation-count"
   | "aggregation-composite-filter"
   | "aggregation-limit-error"
+  | "bundle-nanosecond-read-time"
   | "listen"
   | "multiple-inequality-query"
   | "reconnect-replay"
@@ -112,6 +113,15 @@ const CAPTURE_CASES: readonly CaptureCase[] = [
     directory: "listen-streaming",
     hypothesis: "Listen handshake and backchannel in streaming mode",
     runs: [{ scenario: "listen", variant: "streaming" }],
+  },
+  {
+    directory: "bundle-nanosecond-read-time",
+    hypothesis:
+      "A named query loaded from an SDK bundle resumes Listen from a nanosecond-precision expired read time",
+    runs: [
+      { scenario: "bundle-nanosecond-read-time", variant: "long-poll" },
+      { scenario: "bundle-nanosecond-read-time", variant: "streaming" },
+    ],
   },
   {
     directory: "multiple-inequality-query",
@@ -512,6 +522,20 @@ async function deleteSyntheticDocument(runtime: TargetRuntime): Promise<void> {
     if (!response.ok && response.status !== 404) {
       throw new Error(
         `synthetic query cleanup failed with HTTP ${String(response.status)}: ${await response.text()}`,
+      );
+    }
+  }
+  for (const document of ["oracle-first", "oracle-second"]) {
+    const response = await firestoreRestRequest(
+      runtime,
+      "DELETE",
+      undefined,
+      document,
+      "fireside_webchannel_bundle_capture",
+    );
+    if (!response.ok && response.status !== 404) {
+      throw new Error(
+        `synthetic bundle cleanup failed with HTTP ${String(response.status)}: ${await response.text()}`,
       );
     }
   }

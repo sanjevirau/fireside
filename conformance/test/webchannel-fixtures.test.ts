@@ -13,6 +13,7 @@ import type {
 const CASES = [
   "listen-long-poll",
   "listen-streaming",
+  "bundle-nanosecond-read-time",
   "write-long-poll",
   "write-streaming",
   "write-overlap",
@@ -247,6 +248,42 @@ test("Java and cloud accept overlapping writes that reuse the last acknowledged 
         .filter((value) => Array.isArray(value) && value[1]?.[0]?.writeResults !== undefined)
         .length >= 4,
     );
+  }
+});
+
+test("Java and cloud accept bundle Listen targets with nanosecond read times", async () => {
+  for (const target of TARGETS) {
+    const contract = await readContract(
+      target.directory,
+      "bundle-nanosecond-read-time",
+    );
+    const targetMaps = contract.exchanges.flatMap((exchange) =>
+      (exchange.request.form ?? []).flatMap(([name, value]) =>
+        name.endsWith("___data__") && value.includes("\"addTarget\"")
+          ? [JSON.parse(value) as {
+            readonly addTarget?: { readonly readTime?: string };
+          }]
+          : []
+      )
+    );
+    assert.equal(targetMaps.length, 2);
+    assert.deepEqual(
+      targetMaps.map((value) => value.addTarget?.readTime),
+      [
+        "1970-01-01T00:16:40.000009999Z",
+        "1970-01-01T00:16:40.000009999Z",
+      ],
+    );
+    assert.ok(hasQueryValue(contract, "CI", "0"));
+    assert.ok(hasQueryValue(contract, "CI", "1"));
+
+    const responses = JSON.stringify(
+      contract.exchanges.map((exchange) => exchange.response),
+    );
+    assert.match(responses, /bundle_capture\/oracle-second/u);
+    assert.doesNotMatch(responses, /bundle_capture\/oracle-first/u);
+    assert.doesNotMatch(responses, /INVALID_ARGUMENT/u);
+    assert.doesNotMatch(responses, /microseconds precision/u);
   }
 });
 
