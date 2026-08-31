@@ -181,6 +181,16 @@
         "persistence"
       ],
       "requiredMatrixCells": 4,
+      "browserProcessPartitions": {
+        "memory": [
+          null
+        ],
+        "persistence": [
+          "\\(Persistence=memory_lru_gc\\)",
+          "\\(Persistence=indexeddb\\)"
+        ]
+      },
+      "partitionCoverageRule": "Every test selected by each official build must execute exactly once across its browser-process partitions; user-supplied gate filters are forbidden.",
       "requiredExitCode": 0,
       "unexpectedFailuresAllowed": 0,
       "addedExclusionsAllowed": 0,

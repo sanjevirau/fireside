@@ -17,9 +17,21 @@
   "testCommand": "xvfb-run yarn karma:singlerun",
   "testArtifact": "dist/test-harness.js",
   "testSource": "packages/firestore/test/integration/api/*.ts",
+  "localEmulatorProcessPartition": {
+    "memoryBuild": [
+      null
+    ],
+    "persistenceBuild": [
+      "\\(Persistence=memory_lru_gc\\)",
+      "\\(Persistence=indexeddb\\)"
+    ],
+    "coverageInvariant": "Every test selected by each official build is executed; the persistence build's two persistence modes run in separate browser processes.",
+    "diagnosticControl": "Chrome 151 reproduced the cross-persistence one-minute HTTP/1.1 WebChannel stall against official Java v1.22.0 and Fireside; each isolated persistence mode passed."
+  },
   "observations": [
     "The official workflow builds and runs the minified integration package, not the packages/firestore legacy source bootstrap.",
     "Client memory and IndexedDB persistence are compiled and executed in separate workflow jobs.",
-    "The package copies Google's API integration tests while excluding its three pipeline-specific suites."
+    "The package copies Google's API integration tests while excluding its three pipeline-specific suites.",
+    "For a local plaintext emulator, browser-process partitioning preserves the official selected workload while avoiding a Chrome transport-pool stall that reproduces against the official Java emulator."
   ]
 }

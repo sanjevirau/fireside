@@ -1323,6 +1323,11 @@ oracle for invocation: it builds the minified `integration/firestore` package
 and runs client memory and IndexedDB persistence in separate processes. The
 Fireside gate crosses those two unmodified upstream workloads with both memory
 and disk/WAL server modes (four required cells, zero added exclusions).
+For local plaintext emulator runs, the persistence build's memory and IndexedDB
+describes execute in separate browser processes. This preserves every test
+selected by the official build while avoiding a Chrome HTTP/1.1 transport-pool
+stall reproduced against both official Java v1.22.0 and Fireside; the gate
+records both partition filters and forbids user-supplied filters.
 `firebase-admin-node` follows. CI generates a per-area README scoreboard from
 machine-readable results; manual claims are prohibited.
 

@@ -53,6 +53,10 @@ test("pinned Firebase JS SDK gate mirrors Google's minified integration workflow
     readonly firebaseJsSdkRevision: string;
     readonly packageDirectory: string;
     readonly packageName: string;
+    readonly localEmulatorProcessPartition: {
+      readonly memoryBuild: readonly (string | null)[];
+      readonly persistenceBuild: readonly string[];
+    };
     readonly schemaVersion: number;
     readonly testArtifact: string;
     readonly testCommand: string;
@@ -74,6 +78,11 @@ test("pinned Firebase JS SDK gate mirrors Google's minified integration workflow
   });
   assert.equal(fixture.testCommand, "xvfb-run yarn karma:singlerun");
   assert.equal(fixture.testArtifact, "dist/test-harness.js");
+  assert.deepEqual(fixture.localEmulatorProcessPartition.memoryBuild, [null]);
+  assert.deepEqual(fixture.localEmulatorProcessPartition.persistenceBuild, [
+    "\\(Persistence=memory_lru_gc\\)",
+    "\\(Persistence=indexeddb\\)",
+  ]);
 
   const manifest = JSON.parse(
     await readFile(join(fixtureRoot, "../../../benchmarks/phase-2-webchannel.json"), "utf8"),
@@ -81,6 +90,9 @@ test("pinned Firebase JS SDK gate mirrors Google's minified integration workflow
     readonly gates: {
       readonly firebaseJsSdkIntegration: {
         readonly clientPersistenceModes: readonly string[];
+        readonly browserProcessPartitions: Readonly<
+          Record<string, readonly (string | null)[]>
+        >;
         readonly requiredMatrixCells: number;
         readonly serverModes: readonly string[];
         readonly upstreamBootstrap: string;
@@ -98,6 +110,16 @@ test("pinned Firebase JS SDK gate mirrors Google's minified integration workflow
     ["memory", "persistence"],
   );
   assert.equal(manifest.gates.firebaseJsSdkIntegration.requiredMatrixCells, 4);
+  assert.deepEqual(
+    manifest.gates.firebaseJsSdkIntegration.browserProcessPartitions,
+    {
+      memory: [null],
+      persistence: [
+        "\\(Persistence=memory_lru_gc\\)",
+        "\\(Persistence=indexeddb\\)",
+      ],
+    },
+  );
   assert.equal(
     manifest.gates.firebaseJsSdkIntegration.upstreamWorkflowJob,
     fixture.workflowJob,
