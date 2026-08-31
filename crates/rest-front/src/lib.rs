@@ -552,6 +552,7 @@ async fn commit(
         .iter()
         .map(|write| decode_write(write, &database))
         .collect::<Result<Vec<_>, _>>()?;
+    validate_commit_write_sequence(&writes)?;
     let result = state
         .store
         .commit(&writes)
@@ -1111,7 +1112,43 @@ fn decode_write(value: &JsonValue, database: &DatabaseName) -> Result<Write, Res
         }
         return Ok(Write::Delete { key, precondition });
     }
+    if let Some(name) = object.get("verify").and_then(JsonValue::as_str) {
+        let key = document_key_from_name(name)?;
+        if key.database() != database {
+            return Err(RestError::invalid(
+                "commit verify belongs to a different database",
+            ));
+        }
+        return Ok(Write::Verify { key, precondition });
+    }
     Err(RestError::invalid("unsupported commit write operation"))
+}
+
+fn validate_commit_write_sequence(writes: &[Write]) -> Result<(), RestError> {
+    for (index, write) in writes.iter().enumerate() {
+        let Write::Delete { key, .. } = write else {
+            continue;
+        };
+        if writes[index.saturating_add(1)..].iter().any(|later| {
+            matches!(
+                later,
+                Write::Patch {
+                    key: later_key,
+                    precondition: Precondition::Exists(true),
+                    ..
+                } | Write::Set {
+                    key: later_key,
+                    precondition: Precondition::Exists(true),
+                    ..
+                } if later_key == key
+            )
+        }) {
+            return Err(RestError::invalid(
+                "Cannot delete then update an entity in the same request.",
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn decode_transforms(value: Option<&JsonValue>) -> Result<Vec<FieldTransform>, RestError> {
@@ -1214,14 +1251,15 @@ fn write_key(write: &Write) -> &DocumentKey {
         Write::Create { key, .. }
         | Write::Set { key, .. }
         | Write::Patch { key, .. }
-        | Write::Delete { key, .. } => key,
+        | Write::Delete { key, .. }
+        | Write::Verify { key, .. } => key,
     }
 }
 
 fn write_transforms(write: &Write) -> &[FieldTransform] {
     match write {
         Write::Set { transforms, .. } | Write::Patch { transforms, .. } => transforms,
-        Write::Create { .. } | Write::Delete { .. } => &[],
+        Write::Create { .. } | Write::Delete { .. } | Write::Verify { .. } => &[],
     }
 }
 
@@ -1519,8 +1557,15 @@ fn decode_precondition(parameters: &WriteParameters) -> Result<Precondition, Res
 }
 
 fn decode_field_path(path: &str) -> Result<FieldPath, RestError> {
-    FieldPath::new(path.split('.'))
-        .map_err(|error| RestError::invalid(format!("invalid update mask: {error}")))
+    match QueryFieldPath::parse_wire(path)
+        .map_err(|error| RestError::invalid(format!("invalid update mask: {error}")))?
+    {
+        QueryFieldPath::Field(segments) => FieldPath::new(segments)
+            .map_err(|error| RestError::invalid(format!("invalid update mask: {error}"))),
+        QueryFieldPath::DocumentId => Err(RestError::invalid(
+            "invalid update mask: __name__ is not a writable field",
+        )),
+    }
 }
 
 #[derive(Debug)]
@@ -1637,6 +1682,12 @@ mod tests {
     );
     const JAVA_AGGREGATION_LIMIT_CONTRACT: &str = include_str!(
         "../../../conformance/fixtures/rest-v1/java-v1.22.0/aggregation-limit-error/decoded-contract.json"
+    );
+    const JAVA_TRANSACTION_COMMIT_CONTRACT: &str = include_str!(
+        "../../../conformance/fixtures/rest-v1/java-v1.22.0/transaction-commit/decoded-contract.json"
+    );
+    const JAVA_TRANSACTION_NOOP_CONTRACT: &str = include_str!(
+        "../../../conformance/fixtures/rest-v1/java-v1.22.0/transaction-noop-write/decoded-contract.json"
     );
 
     #[test]
@@ -1835,6 +1886,189 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn browser_transaction_matches_java_delete_then_update_error() {
+        let contract: JsonValue = serde_json::from_str(JAVA_TRANSACTION_COMMIT_CONTRACT)
+            .expect("Java transaction contract should be valid JSON");
+        let exchange = fixture_commit_exchanges(&contract)
+            .next()
+            .expect("fixture should contain the invalid transaction commit");
+        let response = router(Store::default())
+            .oneshot(fixture_request(exchange))
+            .await
+            .expect("REST router should respond");
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("transaction error response should be readable");
+        assert_eq!(
+            std::str::from_utf8(&body).expect("transaction error should be UTF-8"),
+            exchange["response"]["bodyText"]
+                .as_str()
+                .expect("fixture response body")
+        );
+    }
+
+    #[tokio::test]
+    async fn browser_transaction_verify_write_preserves_observed_version() {
+        let contract: JsonValue = serde_json::from_str(JAVA_TRANSACTION_COMMIT_CONTRACT)
+            .expect("Java transaction contract should be valid JSON");
+        let exchange = fixture_commit_exchanges(&contract)
+            .nth(1)
+            .expect("fixture should contain the verify-only commit");
+        let mut body: JsonValue = serde_json::from_str(
+            exchange["request"]["bodyText"]
+                .as_str()
+                .expect("fixture request body"),
+        )
+        .expect("fixture request body should be JSON");
+        let store = Store::default();
+        let database = DatabaseName::new("demo-fireside-phase2", "(default)")
+            .expect("fixture database should be valid");
+        let key = DocumentKey::new(database, "fireside_webchannel_capture/oracle".to_owned())
+            .expect("fixture document key should be valid");
+        store
+            .commit(&[Write::Set {
+                key: key.clone(),
+                fields: Fields::from([("sequence".to_owned(), Value::Integer(2))]),
+                transforms: Vec::new(),
+                precondition: Precondition::None,
+            }])
+            .expect("fixture document should commit");
+        let observed_update_time = store
+            .snapshot()
+            .get(&key)
+            .expect("fixture document should exist")
+            .update_time();
+        body["writes"][0]["currentDocument"]["updateTime"] =
+            JsonValue::String(format_timestamp(observed_update_time).expect("valid timestamp"));
+        let request = Request::builder()
+            .method(Method::POST)
+            .uri(
+                exchange["request"]["path"]
+                    .as_str()
+                    .expect("fixture request path"),
+            )
+            .header(CONTENT_TYPE, "text/plain")
+            .body(Body::from(body.to_string()))
+            .expect("fixture request should build");
+        let response = router(store.clone())
+            .oneshot(request)
+            .await
+            .expect("REST router should respond");
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("transaction response should be readable");
+        let response: JsonValue =
+            serde_json::from_slice(&body).expect("transaction response should be JSON");
+        assert_eq!(
+            response["writeResults"][0]["updateTime"],
+            format_timestamp(observed_update_time).expect("valid timestamp")
+        );
+        assert_eq!(
+            store
+                .snapshot()
+                .get(&key)
+                .expect("verified document should remain present")
+                .update_time(),
+            observed_update_time,
+            "a verify write must not mutate the document version"
+        );
+    }
+
+    #[tokio::test]
+    async fn browser_transaction_applies_java_quoted_field_mask() {
+        let contract: JsonValue = serde_json::from_str(JAVA_TRANSACTION_COMMIT_CONTRACT)
+            .expect("Java transaction contract should be valid JSON");
+        let exchange = fixture_commit_exchanges(&contract)
+            .nth(2)
+            .expect("fixture should contain the quoted-field commit");
+        let store = Store::default();
+        let response = router(store.clone())
+            .oneshot(fixture_request(exchange))
+            .await
+            .expect("REST router should respond");
+        assert_eq!(response.status(), StatusCode::OK);
+        let key = DocumentKey::new(
+            DatabaseName::new("demo-fireside-phase2", "(default)")
+                .expect("fixture database should be valid"),
+            "fireside_webchannel_capture/oracle".to_owned(),
+        )
+        .expect("fixture document key should be valid");
+        let document = store
+            .snapshot()
+            .get(&key)
+            .expect("fixture document should exist");
+        assert_eq!(
+            document.fields().get("is.admin"),
+            Some(&Value::Boolean(true))
+        );
+        assert_eq!(
+            document.fields().get("owner"),
+            Some(&Value::Map(Fields::from([(
+                "name".to_owned(),
+                Value::String("Sebastian".to_owned().into())
+            )])))
+        );
+    }
+
+    #[tokio::test]
+    async fn browser_transaction_matches_java_noop_replacement() {
+        let contract: JsonValue = serde_json::from_str(JAVA_TRANSACTION_NOOP_CONTRACT)
+            .expect("Java transaction no-op contract should be valid JSON");
+        let exchange = fixture_commit_exchanges(&contract)
+            .find(|exchange| {
+                exchange["request"]["bodyText"]
+                    .as_str()
+                    .is_some_and(|body| body.contains("\"update\":"))
+            })
+            .expect("fixture should contain the no-op replacement");
+        let store = Store::default();
+        let key = DocumentKey::new(
+            DatabaseName::new("demo-fireside-phase2", "(default)")
+                .expect("fixture database should be valid"),
+            "fireside_webchannel_capture/oracle".to_owned(),
+        )
+        .expect("fixture document key should be valid");
+        let fields = Fields::from([
+            (
+                "capture".to_owned(),
+                Value::String("transaction-noop-write".into()),
+            ),
+            ("sequence".to_owned(), Value::Integer(1)),
+            ("synthetic".to_owned(), Value::Boolean(true)),
+        ]);
+        store
+            .commit(&[Write::Set {
+                key: key.clone(),
+                fields,
+                transforms: Vec::new(),
+                precondition: Precondition::None,
+            }])
+            .expect("fixture document should commit");
+        let observed_update_time = store.snapshot().get(&key).unwrap().update_time();
+
+        let response = router(store.clone())
+            .oneshot(fixture_request(exchange))
+            .await
+            .expect("REST router should respond");
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("transaction response should be readable");
+        let response: JsonValue =
+            serde_json::from_slice(&body).expect("transaction response should be JSON");
+        assert_eq!(
+            response["writeResults"][0]["updateTime"],
+            format_timestamp(observed_update_time).expect("valid timestamp")
+        );
+        assert_eq!(
+            store.snapshot().get(&key).unwrap().update_time(),
+            observed_update_time
+        );
+    }
+
     fn fixture_post_exchange(contract: &JsonValue) -> &JsonValue {
         contract["exchanges"]
             .as_array()
@@ -1842,6 +2076,19 @@ mod tests {
             .iter()
             .find(|exchange| exchange["request"]["method"] == "POST")
             .expect("fixture should contain the aggregation POST")
+    }
+
+    fn fixture_commit_exchanges(contract: &JsonValue) -> impl Iterator<Item = &JsonValue> {
+        contract["exchanges"]
+            .as_array()
+            .expect("fixture should contain exchanges")
+            .iter()
+            .filter(|exchange| {
+                exchange["request"]["method"] == "POST"
+                    && exchange["request"]["path"]
+                        .as_str()
+                        .is_some_and(|path| path.ends_with("documents:commit"))
+            })
     }
 
     fn fixture_request(exchange: &JsonValue) -> Request<Body> {

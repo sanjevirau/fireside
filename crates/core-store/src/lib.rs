@@ -427,6 +427,13 @@ pub enum Write {
         /// Write precondition.
         precondition: Precondition,
     },
+    /// Validate a document precondition without mutating the document.
+    Verify {
+        /// Document key.
+        key: DocumentKey,
+        /// Write precondition.
+        precondition: Precondition,
+    },
 }
 
 /// Store resource limits.
@@ -1675,6 +1682,11 @@ fn apply_write(
             for transform in transforms {
                 apply_transform(&mut next_fields, transform, commit_time, key)?;
             }
+            if transforms.is_empty()
+                && previous.is_some_and(|document| document.fields == next_fields)
+            {
+                return Ok((key.clone(), previous.cloned()));
+            }
             Ok((
                 key.clone(),
                 Some(Arc::new(Document {
@@ -1720,6 +1732,11 @@ fn apply_write(
         Write::Delete { key, precondition } => {
             validate_precondition(key, documents.get(key), *precondition)?;
             Ok((key.clone(), None))
+        }
+        Write::Verify { key, precondition } => {
+            let document = documents.get(key).cloned();
+            validate_precondition(key, document.as_ref(), *precondition)?;
+            Ok((key.clone(), document))
         }
     }
 }
@@ -2122,6 +2139,99 @@ mod tests {
                 .expect("new value should exist")
                 .fields(),
             &fields(Value::Integer(2))
+        );
+    }
+
+    #[test]
+    fn identical_set_advances_commit_without_changing_document_version() {
+        let store = Store::default();
+        let key = key(&database("(default)"), "items/no-op");
+        let seed = store
+            .commit(&[Write::Create {
+                key: key.clone(),
+                fields: fields(Value::Integer(1)),
+            }])
+            .expect("seed should commit");
+        let retained_changes = store.retained_change_count();
+
+        let no_op = store
+            .commit(&[Write::Set {
+                key: key.clone(),
+                fields: fields(Value::Integer(1)),
+                transforms: Vec::new(),
+                precondition: Precondition::None,
+            }])
+            .expect("identical set should commit");
+        let document = store
+            .snapshot()
+            .get(&key)
+            .expect("document should remain present");
+
+        assert!(no_op.commit_time > seed.commit_time);
+        assert!(no_op.revision > seed.revision);
+        assert_eq!(document.update_time(), seed.commit_time);
+        assert_eq!(store.retained_change_count(), retained_changes);
+    }
+
+    #[test]
+    fn verify_write_is_atomic_and_does_not_change_document_version() {
+        let store = Store::default();
+        let database = database("(default)");
+        let verified = key(&database, "items/verified");
+        let mutated = key(&database, "items/mutated");
+        let seed = store
+            .commit(&[
+                Write::Create {
+                    key: verified.clone(),
+                    fields: fields(Value::Integer(1)),
+                },
+                Write::Create {
+                    key: mutated.clone(),
+                    fields: fields(Value::Integer(1)),
+                },
+            ])
+            .expect("seed should commit");
+
+        store
+            .commit(&[
+                Write::Set {
+                    key: mutated.clone(),
+                    fields: fields(Value::Integer(2)),
+                    transforms: Vec::new(),
+                    precondition: Precondition::None,
+                },
+                Write::Verify {
+                    key: verified.clone(),
+                    precondition: Precondition::UpdateTime(seed.commit_time),
+                },
+            ])
+            .expect("matching verify should commit");
+        assert_eq!(
+            store.snapshot().get(&verified).unwrap().update_time(),
+            seed.commit_time
+        );
+
+        let error = store
+            .commit(&[
+                Write::Set {
+                    key: mutated.clone(),
+                    fields: fields(Value::Integer(3)),
+                    transforms: Vec::new(),
+                    precondition: Precondition::None,
+                },
+                Write::Verify {
+                    key: verified,
+                    precondition: Precondition::UpdateTime(
+                        seed.commit_time.saturating_next_microsecond(),
+                    ),
+                },
+            ])
+            .expect_err("stale verify should fail");
+        assert!(matches!(error, CommitError::UpdateTimePrecondition { .. }));
+        assert_eq!(
+            store.snapshot().get(&mutated).unwrap().fields(),
+            &fields(Value::Integer(2)),
+            "a failed verify must roll back earlier writes in the commit"
         );
     }
 

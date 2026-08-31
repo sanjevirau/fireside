@@ -383,7 +383,8 @@ const fn write_key(write: &Write) -> &DocumentKey {
         Write::Create { key, .. }
         | Write::Set { key, .. }
         | Write::Patch { key, .. }
-        | Write::Delete { key, .. } => key,
+        | Write::Delete { key, .. }
+        | Write::Verify { key, .. } => key,
     }
 }
 
