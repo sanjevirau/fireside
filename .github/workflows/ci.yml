@@ -87,3 +87,41 @@ jobs:
         run: npm run test:official-export-import --prefix conformance
       - name: Export through Fireside and import into Java
         run: npm run test:fireside-export-java-import --prefix conformance
+
+  firebase-js-sdk:
+    name: Firebase JS SDK browser integration (${{ matrix.mode }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [memory, disk-wal]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: firebase/firebase-js-sdk
+          ref: 6cde0c0230b4c1da01d4a058333daa7663322fd1
+          path: .phase2/firebase-js-sdk
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.20.0
+          cache: yarn
+          cache-dependency-path: .phase2/firebase-js-sdk/yarn.lock
+      - name: Install pinned npm and Yarn
+        run: npm install --global npm@12.0.2 yarn@1.22.22
+      - name: Install latest stable Rust
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
+          rustc --version
+      - name: Install Fireside conformance dependencies
+        run: npm ci --prefix conformance
+      - name: Install pinned Firebase JS SDK dependencies
+        working-directory: .phase2/firebase-js-sdk
+        run: yarn install --frozen-lockfile
+      - name: Run Google's Firestore browser integration bootstrap
+        run: >-
+          npm run test:webchannel:firebase-js-sdk --prefix conformance --
+          --sdk-dir "${{ github.workspace }}/.phase2/firebase-js-sdk"
+          ${{ matrix.mode == 'disk-wal' && '--disk' || '' }}
