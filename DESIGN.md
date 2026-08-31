@@ -1021,14 +1021,14 @@ whether any backchannel is live. Teardown validates endpoint, SID, and optional
 compiled from an exact fixture-checked copy of the production body, including
 the nonzero-offset `Unknown SID` literal required by Closure.
 
-The 4,096-session bound applies to live or replay-bearing sessions, not to an
-unbounded history of abandoned SDK instances. When insertion reaches the
-bound, the registry reclaims only the least-recently-used session that has no
-active backchannel and no unacknowledged replay arrays. It never evicts an
-active backchannel or discards retained replay. If every entry is active or
-replay-bearing, the handshake remains fail-fast with HTTP 503. This keeps the
-frozen bound intact while allowing long browser integration runs whose test
-cleanup omits a sendBeacon teardown.
+The 4,096-session bound applies to live sessions, not to an unbounded history
+of abandoned SDK instances. Normal idle expiry remains 30 minutes. Under
+capacity pressure only, the registry may reclaim the least-recently-used
+session after it has had no active backchannel or forward activity for 10
+seconds. The 10-second lease is twice the frozen 5-second reconnect gate: it
+protects retained arrays throughout a compliant reconnect while bounding stale
+replay left by test or page cleanup that omits sendBeacon. If every entry is
+active or inside that lease, the handshake remains fail-fast with HTTP 503.
 
 All framed responses compute their decimal prefixes from Rust UTF-16 encoding
 units after JSON serialization. CORS echoes the request origin and exposes both
