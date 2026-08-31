@@ -3,6 +3,12 @@
   "name": "phase-2-webchannel",
   "frozen": true,
   "frozenAt": "2026-08-31T05:15:00+08:00",
+  "oracleCorrectionAt": "2026-08-31T22:00:00+08:00",
+  "oracleCorrection": {
+    "classification": "strengthening-no-criterion-weakening",
+    "fixture": "conformance/fixtures/webchannel-v8/firebase-js-sdk-integration-gate.json",
+    "reason": "The pinned upstream workflow runs the minified integration/firestore package and partitions client memory and IndexedDB persistence into separate jobs; the earlier packages/firestore source-bootstrap command did not describe Google's own integration gate."
+  },
   "phase1Baseline": {
     "tag": "phase-1",
     "candidateRevision": "dc3438f8c99e1b3d695cb45c2d8831dd24d81e2b",
@@ -158,12 +164,23 @@
   "gates": {
     "firebaseJsSdkIntegration": {
       "sourceRevision": "6cde0c0230b4c1da01d4a058333daa7663322fd1",
-      "upstreamBootstrap": "packages/firestore/test/integration/bootstrap.ts",
-      "upstreamCommand": "yarn --cwd packages/firestore karma start --integration --targetBackend=emulator --single-run",
-      "modes": [
+      "upstreamWorkflowJob": "test-firestore-integration",
+      "upstreamPackage": "integration/firestore",
+      "upstreamBootstrap": "integration/firestore/dist/test-harness.js",
+      "upstreamBuildCommands": {
+        "memory": "yarn --cwd integration/firestore build:memory",
+        "persistence": "yarn --cwd integration/firestore build:persistence"
+      },
+      "upstreamCommand": "yarn --cwd integration/firestore karma start <emulator-target config> --single-run",
+      "serverModes": [
         "memory",
         "disk-wal"
       ],
+      "clientPersistenceModes": [
+        "memory",
+        "persistence"
+      ],
+      "requiredMatrixCells": 4,
       "requiredExitCode": 0,
       "unexpectedFailuresAllowed": 0,
       "addedExclusionsAllowed": 0,

@@ -1318,8 +1318,13 @@ cloud version, SDK version, timestamp, transport, and a human-readable
 hypothesis.
 
 From Phase 2, Google’s `firebase-js-sdk` Firestore integration tests run against
-fireside in CI. `firebase-admin-node` follows. CI generates a per-area README
-scoreboard from machine-readable results; manual claims are prohibited.
+fireside in CI. The pinned upstream `test-firestore-integration` workflow is the
+oracle for invocation: it builds the minified `integration/firestore` package
+and runs client memory and IndexedDB persistence in separate processes. The
+Fireside gate crosses those two unmodified upstream workloads with both memory
+and disk/WAL server modes (four required cells, zero added exclusions).
+`firebase-admin-node` follows. CI generates a per-area README scoreboard from
+machine-readable results; manual claims are prohibited.
 
 ### 10.1 Production safety interlock
 

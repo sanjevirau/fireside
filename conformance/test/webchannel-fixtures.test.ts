@@ -74,6 +74,42 @@ test("pinned Firebase JS SDK gate mirrors Google's minified integration workflow
   });
   assert.equal(fixture.testCommand, "xvfb-run yarn karma:singlerun");
   assert.equal(fixture.testArtifact, "dist/test-harness.js");
+
+  const manifest = JSON.parse(
+    await readFile(join(fixtureRoot, "../../../benchmarks/phase-2-webchannel.json"), "utf8"),
+  ) as {
+    readonly gates: {
+      readonly firebaseJsSdkIntegration: {
+        readonly clientPersistenceModes: readonly string[];
+        readonly requiredMatrixCells: number;
+        readonly serverModes: readonly string[];
+        readonly upstreamBootstrap: string;
+        readonly upstreamPackage: string;
+        readonly upstreamWorkflowJob: string;
+      };
+    };
+  };
+  assert.deepEqual(
+    manifest.gates.firebaseJsSdkIntegration.serverModes,
+    ["memory", "disk-wal"],
+  );
+  assert.deepEqual(
+    manifest.gates.firebaseJsSdkIntegration.clientPersistenceModes,
+    ["memory", "persistence"],
+  );
+  assert.equal(manifest.gates.firebaseJsSdkIntegration.requiredMatrixCells, 4);
+  assert.equal(
+    manifest.gates.firebaseJsSdkIntegration.upstreamWorkflowJob,
+    fixture.workflowJob,
+  );
+  assert.equal(
+    manifest.gates.firebaseJsSdkIntegration.upstreamPackage,
+    fixture.packageDirectory,
+  );
+  assert.equal(
+    manifest.gates.firebaseJsSdkIntegration.upstreamBootstrap,
+    `${fixture.packageDirectory}/${fixture.testArtifact}`,
+  );
 });
 
 for (const target of TARGETS) {
