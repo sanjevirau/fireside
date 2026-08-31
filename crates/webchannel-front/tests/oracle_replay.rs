@@ -192,7 +192,14 @@ struct CapturedRequest {
 #[serde(rename_all = "camelCase")]
 struct CapturedResponse {
     status: u16,
+    headers: Vec<CapturedHeader>,
     body_text: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct CapturedHeader {
+    name: String,
+    value: String,
 }
 
 struct Session {
@@ -235,6 +242,34 @@ fn captured_java_streaming_session_terminates_the_live_backchannel() {
         })
         .expect("fixture should terminate the live streaming SID");
     assert_eq!(terminate.response.status, 200);
+}
+
+#[test]
+fn captured_wire_advertisement_tracks_negotiated_protocol() {
+    let java: Fixture = serde_json::from_str(include_str!(
+        "../../../conformance/fixtures/webchannel-v8/java-v1.22.0/listen-streaming/decoded-contract.json"
+    ))
+    .expect("Java streaming fixture should parse");
+    let cloud: Fixture = serde_json::from_str(include_str!(
+        "../../../conformance/fixtures/webchannel-v8/production-cloud-firestore/listen-streaming/decoded-contract.json"
+    ))
+    .expect("cloud streaming fixture should parse");
+
+    assert_eq!(handshake_wire_protocol(&java), None);
+    assert_eq!(handshake_wire_protocol(&cloud), Some("h2"));
+}
+
+fn handshake_wire_protocol(fixture: &Fixture) -> Option<&str> {
+    fixture
+        .exchanges
+        .iter()
+        .find(|exchange| query_value(&exchange.request.query, "CVER").is_some())
+        .expect("fixture should contain a handshake")
+        .response
+        .headers
+        .iter()
+        .find(|header| header.name.eq_ignore_ascii_case("x-client-wire-protocol"))
+        .map(|header| header.value.as_str())
 }
 
 async fn replay_fixture(name: &str, fixture: &str) {
