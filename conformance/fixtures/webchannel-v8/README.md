@@ -22,6 +22,7 @@ They establish these Java-specific observations:
 | Unknown SID | Java returned HTTP 400 with an empty body. This is a Java deviation candidate; Fireside will follow the production cloud capture if cloud returns the client-matched `Unknown SID` text. |
 | Concurrent forward advertisement | Java did not return `X-Client-Wire-Protocol` in these HTTP/1.1 browser captures. Cloud remains authoritative for the production advertisement. |
 | Overlapping Write requests | In both variants, two forward maps were sent before either write response and both carried the same last-acknowledged token `MA==`; Java accepted both and returned distinct next tokens `MQ==` and `Mg==`. |
+| Inequality queries | A numeric `<= 2` range excluded null, NaN, and missing fields while returning numeric 0 and 1. The multiple-range query returned the two matching documents. Invalid document-key ordering and equality combinations returned `INVALID_ARGUMENT` with stable client-visible diagnostics. |
 
 The production captures used the same pinned browser bundle and tiny synthetic
 collection in the allowlisted `fireside-conformance` project. Application
@@ -41,6 +42,7 @@ fixture entered capture state. No cloud project configuration was changed.
 | Terminate | `TYPE=terminate` was an empty-body POST and returned HTTP 200; preserving its zero content length avoids an intermediary-generated HTTP 411. |
 | Unknown SID | Cloud returned HTTP 400 with its generic HTML error body containing the literal `Unknown SID`; the checked-in raw fixture preserves the exact redacted bytes. |
 | Overlapping Write requests | In both variants, two forward maps were sent before either write response and reused the same opaque last-acknowledged token. Cloud accepted both and advanced the returned token independently for each response. |
+| Inequality queries | The numeric range and both document-key validation errors agree with Java. The multiple-range query itself returned `FAILED_PRECONDITION` with an index-creation diagnostic because the tiny capture project deliberately has no matching composite index; Java's successful result is therefore the permissive-emulator oracle for default mode. |
 
 The proxy records the browser's original `Accept-Encoding` header but asks the
 oracle for identity encoding. This capture-only normalization makes frames in

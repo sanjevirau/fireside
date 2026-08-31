@@ -16,6 +16,7 @@ const CASES = [
   "write-long-poll",
   "write-streaming",
   "write-overlap",
+  "multiple-inequality-query",
   "backchannel-reconnect-replay",
   "unicode-framing",
   "unknown-sid",
@@ -149,6 +150,33 @@ test("Java and cloud fixtures pin their handshake and unknown-SID deviations", a
   assert.equal(javaUnknown.exchanges[0]?.response.bodyText, undefined);
   assert.equal(cloudUnknown.exchanges[0]?.response.status, 400);
   assert.match(cloudUnknown.exchanges[0]?.response.bodyText ?? "", /Unknown SID/u);
+});
+
+test("Java and cloud fixtures pin inequality type ranges and key-order validation", async () => {
+  const java = await readContract("java-v1.22.0", "multiple-inequality-query");
+  const cloud = await readContract(
+    "production-cloud-firestore",
+    "multiple-inequality-query",
+  );
+  for (const contract of [java, cloud]) {
+    const serialized = JSON.stringify(contract);
+    assert.match(serialized, /\/doc1/u);
+    assert.match(serialized, /\/doc5/u);
+    assert.match(serialized, /\/doc6/u);
+    assert.doesNotMatch(serialized, /\/doc2/u);
+    assert.doesNotMatch(serialized, /\/doc3/u);
+    assert.doesNotMatch(serialized, /\/doc4/u);
+    assert.match(
+      serialized,
+      /order by clause cannot contain more fields after the key/iu,
+    );
+    assert.match(
+      serialized,
+      /Equality on key is not allowed if there are other inequality fields/iu,
+    );
+  }
+  assert.match(JSON.stringify(cloud), /query requires an index/iu);
+  assert.doesNotMatch(JSON.stringify(java), /query requires an index/iu);
 });
 
 test("cloud folded authorization is redacted and termination keeps its empty-body length", async () => {

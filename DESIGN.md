@@ -1136,6 +1136,28 @@ therefore treats an identical replacement as a committed no-op: it advances
 commit metadata but emits no document change and does not invalidate a
 concurrent transaction that read the unchanged version.
 
+### 7.11 Browser inequality-query oracle
+
+The `conformance/fixtures/webchannel-v8/*/multiple-inequality-query` captures
+record the pinned vanilla SDK through the full Listen WebChannel path. Java
+v1.22.0 and production agree that a numeric `sort <= 2` range returns numeric
+zero and one but excludes null, NaN, and missing fields; range comparison is
+therefore constrained to the comparable value domain rather than Firestore's
+global index type order. Java's permissive emulator executes `key != "a" AND
+sort <= 2` and returns the two matching documents. Production rejects that
+same query before execution because the deliberately minimal cloud project has
+no matching composite index, preserving the existing default-versus-strict
+index-policy deviation.
+
+Both live oracles reject a query that places `__name__` before another
+inequality order field, and both reject document-key equality when other
+inequality fields exist but the key is not itself an inequality field. The
+captures preserve the client-visible `INVALID_ARGUMENT` diagnostics. The
+readable Firebase JS SDK independently constructs implicit ordering from every
+inequality field in lexicographic field-path order, followed by `__name__`;
+Fireside applies those rules in the shared query engine so REST, gRPC, and
+WebChannel listeners cannot diverge.
+
 ## 8. Export and import contract
 
 Firestore export data under

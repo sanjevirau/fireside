@@ -3,12 +3,15 @@ import {
   collection,
   count,
   doc,
+  documentId,
   FieldPath,
   getAggregateFromServer,
   getCountFromServer,
   getDoc,
+  getDocs,
   initializeFirestore,
   onSnapshot,
+  orderBy,
   query,
   runTransaction,
   setDoc,
@@ -23,6 +26,7 @@ type CaptureScenario =
   | "aggregation-composite-filter"
   | "aggregation-limit-error"
   | "listen"
+  | "multiple-inequality-query"
   | "reconnect-replay"
   | "transaction-commit"
   | "transaction-noop-write"
@@ -173,6 +177,48 @@ window.firesideRunWebChannelCapture = async (
       case "listen":
       case "reconnect-replay":
         observations.push(await observeOneSnapshot(reference));
+        break;
+      case "multiple-inequality-query":
+        {
+          const queryCollection = collection(
+            firestore,
+            "fireside_webchannel_capture_query",
+          );
+          observations.push(
+            (await getDocs(query(queryCollection, where("sort", "<=", 2))))
+              .docs.map((snapshot) => snapshot.id),
+          );
+          try {
+            observations.push(
+              (await getDocs(query(
+                queryCollection,
+                where("key", "!=", "a"),
+                where("sort", "<=", 2),
+              ))).docs.map((snapshot) => snapshot.id),
+            );
+          } catch (error) {
+            observations.push(observeError(error));
+          }
+          for (const invalidQuery of [
+            query(
+              queryCollection,
+              where("key", "!=", 42),
+              orderBy(documentId()),
+            ),
+            query(
+              queryCollection,
+              where("key", "!=", 42),
+              where(documentId(), "==", "doc1"),
+            ),
+          ]) {
+            try {
+              await getDocs(invalidQuery);
+              throw new Error("invalid multiple-inequality query unexpectedly succeeded");
+            } catch (error) {
+              observations.push(observeError(error));
+            }
+          }
+        }
         break;
       case "unicode-framing":
         {

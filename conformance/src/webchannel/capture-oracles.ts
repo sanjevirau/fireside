@@ -20,6 +20,7 @@ const JAVA_PROJECT_ID = "demo-fireside-phase2";
 const CLOUD_PROJECT_ID = "fireside-conformance";
 const COLLECTION = "fireside_webchannel_capture";
 const DOCUMENT = "oracle";
+const QUERY_COLLECTION = "fireside_webchannel_capture_query";
 const CAPTURE_FIXTURE_PATH = "/__fireside_capture/fixture";
 const FIREBASE_SDK = "firebase@12.18.0";
 const JAVA_VERSION = "1.22.0";
@@ -32,6 +33,7 @@ type BrowserScenario =
   | "aggregation-composite-filter"
   | "aggregation-limit-error"
   | "listen"
+  | "multiple-inequality-query"
   | "reconnect-replay"
   | "transaction-commit"
   | "transaction-noop-write"
@@ -110,6 +112,12 @@ const CAPTURE_CASES: readonly CaptureCase[] = [
     directory: "listen-streaming",
     hypothesis: "Listen handshake and backchannel in streaming mode",
     runs: [{ scenario: "listen", variant: "streaming" }],
+  },
+  {
+    directory: "multiple-inequality-query",
+    hypothesis:
+      "Browser queries pin special-value range filtering, multiple-inequality ordering, and key-order validation",
+    runs: [{ scenario: "multiple-inequality-query", variant: "long-poll" }],
   },
   {
     directory: "write-long-poll",
@@ -424,6 +432,25 @@ async function prepareSyntheticDocument(
   captureCase: CaptureCase,
 ): Promise<void> {
   await deleteSyntheticDocument(runtime);
+  if (captureCase.runs.some((run) => run.scenario === "multiple-inequality-query")) {
+    const queryDocuments = [
+      ["doc1", { key: { stringValue: "a" }, sort: { integerValue: "0" }, v: { integerValue: "0" } }],
+      ["doc2", { key: { stringValue: "b" }, sort: { doubleValue: "NaN" }, v: { integerValue: "1" } }],
+      ["doc3", { key: { stringValue: "c" }, sort: { nullValue: null }, v: { integerValue: "3" } }],
+      ["doc4", { key: { stringValue: "d" }, v: { integerValue: "0" } }],
+      ["doc5", { key: { stringValue: "e" }, sort: { integerValue: "1" } }],
+      ["doc6", { key: { stringValue: "f" }, sort: { integerValue: "1" }, v: { integerValue: "1" } }],
+    ] as const;
+    for (const [document, fields] of queryDocuments) {
+      const response = await firestoreRestRequest(runtime, "PATCH", { fields }, document, QUERY_COLLECTION);
+      if (!response.ok) {
+        throw new Error(
+          `synthetic query seed failed with HTTP ${String(response.status)}: ${await response.text()}`,
+        );
+      }
+    }
+    return;
+  }
   if (
     captureCase.runs.some((run) =>
       run.scenario.startsWith("aggregation-") || run.scenario.startsWith("transaction-")
@@ -474,6 +501,20 @@ async function deleteSyntheticDocument(runtime: TargetRuntime): Promise<void> {
       );
     }
   }
+  for (const document of ["doc1", "doc2", "doc3", "doc4", "doc5", "doc6"]) {
+    const response = await firestoreRestRequest(
+      runtime,
+      "DELETE",
+      undefined,
+      document,
+      QUERY_COLLECTION,
+    );
+    if (!response.ok && response.status !== 404) {
+      throw new Error(
+        `synthetic query cleanup failed with HTTP ${String(response.status)}: ${await response.text()}`,
+      );
+    }
+  }
 }
 
 async function firestoreRestRequest(
@@ -481,9 +522,10 @@ async function firestoreRestRequest(
   method: "DELETE" | "PATCH",
   body?: unknown,
   document = DOCUMENT,
+  collection = COLLECTION,
 ): Promise<Response> {
   const url =
-    `${runtime.upstreamOrigin}/v1/projects/${runtime.projectId}/databases/(default)/documents/${COLLECTION}/${document}`;
+    `${runtime.upstreamOrigin}/v1/projects/${runtime.projectId}/databases/(default)/documents/${collection}/${document}`;
   const headers = new Headers();
   if (body !== undefined) {
     headers.set("content-type", "application/json");

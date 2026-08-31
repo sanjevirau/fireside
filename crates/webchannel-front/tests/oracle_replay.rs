@@ -45,6 +45,12 @@ const ORACLE_FIXTURES: &[(&str, &str)] = &[
         ),
     ),
     (
+        "java/multiple-inequality-query",
+        include_str!(
+            "../../../conformance/fixtures/webchannel-v8/java-v1.22.0/multiple-inequality-query/decoded-contract.json"
+        ),
+    ),
+    (
         "java/backchannel-reconnect-replay",
         include_str!(
             "../../../conformance/fixtures/webchannel-v8/java-v1.22.0/backchannel-reconnect-replay/decoded-contract.json"
@@ -90,6 +96,12 @@ const ORACLE_FIXTURES: &[(&str, &str)] = &[
         "cloud/write-overlap",
         include_str!(
             "../../../conformance/fixtures/webchannel-v8/production-cloud-firestore/write-overlap/decoded-contract.json"
+        ),
+    ),
+    (
+        "cloud/multiple-inequality-query",
+        include_str!(
+            "../../../conformance/fixtures/webchannel-v8/production-cloud-firestore/multiple-inequality-query/decoded-contract.json"
         ),
     ),
     (
