@@ -139,6 +139,7 @@ async function main(): Promise<void> {
     }
 
     const summary = {
+      browserVersion: await browser.version(),
       completedAt: new Date().toISOString(),
       mode: diskMode ? "disk-wal" : "memory",
       passed: true,
