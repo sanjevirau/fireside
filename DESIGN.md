@@ -1187,6 +1187,14 @@ inequality field in lexicographic field-path order, followed by `__name__`;
 Fireside applies those rules in the shared query engine so REST, gRPC, and
 WebChannel listeners cannot diverge.
 
+The pinned Firebase JS SDK's readable `Queries / can use IN filters` oracle
+also distinguishes equality ordering from membership-filter matching. An
+`IN` or `ARRAY_CONTAINS_ANY` operand containing `null` or `NaN` does not match
+a stored null or NaN; those sentinel operands are ignored while ordinary
+operands in the same array continue to match. The permanent SDK-gate fixture
+records all eight cases so the shared query engine cannot accidentally use its
+total value-order equality for either membership operator.
+
 The browser JSON surface represents `google.protobuf.NullValue` as the enum
 string `"NULL_VALUE"` in both requests and responses. It must not inherit the
 generic well-known-type JSON `null` representation: doing so drops the

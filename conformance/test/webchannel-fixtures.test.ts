@@ -113,6 +113,30 @@ test("pinned Firebase JS SDK gate mirrors Google's minified integration workflow
         readonly observedCiRun: number;
         readonly suite: string;
       };
+      readonly membershipFilterValueOracle: {
+        readonly arrayContainsAnyExpectations: readonly {
+          readonly operand: readonly (number | string | null)[];
+          readonly resultDocumentIds: readonly string[];
+        }[];
+        readonly arrayContainsAnyTest: string;
+        readonly expectations: readonly {
+          readonly operand: readonly (number | string | null)[];
+          readonly resultDocumentIds: readonly string[];
+        }[];
+        readonly invariant: string;
+        readonly observedDiagnostic: string;
+        readonly sourceFile: string;
+        readonly storedDocuments: readonly {
+          readonly id: string;
+          readonly zip: number | string | null;
+        }[];
+        readonly storedArrayDocuments: readonly {
+          readonly array: readonly (number | string | null)[];
+          readonly id: string;
+        }[];
+        readonly suite: string;
+        readonly test: string;
+      };
       readonly sourcePartitions: readonly {
         readonly name: string;
         readonly sourceFiles: readonly string[];
@@ -181,6 +205,40 @@ test("pinned Firebase JS SDK gate mirrors Google's minified integration workflow
       classification: "passed-upstream-native-skip-only",
       acceptanceInvariant:
         "Accept a nonzero Karma exit only when the captured output reports TOTAL: 0 SUCCESS, at least one explicitly named native skip, no failed-test total, and no browser disconnect or infrastructure error. Preserve the partition and every native skip in evidence.",
+    },
+  );
+  assert.deepEqual(
+    fixture.localEmulatorProcessPartition.membershipFilterValueOracle,
+    {
+      observedDiagnostic: "phase2-skip-fix-memory-d214837",
+      sourceFile: "packages/firestore/test/integration/api/query.test.ts",
+      suite: "Queries",
+      test: "can use IN filters",
+      storedDocuments: [
+        { id: "a", zip: 98101 },
+        { id: "h", zip: null },
+        { id: "i", zip: "NaN" },
+      ],
+      expectations: [
+        { operand: [null], resultDocumentIds: [] },
+        { operand: [98101, null], resultDocumentIds: ["a"] },
+        { operand: ["NaN"], resultDocumentIds: [] },
+        { operand: [98101, "NaN"], resultDocumentIds: ["a"] },
+      ],
+      arrayContainsAnyTest: "can use array-contains-any filters",
+      storedArrayDocuments: [
+        { id: "e", array: [43] },
+        { id: "h", array: [null] },
+        { id: "i", array: ["NaN"] },
+      ],
+      arrayContainsAnyExpectations: [
+        { operand: [null], resultDocumentIds: [] },
+        { operand: [43, null], resultDocumentIds: ["e"] },
+        { operand: ["NaN"], resultDocumentIds: [] },
+        { operand: [43, "NaN"], resultDocumentIds: ["e"] },
+      ],
+      invariant:
+        "IN and ARRAY_CONTAINS_ANY membership ignore null and NaN operands; those sentinels do not match stored null or NaN values and do not suppress matches for ordinary operands in the same array.",
     },
   );
 
