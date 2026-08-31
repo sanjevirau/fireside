@@ -64,6 +64,12 @@ interface Phase2Manifest {
       readonly commands: readonly string[];
     };
     readonly firebaseJsSdkIntegration: {
+      readonly browserProcessPartitions: Readonly<
+        Record<string, readonly (string | null)[]>
+      >;
+      readonly clientPersistenceModes: readonly string[];
+      readonly requiredMatrixCells: number;
+      readonly serverModes: readonly string[];
       readonly sourceRevision: string;
     };
     readonly listenerDeliveryBenchmark: {
@@ -92,7 +98,11 @@ interface Phase2Manifest {
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "../../..");
 const conformanceDirectory = join(repositoryRoot, "conformance");
-const manifestPath = join(repositoryRoot, "benchmarks", "phase-2-webchannel.json");
+const manifestPath = join(
+  repositoryRoot,
+  "benchmarks",
+  "phase-2-webchannel.json",
+);
 const requiredEvidenceFiles = [
   "manifest.json",
   "fixture-replay.json",
@@ -143,7 +153,10 @@ async function main(): Promise<void> {
 
   const candidateRevision = await capture("git", ["rev-parse", "HEAD"]);
   const manifestSha256 = sha256(manifestText);
-  const environment = await collectEnvironment(candidateRevision, manifestSha256);
+  const environment = await collectEnvironment(
+    candidateRevision,
+    manifestSha256,
+  );
   await writeJson(join(outputDirectory, "environment.json"), environment);
 
   try {
@@ -181,7 +194,14 @@ async function runFixtureReplay(outputDirectory: string): Promise<void> {
     [
       "fixture-rust-replay",
       "cargo",
-      ["test", "--locked", "-p", "fireside-webchannel-front", "--test", "oracle_replay"],
+      [
+        "test",
+        "--locked",
+        "-p",
+        "fireside-webchannel-front",
+        "--test",
+        "oracle_replay",
+      ],
       repositoryRoot,
     ],
     [
@@ -210,11 +230,18 @@ async function runFixtureReplay(outputDirectory: string): Promise<void> {
       capturedCasesPerTarget: 10,
       commands,
       mismatches: commands.some((value) => !value.passed) ? null : 0,
-      passed: commands.length === specifications.length &&
+      passed:
+        commands.length === specifications.length &&
         commands.every((value) => value.passed),
       schemaVersion: 1,
       targets: ["java-v1.22.0", "production-cloud-firestore"],
-      unicodePayloads: ["ASCII", "火側", "🔥", "A火🔥éZ", "文書/emoji-😀/mixed-火"],
+      unicodePayloads: [
+        "ASCII",
+        "火側",
+        "🔥",
+        "A火🔥éZ",
+        "文書/emoji-😀/mixed-火",
+      ],
     });
     assertCommandsPassed([command]);
   }
@@ -225,57 +252,108 @@ async function runFirebaseSdkGate(
   sdkDirectory: string,
   manifest: Phase2Manifest,
 ): Promise<void> {
-  const revision = await capture("git", ["-C", sdkDirectory, "rev-parse", "HEAD"]);
+  const revision = await capture("git", [
+    "-C",
+    sdkDirectory,
+    "rev-parse",
+    "HEAD",
+  ]);
   if (revision !== manifest.gates.firebaseJsSdkIntegration.sourceRevision) {
-    throw new Error(`firebase-js-sdk revision ${revision} does not match frozen manifest`);
+    throw new Error(
+      `firebase-js-sdk revision ${revision} does not match frozen manifest`,
+    );
   }
   for (const mode of ["memory", "disk-wal"] as const) {
     const outputPath = join(outputDirectory, `firebase-js-sdk-${mode}.json`);
-    const arguments_ = [
-      "run",
-      "test:webchannel:firebase-js-sdk",
-      "--prefix",
-      "conformance",
-      "--",
-      "--sdk-dir",
-      sdkDirectory,
-      "--output",
-      outputPath,
-    ];
-    if (mode === "disk-wal") {
-      arguments_.push("--disk");
-    }
-    const command = await runCommand(
-      `firebase-js-sdk-${mode}`,
-      "npm",
-      arguments_,
-      repositoryRoot,
-      outputDirectory,
-    );
-    if (!command.passed) {
-      await writeJson(outputPath, { command, mode, passed: false, schemaVersion: 1 });
+    const results: unknown[] = [];
+    for (const clientPersistence of ["memory", "persistence"] as const) {
+      const cellOutputPath = join(
+        outputDirectory,
+        `.firebase-js-sdk-${mode}-${clientPersistence}.json`,
+      );
+      const arguments_ = [
+        "run",
+        "test:webchannel:firebase-js-sdk",
+        "--prefix",
+        "conformance",
+        "--",
+        "--sdk-dir",
+        sdkDirectory,
+        "--client-persistence",
+        clientPersistence,
+        "--output",
+        cellOutputPath,
+      ];
+      if (mode === "disk-wal") {
+        arguments_.push("--disk");
+      }
+      const command = await runCommand(
+        `firebase-js-sdk-${mode}-${clientPersistence}`,
+        "npm",
+        arguments_,
+        repositoryRoot,
+        outputDirectory,
+      );
       assertCommandsPassed([command]);
+      const result = JSON.parse(await readFile(cellOutputPath, "utf8")) as {
+        clientPersistence?: string;
+        completedTests?: number;
+        firebaseJsSdkRevision?: string;
+        filter?: string | null;
+        mode?: string;
+        nativeSkipNames?: readonly string[];
+        nativeSkips?: number;
+        passed?: boolean;
+        processPartitions?: readonly {
+          readonly coverageFilter?: string | null;
+          readonly completedTests?: number;
+        }[];
+        sourcePackage?: string;
+      };
+      if (
+        result.passed !== true ||
+        result.firebaseJsSdkRevision !== revision ||
+        result.mode !== mode ||
+        result.clientPersistence !== clientPersistence ||
+        result.sourcePackage !== "integration/firestore" ||
+        result.filter !== null ||
+        !Number.isInteger(result.completedTests) ||
+        (result.completedTests ?? 0) <= 0 ||
+        !Number.isInteger(result.nativeSkips) ||
+        !Array.isArray(result.nativeSkipNames) ||
+        !validSdkProcessPartitions(clientPersistence, result.processPartitions)
+      ) {
+        throw new Error(
+          `${mode}/${clientPersistence} firebase-js-sdk evidence is incomplete`,
+        );
+      }
+      results.push({ ...result, gateCommand: command });
+      await rm(cellOutputPath);
     }
-    const result = JSON.parse(await readFile(outputPath, "utf8")) as {
-      completedTests?: number;
-      firebaseJsSdkRevision?: string;
-      filter?: string | null;
-      nativeSkipNames?: readonly string[];
-      nativeSkips?: number;
-      passed?: boolean;
-    };
-    if (
-      result.passed !== true ||
-      result.firebaseJsSdkRevision !== revision ||
-      result.filter !== null ||
-      !Number.isInteger(result.completedTests) ||
-      (result.completedTests ?? 0) <= 0 ||
-      !Number.isInteger(result.nativeSkips) ||
-      !Array.isArray(result.nativeSkipNames)
-    ) {
-      throw new Error(`${mode} firebase-js-sdk evidence is incomplete`);
-    }
-    await writeJson(outputPath, { ...result, gateCommand: command });
+    const typedResults = results as readonly {
+      readonly completedTests: number;
+      readonly nativeSkipNames: readonly string[];
+      readonly nativeSkips: number;
+    }[];
+    await writeJson(outputPath, {
+      completedTests: typedResults.reduce(
+        (total, result) => total + result.completedTests,
+        0,
+      ),
+      firebaseJsSdkRevision: revision,
+      mode,
+      nativeSkipNames: [
+        ...new Set(typedResults.flatMap((result) => result.nativeSkipNames)),
+      ].sort(),
+      nativeSkips: typedResults.reduce(
+        (total, result) => total + result.nativeSkips,
+        0,
+      ),
+      passed: true,
+      results,
+      schemaVersion: 1,
+      sourcePackage: "integration/firestore",
+    });
   }
 }
 
@@ -288,7 +366,9 @@ async function runBrowserGate(
     const temporaryOutput = join(outputDirectory, `.browser-${mode}.json`);
     const arguments_ = [
       "run",
-      mode === "memory" ? "test:webchannel:browser" : "test:webchannel:browser:disk",
+      mode === "memory"
+        ? "test:webchannel:browser"
+        : "test:webchannel:browser:disk",
       "--prefix",
       "conformance",
       "--",
@@ -303,7 +383,9 @@ async function runBrowserGate(
       outputDirectory,
     );
     assertCommandsPassed([command]);
-    const result = JSON.parse(await readFile(temporaryOutput, "utf8")) as BrowserModeEvidence;
+    const result = JSON.parse(
+      await readFile(temporaryOutput, "utf8"),
+    ) as BrowserModeEvidence;
     validateBrowserEvidence(result, manifest);
     evidence.push({ ...result, gateCommand: command } as BrowserModeEvidence);
   }
@@ -318,8 +400,8 @@ async function runBrowserGate(
     "utf8",
   );
   await Promise.all(
-    ["memory", "disk-wal"].map(async (mode) =>
-      await rm(join(outputDirectory, `.browser-${mode}.json`))
+    ["memory", "disk-wal"].map(
+      async (mode) => await rm(join(outputDirectory, `.browser-${mode}.json`)),
     ),
   );
   return evidence;
@@ -333,11 +415,14 @@ function validateBrowserEvidence(
     throw new Error("browser demo did not report a passing frozen mode");
   }
   if (evidence.results.length !== 3) {
-    throw new Error(`${evidence.mode} browser demo did not report all three variants`);
+    throw new Error(
+      `${evidence.mode} browser demo did not report all three variants`,
+    );
   }
   for (const result of evidence.results) {
     const variant = result.result.variant;
-    const expectedThreshold = manifest.gates.listenerDeliveryBenchmark.maximumMilliseconds[variant];
+    const expectedThreshold =
+      manifest.gates.listenerDeliveryBenchmark.maximumMilliseconds[variant];
     if (
       expectedThreshold === undefined ||
       result.benchmark.thresholdMilliseconds !== expectedThreshold ||
@@ -347,7 +432,9 @@ function validateBrowserEvidence(
       result.network.reconnectMilliseconds >
         manifest.gates.listenerDeliveryBenchmark.maximumReconnectMilliseconds
     ) {
-      throw new Error(`${evidence.mode}/${variant} browser benchmark violates the manifest`);
+      throw new Error(
+        `${evidence.mode}/${variant} browser benchmark violates the manifest`,
+      );
     }
   }
 }
@@ -359,7 +446,14 @@ async function runSessionChaos(
   const command = await runCommand(
     "session-chaos",
     "cargo",
-    ["test", "--locked", "-p", "fireside-webchannel-front", "--test", "session_chaos"],
+    [
+      "test",
+      "--locked",
+      "-p",
+      "fireside-webchannel-front",
+      "--test",
+      "session_chaos",
+    ],
     repositoryRoot,
     outputDirectory,
   );
@@ -382,8 +476,15 @@ async function runSessionChaos(
     retriedForwardPostsPerVariant:
       manifest.gates.sessionChaos.retriedForwardPostsPerVariant,
     schemaVersion: 1,
-    unicodePayloads: ["ASCII", "火側", "🔥", "A火🔥éZ", "文書/emoji-😀/mixed-火"],
-    unknownSidMismatches: manifest.gates.sessionChaos.unknownSidMismatchesAllowed,
+    unicodePayloads: [
+      "ASCII",
+      "火側",
+      "🔥",
+      "A火🔥éZ",
+      "文書/emoji-😀/mixed-火",
+    ],
+    unknownSidMismatches:
+      manifest.gates.sessionChaos.unknownSidMismatchesAllowed,
     unknownSidRequestsPerVariant:
       manifest.gates.sessionChaos.unknownSidRequestsPerVariant,
     variants: manifest.gates.sessionChaos.variants,
@@ -407,7 +508,8 @@ async function runExistingConformance(outputDirectory: string): Promise<void> {
     await writeJson(join(outputDirectory, "existing-conformance.json"), {
       commands,
       completedCommands: commands.length,
-      passed: commands.length === existingConformanceCommands.length &&
+      passed:
+        commands.length === existingConformanceCommands.length &&
         commands.every((value) => value.passed),
       requiredCommands: existingConformanceCommands.length,
       schemaVersion: 1,
@@ -421,9 +523,11 @@ async function writeDeviations(outputDirectory: string): Promise<void> {
     authoritativeOracle: "production-cloud-firestore",
     captureOnlyNormalizations: [
       {
-        behavior: "capture proxy requested identity encoding upstream while preserving the browser Accept-Encoding observation",
+        behavior:
+          "capture proxy requested identity encoding upstream while preserving the browser Accept-Encoding observation",
         productBehaviorClaimed: false,
-        reason: "retain independently decodable chunks from still-open oracle streams",
+        reason:
+          "retain independently decodable chunks from still-open oracle streams",
       },
     ],
     javaV1_22_0: [
@@ -462,7 +566,9 @@ function listenerCsv(evidence: readonly BrowserModeEvidence[]): string {
   for (const mode of evidence) {
     for (const result of mode.results) {
       result.result.listenerDeliveryMilliseconds.forEach((value, index) => {
-        rows.push(`${mode.mode},${result.result.variant},${String(index + 1)},${value.toFixed(6)}`);
+        rows.push(
+          `${mode.mode},${result.result.variant},${String(index + 1)},${value.toFixed(6)}`,
+        );
       });
     }
   }
@@ -471,15 +577,77 @@ function listenerCsv(evidence: readonly BrowserModeEvidence[]): string {
 
 function assertFrozenPlan(manifest: Phase2Manifest): void {
   const evidenceFiles = [...requiredEvidenceFiles, "SHA256SUMS"];
-  if (JSON.stringify(evidenceFiles) !== JSON.stringify(manifest.evidence.requiredFiles)) {
-    throw new Error("gate runner evidence files do not match the frozen manifest");
+  if (
+    JSON.stringify(evidenceFiles) !==
+    JSON.stringify(manifest.evidence.requiredFiles)
+  ) {
+    throw new Error(
+      "gate runner evidence files do not match the frozen manifest",
+    );
   }
   if (
     JSON.stringify(existingConformanceCommands) !==
-      JSON.stringify(manifest.gates.existingConformance.commands)
+    JSON.stringify(manifest.gates.existingConformance.commands)
   ) {
-    throw new Error("gate runner conformance commands do not match the frozen manifest");
+    throw new Error(
+      "gate runner conformance commands do not match the frozen manifest",
+    );
   }
+  if (
+    JSON.stringify(manifest.gates.firebaseJsSdkIntegration.serverModes) !==
+      JSON.stringify(["memory", "disk-wal"]) ||
+    JSON.stringify(
+      manifest.gates.firebaseJsSdkIntegration.clientPersistenceModes,
+    ) !== JSON.stringify(["memory", "persistence"]) ||
+    manifest.gates.firebaseJsSdkIntegration.requiredMatrixCells !== 4
+  ) {
+    throw new Error(
+      "firebase-js-sdk gate runner does not match the frozen matrix",
+    );
+  }
+  const expectedPartitions = {
+    memory: [null],
+    persistence: [
+      "\\(Persistence=memory_lru_gc\\)",
+      "\\(Persistence=indexeddb\\)",
+    ],
+  };
+  if (
+    JSON.stringify(
+      manifest.gates.firebaseJsSdkIntegration.browserProcessPartitions,
+    ) !== JSON.stringify(expectedPartitions)
+  ) {
+    throw new Error(
+      "firebase-js-sdk process partitions do not match the frozen manifest",
+    );
+  }
+}
+
+function validSdkProcessPartitions(
+  clientPersistence: "memory" | "persistence",
+  partitions:
+    | readonly {
+        readonly coverageFilter?: string | null;
+        readonly completedTests?: number;
+      }[]
+    | undefined,
+): boolean {
+  if (partitions === undefined) {
+    return false;
+  }
+  const expectedFilters =
+    clientPersistence === "memory"
+      ? [null]
+      : ["\\(Persistence=memory_lru_gc\\)", "\\(Persistence=indexeddb\\)"];
+  return (
+    JSON.stringify(partitions.map((partition) => partition.coverageFilter)) ===
+      JSON.stringify(expectedFilters) &&
+    partitions.every(
+      (partition) =>
+        Number.isInteger(partition.completedTests) &&
+        (partition.completedTests ?? 0) > 0,
+    )
+  );
 }
 
 async function runCommand(
@@ -509,7 +677,9 @@ async function runCommand(
     child.stdout.pipe(process.stdout, { end: false });
     child.stderr.pipe(process.stderr, { end: false });
     child.once("error", reject);
-    child.once("exit", (exitCode, signal) => resolvePromise({ exitCode, signal }));
+    child.once("exit", (exitCode, signal) =>
+      resolvePromise({ exitCode, signal }),
+    );
   });
   await new Promise<void>((resolvePromise, reject) => {
     log.once("error", reject);
@@ -567,33 +737,64 @@ async function writeReport(
   },
 ): Promise<void> {
   const sdkMemory = JSON.parse(
-    await readFile(join(context.outputDirectory, "firebase-js-sdk-memory.json"), "utf8"),
-  ) as { readonly completedTests: number; readonly nativeSkips: number };
+    await readFile(
+      join(context.outputDirectory, "firebase-js-sdk-memory.json"),
+      "utf8",
+    ),
+  ) as {
+    readonly completedTests: number;
+    readonly nativeSkips: number;
+    readonly results: readonly {
+      readonly clientPersistence: string;
+      readonly completedTests: number;
+      readonly nativeSkips: number;
+    }[];
+  };
   const sdkDisk = JSON.parse(
-    await readFile(join(context.outputDirectory, "firebase-js-sdk-disk-wal.json"), "utf8"),
-  ) as { readonly completedTests: number; readonly nativeSkips: number };
+    await readFile(
+      join(context.outputDirectory, "firebase-js-sdk-disk-wal.json"),
+      "utf8",
+    ),
+  ) as {
+    readonly completedTests: number;
+    readonly nativeSkips: number;
+    readonly results: readonly {
+      readonly clientPersistence: string;
+      readonly completedTests: number;
+      readonly nativeSkips: number;
+    }[];
+  };
   const benchmarkRows = context.browserEvidence.flatMap((mode) =>
-    mode.results.map((result) =>
-      `| ${mode.mode} | ${result.result.variant} | ${result.benchmark.sampleCount} | ${result.benchmark.p99Milliseconds.toFixed(3)} | ${result.benchmark.thresholdMilliseconds} | ${result.network.reconnectMilliseconds.toFixed(3)} |`,
-    )
+    mode.results.map(
+      (result) =>
+        `| ${mode.mode} | ${result.result.variant} | ${result.benchmark.sampleCount} | ${result.benchmark.p99Milliseconds.toFixed(3)} | ${result.benchmark.thresholdMilliseconds} | ${result.network.reconnectMilliseconds.toFixed(3)} |`,
+    ),
   );
   const environmentValue = context.environment as {
     readonly cpuCount: number;
     readonly cpuModel: string;
     readonly java: string;
     readonly node: string;
-    readonly os: { readonly arch: string; readonly platform: string; readonly release: string };
+    readonly os: {
+      readonly arch: string;
+      readonly platform: string;
+      readonly release: string;
+    };
     readonly rust: string;
     readonly totalMemoryBytes: number;
   };
-  const relativeEvidence = relative(dirname(reportPath), context.outputDirectory);
-  const report = `# Phase 2 WebChannel gate\n\n` +
+  const relativeEvidence = relative(
+    dirname(reportPath),
+    context.outputDirectory,
+  );
+  const report =
+    `# Phase 2 WebChannel gate\n\n` +
     `Status: **PASS**\n\n` +
     `Candidate revision: \`${context.candidateRevision}\`  \n` +
     `Frozen manifest SHA-256: \`${context.manifestSha256}\`  \n` +
     `Evidence directory: [\`${relativeEvidence}\`](${relativeEvidence})\n\n` +
     `## Immutable criteria\n\n` +
-    `- Pinned firebase-js-sdk revision passed in memory (${sdkMemory.completedTests} completed, ${sdkMemory.nativeSkips} native skips) and disk/WAL (${sdkDisk.completedTests} completed, ${sdkDisk.nativeSkips} native skips), without a Fireside-specific filter.\n` +
+    `- Pinned firebase-js-sdk revision passed Google's minified integration package in all four cells: memory server (${sdkCellSummary(sdkMemory.results)}) and disk/WAL server (${sdkCellSummary(sdkDisk.results)}). Every frozen browser-process partition ran with no user-supplied filter. Totals: ${sdkMemory.completedTests + sdkDisk.completedTests} completed and ${sdkMemory.nativeSkips + sdkDisk.nativeSkips} upstream-native skips.\n` +
     `- The wrapper-free Firebase SDK demo passed writes, initial and realtime query snapshots, multiplexed targets, forced backchannel loss/reconnect, and sendBeacon teardown in all three variants and both storage modes.\n` +
     `- All permanent Java v1.22.0 and production Cloud Firestore fixtures replayed without mismatch, including UTF-16 torture payloads.\n` +
     `- Deterministic session chaos passed 50 dropped backchannels, forward retries, duplicate maps, and overlapping pairs per variant plus 25 unknown-SID requests per variant, with zero duplicate effects or replay loss.\n` +
@@ -617,6 +818,21 @@ async function writeReport(
   await writeFile(reportPath, report, { encoding: "utf8", flag: "wx" });
 }
 
+function sdkCellSummary(
+  results: readonly {
+    readonly clientPersistence: string;
+    readonly completedTests: number;
+    readonly nativeSkips: number;
+  }[],
+): string {
+  return results
+    .map(
+      (result) =>
+        `${result.clientPersistence}: ${String(result.completedTests)} completed, ${String(result.nativeSkips)} native skips`,
+    )
+    .join("; ");
+}
+
 async function verifyRequiredFiles(outputDirectory: string): Promise<void> {
   for (const file of requiredEvidenceFiles) {
     await access(join(outputDirectory, file));
@@ -629,9 +845,15 @@ async function writeChecksums(outputDirectory: string): Promise<void> {
     .sort();
   const lines: string[] = [];
   for (const path of files) {
-    lines.push(`${sha256(await readFile(join(outputDirectory, path)))}  ${path}`);
+    lines.push(
+      `${sha256(await readFile(join(outputDirectory, path)))}  ${path}`,
+    );
   }
-  await writeFile(join(outputDirectory, "SHA256SUMS"), `${lines.join("\n")}\n`, "utf8");
+  await writeFile(
+    join(outputDirectory, "SHA256SUMS"),
+    `${lines.join("\n")}\n`,
+    "utf8",
+  );
 }
 
 async function listFiles(root: string, directory = ""): Promise<string[]> {
@@ -640,7 +862,7 @@ async function listFiles(root: string, directory = ""): Promise<string[]> {
   for (const entry of entries) {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) {
-      files.push(...await listFiles(root, path));
+      files.push(...(await listFiles(root, path)));
     } else if (entry.isFile()) {
       files.push(path);
     }
@@ -648,7 +870,10 @@ async function listFiles(root: string, directory = ""): Promise<string[]> {
   return files;
 }
 
-async function capture(command: string, arguments_: readonly string[]): Promise<string> {
+async function capture(
+  command: string,
+  arguments_: readonly string[],
+): Promise<string> {
   return await new Promise<string>((resolvePromise, reject) => {
     const child = spawn(command, arguments_, {
       cwd: repositoryRoot,
@@ -662,7 +887,9 @@ async function capture(command: string, arguments_: readonly string[]): Promise<
       if (code === 0) {
         resolvePromise(Buffer.concat(chunks).toString("utf8").trim());
       } else {
-        reject(new Error(`${command} exited ${String(code)} (${String(signal)})`));
+        reject(
+          new Error(`${command} exited ${String(code)} (${String(signal)})`),
+        );
       }
     });
   });
@@ -674,7 +901,11 @@ function parseArguments(arguments_: readonly string[]): Arguments {
   let sdkDirectory: string | undefined;
   for (let index = 0; index < arguments_.length; index += 1) {
     const argument = arguments_[index];
-    if (argument === "--output-dir" || argument === "--report" || argument === "--sdk-dir") {
+    if (
+      argument === "--output-dir" ||
+      argument === "--report" ||
+      argument === "--sdk-dir"
+    ) {
       const value = arguments_[index + 1];
       if (value === undefined || value.length === 0) {
         throw new Error(`${argument} requires a value`);

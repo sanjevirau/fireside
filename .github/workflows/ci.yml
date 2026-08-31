@@ -89,13 +89,14 @@ jobs:
         run: npm run test:fireside-export-java-import --prefix conformance
 
   firebase-js-sdk:
-    name: Firebase JS SDK browser integration (${{ matrix.mode }})
+    name: Firebase JS SDK browser integration (${{ matrix.server_mode }}, client ${{ matrix.client_persistence }})
     runs-on: ubuntu-latest
     timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
-        mode: [memory, disk-wal]
+        server_mode: [memory, disk-wal]
+        client_persistence: [memory, persistence]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -124,4 +125,5 @@ jobs:
         run: >-
           npm run test:webchannel:firebase-js-sdk --prefix conformance --
           --sdk-dir "${{ github.workspace }}/.phase2/firebase-js-sdk"
-          ${{ matrix.mode == 'disk-wal' && '--disk' || '' }}
+          --client-persistence "${{ matrix.client_persistence }}"
+          ${{ matrix.server_mode == 'disk-wal' && '--disk' || '' }}

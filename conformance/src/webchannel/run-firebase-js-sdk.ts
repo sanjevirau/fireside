@@ -1,17 +1,24 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import {
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { createConnection } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const FIREBASE_JS_SDK_REVISION =
-  "6cde0c0230b4c1da01d4a058333daa7663322fd1";
+const FIREBASE_JS_SDK_REVISION = "6cde0c0230b4c1da01d4a058333daa7663322fd1";
 const HOST = "127.0.0.1";
 const PORT = 8080;
 const PROJECT_ID = "test-emulator";
 
 interface Arguments {
+  readonly clientPersistence: "memory" | "persistence";
   readonly diskMode: boolean;
   readonly grep?: string;
   readonly outputPath?: string;
@@ -25,7 +32,7 @@ async function main(): Promise<void> {
   const sdkDirectory = isAbsolute(arguments_.sdkDirectory)
     ? arguments_.sdkDirectory
     : resolve(process.cwd(), arguments_.sdkDirectory);
-  const firestoreDirectory = join(sdkDirectory, "packages", "firestore");
+  const integrationDirectory = join(sdkDirectory, "integration", "firestore");
   const sdkRevision = await capturedCommand(
     "git",
     ["-C", sdkDirectory, "rev-parse", "HEAD"],
@@ -37,107 +44,175 @@ async function main(): Promise<void> {
     );
   }
 
-  await copyFile(
-    join(sdkDirectory, "config", "ci.config.json"),
-    join(sdkDirectory, "config", "project.json"),
-  );
-
-  await runCommand(
-    "yarn",
-    ["--cwd", firestoreDirectory, "build:deps"],
-    sdkDirectory,
-  );
-
-  await runCommand(
-    "cargo",
-    ["build", "--locked", "-p", "fireside"],
-    repositoryRoot,
-  );
-
-  const temporaryDirectory = await mkdtemp(
-    join(tmpdir(), "fireside-firebase-js-sdk-"),
-  );
-  if (await canConnect(PORT)) {
-    throw new Error(
-      `port ${String(PORT)} is already in use; the upstream browser harness requires its default emulator port`,
-    );
-  }
-  const executable = process.platform === "win32" ? "fireside.exe" : "fireside";
-  const serverArguments = [
-    "firestore",
-    "--host",
-    HOST,
-    "--port",
-    String(PORT),
-    "--project_id",
-    PROJECT_ID,
-    "--single_project_mode",
-    "true",
+  const generatedMetadataPaths = [
+    join(sdkDirectory, "packages", "app", "package.json"),
+    join(sdkDirectory, "packages", "firestore", "package.json"),
   ];
-  if (arguments_.diskMode) {
-    serverArguments.push("--data-dir", join(temporaryDirectory, "data"));
-  }
-  const server = spawn(
-    join(repositoryRoot, "target", "debug", executable),
-    serverArguments,
-    {
-      cwd: repositoryRoot,
-      env: process.env,
-      stdio: ["ignore", "inherit", "inherit"],
-    },
+  const generatedMetadata = await Promise.all(
+    generatedMetadataPaths.map(async (path) => await readFile(path, "utf8")),
   );
 
   try {
-    await waitUntilListening(server, PORT);
-    const karmaArguments = [
-      "--cwd",
-      firestoreDirectory,
-      "karma",
-      "start",
-      "--integration",
-      "--targetBackend=emulator",
-      "--single-run",
+    await copyFile(
+      join(sdkDirectory, "config", "ci.config.json"),
+      join(sdkDirectory, "config", "project.json"),
+    );
+
+    await runCommand(
+      "yarn",
+      ["--cwd", join(sdkDirectory, "packages", "firestore"), "build:deps"],
+      sdkDirectory,
+    );
+    await runCommand(
+      "yarn",
+      ["--cwd", integrationDirectory, `build:${arguments_.clientPersistence}`],
+      sdkDirectory,
+    );
+
+    await runCommand(
+      "cargo",
+      ["build", "--locked", "-p", "fireside"],
+      repositoryRoot,
+    );
+
+    if (await canConnect(PORT)) {
+      throw new Error(
+        `port ${String(PORT)} is already in use; the upstream browser harness requires its default emulator port`,
+      );
+    }
+    const temporaryDirectory = await mkdtemp(
+      join(tmpdir(), "fireside-firebase-js-sdk-"),
+    );
+    const executable =
+      process.platform === "win32" ? "fireside.exe" : "fireside";
+    const serverArguments = [
+      "firestore",
+      "--host",
+      HOST,
+      "--port",
+      String(PORT),
+      "--project_id",
+      PROJECT_ID,
+      "--single_project_mode",
+      "true",
     ];
-    if (arguments_.grep !== undefined) {
-      karmaArguments.push("--grep", arguments_.grep);
+    if (arguments_.diskMode) {
+      serverArguments.push("--data-dir", join(temporaryDirectory, "data"));
     }
-    const karmaOutput = await runObservedCommand("yarn", karmaArguments, sdkDirectory, {
-      ...process.env,
-      FIRESTORE_EMULATOR_PORT: String(PORT),
-      FIRESTORE_EMULATOR_PROJECT_ID: PROJECT_ID,
-    });
-    const summary = {
-      command:
-        "yarn --cwd packages/firestore karma start --integration --targetBackend=emulator --single-run",
-      completedAt: new Date().toISOString(),
-      firebaseJsSdkRevision: sdkRevision,
-      filter: arguments_.grep ?? null,
-      mode: arguments_.diskMode ? "disk-wal" : "memory",
-      passed: true,
-      projectId: PROJECT_ID,
-      schemaVersion: 1,
-      sdkBuildCommand:
-        "yarn --cwd packages/firestore build:deps",
-      sdkConfigCommand:
-        "cp config/ci.config.json config/project.json",
-      ...parseKarmaEvidence(karmaOutput),
-    };
-    const summaryText = `${JSON.stringify(summary, null, 2)}\n`;
-    if (arguments_.outputPath !== undefined) {
-      const outputPath = isAbsolute(arguments_.outputPath)
-        ? arguments_.outputPath
-        : resolve(process.cwd(), arguments_.outputPath);
-      await mkdir(dirname(outputPath), { recursive: true });
-      await writeFile(outputPath, summaryText, "utf8");
+    const server = spawn(
+      join(repositoryRoot, "target", "debug", executable),
+      serverArguments,
+      {
+        cwd: repositoryRoot,
+        env: process.env,
+        stdio: ["ignore", "inherit", "inherit"],
+      },
+    );
+
+    try {
+      await waitUntilListening(server, PORT);
+      const coverageFilters =
+        arguments_.clientPersistence === "memory"
+          ? [undefined]
+          : ["\\(Persistence=memory_lru_gc\\)", "\\(Persistence=indexeddb\\)"];
+      const processPartitions = [];
+      for (const coverageFilter of coverageFilters) {
+        const karmaArguments = [
+          "--cwd",
+          integrationDirectory,
+          "karma",
+          "start",
+          join(scriptDirectory, "firebase-js-sdk-karma.conf.cjs"),
+          "--single-run",
+        ];
+        const effectiveFilter = combineFilters(coverageFilter, arguments_.grep);
+        if (effectiveFilter !== undefined) {
+          karmaArguments.push("--grep", effectiveFilter);
+        }
+        const karmaOutput = await runObservedCommand(
+          "yarn",
+          karmaArguments,
+          sdkDirectory,
+          {
+            ...process.env,
+            FIREBASE_JS_SDK_DIR: sdkDirectory,
+            FIRESTORE_EMULATOR_PORT: String(PORT),
+            FIRESTORE_EMULATOR_PROJECT_ID: PROJECT_ID,
+          },
+        );
+        processPartitions.push({
+          coverageFilter: coverageFilter ?? null,
+          effectiveFilter: effectiveFilter ?? null,
+          ...parseKarmaEvidence(karmaOutput),
+        });
+      }
+      const summary = {
+        command:
+          "yarn --cwd integration/firestore karma start <fireside emulator-target config> --single-run",
+        clientPersistence: arguments_.clientPersistence,
+        completedTests: processPartitions.reduce(
+          (total, partition) => total + partition.completedTests,
+          0,
+        ),
+        completedAt: new Date().toISOString(),
+        firebaseJsSdkRevision: sdkRevision,
+        filter: arguments_.grep ?? null,
+        mode: arguments_.diskMode ? "disk-wal" : "memory",
+        nativeSkipNames: [
+          ...new Set(
+            processPartitions.flatMap((partition) => partition.nativeSkipNames),
+          ),
+        ].sort(),
+        nativeSkips: processPartitions.reduce(
+          (total, partition) => total + partition.nativeSkips,
+          0,
+        ),
+        passed: true,
+        processPartitions,
+        projectId: PROJECT_ID,
+        schemaVersion: 1,
+        sdkBuildCommand: `yarn --cwd packages/firestore build:deps && yarn --cwd integration/firestore build:${arguments_.clientPersistence}`,
+        sdkConfigCommand: "cp config/ci.config.json config/project.json",
+        sourcePackage: "integration/firestore",
+      };
+      const summaryText = `${JSON.stringify(summary, null, 2)}\n`;
+      if (arguments_.outputPath !== undefined) {
+        const outputPath = isAbsolute(arguments_.outputPath)
+          ? arguments_.outputPath
+          : resolve(process.cwd(), arguments_.outputPath);
+        await mkdir(dirname(outputPath), { recursive: true });
+        await writeFile(outputPath, summaryText, "utf8");
+      }
+      process.stdout.write(summaryText);
+    } finally {
+      await stop(server);
+      await rm(temporaryDirectory, { recursive: true, force: true });
     }
-    process.stdout.write(summaryText);
   } finally {
-    await stop(server);
-    await rm(temporaryDirectory, { recursive: true, force: true });
+    await Promise.all(
+      generatedMetadataPaths.map(
+        async (path, index) =>
+          await writeFile(path, generatedMetadata[index]!, "utf8"),
+      ),
+    );
   }
 }
 
+function combineFilters(
+  coverageFilter: string | undefined,
+  userFilter: string | undefined,
+): string | undefined {
+  if (coverageFilter === undefined) {
+    return userFilter;
+  }
+  if (userFilter === undefined) {
+    return coverageFilter;
+  }
+  return `(?=.*${coverageFilter})(?=.*${userFilter})`;
+}
+
 function parseArguments(arguments_: readonly string[]): Arguments {
+  let clientPersistence: "memory" | "persistence" | undefined;
   let diskMode = false;
   let grep: string | undefined;
   let outputPath: string | undefined;
@@ -148,12 +223,22 @@ function parseArguments(arguments_: readonly string[]): Arguments {
       diskMode = true;
       continue;
     }
-    if (argument === "--grep" || argument === "--output" || argument === "--sdk-dir") {
+    if (
+      argument === "--client-persistence" ||
+      argument === "--grep" ||
+      argument === "--output" ||
+      argument === "--sdk-dir"
+    ) {
       const value = arguments_[index + 1];
       if (value === undefined || value.length === 0) {
         throw new Error(`${argument} requires a value`);
       }
-      if (argument === "--grep") {
+      if (argument === "--client-persistence") {
+        if (value !== "memory" && value !== "persistence") {
+          throw new Error("--client-persistence must be memory or persistence");
+        }
+        clientPersistence = value;
+      } else if (argument === "--grep") {
         grep = value;
       } else if (argument === "--output") {
         outputPath = value;
@@ -168,7 +253,11 @@ function parseArguments(arguments_: readonly string[]): Arguments {
   if (sdkDirectory === undefined) {
     throw new Error("--sdk-dir is required");
   }
+  if (clientPersistence === undefined) {
+    throw new Error("--client-persistence is required");
+  }
   return {
+    clientPersistence,
     diskMode,
     ...(grep === undefined ? {} : { grep }),
     ...(outputPath === undefined ? {} : { outputPath }),
@@ -184,9 +273,13 @@ function parseKarmaEvidence(output: string): {
   const plain = output.replaceAll(/\u001b\[[0-9;]*m/gu, "");
   const completed = /TOTAL:\s+(\d+)\s+SUCCESS/gu.exec(plain)?.[1];
   if (completed === undefined) {
-    throw new Error("upstream Karma output did not report its completed test count");
+    throw new Error(
+      "upstream Karma output did not report its completed test count",
+    );
   }
-  const nativeSkipNames = [...plain.matchAll(/^\s*✖\s+(.+?)\s+\(skipped\)\s*$/gmu)]
+  const nativeSkipNames = [
+    ...plain.matchAll(/^\s*✖\s+(.+?)\s+\(skipped\)\s*$/gmu),
+  ]
     .map((match) => match[1])
     .filter((name): name is string => name !== undefined);
   return {
