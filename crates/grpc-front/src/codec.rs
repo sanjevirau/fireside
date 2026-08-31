@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use fireside_core_store::{
     DatabaseName, Document, DocumentKey, FieldPath, FieldTransform, Fields, Precondition,
-    Timestamp, TransformOperation, Value, Write,
+    Timestamp, TransformOperation, Value, Write, validate_resource_id,
 };
 use fireside_query_engine::FieldPath as QueryFieldPath;
 use pbjson_types::Timestamp as ProtoTimestamp;
@@ -76,6 +76,10 @@ pub(crate) fn decode_parent(resource: &str) -> Result<(DatabaseName, Option<Stri
         return Err(Status::invalid_argument(format!(
             "invalid document parent resource name: {resource}"
         )));
+    }
+    for segment in path {
+        validate_resource_id(segment)
+            .map_err(|error| Status::invalid_argument(error.to_string()))?;
     }
     Ok((database, (!path.is_empty()).then(|| path.join("/"))))
 }
@@ -550,6 +554,30 @@ mod tests {
         let error = decode_document_name("projects/demo/databases/(default)/documents/cities")
             .expect_err("collection resource should be invalid");
         assert_eq!(error.code(), tonic::Code::InvalidArgument);
+    }
+
+    #[test]
+    fn rejects_reserved_resource_ids_in_documents_and_query_parents() {
+        for resource in [
+            "projects/demo/databases/(default)/documents/a/__badpath__",
+            "projects/demo/databases/(default)/documents/__badpath__/one",
+        ] {
+            let error = decode_document_name(resource)
+                .expect_err("reserved document resource should be invalid");
+            assert_eq!(error.code(), tonic::Code::InvalidArgument);
+            assert_eq!(
+                error.message(),
+                "Resource id \"__badpath__\" is invalid because it is reserved."
+            );
+        }
+
+        let error = decode_parent("projects/demo/databases/(default)/documents/a/__badpath__")
+            .expect_err("reserved query parent should be invalid");
+        assert_eq!(error.code(), tonic::Code::InvalidArgument);
+        assert_eq!(
+            error.message(),
+            "Resource id \"__badpath__\" is invalid because it is reserved."
+        );
     }
 
     #[test]

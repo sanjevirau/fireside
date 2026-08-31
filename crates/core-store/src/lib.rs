@@ -192,6 +192,9 @@ impl DocumentKey {
         if segments.len() < 2 || segments.len() % 2 != 0 || segments.iter().any(|s| s.is_empty()) {
             return Err(NameError::InvalidDocumentPath(path));
         }
+        for segment in segments {
+            validate_resource_id(segment)?;
+        }
 
         Ok(Self { database, path })
     }
@@ -228,6 +231,9 @@ pub enum NameError {
     /// A document path is empty, has empty segments, or does not end in a
     /// document segment.
     InvalidDocumentPath(Arc<str>),
+    /// A collection or document identifier uses Firestore's reserved
+    /// `__.*__` namespace.
+    ReservedResourceId(Arc<str>),
 }
 
 impl Display for NameError {
@@ -239,11 +245,26 @@ impl Display for NameError {
             Self::InvalidDocumentPath(path) => {
                 write!(formatter, "invalid document path: {path}")
             }
+            Self::ReservedResourceId(resource_id) => {
+                write!(
+                    formatter,
+                    "Resource id \"{resource_id}\" is invalid because it is reserved."
+                )
+            }
         }
     }
 }
 
 impl Error for NameError {}
+
+/// Rejects collection and document identifiers in Firestore's reserved
+/// `__.*__` namespace.
+pub fn validate_resource_id(resource_id: &str) -> Result<(), NameError> {
+    if resource_id.len() >= 4 && resource_id.starts_with("__") && resource_id.ends_with("__") {
+        return Err(NameError::ReservedResourceId(Arc::from(resource_id)));
+    }
+    Ok(())
+}
 
 /// Monotonic internal commit revision.
 #[derive(
@@ -2638,6 +2659,23 @@ mod tests {
         assert!(DocumentKey::new(database.clone(), "items/one").is_ok());
         assert!(DocumentKey::new(database.clone(), "items").is_err());
         assert!(DocumentKey::new(database, "items//one").is_err());
+    }
+
+    #[test]
+    fn document_paths_reject_reserved_resource_ids() {
+        let database = database("(default)");
+        for path in ["__badpath__/one", "items/__badpath__", "a/one/____/two"] {
+            let error = DocumentKey::new(database.clone(), path)
+                .expect_err("reserved resource ids should be rejected");
+            assert!(matches!(error, NameError::ReservedResourceId(_)));
+        }
+        assert!(DocumentKey::new(database, "__badpath/allowed__").is_ok());
+        assert_eq!(
+            validate_resource_id("__badpath__")
+                .expect_err("reserved resource id should be rejected")
+                .to_string(),
+            "Resource id \"__badpath__\" is invalid because it is reserved."
+        );
     }
 
     #[test]

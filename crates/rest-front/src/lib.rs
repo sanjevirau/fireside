@@ -21,7 +21,7 @@ use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use fireside_core_store::{
     CommitError, DatabaseName, Document, DocumentKey, FieldPath, FieldTransform, Fields,
-    Precondition, Store, Timestamp, TransformOperation, Value, Write,
+    Precondition, Store, Timestamp, TransformOperation, Value, Write, validate_resource_id,
 };
 use fireside_export_format::{ExportedDocument, write_export};
 use fireside_query_engine::{
@@ -1034,6 +1034,9 @@ fn validate_parent(parent: &str) -> Result<(), RestError> {
             "runQuery parent must be a document path",
         ));
     }
+    for segment in segments {
+        validate_resource_id(segment).map_err(|error| RestError::invalid(error.to_string()))?;
+    }
     Ok(())
 }
 
@@ -1693,6 +1696,38 @@ mod tests {
     #[test]
     fn control_and_document_routes_can_share_one_router() {
         let _router = router(Store::default());
+    }
+
+    #[tokio::test]
+    async fn run_query_rejects_reserved_resource_ids_with_the_oracle_error() {
+        let response = router(Store::default())
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/v1/projects/demo/databases/(default)/documents/a/__badpath__:runQuery")
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        r#"{"structuredQuery":{"from":[{"collectionId":"b"}]}}"#,
+                    ))
+                    .expect("reserved-id request should build"),
+            )
+            .await
+            .expect("REST router should respond");
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("reserved-id response should be readable");
+        assert_eq!(
+            serde_json::from_slice::<JsonValue>(&body)
+                .expect("reserved-id response should be JSON"),
+            json!({
+                "error": {
+                    "code": 400,
+                    "message": "Resource id \"__badpath__\" is invalid because it is reserved.",
+                    "status": "INVALID_ARGUMENT",
+                }
+            })
+        );
     }
 
     #[tokio::test]
