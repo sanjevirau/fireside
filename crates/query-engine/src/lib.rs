@@ -11,7 +11,7 @@ use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use fireside_core_store::Value;
+use fireside_core_store::{Value, compare_resource_paths};
 
 mod indexes;
 mod query;
@@ -112,7 +112,7 @@ pub fn compare_values(left: &Value, right: &Value, edition: DatabaseEdition) -> 
             compare_indexed_bytes(left.as_bytes(), right.as_bytes(), edition)
         }
         (Value::Bytes(left), Value::Bytes(right)) => compare_indexed_bytes(left, right, edition),
-        (Value::Reference(left), Value::Reference(right)) => left.split('/').cmp(right.split('/')),
+        (Value::Reference(left), Value::Reference(right)) => compare_resource_paths(left, right),
         (
             Value::GeoPoint {
                 latitude: left_latitude,

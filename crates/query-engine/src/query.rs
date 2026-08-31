@@ -4,7 +4,9 @@ use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::sync::Arc;
 
-use fireside_core_store::{DatabaseName, Document, DocumentKey, Fields, Snapshot, Value};
+use fireside_core_store::{
+    DatabaseName, Document, DocumentKey, Fields, Snapshot, Value, compare_resource_paths,
+};
 
 use crate::{DatabaseEdition, compare_values};
 
@@ -525,7 +527,7 @@ fn execute_nearest(
         } else {
             ordering
         };
-        ordering.then_with(|| left_key.path().split('/').cmp(right_key.path().split('/')))
+        ordering.then_with(|| compare_resource_paths(left_key.path(), right_key.path()))
     });
     let limit = query.limit.map_or(nearest.limit, |limit| match limit {
         Limit::First(limit) | Limit::Last(limit) => limit.min(nearest.limit),
@@ -921,8 +923,8 @@ impl FieldValue<'_> {
         match self {
             Self::Borrowed(left) => compare_values(left, right, edition),
             Self::DocumentName(left) => match right {
-                Value::Reference(right) => left.split('/').cmp(right.split('/')),
-                Value::String(right) => left.split('/').cmp(right.split('/')),
+                Value::Reference(right) => compare_resource_paths(left, right),
+                Value::String(right) => compare_resource_paths(left, right),
                 _ => Ordering::Greater,
             },
         }
@@ -934,8 +936,8 @@ impl FieldValue<'_> {
                 Some(compare_values(left, right, edition))
             }
             Self::DocumentName(left) => match right {
-                Value::Reference(right) => Some(left.split('/').cmp(right.split('/'))),
-                Value::String(right) => Some(left.split('/').cmp(right.split('/'))),
+                Value::Reference(right) => Some(compare_resource_paths(left, right)),
+                Value::String(right) => Some(compare_resource_paths(left, right)),
                 _ => None,
             },
             Self::Borrowed(_) => None,
@@ -1020,7 +1022,7 @@ fn compare_field_values(
             compare_values(left, right, edition)
         }
         (FieldValue::DocumentName(left), FieldValue::DocumentName(right)) => {
-            left.split('/').cmp(right.split('/'))
+            compare_resource_paths(left, right)
         }
         (FieldValue::Borrowed(_), FieldValue::DocumentName(_)) => Ordering::Less,
         (FieldValue::DocumentName(_), FieldValue::Borrowed(_)) => Ordering::Greater,

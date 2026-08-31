@@ -7,7 +7,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use fireside_core_store::{
     CommitError, CommitResult, DatabaseName, Document, DocumentKey, FieldTransform, Snapshot,
     SnapshotError, Store, Timestamp, TransactionMemoryRegistration, TransformOperation, Value,
-    Write, database_name_logical_bytes, document_key_logical_bytes,
+    Write, compare_resource_paths, database_name_logical_bytes, document_key_logical_bytes,
 };
 use fireside_query_engine::{
     DatabaseEdition, Direction as QueryDirection, FieldPath as QueryFieldPath, IndexConfigError,
@@ -1470,9 +1470,7 @@ fn compare_list_documents(
 ) -> std::cmp::Ordering {
     for order in orders {
         let ordering = match &order.path {
-            QueryFieldPath::DocumentId => {
-                left_key.path().split('/').cmp(right_key.path().split('/'))
-            }
+            QueryFieldPath::DocumentId => compare_resource_paths(left_key.path(), right_key.path()),
             QueryFieldPath::Field(segments) => compare_values(
                 nested_value(
                     left.expect("documents missing ordered fields are filtered")

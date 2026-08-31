@@ -258,12 +258,55 @@ impl Display for NameError {
 impl Error for NameError {}
 
 /// Rejects collection and document identifiers in Firestore's reserved
-/// `__.*__` namespace.
+/// `__.*__` namespace while preserving signed numeric Datastore IDs.
 pub fn validate_resource_id(resource_id: &str) -> Result<(), NameError> {
-    if resource_id.len() >= 4 && resource_id.starts_with("__") && resource_id.ends_with("__") {
+    if resource_id.len() >= 4
+        && resource_id.starts_with("__")
+        && resource_id.ends_with("__")
+        && numeric_resource_id(resource_id).is_none()
+    {
         return Err(NameError::ReservedResourceId(Arc::from(resource_id)));
     }
     Ok(())
+}
+
+/// Compares Firestore resource paths, ordering signed numeric Datastore IDs by
+/// their embedded integer before ordinary string identifiers.
+#[must_use]
+pub fn compare_resource_paths(left: &str, right: &str) -> Ordering {
+    let mut left_segments = left.split('/');
+    let mut right_segments = right.split('/');
+    loop {
+        match (left_segments.next(), right_segments.next()) {
+            (Some(left), Some(right)) => {
+                let ordering = compare_resource_ids(left, right);
+                if ordering != Ordering::Equal {
+                    return ordering;
+                }
+            }
+            (Some(_), None) => return Ordering::Greater,
+            (None, Some(_)) => return Ordering::Less,
+            (None, None) => return Ordering::Equal,
+        }
+    }
+}
+
+fn compare_resource_ids(left: &str, right: &str) -> Ordering {
+    match (numeric_resource_id(left), numeric_resource_id(right)) {
+        (Some(left), Some(right)) => left.cmp(&right),
+        (Some(_), None) => Ordering::Less,
+        (None, Some(_)) => Ordering::Greater,
+        (None, None) => left.as_bytes().cmp(right.as_bytes()),
+    }
+}
+
+fn numeric_resource_id(resource_id: &str) -> Option<i64> {
+    let digits = resource_id.strip_prefix("__id")?.strip_suffix("__")?;
+    let magnitude = digits.strip_prefix('-').unwrap_or(digits);
+    if magnitude.is_empty() || !magnitude.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    digits.parse().ok()
 }
 
 /// Monotonic internal commit revision.
@@ -2675,6 +2718,39 @@ mod tests {
                 .expect_err("reserved resource id should be rejected")
                 .to_string(),
             "Resource id \"__badpath__\" is invalid because it is reserved."
+        );
+    }
+
+    #[test]
+    fn numeric_datastore_resource_ids_are_valid_and_sort_by_signed_integer() {
+        let database = database("(default)");
+        for resource_id in [
+            "__id-9223372036854775808__",
+            "__id-2__",
+            "__id7__",
+            "__id9223372036854775807__",
+        ] {
+            assert!(DocumentKey::new(database.clone(), format!("items/{resource_id}")).is_ok());
+        }
+        assert!(DocumentKey::new(database, "items/__id9223372036854775808__").is_err());
+
+        let mut paths = [
+            "items/plain",
+            "items/__id7__",
+            "items/__id9223372036854775807__",
+            "items/__id-2__",
+            "items/__id-9223372036854775808__",
+        ];
+        paths.sort_by(|left, right| compare_resource_paths(left, right));
+        assert_eq!(
+            paths,
+            [
+                "items/__id-9223372036854775808__",
+                "items/__id-2__",
+                "items/__id7__",
+                "items/__id9223372036854775807__",
+                "items/plain",
+            ]
         );
     }
 
