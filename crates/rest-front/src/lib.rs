@@ -25,9 +25,9 @@ use fireside_core_store::{
 };
 use fireside_export_format::{ExportedDocument, write_export};
 use fireside_query_engine::{
-    DatabaseEdition, Direction, DistanceMeasure, FieldFilter, FieldOperator,
+    Aggregation, DatabaseEdition, Direction, DistanceMeasure, FieldFilter, FieldOperator,
     FieldPath as QueryFieldPath, Filter, Limit, Query as StructuredQuery, QueryPolicy, QueryScope,
-    execute,
+    aggregate, execute,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value as JsonValue, json};
@@ -38,6 +38,8 @@ const DOCUMENT_ROUTE: &str = "/v1/projects/{project}/databases/{database}/docume
 const COMMIT_ROUTE: &str = "/v1/projects/{project}/databases/{database}/documents:commit";
 const BATCH_GET_ROUTE: &str = "/v1/projects/{project}/databases/{database}/documents:batchGet";
 const RUN_QUERY_ROUTE: &str = "/v1/projects/{project}/databases/{database}/documents:runQuery";
+const RUN_AGGREGATION_QUERY_ROUTE: &str =
+    "/v1/projects/{project}/databases/{database}/documents:runAggregationQuery";
 const TRIGGER_ROUTE: &str = "/emulator/v1/projects/{project}/triggers/{key}";
 const EVENTARC_ROUTE: &str = "/emulator/v1/projects/{project}/eventarcTrigger";
 const CLEAR_ROUTE: &str = "/emulator/v1/projects/{project}/databases/{database}/documents";
@@ -78,6 +80,10 @@ pub fn router_with_query_policy_and_memory_reporter(
         .route(COMMIT_ROUTE, axum::routing::post(commit))
         .route(BATCH_GET_ROUTE, axum::routing::post(batch_get))
         .route(RUN_QUERY_ROUTE, axum::routing::post(run_query_at_root))
+        .route(
+            RUN_AGGREGATION_QUERY_ROUTE,
+            axum::routing::post(run_aggregation_query_at_root),
+        )
         .route(
             TRIGGER_ROUTE,
             axum::routing::put(put_trigger).delete(delete_trigger),
@@ -633,13 +639,25 @@ async fn run_query_at_parent(
     Path(path): Path<DocumentPath>,
     Json(body): Json<JsonValue>,
 ) -> Result<Json<JsonValue>, RestError> {
-    let Some(parent) = path.document.strip_suffix(":runQuery") else {
-        return Err(RestError::not_found("unknown REST document operation"));
-    };
-    validate_parent(parent)?;
     let database = DatabaseName::new(path.project, path.database)
         .map_err(|error| RestError::invalid(error.to_string()))?;
-    run_query(&state, &database, Some(parent), &body)
+    if let Some(parent) = path.document.strip_suffix(":runQuery") {
+        validate_parent(parent)?;
+        return run_query(&state, &database, Some(parent), &body);
+    }
+    if let Some(parent) = path.document.strip_suffix(":runAggregationQuery") {
+        validate_parent(parent)?;
+        return run_aggregation_query(&state, &database, Some(parent), &body);
+    }
+    Err(RestError::not_found("unknown REST document operation"))
+}
+
+async fn run_aggregation_query_at_root(
+    State(state): State<RestState>,
+    Path(path): Path<DatabasePath>,
+    Json(body): Json<JsonValue>,
+) -> Result<Json<JsonValue>, RestError> {
+    run_aggregation_query(&state, &database_name(path)?, None, &body)
 }
 
 fn run_query(
@@ -683,6 +701,120 @@ fn run_query(
         responses.push(json!({ "readTime": read_time }));
     }
     Ok(Json(JsonValue::Array(responses)))
+}
+
+fn run_aggregation_query(
+    state: &RestState,
+    database: &DatabaseName,
+    parent: Option<&str>,
+    body: &JsonValue,
+) -> Result<Json<JsonValue>, RestError> {
+    let aggregation_query = body
+        .get("structuredAggregationQuery")
+        .and_then(JsonValue::as_object)
+        .ok_or_else(|| RestError::invalid("structuredAggregationQuery is required"))?;
+    let structured = aggregation_query
+        .get("structuredQuery")
+        .and_then(JsonValue::as_object)
+        .ok_or_else(|| RestError::invalid("aggregation structuredQuery is required"))?;
+    let query = decode_query(structured, parent)?;
+    state
+        .query_policy
+        .validate(&query)
+        .map_err(|error| RestError::streaming_failed_precondition(error.to_string()))?;
+    let (operations, count_bounds) = decode_aggregations(aggregation_query)?;
+    let documents = execute(
+        &state.store.snapshot(),
+        database,
+        &query,
+        state.query_policy.edition(),
+    )
+    .map_err(|error| RestError::invalid(error.to_string()))?;
+    let mut fields = aggregate(&documents, &operations);
+    for (alias, bound) in count_bounds {
+        if let Some(Value::Integer(count)) = fields.get_mut(&alias) {
+            *count = (*count).min(i64::try_from(bound).unwrap_or(i64::MAX));
+        }
+    }
+    Ok(Json(JsonValue::Array(vec![json!({
+        "result": { "aggregateFields": encode_fields(&fields)? },
+        "readTime": format_timestamp(now_timestamp())?,
+    })])))
+}
+
+fn decode_aggregations(
+    aggregation_query: &Map<String, JsonValue>,
+) -> Result<(Vec<Aggregation>, BTreeMap<String, usize>), RestError> {
+    let aggregations = aggregation_query
+        .get("aggregations")
+        .and_then(JsonValue::as_array)
+        .ok_or_else(|| RestError::invalid("aggregations must be an array"))?;
+    if aggregations.is_empty() || aggregations.len() > 5 {
+        return Err(RestError::invalid(
+            "aggregation query requires between one and five operations",
+        ));
+    }
+    let mut generated_alias = 1_u32;
+    let mut operations = Vec::with_capacity(aggregations.len());
+    let mut count_bounds = BTreeMap::new();
+    for operation in aggregations {
+        let operation = operation
+            .as_object()
+            .ok_or_else(|| RestError::invalid("aggregation operation must be an object"))?;
+        let alias = operation
+            .get("alias")
+            .and_then(JsonValue::as_str)
+            .filter(|alias| !alias.is_empty())
+            .map_or_else(
+                || {
+                    let alias = format!("field_{generated_alias}");
+                    generated_alias += 1;
+                    alias
+                },
+                ToOwned::to_owned,
+            );
+        let aggregation = if let Some(count) = operation.get("count") {
+            if let Some(up_to) = count.get("upTo").and_then(|value| {
+                value
+                    .as_u64()
+                    .or_else(|| value.as_str().and_then(|value| value.parse().ok()))
+            }) {
+                let up_to = usize::try_from(up_to)
+                    .map_err(|_| RestError::invalid("count upper bound is too large"))?;
+                if up_to == 0 {
+                    return Err(RestError::invalid("count upper bound must be positive"));
+                }
+                count_bounds.insert(alias.clone(), up_to);
+            }
+            Aggregation::Count {
+                alias: alias.clone(),
+            }
+        } else if let Some(sum) = operation.get("sum") {
+            Aggregation::Sum {
+                alias: alias.clone(),
+                field: decode_aggregation_field(sum)?,
+            }
+        } else if let Some(average) = operation.get("avg") {
+            Aggregation::Average {
+                alias: alias.clone(),
+                field: decode_aggregation_field(average)?,
+            }
+        } else {
+            return Err(RestError::invalid("aggregation operator is required"));
+        };
+        operations.push(aggregation);
+    }
+    Ok((operations, count_bounds))
+}
+
+fn decode_aggregation_field(value: &JsonValue) -> Result<QueryFieldPath, RestError> {
+    let field = value
+        .get("field")
+        .and_then(JsonValue::as_object)
+        .and_then(|field| field.get("fieldPath"))
+        .and_then(JsonValue::as_str)
+        .ok_or_else(|| RestError::invalid("aggregation fieldPath is required"))?;
+    decode_query_field(field)
 }
 
 fn decode_query(
@@ -1470,6 +1602,9 @@ mod tests {
     const JAVA_CORS_FIXTURE: &str = include_str!(
         "../../../conformance/fixtures/rest-v1/java-v1.22.0/cors-preflight/fixture.json"
     );
+    const CLOUD_AGGREGATION_CONTRACT: &str = include_str!(
+        "../../../conformance/fixtures/rest-v1/production-cloud-firestore/aggregation-count/decoded-contract.json"
+    );
 
     #[test]
     fn control_and_document_routes_can_share_one_router() {
@@ -1543,6 +1678,65 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[tokio::test]
+    async fn browser_aggregation_matches_the_cloud_envelope() {
+        let store = Store::default();
+        let database = DatabaseName::new("fireside-conformance", "(default)")
+            .expect("fixture database should be valid");
+        let writes = ["oracle", "oracle-second"].map(|document| Write::Set {
+            key: DocumentKey::new(
+                database.clone(),
+                format!("fireside_webchannel_capture/{document}"),
+            )
+            .expect("fixture document key should be valid"),
+            fields: Fields::from([("synthetic".to_owned(), Value::Boolean(true))]),
+            transforms: Vec::new(),
+            precondition: Precondition::None,
+        });
+        store
+            .commit(&writes)
+            .expect("fixture documents should commit");
+        let contract: JsonValue = serde_json::from_str(CLOUD_AGGREGATION_CONTRACT)
+            .expect("cloud aggregation contract should be valid JSON");
+        let exchange = contract["exchanges"]
+            .as_array()
+            .expect("fixture should contain exchanges")
+            .iter()
+            .find(|exchange| exchange["request"]["method"] == "POST")
+            .expect("fixture should contain the aggregation POST");
+        let request = Request::builder()
+            .method(Method::POST)
+            .uri(
+                exchange["request"]["path"]
+                    .as_str()
+                    .expect("fixture request path"),
+            )
+            .header(CONTENT_TYPE, "text/plain")
+            .body(Body::from(
+                exchange["request"]["bodyText"]
+                    .as_str()
+                    .expect("fixture request body")
+                    .to_owned(),
+            ))
+            .expect("fixture request should build");
+        let response = router(store)
+            .oneshot(request)
+            .await
+            .expect("REST router should respond");
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("aggregation response should be readable");
+        let response: JsonValue =
+            serde_json::from_slice(&body).expect("aggregation response should be JSON");
+        assert_eq!(
+            response[0]["result"]["aggregateFields"]["aggregate_0"]["integerValue"],
+            "2"
+        );
+        assert!(response[0].get("readTime").is_some());
+        assert!(response[0].get("done").is_none());
     }
 
     #[tokio::test]
