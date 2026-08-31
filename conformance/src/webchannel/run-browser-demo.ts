@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -17,6 +17,7 @@ const VARIANTS = [
   "buffering-proxy-auto-detection",
 ] as const;
 const diskMode = process.argv.includes("--disk");
+const outputPath = argumentValue("--output");
 
 interface NetworkObservations {
   droppedBackchannels: number;
@@ -137,12 +138,21 @@ async function main(): Promise<void> {
       }
     }
 
-    process.stdout.write(`${JSON.stringify({
+    const summary = {
+      completedAt: new Date().toISOString(),
       mode: diskMode ? "disk-wal" : "memory",
+      passed: true,
       projectId: PROJECT_ID,
       results,
       schemaVersion: 1,
-    }, null, 2)}\n`);
+    };
+    const summaryText = `${JSON.stringify(summary, null, 2)}\n`;
+    if (outputPath !== undefined) {
+      const resolvedOutputPath = resolve(process.cwd(), outputPath);
+      await mkdir(dirname(resolvedOutputPath), { recursive: true });
+      await writeFile(resolvedOutputPath, summaryText, "utf8");
+    }
+    process.stdout.write(summaryText);
   } finally {
     await browser?.close();
     if (staticServer !== undefined) {
@@ -153,6 +163,18 @@ async function main(): Promise<void> {
     }
     await rm(temporaryDirectory, { recursive: true, force: true });
   }
+}
+
+function argumentValue(name: string): string | undefined {
+  const index = process.argv.indexOf(name);
+  if (index < 0) {
+    return undefined;
+  }
+  const value = process.argv[index + 1];
+  if (value === undefined || value.startsWith("--")) {
+    throw new Error(`${name} requires a value`);
+  }
+  return value;
 }
 
 async function observeWebChannel(

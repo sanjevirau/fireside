@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { copyFile, mkdtemp, rm } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createConnection } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
@@ -14,6 +14,7 @@ const PROJECT_ID = "test-emulator";
 interface Arguments {
   readonly diskMode: boolean;
   readonly grep?: string;
+  readonly outputPath?: string;
   readonly sdkDirectory: string;
 }
 
@@ -100,30 +101,36 @@ async function main(): Promise<void> {
     if (arguments_.grep !== undefined) {
       karmaArguments.push("--grep", arguments_.grep);
     }
-    await runCommand("yarn", karmaArguments, sdkDirectory, {
+    const karmaOutput = await runObservedCommand("yarn", karmaArguments, sdkDirectory, {
       ...process.env,
       FIRESTORE_EMULATOR_PORT: String(PORT),
       FIRESTORE_EMULATOR_PROJECT_ID: PROJECT_ID,
     });
-    process.stdout.write(
-      `${JSON.stringify(
-        {
-          command:
-            "yarn --cwd packages/firestore karma start --integration --targetBackend=emulator --single-run",
-          firebaseJsSdkRevision: sdkRevision,
-          filter: arguments_.grep ?? null,
-          mode: arguments_.diskMode ? "disk-wal" : "memory",
-          projectId: PROJECT_ID,
-          schemaVersion: 1,
-          sdkConfigCommand:
-            "cp config/ci.config.json config/project.json",
-          sdkBuildCommand:
-            "yarn --cwd packages/firestore build:deps",
-        },
-        null,
-        2,
-      )}\n`,
-    );
+    const summary = {
+      command:
+        "yarn --cwd packages/firestore karma start --integration --targetBackend=emulator --single-run",
+      completedAt: new Date().toISOString(),
+      firebaseJsSdkRevision: sdkRevision,
+      filter: arguments_.grep ?? null,
+      mode: arguments_.diskMode ? "disk-wal" : "memory",
+      passed: true,
+      projectId: PROJECT_ID,
+      schemaVersion: 1,
+      sdkBuildCommand:
+        "yarn --cwd packages/firestore build:deps",
+      sdkConfigCommand:
+        "cp config/ci.config.json config/project.json",
+      ...parseKarmaEvidence(karmaOutput),
+    };
+    const summaryText = `${JSON.stringify(summary, null, 2)}\n`;
+    if (arguments_.outputPath !== undefined) {
+      const outputPath = isAbsolute(arguments_.outputPath)
+        ? arguments_.outputPath
+        : resolve(process.cwd(), arguments_.outputPath);
+      await mkdir(dirname(outputPath), { recursive: true });
+      await writeFile(outputPath, summaryText, "utf8");
+    }
+    process.stdout.write(summaryText);
   } finally {
     await stop(server);
     await rm(temporaryDirectory, { recursive: true, force: true });
@@ -133,6 +140,7 @@ async function main(): Promise<void> {
 function parseArguments(arguments_: readonly string[]): Arguments {
   let diskMode = false;
   let grep: string | undefined;
+  let outputPath: string | undefined;
   let sdkDirectory: string | undefined;
   for (let index = 0; index < arguments_.length; index += 1) {
     const argument = arguments_[index];
@@ -140,13 +148,15 @@ function parseArguments(arguments_: readonly string[]): Arguments {
       diskMode = true;
       continue;
     }
-    if (argument === "--grep" || argument === "--sdk-dir") {
+    if (argument === "--grep" || argument === "--output" || argument === "--sdk-dir") {
       const value = arguments_[index + 1];
       if (value === undefined || value.length === 0) {
         throw new Error(`${argument} requires a value`);
       }
       if (argument === "--grep") {
         grep = value;
+      } else if (argument === "--output") {
+        outputPath = value;
       } else {
         sdkDirectory = value;
       }
@@ -158,9 +168,32 @@ function parseArguments(arguments_: readonly string[]): Arguments {
   if (sdkDirectory === undefined) {
     throw new Error("--sdk-dir is required");
   }
-  return grep === undefined
-    ? { diskMode, sdkDirectory }
-    : { diskMode, grep, sdkDirectory };
+  return {
+    diskMode,
+    ...(grep === undefined ? {} : { grep }),
+    ...(outputPath === undefined ? {} : { outputPath }),
+    sdkDirectory,
+  };
+}
+
+function parseKarmaEvidence(output: string): {
+  readonly completedTests: number;
+  readonly nativeSkipNames: readonly string[];
+  readonly nativeSkips: number;
+} {
+  const plain = output.replaceAll(/\u001b\[[0-9;]*m/gu, "");
+  const completed = /TOTAL:\s+(\d+)\s+SUCCESS/gu.exec(plain)?.[1];
+  if (completed === undefined) {
+    throw new Error("upstream Karma output did not report its completed test count");
+  }
+  const nativeSkipNames = [...plain.matchAll(/^\s*✖\s+(.+?)\s+\(skipped\)\s*$/gmu)]
+    .map((match) => match[1])
+    .filter((name): name is string => name !== undefined);
+  return {
+    completedTests: Number.parseInt(completed, 10),
+    nativeSkipNames: [...new Set(nativeSkipNames)].sort(),
+    nativeSkips: nativeSkipNames.length,
+  };
 }
 
 async function capturedCommand(
@@ -207,6 +240,42 @@ async function runCommand(
     child.once("exit", (code, signal) => {
       if (code === 0) {
         resolvePromise();
+        return;
+      }
+      reject(
+        new Error(
+          `${command} exited with code ${String(code)} and signal ${String(signal)}`,
+        ),
+      );
+    });
+  });
+}
+
+async function runObservedCommand(
+  command: string,
+  arguments_: readonly string[],
+  cwd: string,
+  environment: NodeJS.ProcessEnv,
+): Promise<string> {
+  return await new Promise<string>((resolvePromise, reject) => {
+    const child = spawn(command, arguments_, {
+      cwd,
+      env: environment,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const chunks: Buffer[] = [];
+    child.stdout.on("data", (chunk: Buffer) => {
+      chunks.push(chunk);
+      process.stdout.write(chunk);
+    });
+    child.stderr.on("data", (chunk: Buffer) => {
+      chunks.push(chunk);
+      process.stderr.write(chunk);
+    });
+    child.once("error", reject);
+    child.once("exit", (code, signal) => {
+      if (code === 0) {
+        resolvePromise(Buffer.concat(chunks).toString("utf8"));
         return;
       }
       reject(
