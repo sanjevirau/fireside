@@ -19,19 +19,89 @@
   "testSource": "packages/firestore/test/integration/api/*.ts",
   "localEmulatorProcessPartition": {
     "memoryBuild": [
-      null
+      "aggregation",
+      "array-transforms",
+      "batch-writes",
+      "bundles",
+      "composite-index-query",
+      "cursors",
+      "database",
+      "fields",
+      "get-options",
+      "index-configuration",
+      "large-document",
+      "numeric-transforms",
+      "persistent-cache-index-manager",
+      "pipelines",
+      "provider",
+      "queries",
+      "query-to-pipeline",
+      "server-timestamps",
+      "smoke",
+      "transactions",
+      "types",
+      "validation"
     ],
     "persistenceBuild": [
-      "\\(Persistence=memory_lru_gc\\)",
-      "\\(Persistence=indexeddb\\)"
+      "aggregation",
+      "array-transforms",
+      "batch-writes",
+      "bundles",
+      "composite-index-query",
+      "cursors",
+      "database",
+      "fields",
+      "get-options",
+      "index-configuration",
+      "large-document",
+      "numeric-transforms",
+      "persistent-cache-index-manager",
+      "pipelines",
+      "provider",
+      "queries",
+      "query-to-pipeline",
+      "server-timestamps",
+      "smoke",
+      "transactions",
+      "types",
+      "validation"
     ],
-    "coverageInvariant": "Every test selected by each official build is executed; the persistence build's two persistence modes run in separate browser processes.",
-    "diagnosticControl": "Chrome 151 reproduced the cross-persistence one-minute HTTP/1.1 WebChannel stall against official Java v1.22.0 and Fireside; each isolated persistence mode passed."
+    "sourcePartitions": [
+      { "name": "aggregation", "sourceFiles": ["aggregation.test.ts"], "suiteTitles": ["Count queries", "Aggregation queries", "Aggregation queries - sum / average"] },
+      { "name": "array-transforms", "sourceFiles": ["array_transforms.test.ts"], "suiteTitles": ["Array Transforms:"] },
+      { "name": "batch-writes", "sourceFiles": ["batch_writes.test.ts"], "suiteTitles": ["Database batch writes"] },
+      { "name": "bundles", "sourceFiles": ["bundle.test.ts"], "suiteTitles": ["Bundles"] },
+      { "name": "composite-index-query", "sourceFiles": ["composite_index_query.test.ts"], "suiteTitles": ["Composite Index Queries"] },
+      { "name": "cursors", "sourceFiles": ["cursor.test.ts"], "suiteTitles": ["Cursors"] },
+      { "name": "database", "sourceFiles": ["database.test.ts"], "suiteTitles": ["Database"] },
+      { "name": "fields", "sourceFiles": ["fields.test.ts"], "suiteTitles": ["Nested Fields", "Fields with special characters", "Timestamp Fields in snapshots", "`undefined` properties"] },
+      { "name": "get-options", "sourceFiles": ["get_options.test.ts"], "suiteTitles": ["GetOptions"] },
+      { "name": "index-configuration", "sourceFiles": ["index_configuration.test.ts"], "suiteTitles": ["Index Configuration:"] },
+      { "name": "large-document", "sourceFiles": ["large_document.test.ts"], "suiteTitles": ["Large Documents"] },
+      { "name": "numeric-transforms", "sourceFiles": ["numeric_transforms.test.ts"], "suiteTitles": ["Numeric Transforms:"] },
+      { "name": "persistent-cache-index-manager", "sourceFiles": ["persistent_cache_index_manager.test.ts"], "suiteTitles": ["PersistentCacheIndexManager"] },
+      { "name": "pipelines", "sourceFiles": ["pipeline.test.ts"], "suiteTitles": ["Pipelines"] },
+      { "name": "provider", "sourceFiles": ["provider.test.ts"], "suiteTitles": ["Firestore Provider"], "unscoped": true },
+      { "name": "queries", "sourceFiles": ["query.test.ts"], "suiteTitles": ["Queries", "Hanging query issue - #7652"] },
+      { "name": "query-to-pipeline", "sourceFiles": ["query_to_pipeline.test.ts"], "suiteTitles": ["Query to Pipeline"] },
+      { "name": "server-timestamps", "sourceFiles": ["server_timestamp.test.ts"], "suiteTitles": ["Server Timestamps"] },
+      { "name": "smoke", "sourceFiles": ["smoke.test.ts"], "suiteTitles": ["Smoke Test"] },
+      { "name": "transactions", "sourceFiles": ["transactions.test.ts"], "suiteTitles": ["Database transactions"] },
+      { "name": "types", "sourceFiles": ["type.test.ts"], "suiteTitles": ["Firestore"] },
+      { "name": "validation", "sourceFiles": ["validation.test.ts"], "suiteTitles": ["Validation:"] }
+    ],
+    "excludedSourceFiles": [
+      "pipeline.listen.test.ts",
+      "pipeline.query.test.ts",
+      "snapshot_listener_source.test.ts"
+    ],
+    "coverageInvariant": "Every top-level suite copied by the pinned integration/firestore build is matched by exactly one source partition; all partitions run for both official client builds, with no user-supplied gate filter.",
+    "diagnosticControl": "Chrome 151 exhausted its six HTTP/1.1 connections in long single-browser runs against both official Java v1.22.0 and Fireside. The exact mixed-persistence rejection/cursor sequence failed against both servers, while the isolated Fireside memory partition passed 11/11. Fresh browser processes partition transport lifetime only; test sources, modes, assertions, native skips, and thresholds are unchanged."
   },
   "observations": [
     "The official workflow builds and runs the minified integration package, not the packages/firestore legacy source bootstrap.",
-    "Client memory and IndexedDB persistence are compiled and executed in separate workflow jobs.",
+    "The official memory and persistence builds are compiled and executed in separate workflow jobs; each pinned API source-suite partition executes in a fresh browser process.",
     "The package copies Google's API integration tests while excluding its three pipeline-specific suites.",
-    "For a local plaintext emulator, browser-process partitioning preserves the official selected workload while avoiding a Chrome transport-pool stall that reproduces against the official Java emulator."
+    "For a local plaintext emulator, source-suite browser-process partitioning preserves the official selected workload while avoiding a Chrome transport-pool stall that reproduces against the official Java emulator."
   ]
 }
