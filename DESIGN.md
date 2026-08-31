@@ -921,6 +921,12 @@ Teardown therefore releases the live response as well as the session lookup;
 a server must not leave an orphaned streaming body consuming a browser
 connection after termination.
 
+The bounded registry applies two capacity leases. A session with no active
+backchannel and no unacknowledged arrays has a short two-second handshake-gap
+lease. A session retaining replay arrays keeps the full ten-second reconnect
+lease. Capacity and idle eviction run the same teardown signal as an explicit
+terminate, so discarded SIDs cannot leave backend Listen or Write tasks alive.
+
 Two easily missed wire invariants are mandatory tests:
 
 1. The frame length is UTF-16 code units of decoded text, not UTF-8 bytes.

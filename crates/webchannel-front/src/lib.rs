@@ -27,7 +27,7 @@ use axum::routing::get;
 use fireside_grpc_front::FirestoreService;
 use futures_util::{StreamExt as _, stream};
 use serde_json::{Value as JsonValue, json};
-use tokio::sync::{Notify, mpsc};
+use tokio::sync::{Notify, mpsc, watch};
 
 /// `WebChannel` endpoint used by the Firestore browser SDK for Listen.
 pub const LISTEN_CHANNEL_PATH: &str = "/google.firestore.v1.Firestore/Listen/channel";
@@ -36,7 +36,8 @@ pub const WRITE_CHANNEL_PATH: &str = "/google.firestore.v1.Firestore/Write/chann
 
 const MAXIMUM_CONCURRENT_SESSIONS: usize = 4_096;
 const SESSION_IDLE_TIMEOUT: Duration = Duration::from_mins(30);
-const CAPACITY_RECLAIM_GRACE: Duration = Duration::from_secs(10);
+const CAPACITY_EMPTY_SESSION_GRACE: Duration = Duration::from_secs(2);
+const CAPACITY_REPLAY_GRACE: Duration = Duration::from_secs(10);
 const MAXIMUM_UNACKNOWLEDGED_ARRAYS: usize = 4_096;
 const MAXIMUM_UNACKNOWLEDGED_BYTES: usize = 64 * 1_024 * 1_024;
 const MAXIMUM_FORWARD_BODY_BYTES: usize = 32 * 1_024 * 1_024;
@@ -273,6 +274,7 @@ struct Session {
     requests: mpsc::Sender<JsonValue>,
     state: Mutex<SessionState>,
     notify: Notify,
+    termination: watch::Sender<bool>,
     active_backchannels: AtomicUsize,
 }
 
@@ -493,25 +495,35 @@ fn streaming_response(
 ) -> Response<Body> {
     let state = StreamingBackchannel {
         cursor: after_id,
+        termination: session.termination.subscribe(),
         session: Arc::clone(&session),
         _guard: BackchannelGuard::new(session),
     };
     let body = Body::from_stream(stream::unfold(state, |mut state| async move {
         loop {
+            if *state.termination.borrow() {
+                return None;
+            }
             let arrays = state.session.arrays_after(state.cursor);
             if let Some(last) = arrays.last() {
                 state.cursor = last.id;
                 let frame = encode_arrays_frame(&arrays);
                 return Some((Ok::<Bytes, Infallible>(Bytes::from(frame)), state));
             }
-            if tokio::time::timeout(
-                Duration::from_millis(KEEPALIVE_MILLISECONDS),
-                state.session.notify.notified(),
-            )
-            .await
-            .is_err()
-            {
-                let _ = state.session.enqueue(json!(["noop"]));
+            tokio::select! {
+                changed = state.termination.changed() => {
+                    if changed.is_err() || *state.termination.borrow() {
+                        return None;
+                    }
+                }
+                result = tokio::time::timeout(
+                    Duration::from_millis(KEEPALIVE_MILLISECONDS),
+                    state.session.notify.notified(),
+                ) => {
+                    if result.is_err() {
+                        let _ = state.session.enqueue(json!(["noop"]));
+                    }
+                }
             }
         }
     }));
@@ -524,24 +536,35 @@ fn streaming_response(
 struct StreamingBackchannel {
     cursor: u64,
     session: Arc<Session>,
+    termination: watch::Receiver<bool>,
     _guard: BackchannelGuard,
 }
 
 async fn long_poll(session: &Arc<Session>, after_id: u64, timeout: Duration) -> Vec<ArrayRecord> {
     let deadline = tokio::time::Instant::now() + timeout;
+    let mut termination = session.termination.subscribe();
     loop {
+        if *termination.borrow() {
+            return Vec::new();
+        }
         let arrays = session.arrays_after(after_id);
         if !arrays.is_empty() {
             return arrays;
         }
-        if tokio::time::timeout_at(deadline, session.notify.notified())
-            .await
-            .is_err()
-        {
-            if session.enqueue(json!(["noop"])).is_ok() {
-                return session.arrays_after(after_id);
+        tokio::select! {
+            changed = termination.changed() => {
+                if changed.is_err() || *termination.borrow() {
+                    return Vec::new();
+                }
             }
-            return Vec::new();
+            result = tokio::time::timeout_at(deadline, session.notify.notified()) => {
+                if result.is_err() {
+                    if session.enqueue(json!(["noop"])).is_ok() {
+                        return session.arrays_after(after_id);
+                    }
+                    return Vec::new();
+                }
+            }
         }
     }
 }
@@ -578,6 +601,7 @@ impl SessionRegistry {
             .as_nanos();
         let sid = format!("fireside-{time:032x}-{sequence:016x}");
         let gsession_id = format!("fireside-gsession-{time:032x}-{sequence:016x}");
+        let (termination, _) = watch::channel(false);
         let session = Arc::new(Session {
             sid: sid.clone(),
             gsession_id,
@@ -593,6 +617,7 @@ impl SessionRegistry {
                 terminal_error: None,
             }),
             notify: Notify::new(),
+            termination,
             active_backchannels: AtomicUsize::new(0),
         });
         {
@@ -605,7 +630,9 @@ impl SessionRegistry {
                     .min_by_key(|(_, session)| session.last_activity())
                     .map(|(sid, _)| sid.clone());
                 if let Some(dormant_sid) = dormant_sid {
-                    sessions.remove(&dormant_sid);
+                    if let Some(dormant) = sessions.remove(&dormant_sid) {
+                        dormant.terminate();
+                    }
                 } else {
                     return Err(ProtocolError::Capacity(
                         "WebChannel session limit reached".to_owned(),
@@ -615,8 +642,23 @@ impl SessionRegistry {
             sessions.insert(sid, Arc::clone(&session));
         }
         let response_session = Arc::clone(&session);
+        let mut termination = response_session.termination.subscribe();
         tokio::spawn(async move {
-            while let Some(response) = backend.responses.recv().await {
+            loop {
+                let response = tokio::select! {
+                    changed = termination.changed() => {
+                        if changed.is_err() || *termination.borrow() {
+                            break;
+                        }
+                        continue;
+                    }
+                    response = backend.responses.recv() => {
+                        let Some(response) = response else {
+                            break;
+                        };
+                        response
+                    }
+                };
                 match response {
                     Ok(message) => {
                         if let Err(error) = response_session.enqueue(json!([message])) {
@@ -656,14 +698,20 @@ impl SessionRegistry {
     }
 
     fn remove(&self, sid: &str) {
-        mutex_lock(&self.inner.sessions).remove(sid);
+        if let Some(session) = mutex_lock(&self.inner.sessions).remove(sid) {
+            session.terminate();
+        }
     }
 
     fn prune_idle(&self) {
         let now = Instant::now();
         mutex_lock(&self.inner.sessions).retain(|_, session| {
-            now.saturating_duration_since(mutex_lock(&session.state).last_activity)
-                < SESSION_IDLE_TIMEOUT
+            let retain = now.saturating_duration_since(mutex_lock(&session.state).last_activity)
+                < SESSION_IDLE_TIMEOUT;
+            if !retain {
+                session.terminate();
+            }
+            retain
         });
     }
 }
@@ -727,6 +775,11 @@ impl Session {
         self.notify.notify_waiters();
     }
 
+    fn terminate(&self) {
+        self.termination.send_replace(true);
+        self.notify.notify_waiters();
+    }
+
     fn acknowledge(&self, aid: u64) {
         let mut state = mutex_lock(&self.state);
         state.acknowledged_array_id = state.acknowledged_array_id.max(aid);
@@ -763,8 +816,16 @@ impl Session {
     }
 
     fn is_reclaimable(&self, now: Instant) -> bool {
-        self.active_backchannels.load(Ordering::Acquire) == 0
-            && now.saturating_duration_since(self.last_activity()) >= CAPACITY_RECLAIM_GRACE
+        if self.active_backchannels.load(Ordering::Acquire) > 0 {
+            return false;
+        }
+        let state = mutex_lock(&self.state);
+        let grace = if state.arrays.is_empty() {
+            CAPACITY_EMPTY_SESSION_GRACE
+        } else {
+            CAPACITY_REPLAY_GRACE
+        };
+        now.saturating_duration_since(state.last_activity) >= grace
     }
 
     fn last_activity(&self) -> Instant {
@@ -1287,6 +1348,11 @@ mod tests {
         for session in &sessions[3..] {
             mutex_lock(&session.state).last_activity = seconds_ago(10);
         }
+        mutex_lock(&sessions[3].state).last_activity = seconds_ago(3);
+        mutex_lock(&sessions[4].state).last_activity = seconds_ago(1);
+
+        assert!(sessions[3].is_reclaimable(now));
+        assert!(!sessions[4].is_reclaimable(now));
 
         let replacement = registry
             .create(ChannelKind::Listen, quiet_backend_channel())
@@ -1305,6 +1371,14 @@ mod tests {
             registry.get(&reclaimed_sid, ChannelKind::Listen, None),
             Err(ProtocolError::UnknownSession)
         ));
+        assert!(
+            *sessions[2].termination.borrow(),
+            "capacity eviction must terminate the reclaimed backend"
+        );
+        assert!(
+            !*sessions[0].termination.borrow(),
+            "an active backchannel must remain live"
+        );
         assert!(
             registry
                 .get(&replacement.sid, ChannelKind::Listen, None)
@@ -1493,6 +1567,7 @@ mod tests {
         drop(stream);
 
         let retry = application
+            .clone()
             .oneshot(
                 Request::get(format!(
                     "{LISTEN_CHANNEL_PATH}?VER=8&RID=rpc&SID={sid}&AID=0&CI=0&TYPE=xmlhttp&t=2&gsessionid={gsession_id}"
@@ -1521,5 +1596,22 @@ mod tests {
             ids,
             (1..=u64::try_from(ids.len()).expect("length fits u64")).collect::<Vec<_>>()
         );
+
+        let terminate = application
+            .oneshot(
+                Request::post(format!(
+                    "{LISTEN_CHANNEL_PATH}?VER=8&RID=125&SID={sid}&TYPE=terminate&gsessionid={gsession_id}"
+                ))
+                .body(Body::empty())
+                .expect("terminate request should build"),
+            )
+            .await
+            .expect("router should answer");
+        assert_eq!(terminate.status(), StatusCode::OK);
+        tokio::time::timeout(Duration::from_millis(250), async {
+            while retry.next().await.is_some() {}
+        })
+        .await
+        .expect("terminate should close the live streaming response");
     }
 }
