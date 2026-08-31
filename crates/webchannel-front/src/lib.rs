@@ -597,9 +597,18 @@ impl SessionRegistry {
         {
             let mut sessions = mutex_lock(&self.inner.sessions);
             if sessions.len() >= MAXIMUM_CONCURRENT_SESSIONS {
-                return Err(ProtocolError::Capacity(
-                    "WebChannel session limit reached".to_owned(),
-                ));
+                let dormant_sid = sessions
+                    .iter()
+                    .filter(|(_, session)| session.is_reclaimable())
+                    .min_by_key(|(_, session)| session.last_activity())
+                    .map(|(sid, _)| sid.clone());
+                if let Some(dormant_sid) = dormant_sid {
+                    sessions.remove(&dormant_sid);
+                } else {
+                    return Err(ProtocolError::Capacity(
+                        "WebChannel session limit reached".to_owned(),
+                    ));
+                }
             }
             sessions.insert(sid, Arc::clone(&session));
         }
@@ -749,6 +758,15 @@ impl Session {
 
     fn touch(&self) {
         mutex_lock(&self.state).last_activity = Instant::now();
+    }
+
+    fn is_reclaimable(&self) -> bool {
+        self.active_backchannels.load(Ordering::Acquire) == 0
+            && mutex_lock(&self.state).arrays.is_empty()
+    }
+
+    fn last_activity(&self) -> Instant {
+        mutex_lock(&self.state).last_activity
     }
 }
 
@@ -1223,6 +1241,72 @@ mod tests {
         assert_eq!(session.forward_acknowledgement()[0], 1);
         drop(guard);
         assert_eq!(session.forward_acknowledgement()[0], 0);
+    }
+
+    #[tokio::test]
+    async fn capacity_reclaims_only_the_oldest_dormant_empty_session() {
+        fn quiet_backend_channel() -> BackendChannel {
+            let (request_sender, _requests) = mpsc::channel(1);
+            let (_response_sender, responses) = mpsc::channel(1);
+            BackendChannel {
+                requests: request_sender,
+                responses,
+            }
+        }
+
+        let registry = SessionRegistry::default();
+        let mut sessions = Vec::with_capacity(MAXIMUM_CONCURRENT_SESSIONS);
+        for _ in 0..MAXIMUM_CONCURRENT_SESSIONS {
+            sessions.push(
+                registry
+                    .create(ChannelKind::Listen, quiet_backend_channel())
+                    .expect("session within the bound should open"),
+            );
+        }
+
+        let active_sid = sessions[0].sid.clone();
+        let replay_sid = sessions[1].sid.clone();
+        let reclaimed_sid = sessions[2].sid.clone();
+        let _active = BackchannelGuard::new(Arc::clone(&sessions[0]));
+        sessions[1]
+            .enqueue(json!([{"retained": true}]))
+            .expect("replay array should enqueue");
+        let now = Instant::now();
+        let seconds_ago = |seconds| {
+            now.checked_sub(Duration::from_secs(seconds))
+                .expect("short test duration should fit Instant")
+        };
+        mutex_lock(&sessions[0].state).last_activity = seconds_ago(30);
+        mutex_lock(&sessions[1].state).last_activity = seconds_ago(25);
+        mutex_lock(&sessions[2].state).last_activity = seconds_ago(20);
+        for session in &sessions[3..] {
+            mutex_lock(&session.state).last_activity = seconds_ago(10);
+        }
+
+        let replacement = registry
+            .create(ChannelKind::Listen, quiet_backend_channel())
+            .expect("a dormant empty session should be reclaimed at capacity");
+        assert!(
+            registry.get(&active_sid, ChannelKind::Listen, None).is_ok(),
+            "an active backchannel must never be reclaimed"
+        );
+        assert!(
+            registry.get(&replay_sid, ChannelKind::Listen, None).is_ok(),
+            "an unacknowledged replay array must never be reclaimed"
+        );
+        assert!(matches!(
+            registry.get(&reclaimed_sid, ChannelKind::Listen, None),
+            Err(ProtocolError::UnknownSession)
+        ));
+        assert!(
+            registry
+                .get(&replacement.sid, ChannelKind::Listen, None)
+                .is_ok()
+        );
+        assert_eq!(
+            mutex_lock(&registry.inner.sessions).len(),
+            MAXIMUM_CONCURRENT_SESSIONS
+        );
     }
 
     #[tokio::test]

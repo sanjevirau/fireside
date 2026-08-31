@@ -1021,6 +1021,15 @@ whether any backchannel is live. Teardown validates endpoint, SID, and optional
 compiled from an exact fixture-checked copy of the production body, including
 the nonzero-offset `Unknown SID` literal required by Closure.
 
+The 4,096-session bound applies to live or replay-bearing sessions, not to an
+unbounded history of abandoned SDK instances. When insertion reaches the
+bound, the registry reclaims only the least-recently-used session that has no
+active backchannel and no unacknowledged replay arrays. It never evicts an
+active backchannel or discards retained replay. If every entry is active or
+replay-bearing, the handshake remains fail-fast with HTTP 503. This keeps the
+frozen bound intact while allowing long browser integration runs whose test
+cleanup omits a sendBeacon teardown.
+
 All framed responses compute their decimal prefixes from Rust UTF-16 encoding
 units after JSON serialization. CORS echoes the request origin and exposes both
 session/protocol response headers. Responses carry `no-transform`, no content
