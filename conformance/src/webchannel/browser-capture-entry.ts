@@ -1,17 +1,24 @@
 import { deleteApp, initializeApp } from "firebase/app";
 import {
   collection,
+  count,
   doc,
+  getAggregateFromServer,
   getCountFromServer,
   initializeFirestore,
   onSnapshot,
+  query,
   setDoc,
+  sum,
   terminate,
   waitForPendingWrites,
+  where,
 } from "firebase/firestore";
 
 type CaptureScenario =
   | "aggregation-count"
+  | "aggregation-composite-filter"
+  | "aggregation-limit-error"
   | "listen"
   | "reconnect-replay"
   | "unicode-framing"
@@ -82,6 +89,37 @@ window.firesideRunWebChannelCapture = async (
           (await getCountFromServer(collection(firestore, COLLECTION))).data(),
         );
         break;
+      case "aggregation-composite-filter":
+        try {
+          observations.push(
+            (await getAggregateFromServer(
+              query(
+                collection(firestore, COLLECTION),
+                where("synthetic", "==", true),
+                where("sequence", "==", 1),
+              ),
+              { aggregate_count: count(), aggregate_sum: sum("sequence") },
+            )).data(),
+          );
+        } catch (error) {
+          observations.push(observeError(error));
+        }
+        break;
+      case "aggregation-limit-error":
+        try {
+          await getAggregateFromServer(collection(firestore, COLLECTION), {
+            aggregate_0: count(),
+            aggregate_1: count(),
+            aggregate_2: count(),
+            aggregate_3: count(),
+            aggregate_4: count(),
+            aggregate_5: count(),
+          });
+          throw new Error("six aggregations unexpectedly succeeded");
+        } catch (error) {
+          observations.push(observeError(error));
+        }
+        break;
       case "listen":
       case "reconnect-replay":
         observations.push(await observeOneSnapshot(reference));
@@ -140,6 +178,16 @@ window.firesideRunWebChannelCapture = async (
     observations,
   };
 };
+
+function observeError(error: unknown): { code?: string; message: string } {
+  const code = typeof error === "object" && error !== null && "code" in error
+    ? String(error.code)
+    : undefined;
+  return {
+    ...(code === undefined ? {} : { code }),
+    message: error instanceof Error ? error.message : String(error),
+  };
+}
 
 async function captureUnknownSession(
   configuration: BrowserCaptureConfiguration,

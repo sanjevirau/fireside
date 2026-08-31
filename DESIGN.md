@@ -1089,6 +1089,21 @@ production envelope and records Java's extra completion marker as an observed
 design difference. The capture used exactly two expiring synthetic documents
 in the authorized cloud project and removed both after recording.
 
+The `aggregation-limit-error` fixtures pin a second shared contract: six
+operations return HTTP 400 with `INVALID_ARGUMENT` and the exact message
+`The maximum number of aggregations allowed in an aggregation query is 5.
+Received: 6`. Production adds structured `TOO_MANY_AGGREGATIONS` details;
+Java does not.
+
+The `aggregation-composite-filter` fixtures pin the browser SDK's recursive
+`where.compositeFilter` request shape. Java executes the synthetic two-field
+query without an index and returns both requested aggregate aliases. The
+production project rejects the identical unindexed query with
+`FAILED_PRECONDITION` and an index-required message. That is an observed
+deployment/index design difference, not a wire-format difference. Fireside's
+default emulator mode follows Java and accepts the query without requiring an
+index; strict-index behavior remains separately configurable.
+
 ## 8. Export and import contract
 
 Firestore export data under

@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 1,
+  "fixtureSchemaVersion": 1,
+  "metadata": {
+    "hypothesis": "Browser aggregation serializes multiple where clauses as a composite filter",
+    "target": "java-v1.22.0",
+    "targetVersion": "1.22.0",
+    "sdk": "firebase@12.18.0",
+    "recordedAt": "2026-08-31T00:21:45.214Z",
+    "transport": "http1"
+  },
+  "exchanges": [
+    {
+      "sequence": 1,
+      "request": {
+        "method": "OPTIONS",
+        "path": "/v1/projects/demo-fireside-phase2/databases/(default)/documents:runAggregationQuery",
+        "query": [
+          [
+            "key",
+            "[REDACTED]"
+          ]
+        ],
+        "headers": [
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "access-control-request-method",
+            "value": "POST"
+          },
+          {
+            "name": "access-control-request-headers",
+            "value": "google-cloud-resource-prefix,x-firebase-gmpid,x-goog-api-client,x-goog-api-key,x-goog-request-params"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:55925"
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:55925/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:55925"
+          },
+          {
+            "name": "access-control-allow-methods",
+            "value": "DELETE,GET,HEAD,PATCH,POST,PUT"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "access-control-allow-headers",
+            "value": "google-cloud-resource-prefix,x-firebase-gmpid,x-goog-api-client,x-goog-api-key,x-goog-request-params"
+          },
+          {
+            "name": "content-length",
+            "value": "0"
+          }
+        ],
+        "chunks": [],
+        "frames": []
+      }
+    },
+    {
+      "sequence": 2,
+      "request": {
+        "method": "POST",
+        "path": "/v1/projects/demo-fireside-phase2/databases/(default)/documents:runAggregationQuery",
+        "query": [
+          [
+            "key",
+            "[REDACTED]"
+          ]
+        ],
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "466"
+          },
+          {
+            "name": "google-cloud-resource-prefix",
+            "value": "projects/demo-fireside-phase2/databases/(default)"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "x-goog-request-params",
+            "value": "project_id=demo-fireside-phase2"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "x-goog-api-client",
+            "value": "gl-js/ fire/12.18.0"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "x-firebase-gmpid",
+            "value": "1:123456789:web:fireside-webchannel-capture"
+          },
+          {
+            "name": "x-goog-api-key",
+            "value": "[REDACTED]"
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:55925"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:55925/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyText": "{\"structuredAggregationQuery\":{\"aggregations\":[{\"alias\":\"aggregate_0\",\"count\":{}},{\"alias\":\"aggregate_1\",\"sum\":{\"field\":{\"fieldPath\":\"sequence\"}}}],\"structuredQuery\":{\"from\":[{\"collectionId\":\"fireside_webchannel_capture\"}],\"where\":{\"compositeFilter\":{\"op\":\"AND\",\"filters\":[{\"fieldFilter\":{\"field\":{\"fieldPath\":\"synthetic\"},\"op\":\"EQUAL\",\"value\":{\"booleanValue\":true}}},{\"fieldFilter\":{\"field\":{\"fieldPath\":\"sequence\"},\"op\":\"EQUAL\",\"value\":{\"integerValue\":\"1\"}}}]}}}}}"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "content-type",
+            "value": "application/json"
+          },
+          {
+            "name": "content-length",
+            "value": "237"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:55925"
+          },
+          {
+            "name": "access-control-allow-methods",
+            "value": "DELETE,GET,HEAD,PATCH,POST,PUT"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          }
+        ],
+        "chunks": [
+          {
+            "bodyBase64": "Wwp7CiAgInJlc3VsdCI6IHsKICAgICJhZ2dyZWdhdGVGaWVsZHMiOiB7CiAgICAgICJhZ2dyZWdhdGVfMCI6IHsKICAgICAgICAiaW50ZWdlclZhbHVlIjogIjEiCiAgICAgIH0sCiAgICAgICJhZ2dyZWdhdGVfMSI6IHsKICAgICAgICAiaW50ZWdlclZhbHVlIjogIjEiCiAgICAgIH0KICAgIH0KICB9LAogICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDAwOjIxOjQ3LjExNzg4NFoiLAogICJkb25lIjogdHJ1ZQp9Cl0K",
+            "bytes": 237,
+            "text": "[\n{\n  \"result\": {\n    \"aggregateFields\": {\n      \"aggregate_0\": {\n        \"integerValue\": \"1\"\n      },\n      \"aggregate_1\": {\n        \"integerValue\": \"1\"\n      }\n    }\n  },\n  \"readTime\": \"2026-08-31T00:21:47.117884Z\",\n  \"done\": true\n}\n]\n",
+            "utf16CodeUnits": 237,
+            "utf8Bytes": 237
+          }
+        ],
+        "frames": [],
+        "bodyText": "[\n{\n  \"result\": {\n    \"aggregateFields\": {\n      \"aggregate_0\": {\n        \"integerValue\": \"1\"\n      },\n      \"aggregate_1\": {\n        \"integerValue\": \"1\"\n      }\n    }\n  },\n  \"readTime\": \"2026-08-31T00:21:47.117884Z\",\n  \"done\": true\n}\n]\n"
+      }
+    }
+  ]
+}

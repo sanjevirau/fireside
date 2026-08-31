@@ -29,6 +29,8 @@ const JAVA_JAR_SHA256 =
 type CaptureTarget = "cloud" | "java";
 type BrowserScenario =
   | "aggregation-count"
+  | "aggregation-composite-filter"
+  | "aggregation-limit-error"
   | "listen"
   | "reconnect-replay"
   | "unicode-framing"
@@ -67,6 +69,20 @@ const CAPTURE_CASES: readonly CaptureCase[] = [
     fixtureRoot: "rest-v1",
     hypothesis: "Browser RunAggregationQuery count request and response envelope",
     runs: [{ scenario: "aggregation-count", variant: "long-poll" }],
+    transport: "http1",
+  },
+  {
+    directory: "aggregation-composite-filter",
+    fixtureRoot: "rest-v1",
+    hypothesis: "Browser aggregation serializes multiple where clauses as a composite filter",
+    runs: [{ scenario: "aggregation-composite-filter", variant: "long-poll" }],
+    transport: "http1",
+  },
+  {
+    directory: "aggregation-limit-error",
+    fixtureRoot: "rest-v1",
+    hypothesis: "Browser observes the maximum-aggregation validation response",
+    runs: [{ scenario: "aggregation-limit-error", variant: "long-poll" }],
     transport: "http1",
   },
   {
@@ -392,7 +408,7 @@ async function prepareSyntheticDocument(
   captureCase: CaptureCase,
 ): Promise<void> {
   await deleteSyntheticDocument(runtime);
-  if (captureCase.runs.some((run) => run.scenario === "aggregation-count")) {
+  if (captureCase.runs.some((run) => run.scenario.startsWith("aggregation-"))) {
     for (const [document, sequence] of [[DOCUMENT, 1], ["oracle-second", 2]] as const) {
       const response = await firestoreRestRequest(runtime, "PATCH", {
         fields: {
