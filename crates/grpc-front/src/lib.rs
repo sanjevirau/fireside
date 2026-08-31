@@ -16,6 +16,14 @@ pub use service::{FirestoreService, ResponseStream};
 
 /// Generated Google API protocol types and Firestore client/server contracts.
 pub mod google {
+    /// Generated protobuf enum types whose canonical JSON differs from the
+    /// generic well-known-type wrapper representation.
+    #[allow(clippy::all, clippy::pedantic)]
+    pub mod protobuf {
+        tonic::include_proto!("google.protobuf");
+        include!(concat!(env!("OUT_DIR"), "/google.protobuf.serde.rs"));
+    }
+
     /// Shared Google API annotations used by the Firestore descriptor graph.
     #[allow(clippy::all, clippy::pedantic)]
     pub mod api {

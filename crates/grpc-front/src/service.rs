@@ -1727,6 +1727,7 @@ mod tests {
         assert!(!write_handshake.stream_token.is_empty());
 
         let (listen_requests, mut listen_responses) = service.open_listen_channel();
+        let (invalid_requests, mut invalid_responses) = service.open_listen_channel();
         listen_requests
             .send(ListenRequest {
                 database: DATABASE.to_owned(),
@@ -1761,6 +1762,46 @@ mod tests {
             change.target_change_type,
             proto::target_change::TargetChangeType::Add as i32
         );
+
+        invalid_requests
+            .send(ListenRequest {
+                database: DATABASE.to_owned(),
+                target_change: Some(proto::listen_request::TargetChange::AddTarget(
+                    proto::Target {
+                        target_type: Some(proto::target::TargetType::Query(
+                            proto::target::QueryTarget {
+                                parent: format!("{DATABASE}/documents"),
+                                query_type: None,
+                            },
+                        )),
+                        target_id: 38,
+                        ..proto::Target::default()
+                    },
+                )),
+                ..ListenRequest::default()
+            })
+            .await
+            .expect("invalid target should reach the engine");
+        let rejected_target = invalid_responses
+            .next()
+            .await
+            .expect("listen engine should reject only the target")
+            .expect("target rejection should remain an in-band response");
+        let Some(proto::listen_response::ResponseType::TargetChange(rejected_target)) =
+            rejected_target.response_type
+        else {
+            panic!("target rejection should be a target change");
+        };
+        assert_eq!(rejected_target.target_ids, vec![38]);
+        assert_eq!(
+            rejected_target.target_change_type,
+            proto::target_change::TargetChangeType::Remove as i32
+        );
+        let cause = rejected_target
+            .cause
+            .expect("rejection should include a cause");
+        assert_eq!(cause.code, tonic::Code::InvalidArgument as i32);
+        assert_eq!(cause.message, "listen target requires a structured query");
     }
 
     #[tokio::test]

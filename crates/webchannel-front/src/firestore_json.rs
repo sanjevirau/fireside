@@ -150,6 +150,36 @@ mod tests {
     }
 
     #[test]
+    fn sdk_null_enum_decodes_as_the_well_known_protobuf_value() {
+        let request = decode_write_request(json!({
+            "database": DATABASE,
+            "writes": [{
+                "update": {
+                    "name": DOCUMENT,
+                    "fields": {
+                        "nullable": {"nullValue": "NULL_VALUE"}
+                    }
+                }
+            }]
+        }))
+        .expect("SDK null enum should decode");
+        let update = request.writes[0]
+            .operation
+            .as_ref()
+            .and_then(|operation| match operation {
+                fireside_grpc_front::google::firestore::v1::write::Operation::Update(update) => {
+                    Some(update)
+                }
+                _ => None,
+            })
+            .expect("request should update a document");
+        assert_eq!(
+            update.fields["nullable"].value_type,
+            Some(ValueType::NullValue(0))
+        );
+    }
+
+    #[test]
     fn responses_use_protobuf_json_for_enums_bytes_int64_and_timestamps() {
         let listen = encode_listen_response(ListenResponse {
             response_type: Some(ResponseType::TargetChange(TargetChange {
@@ -186,6 +216,12 @@ mod tests {
                         value_type: Some(ValueType::StringValue("東京😀".to_owned())),
                     },
                 ),
+                (
+                    "nullable".to_owned(),
+                    Value {
+                        value_type: Some(ValueType::NullValue(0)),
+                    },
+                ),
             ]),
             ..Document::default()
         };
@@ -204,6 +240,10 @@ mod tests {
         assert_eq!(
             document_change["documentChange"]["document"]["fields"]["mixed"],
             json!({"stringValue": "東京😀"})
+        );
+        assert_eq!(
+            document_change["documentChange"]["document"]["fields"]["nullable"],
+            json!({"nullValue": "NULL_VALUE"})
         );
 
         let write = encode_write_response(WriteResponse {

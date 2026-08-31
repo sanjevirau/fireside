@@ -211,13 +211,20 @@ async fn add_target(
         }
         Err(error) => return Err(error),
     };
-    let spec = decode_target_spec(&database, target.target_type)?;
-    if let TargetSpec::Query(query) = &spec {
-        query_policy
-            .validate(query)
-            .map_err(|error| Status::failed_precondition(error.to_string()))?;
+    let spec = match decode_target_spec(&database, target.target_type) {
+        Ok(spec) => spec,
+        Err(error) => {
+            send_target_error(sender, id, error.code(), error.message()).await?;
+            return Ok(());
+        }
+    };
+    if let TargetSpec::Query(query) = &spec
+        && let Err(error) = query_policy.validate(query)
+    {
+        send_target_error(sender, id, Code::FailedPrecondition, &error.to_string()).await?;
+        return Ok(());
     }
-    let initial = initialize_target(
+    let initial = match initialize_target(
         store,
         id,
         database,
@@ -225,7 +232,13 @@ async fn add_target(
         query_policy,
         resume_point.as_ref(),
         expected_count,
-    )?;
+    ) {
+        Ok(initial) => initial,
+        Err(error) => {
+            send_target_error(sender, id, error.code(), error.message()).await?;
+            return Ok(());
+        }
+    };
     send_initial_target(sender, id, &initial).await?;
     if !target.once {
         targets.insert(id, initial.watch);

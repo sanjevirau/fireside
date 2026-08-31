@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::sync::Arc;
@@ -432,10 +432,10 @@ pub fn execute(
     query: &Query,
     edition: DatabaseEdition,
 ) -> Result<Vec<QueryDocument>, QueryError> {
+    let orders = normalized_orders(query)?;
     if let Some(nearest) = &query.nearest {
         return execute_nearest(snapshot, database, query, nearest, edition);
     }
-    let orders = normalized_orders(query);
     validate_cursor(query.start.as_ref(), &orders)?;
     validate_cursor(query.end.as_ref(), &orders)?;
 
@@ -724,36 +724,51 @@ pub fn aggregate(documents: &[QueryDocument], aggregations: &[Aggregation]) -> F
     result
 }
 
-fn normalized_orders(query: &Query) -> Vec<Order> {
-    let mut orders = query.orders.clone();
-    if orders.is_empty()
-        && let Some(path) = query.filter.as_ref().and_then(first_inequality_field)
-    {
-        orders.push(Order {
-            path,
-            direction: Direction::Ascending,
-        });
-    }
-    if orders.is_empty() {
-        orders.push(Order {
-            path: FieldPath::DocumentId,
-            direction: Direction::Ascending,
-        });
-    } else if !orders
+fn normalized_orders(query: &Query) -> Result<Vec<Order>, QueryError> {
+    let inequality_fields = query
+        .filter
+        .as_ref()
+        .map_or_else(BTreeSet::new, collect_inequality_fields);
+    if query.filter.as_ref().is_some_and(|filter| {
+        contains_field_filter(filter, &FieldPath::DocumentId, FieldOperator::Equal)
+    }) && inequality_fields
         .iter()
-        .any(|order| order.path == FieldPath::DocumentId)
+        .any(|path| *path != FieldPath::DocumentId)
+        && !inequality_fields.contains(&FieldPath::DocumentId)
     {
+        return Err(QueryError::DocumentKeyEqualityWithOtherInequality);
+    }
+
+    let mut orders = query.orders.clone();
+    let direction = orders
+        .last()
+        .map_or(Direction::Ascending, |order| order.direction);
+    let mut normalized_fields = orders
+        .iter()
+        .map(|order| order.path.clone())
+        .collect::<BTreeSet<_>>();
+    for path in inequality_fields {
+        if path != FieldPath::DocumentId && normalized_fields.insert(path.clone()) {
+            orders.push(Order { path, direction });
+        }
+    }
+    if normalized_fields.insert(FieldPath::DocumentId) {
         orders.push(Order {
             path: FieldPath::DocumentId,
-            direction: orders
-                .last()
-                .map_or(Direction::Ascending, |order| order.direction),
+            direction,
         });
     }
-    orders
+    if orders
+        .iter()
+        .position(|order| order.path == FieldPath::DocumentId)
+        .is_some_and(|position| position + 1 != orders.len())
+    {
+        return Err(QueryError::DocumentKeyOrderNotLast);
+    }
+    Ok(orders)
 }
 
-fn first_inequality_field(filter: &Filter) -> Option<FieldPath> {
+fn collect_inequality_fields(filter: &Filter) -> BTreeSet<FieldPath> {
     match filter {
         Filter::Field(filter)
             if matches!(
@@ -766,12 +781,21 @@ fn first_inequality_field(filter: &Filter) -> Option<FieldPath> {
                     | FieldOperator::NotIn
             ) =>
         {
-            Some(filter.path.clone())
+            BTreeSet::from([filter.path.clone()])
         }
-        Filter::Field(_) => None,
+        Filter::Field(_) => BTreeSet::new(),
         Filter::And(filters) | Filter::Or(filters) => {
-            filters.iter().find_map(first_inequality_field)
+            filters.iter().flat_map(collect_inequality_fields).collect()
         }
+    }
+}
+
+fn contains_field_filter(filter: &Filter, path: &FieldPath, operator: FieldOperator) -> bool {
+    match filter {
+        Filter::Field(filter) => filter.path == *path && filter.operator == operator,
+        Filter::And(filters) | Filter::Or(filters) => filters
+            .iter()
+            .any(|filter| contains_field_filter(filter, path, operator)),
     }
 }
 
@@ -831,11 +855,22 @@ fn field_filter_matches(
     };
     match filter.operator {
         FieldOperator::Equal => left.compare(&filter.value, edition) == Ordering::Equal,
-        FieldOperator::LessThan => left.compare(&filter.value, edition) == Ordering::Less,
-        FieldOperator::LessThanOrEqual => left.compare(&filter.value, edition) != Ordering::Greater,
-        FieldOperator::GreaterThan => left.compare(&filter.value, edition) == Ordering::Greater,
-        FieldOperator::GreaterThanOrEqual => left.compare(&filter.value, edition) != Ordering::Less,
-        FieldOperator::NotEqual => left.compare(&filter.value, edition) != Ordering::Equal,
+        FieldOperator::LessThan => {
+            left.range_compare(&filter.value, edition) == Some(Ordering::Less)
+        }
+        FieldOperator::LessThanOrEqual => left
+            .range_compare(&filter.value, edition)
+            .is_some_and(|ordering| ordering != Ordering::Greater),
+        FieldOperator::GreaterThan => {
+            left.range_compare(&filter.value, edition) == Some(Ordering::Greater)
+        }
+        FieldOperator::GreaterThanOrEqual => left
+            .range_compare(&filter.value, edition)
+            .is_some_and(|ordering| ordering != Ordering::Less),
+        FieldOperator::NotEqual => {
+            !matches!(left.as_value(), Some(Value::Null))
+                && left.compare(&filter.value, edition) != Ordering::Equal
+        }
         FieldOperator::In => match &filter.value {
             Value::Array(values) => values
                 .iter()
@@ -846,6 +881,7 @@ fn field_filter_matches(
             Value::Array(values) if values.iter().any(|value| matches!(value, Value::Null)) => {
                 false
             }
+            Value::Array(_) if matches!(left.as_value(), Some(Value::Null)) => false,
             Value::Array(values) => values
                 .iter()
                 .all(|right| left.compare(right, edition) != Ordering::Equal),
@@ -890,6 +926,40 @@ impl FieldValue<'_> {
                 _ => Ordering::Greater,
             },
         }
+    }
+
+    fn range_compare(&self, right: &Value, edition: DatabaseEdition) -> Option<Ordering> {
+        match self {
+            Self::Borrowed(left) if values_share_range_domain(left, right) => {
+                Some(compare_values(left, right, edition))
+            }
+            Self::DocumentName(left) => match right {
+                Value::Reference(right) => Some(left.split('/').cmp(right.split('/'))),
+                Value::String(right) => Some(left.split('/').cmp(right.split('/'))),
+                _ => None,
+            },
+            Self::Borrowed(_) => None,
+        }
+    }
+}
+
+fn values_share_range_domain(left: &Value, right: &Value) -> bool {
+    match (left, right) {
+        (Value::Integer(_), Value::Double(right)) => !right.is_nan(),
+        (Value::Double(left), Value::Integer(_)) => !left.is_nan(),
+        (Value::Double(left), Value::Double(right)) => !left.is_nan() && !right.is_nan(),
+        (Value::Integer(_), Value::Integer(_))
+        | (Value::Null, Value::Null)
+        | (Value::Boolean(_), Value::Boolean(_))
+        | (Value::Timestamp(_), Value::Timestamp(_))
+        | (Value::String(_), Value::String(_))
+        | (Value::Bytes(_), Value::Bytes(_))
+        | (Value::Reference(_), Value::Reference(_))
+        | (Value::GeoPoint { .. }, Value::GeoPoint { .. })
+        | (Value::Array(_), Value::Array(_))
+        | (Value::Vector(_), Value::Vector(_))
+        | (Value::Map(_), Value::Map(_)) => true,
+        _ => false,
     }
 }
 
@@ -1100,6 +1170,8 @@ pub enum QueryError {
     InvalidQueryVectorDimension,
     InvalidVectorLimit,
     UnsupportedVectorShape,
+    DocumentKeyOrderNotLast,
+    DocumentKeyEqualityWithOtherInequality,
 }
 
 impl Display for QueryError {
@@ -1128,6 +1200,12 @@ impl Display for QueryError {
             Self::UnsupportedVectorShape => {
                 formatter.write_str("vector queries do not support cursors or limit-to-last")
             }
+            Self::DocumentKeyOrderNotLast => {
+                formatter.write_str("order by clause cannot contain more fields after the key")
+            }
+            Self::DocumentKeyEqualityWithOtherInequality => formatter.write_str(
+                "Equality on key is not allowed if there are other inequality fields and key does not appear in inequalities.",
+            ),
         }
     }
 }
@@ -1454,6 +1532,113 @@ mod tests {
             results
                 .iter()
                 .all(|document| document.fields().contains_key("score"))
+        );
+    }
+
+    #[test]
+    fn numeric_ranges_exclude_null_nan_and_missing_values() {
+        let database = database();
+        let store = Store::default();
+        let cases = [
+            ("zero", Some(Value::Integer(0))),
+            ("nan", Some(Value::Double(f64::NAN))),
+            ("null", Some(Value::Null)),
+            ("missing", None),
+            ("one", Some(Value::Integer(1))),
+        ];
+        let writes = cases.map(|(id, sort)| Write::Set {
+            key: DocumentKey::new(database.clone(), format!("special/{id}")).expect("valid key"),
+            fields: sort.map_or_else(BTreeMap::new, |sort| {
+                BTreeMap::from([("sort".to_owned(), sort)])
+            }),
+            transforms: Vec::new(),
+            precondition: Precondition::None,
+        });
+        store.commit(&writes).expect("seed should commit");
+
+        let query = Query::new(QueryScope::collection("special").expect("valid scope")).filter(
+            filter("sort", FieldOperator::LessThanOrEqual, Value::Integer(2)),
+        );
+        assert_eq!(ids(&database, &store.snapshot(), &query), ["zero", "one"]);
+    }
+
+    #[test]
+    fn inequality_fields_are_implicitly_ordered_lexicographically() {
+        let database = database();
+        let store = Store::default();
+        let cases = [
+            ("doc1", "b", 2, 3),
+            ("doc2", "a", 4, 4),
+            ("doc3", "b", 2, 1),
+        ];
+        let writes = cases.map(|(id, key, sort, value)| Write::Set {
+            key: DocumentKey::new(database.clone(), format!("multiple/{id}")).expect("valid key"),
+            fields: BTreeMap::from([
+                ("key".to_owned(), string(key)),
+                ("sort".to_owned(), Value::Integer(sort)),
+                ("v".to_owned(), Value::Integer(value)),
+            ]),
+            transforms: Vec::new(),
+            precondition: Precondition::None,
+        });
+        store.commit(&writes).expect("seed should commit");
+
+        let query = Query::new(QueryScope::collection("multiple").expect("valid scope")).filter(
+            Filter::And(vec![
+                filter("v", FieldOperator::LessThanOrEqual, Value::Integer(4)),
+                filter("sort", FieldOperator::GreaterThan, Value::Integer(1)),
+                filter("key", FieldOperator::NotEqual, string("z")),
+            ]),
+        );
+        assert_eq!(
+            ids(&database, &store.snapshot(), &query),
+            ["doc2", "doc3", "doc1"]
+        );
+    }
+
+    #[test]
+    fn document_key_order_and_equality_validation_match_the_oracle() {
+        let (database, snapshot) = seeded_snapshot();
+        let key_inequality = filter("key", FieldOperator::NotEqual, Value::Integer(42));
+        let key_ordered_first = collection_query()
+            .filter(key_inequality.clone())
+            .order_by(FieldPath::DocumentId, Direction::Ascending);
+        assert_eq!(
+            execute(
+                &snapshot,
+                &database,
+                &key_ordered_first,
+                DatabaseEdition::Standard,
+            )
+            .expect_err("document key must be ordered last"),
+            QueryError::DocumentKeyOrderNotLast
+        );
+        assert_eq!(
+            QueryError::DocumentKeyOrderNotLast.to_string(),
+            "order by clause cannot contain more fields after the key"
+        );
+
+        let key_equality = collection_query().filter(Filter::And(vec![
+            key_inequality,
+            Filter::Field(FieldFilter {
+                path: FieldPath::DocumentId,
+                operator: FieldOperator::Equal,
+                value: string("a"),
+            }),
+        ]));
+        assert_eq!(
+            execute(
+                &snapshot,
+                &database,
+                &key_equality,
+                DatabaseEdition::Standard,
+            )
+            .expect_err("document key equality must reject other inequality fields"),
+            QueryError::DocumentKeyEqualityWithOtherInequality
+        );
+        assert_eq!(
+            QueryError::DocumentKeyEqualityWithOtherInequality.to_string(),
+            "Equality on key is not allowed if there are other inequality fields and key does not appear in inequalities."
         );
     }
 

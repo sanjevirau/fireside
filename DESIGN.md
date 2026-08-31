@@ -1158,6 +1158,14 @@ inequality field in lexicographic field-path order, followed by `__name__`;
 Fireside applies those rules in the shared query engine so REST, gRPC, and
 WebChannel listeners cannot diverge.
 
+The browser JSON surface represents `google.protobuf.NullValue` as the enum
+string `"NULL_VALUE"` in both requests and responses. It must not inherit the
+generic well-known-type JSON `null` representation: doing so drops the
+Firestore `Value` oneof while decoding. A rejected Listen target is an in-band
+`TargetChange REMOVE` carrying its canonical `google.rpc.Status` cause. The
+bidirectional stream stays open so rejection of one target cannot terminate
+other multiplexed targets.
+
 ## 8. Export and import contract
 
 Firestore export data under
