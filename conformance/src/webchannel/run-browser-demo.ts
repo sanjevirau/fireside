@@ -20,13 +20,28 @@ const diskMode = process.argv.includes("--disk");
 
 interface NetworkObservations {
   droppedBackchannels: number;
+  droppedBackchannelAtMilliseconds?: number;
   delayedBackchannels: number;
   listenTargetIds: Set<number>;
   listenTraffic: number;
+  reconnectedBackchannelAtMilliseconds?: number;
   terminateRequests: number;
   variants: Set<string>;
   writeTraffic: number;
 }
+
+interface BrowserDemoResult {
+  readonly listenerDeliveryMilliseconds: readonly number[];
+  readonly variant: (typeof VARIANTS)[number];
+}
+
+const LISTENER_DELIVERY_SAMPLES = 100;
+const MAXIMUM_RECONNECT_MILLISECONDS = 5_000;
+const MAXIMUM_P99_MILLISECONDS: Record<(typeof VARIANTS)[number], number> = {
+  "buffering-proxy-auto-detection": 2_000,
+  "long-polling": 1_500,
+  streaming: 1_000,
+};
 
 async function main(): Promise<void> {
   const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -111,7 +126,9 @@ async function main(): Promise<void> {
           },
         );
         assertNetworkContract(variant, observations);
+        const benchmark = assertListenerDeliveryContract(variant, result);
         results.push({
+          benchmark,
           network: serializeObservations(observations),
           result,
         });
@@ -175,8 +192,18 @@ async function observeWebChannel(
       url.searchParams.get("RID") === "rpc"
     ) {
       observations.droppedBackchannels += 1;
+      observations.droppedBackchannelAtMilliseconds = performance.now();
       await route.abort("connectionreset");
       return;
+    }
+    if (
+      observations.reconnectedBackchannelAtMilliseconds === undefined &&
+      observations.droppedBackchannelAtMilliseconds !== undefined &&
+      isListen &&
+      request.method() === "GET" &&
+      url.searchParams.get("RID") === "rpc"
+    ) {
+      observations.reconnectedBackchannelAtMilliseconds = performance.now();
     }
     if (
       variant === "buffering-proxy-auto-detection" &&
@@ -245,6 +272,15 @@ function assertNetworkContract(
   if (observations.droppedBackchannels !== 1) {
     throw new Error(`${variant} did not recover from the forced backchannel loss`);
   }
+  const reconnectMilliseconds = reconnectDuration(observations);
+  if (reconnectMilliseconds === undefined) {
+    throw new Error(`${variant} did not reopen its dropped backchannel`);
+  }
+  if (reconnectMilliseconds > MAXIMUM_RECONNECT_MILLISECONDS) {
+    throw new Error(
+      `${variant} backchannel reconnect ${reconnectMilliseconds.toFixed(3)} ms exceeds ${String(MAXIMUM_RECONNECT_MILLISECONDS)} ms`,
+    );
+  }
   if (observations.terminateRequests < 2) {
     throw new Error(`${variant} did not terminate both Listen and Write channels`);
   }
@@ -256,10 +292,66 @@ function serializeObservations(observations: NetworkObservations): unknown {
     delayedBackchannels: observations.delayedBackchannels,
     listenTargetIds: [...observations.listenTargetIds].sort((left, right) => left - right),
     listenTraffic: observations.listenTraffic,
+    reconnectMilliseconds: reconnectDuration(observations),
     terminateRequests: observations.terminateRequests,
     variants: [...observations.variants].sort(),
     writeTraffic: observations.writeTraffic,
   };
+}
+
+function assertListenerDeliveryContract(
+  variant: (typeof VARIANTS)[number],
+  result: unknown,
+): {
+  readonly maximumMilliseconds: number;
+  readonly p99Milliseconds: number;
+  readonly sampleCount: number;
+  readonly thresholdMilliseconds: number;
+} {
+  if (typeof result !== "object" || result === null) {
+    throw new Error(`${variant} browser demo returned no result`);
+  }
+  const candidate = result as Partial<BrowserDemoResult>;
+  const samples = candidate.listenerDeliveryMilliseconds;
+  if (!Array.isArray(samples) || samples.length !== LISTENER_DELIVERY_SAMPLES) {
+    throw new Error(
+      `${variant} recorded ${String(samples?.length ?? 0)} listener samples; expected ${String(LISTENER_DELIVERY_SAMPLES)}`,
+    );
+  }
+  if (!samples.every((value) => Number.isFinite(value) && value >= 0)) {
+    throw new Error(`${variant} recorded an invalid listener-delivery sample`);
+  }
+  const p99Milliseconds = percentile(samples, 0.99);
+  const maximumMilliseconds = Math.max(...samples);
+  const thresholdMilliseconds = MAXIMUM_P99_MILLISECONDS[variant];
+  if (p99Milliseconds > thresholdMilliseconds) {
+    throw new Error(
+      `${variant} listener-delivery p99 ${p99Milliseconds.toFixed(3)} ms exceeds ${String(thresholdMilliseconds)} ms`,
+    );
+  }
+  return {
+    maximumMilliseconds,
+    p99Milliseconds,
+    sampleCount: samples.length,
+    thresholdMilliseconds,
+  };
+}
+
+function reconnectDuration(observations: NetworkObservations): number | undefined {
+  const droppedAt = observations.droppedBackchannelAtMilliseconds;
+  const reconnectedAt = observations.reconnectedBackchannelAtMilliseconds;
+  return droppedAt === undefined || reconnectedAt === undefined
+    ? undefined
+    : reconnectedAt - droppedAt;
+}
+
+function percentile(values: readonly number[], fraction: number): number {
+  const sorted = [...values].sort((left, right) => left - right);
+  const index = Math.min(
+    sorted.length - 1,
+    Math.max(0, Math.ceil(fraction * sorted.length) - 1),
+  );
+  return sorted[index] ?? Number.NaN;
 }
 
 async function delay(milliseconds: number): Promise<void> {

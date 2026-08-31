@@ -30,6 +30,7 @@ interface BrowserDemoConfiguration {
 
 interface BrowserDemoResult {
   readonly initialDocuments: readonly string[];
+  readonly listenerDeliveryMilliseconds: readonly number[];
   readonly liveDocuments: readonly string[];
   readonly observedUnicode: string;
   readonly projectId: string;
@@ -46,6 +47,7 @@ declare global {
 }
 
 const COLLECTION = "fireside_phase2_browser_demo";
+const LISTENER_DELIVERY_SAMPLES = 100;
 const TIMEOUT_MILLISECONDS = 20_000;
 
 window.firesideRunWebChannelDemo = async (
@@ -101,6 +103,16 @@ window.firesideRunWebChannelDemo = async (
       (value) => value?.sequence === 2,
     );
 
+    const listenerDeliveryMilliseconds: number[] = [];
+    for (let index = 0; index < LISTENER_DELIVERY_SAMPLES; index += 1) {
+      const sequence = index + 3;
+      const startedAt = performance.now();
+      await setDoc(second, demoDocument(configuration.runId, "second", sequence));
+      await waitForPendingWrites(firestore);
+      await documentSubscription.next((value) => value?.sequence === sequence);
+      listenerDeliveryMilliseconds.push(performance.now() - startedAt);
+    }
+
     querySubscription.unsubscribe();
     querySubscription = undefined;
     documentSubscription.unsubscribe();
@@ -110,6 +122,7 @@ window.firesideRunWebChannelDemo = async (
 
     return {
       initialDocuments: initialQuery.map((value) => value.name).sort(),
+      listenerDeliveryMilliseconds,
       liveDocuments: liveQuery.map((value) => value.name).sort(),
       observedUnicode: liveDocument?.unicode ?? "",
       projectId: configuration.projectId,
