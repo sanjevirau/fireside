@@ -22,6 +22,50 @@ const CASES = [
   "unicode-framing",
   "unknown-sid",
 ] as const;
+const SOURCE_PARTITION_NAMES = [
+  "aggregation",
+  "array-transforms",
+  "batch-writes",
+  "bundles",
+  "composite-index-query",
+  "cursors",
+  "database",
+  "fields",
+  "get-options",
+  "index-configuration",
+  "large-document",
+  "numeric-transforms",
+  "persistent-cache-index-manager",
+  "pipelines",
+  "provider",
+  "queries",
+  "query-to-pipeline",
+  "server-timestamps",
+  "smoke",
+  "transactions",
+  "types",
+  "validation",
+] as const;
+const BROWSER_PROCESS_PLAN = {
+  strategy: "top-level-suite-with-immediate-child-chunks",
+  maximumImmediateChildrenPerProcess: 5,
+  chunkedSourcePartitions: ["database", "queries", "query-to-pipeline"],
+  isolatedImmediateSuiteSourcePartitions: ["pipelines"],
+  outerPersistenceModes: {
+    memory: ["memory_lru_gc"],
+    persistence: ["memory_lru_gc", "indexeddb"],
+  },
+  unscopedSuitePolicy: "once-per-client-build",
+  expectedProcessPartitions: {
+    memory: 66,
+    persistence: 131,
+  },
+  expectedPlanSha256: {
+    memory: "dc34ccdf301afa74aa9eb83e2c944dc9b7614cd8d01d494c706601b123ed8c11",
+    persistence:
+      "80688193a06f9f1dca791ca1e84905a8ba6d1f61ee7d24832eaa14a367ab0a11",
+  },
+} as const;
 const TARGETS = [
   {
     apiKey: "fireside-synthetic-emulator-key",
@@ -54,8 +98,13 @@ test("pinned Firebase JS SDK gate mirrors Google's minified integration workflow
     readonly packageDirectory: string;
     readonly packageName: string;
     readonly localEmulatorProcessPartition: {
-      readonly memoryBuild: readonly (string | null)[];
-      readonly persistenceBuild: readonly string[];
+      readonly browserProcessPlan: typeof BROWSER_PROCESS_PLAN;
+      readonly excludedSourceFiles: readonly string[];
+      readonly sourcePartitions: readonly {
+        readonly name: string;
+        readonly sourceFiles: readonly string[];
+        readonly suiteTitles: readonly string[];
+      }[];
     };
     readonly schemaVersion: number;
     readonly testArtifact: string;
@@ -78,21 +127,44 @@ test("pinned Firebase JS SDK gate mirrors Google's minified integration workflow
   });
   assert.equal(fixture.testCommand, "xvfb-run yarn karma:singlerun");
   assert.equal(fixture.testArtifact, "dist/test-harness.js");
-  assert.deepEqual(fixture.localEmulatorProcessPartition.memoryBuild, [null]);
-  assert.deepEqual(fixture.localEmulatorProcessPartition.persistenceBuild, [
-    "\\(Persistence=memory_lru_gc\\)",
-    "\\(Persistence=indexeddb\\)",
-  ]);
+  assert.deepEqual(
+    fixture.localEmulatorProcessPartition.browserProcessPlan,
+    BROWSER_PROCESS_PLAN,
+  );
+  assert.deepEqual(
+    fixture.localEmulatorProcessPartition.sourcePartitions.map(
+      ({ name }) => name,
+    ),
+    SOURCE_PARTITION_NAMES,
+  );
+  assert.equal(
+    fixture.localEmulatorProcessPartition.sourcePartitions.flatMap(
+      ({ sourceFiles }) => sourceFiles,
+    ).length,
+    22,
+  );
+  assert.equal(
+    fixture.localEmulatorProcessPartition.sourcePartitions.flatMap(
+      ({ suiteTitles }) => suiteTitles,
+    ).length,
+    28,
+  );
+  assert.deepEqual(
+    fixture.localEmulatorProcessPartition.excludedSourceFiles,
+    [
+      "pipeline.listen.test.ts",
+      "pipeline.query.test.ts",
+      "snapshot_listener_source.test.ts",
+    ],
+  );
 
   const manifest = JSON.parse(
     await readFile(join(fixtureRoot, "../../../benchmarks/phase-2-webchannel.json"), "utf8"),
   ) as {
     readonly gates: {
       readonly firebaseJsSdkIntegration: {
+        readonly browserProcessPlan: typeof BROWSER_PROCESS_PLAN;
         readonly clientPersistenceModes: readonly string[];
-        readonly browserProcessPartitions: Readonly<
-          Record<string, readonly (string | null)[]>
-        >;
         readonly requiredMatrixCells: number;
         readonly serverModes: readonly string[];
         readonly upstreamBootstrap: string;
@@ -111,14 +183,8 @@ test("pinned Firebase JS SDK gate mirrors Google's minified integration workflow
   );
   assert.equal(manifest.gates.firebaseJsSdkIntegration.requiredMatrixCells, 4);
   assert.deepEqual(
-    manifest.gates.firebaseJsSdkIntegration.browserProcessPartitions,
-    {
-      memory: [null],
-      persistence: [
-        "\\(Persistence=memory_lru_gc\\)",
-        "\\(Persistence=indexeddb\\)",
-      ],
-    },
+    manifest.gates.firebaseJsSdkIntegration.browserProcessPlan,
+    BROWSER_PROCESS_PLAN,
   );
   assert.equal(
     manifest.gates.firebaseJsSdkIntegration.upstreamWorkflowJob,

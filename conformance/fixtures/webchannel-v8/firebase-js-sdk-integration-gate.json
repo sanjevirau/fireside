@@ -18,54 +18,31 @@
   "testArtifact": "dist/test-harness.js",
   "testSource": "packages/firestore/test/integration/api/*.ts",
   "localEmulatorProcessPartition": {
-    "memoryBuild": [
-      "aggregation",
-      "array-transforms",
-      "batch-writes",
-      "bundles",
-      "composite-index-query",
-      "cursors",
-      "database",
-      "fields",
-      "get-options",
-      "index-configuration",
-      "large-document",
-      "numeric-transforms",
-      "persistent-cache-index-manager",
-      "pipelines",
-      "provider",
-      "queries",
-      "query-to-pipeline",
-      "server-timestamps",
-      "smoke",
-      "transactions",
-      "types",
-      "validation"
-    ],
-    "persistenceBuild": [
-      "aggregation",
-      "array-transforms",
-      "batch-writes",
-      "bundles",
-      "composite-index-query",
-      "cursors",
-      "database",
-      "fields",
-      "get-options",
-      "index-configuration",
-      "large-document",
-      "numeric-transforms",
-      "persistent-cache-index-manager",
-      "pipelines",
-      "provider",
-      "queries",
-      "query-to-pipeline",
-      "server-timestamps",
-      "smoke",
-      "transactions",
-      "types",
-      "validation"
-    ],
+    "browserProcessPlan": {
+      "strategy": "top-level-suite-with-immediate-child-chunks",
+      "maximumImmediateChildrenPerProcess": 5,
+      "chunkedSourcePartitions": [
+        "database",
+        "queries",
+        "query-to-pipeline"
+      ],
+      "isolatedImmediateSuiteSourcePartitions": [
+        "pipelines"
+      ],
+      "outerPersistenceModes": {
+        "memory": ["memory_lru_gc"],
+        "persistence": ["memory_lru_gc", "indexeddb"]
+      },
+      "unscopedSuitePolicy": "once-per-client-build",
+      "expectedProcessPartitions": {
+        "memory": 66,
+        "persistence": 131
+      },
+      "expectedPlanSha256": {
+        "memory": "dc34ccdf301afa74aa9eb83e2c944dc9b7614cd8d01d494c706601b123ed8c11",
+        "persistence": "80688193a06f9f1dca791ca1e84905a8ba6d1f61ee7d24832eaa14a367ab0a11"
+      }
+    },
     "sourcePartitions": [
       { "name": "aggregation", "sourceFiles": ["aggregation.test.ts"], "suiteTitles": ["Count queries", "Aggregation queries", "Aggregation queries - sum / average"] },
       { "name": "array-transforms", "sourceFiles": ["array_transforms.test.ts"], "suiteTitles": ["Array Transforms:"] },
@@ -95,13 +72,13 @@
       "pipeline.query.test.ts",
       "snapshot_listener_source.test.ts"
     ],
-    "coverageInvariant": "Every top-level suite copied by the pinned integration/firestore build is matched by exactly one source partition; all partitions run for both official client builds, with no user-supplied gate filter.",
-    "diagnosticControl": "Chrome 151 exhausted its six HTTP/1.1 connections in long single-browser runs against both official Java v1.22.0 and Fireside. The exact mixed-persistence rejection/cursor sequence failed against both servers, while the isolated Fireside memory partition passed 11/11. Fresh browser processes partition transport lifetime only; test sources, modes, assertions, native skips, and thresholds are unchanged."
+    "coverageInvariant": "Every top-level suite copied by the pinned integration/firestore build is matched by the frozen process-plan digest. Listener-heavy sources use consecutive groups of at most five immediate test or suite registrations, pipeline immediate suites are isolated, scoped suites run once per outer persistence mode, and unscoped suites run once per client build. No user-supplied gate filter is allowed.",
+    "diagnosticControl": "Chrome 151 exhausted its six HTTP/1.1 connections in long single-browser runs against both official Java v1.22.0 and Fireside. The exact mixed-persistence rejection/cursor sequence failed against both servers, the isolated Fireside memory sequence passed 11/11, and an isolated 120-test Database source partition again exhausted all six sockets. Fresh browser processes partition transport lifetime only; test sources, modes, assertions, native skips, and thresholds are unchanged."
   },
   "observations": [
     "The official workflow builds and runs the minified integration package, not the packages/firestore legacy source bootstrap.",
-    "The official memory and persistence builds are compiled and executed in separate workflow jobs; each pinned API source-suite partition executes in a fresh browser process.",
+    "The official memory and persistence builds are compiled and executed in separate workflow jobs; every frozen transport-lifetime partition executes in a fresh browser process.",
     "The package copies Google's API integration tests while excluding its three pipeline-specific suites.",
-    "For a local plaintext emulator, source-suite browser-process partitioning preserves the official selected workload while avoiding a Chrome transport-pool stall that reproduces against the official Java emulator."
+    "For a local plaintext emulator, deterministic suite and immediate-child browser-process partitioning preserves the official selected workload while avoiding a Chrome transport-pool stall that reproduces against the official Java emulator."
   ]
 }

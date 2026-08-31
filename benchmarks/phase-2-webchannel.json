@@ -181,57 +181,32 @@
         "persistence"
       ],
       "requiredMatrixCells": 4,
-      "browserProcessPartitions": {
-        "memory": [
-          "aggregation",
-          "array-transforms",
-          "batch-writes",
-          "bundles",
-          "composite-index-query",
-          "cursors",
+      "browserProcessPlan": {
+        "strategy": "top-level-suite-with-immediate-child-chunks",
+        "maximumImmediateChildrenPerProcess": 5,
+        "chunkedSourcePartitions": [
           "database",
-          "fields",
-          "get-options",
-          "index-configuration",
-          "large-document",
-          "numeric-transforms",
-          "persistent-cache-index-manager",
-          "pipelines",
-          "provider",
           "queries",
-          "query-to-pipeline",
-          "server-timestamps",
-          "smoke",
-          "transactions",
-          "types",
-          "validation"
+          "query-to-pipeline"
         ],
-        "persistence": [
-          "aggregation",
-          "array-transforms",
-          "batch-writes",
-          "bundles",
-          "composite-index-query",
-          "cursors",
-          "database",
-          "fields",
-          "get-options",
-          "index-configuration",
-          "large-document",
-          "numeric-transforms",
-          "persistent-cache-index-manager",
-          "pipelines",
-          "provider",
-          "queries",
-          "query-to-pipeline",
-          "server-timestamps",
-          "smoke",
-          "transactions",
-          "types",
-          "validation"
-        ]
+        "isolatedImmediateSuiteSourcePartitions": [
+          "pipelines"
+        ],
+        "outerPersistenceModes": {
+          "memory": ["memory_lru_gc"],
+          "persistence": ["memory_lru_gc", "indexeddb"]
+        },
+        "unscopedSuitePolicy": "once-per-client-build",
+        "expectedProcessPartitions": {
+          "memory": 66,
+          "persistence": 131
+        },
+        "expectedPlanSha256": {
+          "memory": "dc34ccdf301afa74aa9eb83e2c944dc9b7614cd8d01d494c706601b123ed8c11",
+          "persistence": "80688193a06f9f1dca791ca1e84905a8ba6d1f61ee7d24832eaa14a367ab0a11"
+        }
       },
-      "partitionCoverageRule": "Every top-level suite copied by the pinned integration/firestore build must match exactly one source-suite browser partition, and every partition must run for both official client builds; user-supplied gate filters are forbidden.",
+      "partitionCoverageRule": "Every top-level suite copied by the pinned integration/firestore build must match the frozen process-plan digest. Listener-heavy sources use consecutive groups of at most five immediate test or suite registrations, pipeline immediate suites are isolated, scoped suites run once per outer persistence mode, unscoped suites run once per client build, and user-supplied gate filters are forbidden.",
       "requiredExitCode": 0,
       "unexpectedFailuresAllowed": 0,
       "addedExclusionsAllowed": 0,
