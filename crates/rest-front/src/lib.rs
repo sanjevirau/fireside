@@ -1452,12 +1452,7 @@ fn encode_value(value: &Value) -> Result<JsonValue, RestError> {
         Value::Null => json!({ "nullValue": null }),
         Value::Boolean(value) => json!({ "booleanValue": value }),
         Value::Integer(value) => json!({ "integerValue": value.to_string() }),
-        Value::Double(value) if value.is_nan() => json!({ "doubleValue": "NaN" }),
-        Value::Double(value) if *value == f64::INFINITY => json!({ "doubleValue": "Infinity" }),
-        Value::Double(value) if *value == f64::NEG_INFINITY => {
-            json!({ "doubleValue": "-Infinity" })
-        }
-        Value::Double(value) => json!({ "doubleValue": value }),
+        Value::Double(value) => encode_double_value(*value),
         Value::Timestamp(value) => json!({ "timestampValue": format_timestamp(*value)? }),
         Value::String(value) => json!({ "stringValue": value }),
         Value::Bytes(value) => json!({ "bytesValue": BASE64.encode(value) }),
@@ -1478,13 +1473,25 @@ fn encode_value(value: &Value) -> Result<JsonValue, RestError> {
                     "__type__": { "stringValue": "__vector__" },
                     "value": {
                         "arrayValue": {
-                            "values": values.iter().map(|value| json!({ "doubleValue": value })).collect::<Vec<_>>()
+                            "values": values.iter().map(|value| encode_double_value(*value)).collect::<Vec<_>>()
                         }
                     }
                 }
             }
         }),
     })
+}
+
+fn encode_double_value(value: f64) -> JsonValue {
+    if value.is_nan() {
+        json!({ "doubleValue": "NaN" })
+    } else if value == f64::INFINITY {
+        json!({ "doubleValue": "Infinity" })
+    } else if value == f64::NEG_INFINITY {
+        json!({ "doubleValue": "-Infinity" })
+    } else {
+        json!({ "doubleValue": value })
+    }
 }
 
 fn parse_integer(value: &JsonValue) -> Result<i64, RestError> {
@@ -2190,7 +2197,7 @@ mod tests {
         let values = [
             Value::Integer(i64::MAX),
             Value::Double(f64::NAN),
-            Value::Vector(vec![1.0, -0.0]),
+            Value::Double(f64::NEG_INFINITY),
         ];
         for value in values {
             let decoded = decode_value(&encode_value(&value).expect("value should encode"))
@@ -2200,6 +2207,37 @@ mod tests {
                     assert!(right.is_nan());
                 }
                 _ => assert_eq!(decoded, value),
+            }
+        }
+
+        let vector = Value::Vector(vec![
+            f64::NEG_INFINITY,
+            -100.0,
+            -0.0,
+            100.0,
+            f64::INFINITY,
+            f64::NAN,
+        ]);
+        let encoded = encode_value(&vector).expect("vector should encode");
+        let encoded_values = encoded["mapValue"]["fields"]["value"]["arrayValue"]["values"]
+            .as_array()
+            .expect("vector components should be an array");
+        assert_eq!(encoded_values[0]["doubleValue"], "-Infinity");
+        assert_eq!(encoded_values[4]["doubleValue"], "Infinity");
+        assert_eq!(encoded_values[5]["doubleValue"], "NaN");
+
+        let Value::Vector(decoded) = decode_value(&encoded).expect("vector should decode") else {
+            panic!("decoded value should remain a vector");
+        };
+        let Value::Vector(expected) = vector else {
+            unreachable!("test value is a vector");
+        };
+        assert_eq!(decoded.len(), expected.len());
+        for (actual, expected) in decoded.into_iter().zip(expected) {
+            if expected.is_nan() {
+                assert!(actual.is_nan());
+            } else {
+                assert_eq!(actual.to_bits(), expected.to_bits());
             }
         }
     }
