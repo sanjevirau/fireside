@@ -876,6 +876,7 @@ fn field_filter_matches(
         FieldOperator::In => match &filter.value {
             Value::Array(values) => values
                 .iter()
+                .filter(|right| !is_membership_sentinel(right))
                 .any(|right| left.compare(right, edition) == Ordering::Equal),
             _ => false,
         },
@@ -899,11 +900,16 @@ fn field_filter_matches(
             (Some(Value::Array(left)), Value::Array(right)) => left.iter().any(|left| {
                 right
                     .iter()
+                    .filter(|right| !is_membership_sentinel(right))
                     .any(|right| compare_values(left, right, edition) == Ordering::Equal)
             }),
             (Some(_) | None, _) => false,
         },
     }
+}
+
+fn is_membership_sentinel(value: &Value) -> bool {
+    matches!(value, Value::Null) || matches!(value, Value::Double(number) if number.is_nan())
 }
 
 enum FieldValue<'a> {
@@ -1562,6 +1568,73 @@ mod tests {
             filter("sort", FieldOperator::LessThanOrEqual, Value::Integer(2)),
         );
         assert_eq!(ids(&database, &store.snapshot(), &query), ["zero", "one"]);
+    }
+
+    #[test]
+    fn membership_filters_ignore_null_and_nan_operands() {
+        let database = database();
+        let store = Store::default();
+        let cases = [
+            (
+                "ordinary",
+                Value::Integer(43),
+                Value::Array(vec![Value::Integer(43)]),
+            ),
+            ("null", Value::Null, Value::Array(vec![Value::Null])),
+            (
+                "nan",
+                Value::Double(f64::NAN),
+                Value::Array(vec![Value::Double(f64::NAN)]),
+            ),
+        ];
+        let writes = cases.map(|(id, scalar, array)| Write::Set {
+            key: DocumentKey::new(database.clone(), format!("membership/{id}")).expect("valid key"),
+            fields: BTreeMap::from([("scalar".to_owned(), scalar), ("array".to_owned(), array)]),
+            transforms: Vec::new(),
+            precondition: Precondition::None,
+        });
+        store.commit(&writes).expect("seed should commit");
+        let snapshot = store.snapshot();
+        let query = || Query::new(QueryScope::collection("membership").expect("valid scope"));
+
+        let in_only_sentinels = query().filter(filter(
+            "scalar",
+            FieldOperator::In,
+            Value::Array(vec![Value::Null, Value::Double(f64::NAN)]),
+        ));
+        assert!(ids(&database, &snapshot, &in_only_sentinels).is_empty());
+
+        let in_with_ordinary = query().filter(filter(
+            "scalar",
+            FieldOperator::In,
+            Value::Array(vec![
+                Value::Integer(43),
+                Value::Null,
+                Value::Double(f64::NAN),
+            ]),
+        ));
+        assert_eq!(ids(&database, &snapshot, &in_with_ordinary), ["ordinary"]);
+
+        let array_only_sentinels = query().filter(filter(
+            "array",
+            FieldOperator::ArrayContainsAny,
+            Value::Array(vec![Value::Null, Value::Double(f64::NAN)]),
+        ));
+        assert!(ids(&database, &snapshot, &array_only_sentinels).is_empty());
+
+        let array_with_ordinary = query().filter(filter(
+            "array",
+            FieldOperator::ArrayContainsAny,
+            Value::Array(vec![
+                Value::Integer(43),
+                Value::Null,
+                Value::Double(f64::NAN),
+            ]),
+        ));
+        assert_eq!(
+            ids(&database, &snapshot, &array_with_ordinary),
+            ["ordinary"]
+        );
     }
 
     #[test]
