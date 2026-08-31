@@ -113,6 +113,36 @@ for (const target of oracleTargets) {
     assert.equal(nested?.response.status, 200);
     assert.match(nested?.request.bodyText ?? "", /"owner.name"/u);
   });
+
+  test(`${target.directory} transaction no-op fixture preserves update time`, async () => {
+    const { contract } = await readOracleFixture(
+      target,
+      "transaction-noop-write",
+      7,
+    );
+    const reads = contract.exchanges.filter((exchange) =>
+      exchange.request.method === "POST" && exchange.request.path.endsWith(":batchGet")
+    );
+    assert.equal(reads.length, 2);
+    const readUpdateTimes = reads.map((exchange) => {
+      const body = JSON.parse(exchange.response.bodyText ?? "") as Array<{
+        found: { updateTime: string };
+      }>;
+      return body[0]?.found.updateTime;
+    });
+    assert.equal(readUpdateTimes[0], readUpdateTimes[1]);
+
+    const replacement = contract.exchanges.find((exchange) =>
+      exchange.request.method === "POST" &&
+      exchange.request.path.endsWith(":commit") &&
+      (exchange.request.bodyText ?? "").includes('"update":')
+    );
+    assert.equal(replacement?.response.status, 200);
+    const response = JSON.parse(replacement?.response.bodyText ?? "") as {
+      writeResults: Array<{ updateTime: string }>;
+    };
+    assert.equal(response.writeResults[0]?.updateTime, readUpdateTimes[0]);
+  });
 }
 
 async function readOracleFixture(

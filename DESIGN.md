@@ -1118,6 +1118,15 @@ literal dotted field as `` `is.admin` `` while the nested map path remains
 are part of the browser integration surface even though Listen and streaming
 Write use WebChannel.
 
+The companion `conformance/fixtures/rest-v1/*/transaction-noop-write`
+captures pin a transaction replacement whose fields are byte-for-byte
+equivalent to the stored document. Java and production both acknowledge the
+write with a later `commitTime` while preserving the document's original
+`updateTime`; BatchGet before and after returns that same version. Fireside
+therefore treats an identical replacement as a committed no-op: it advances
+commit metadata but emits no document change and does not invalidate a
+concurrent transaction that read the unchanged version.
+
 ## 8. Export and import contract
 
 Firestore export data under

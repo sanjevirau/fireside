@@ -34,6 +34,7 @@ type BrowserScenario =
   | "listen"
   | "reconnect-replay"
   | "transaction-commit"
+  | "transaction-noop-write"
   | "unicode-framing"
   | "unknown-sid"
   | "write"
@@ -91,6 +92,13 @@ const CAPTURE_CASES: readonly CaptureCase[] = [
     fixtureRoot: "rest-v1",
     hypothesis: "Browser transactions pin multi-write validation, verify writes, and quoted update masks",
     runs: [{ scenario: "transaction-commit", variant: "long-poll" }],
+    transport: "http1",
+  },
+  {
+    directory: "transaction-noop-write",
+    fixtureRoot: "rest-v1",
+    hypothesis: "An identical document replacement preserves the document update time",
+    runs: [{ scenario: "transaction-noop-write", variant: "long-poll" }],
     transport: "http1",
   },
   {
@@ -418,7 +426,7 @@ async function prepareSyntheticDocument(
   await deleteSyntheticDocument(runtime);
   if (
     captureCase.runs.some((run) =>
-      run.scenario.startsWith("aggregation-") || run.scenario === "transaction-commit"
+      run.scenario.startsWith("aggregation-") || run.scenario.startsWith("transaction-")
     )
   ) {
     for (const [document, sequence] of [[DOCUMENT, 1], ["oracle-second", 2]] as const) {

@@ -25,6 +25,7 @@ type CaptureScenario =
   | "listen"
   | "reconnect-replay"
   | "transaction-commit"
+  | "transaction-noop-write"
   | "unicode-framing"
   | "unknown-sid"
   | "write"
@@ -153,6 +154,21 @@ window.firesideRunWebChannelCapture = async (
           );
         });
         observations.push((await getDoc(reference)).data());
+        break;
+      case "transaction-noop-write":
+        await runTransaction(firestore, async (transaction) => {
+          observations.push((await transaction.get(reference)).data());
+        });
+        await runTransaction(firestore, async (transaction) => {
+          transaction.set(reference, {
+            capture: "transaction-noop-write",
+            sequence: 1,
+            synthetic: true,
+          });
+        });
+        await runTransaction(firestore, async (transaction) => {
+          observations.push((await transaction.get(reference)).data());
+        });
         break;
       case "listen":
       case "reconnect-replay":
