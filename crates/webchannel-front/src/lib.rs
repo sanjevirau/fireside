@@ -130,7 +130,7 @@ impl Backend for FirestoreBackend {
                 tokio::spawn(async move {
                     while let Some(response) = typed_responses.next().await {
                         let response = match response {
-                            Ok(response) => firestore_json::encode_listen_response(response),
+                            Ok(response) => firestore_json::encode_listen_response(&response),
                             Err(error) => Err(backend_status(&error)),
                         };
                         let terminal = response.is_err();
@@ -166,7 +166,7 @@ impl Backend for FirestoreBackend {
                 tokio::spawn(async move {
                     while let Some(response) = typed_responses.next().await {
                         let response = match response {
-                            Ok(response) => firestore_json::encode_write_response(response),
+                            Ok(response) => firestore_json::encode_write_response(&response),
                             Err(error) => Err(backend_status(&error)),
                         };
                         let terminal = response.is_err();

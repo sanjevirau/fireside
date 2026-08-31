@@ -14,7 +14,7 @@ pub(crate) fn decode_write_request(value: JsonValue) -> Result<WriteRequest, Bac
     serde_json::from_value(value).map_err(|error| invalid_json(&error))
 }
 
-pub(crate) fn encode_listen_response(response: ListenResponse) -> Result<JsonValue, BackendError> {
+pub(crate) fn encode_listen_response(response: &ListenResponse) -> Result<JsonValue, BackendError> {
     let mut encoded = encode_response(&response)?;
     if let Some(listen_response::ResponseType::DocumentChange(change)) =
         response.response_type.as_ref()
@@ -29,7 +29,7 @@ pub(crate) fn encode_listen_response(response: ListenResponse) -> Result<JsonVal
     Ok(encoded)
 }
 
-pub(crate) fn encode_write_response(response: WriteResponse) -> Result<JsonValue, BackendError> {
+pub(crate) fn encode_write_response(response: &WriteResponse) -> Result<JsonValue, BackendError> {
     let mut encoded = encode_response(&response)?;
     if let Some(write_results) = encoded
         .get_mut("writeResults")
@@ -334,11 +334,11 @@ mod tests {
                 _ => panic!("vector component should remain a double"),
             })
             .collect::<Vec<_>>();
-        assert_eq!(components[0], f64::NEG_INFINITY);
+        assert!(components[0].is_infinite() && components[0].is_sign_negative());
         assert!(components[1].is_nan());
-        assert_eq!(components[2], f64::INFINITY);
+        assert!(components[2].is_infinite() && components[2].is_sign_positive());
 
-        let document_change = encode_listen_response(ListenResponse {
+        let document_change = encode_listen_response(&ListenResponse {
             response_type: Some(ResponseType::DocumentChange(DocumentChange {
                 document: Some(Document {
                     name: DOCUMENT.to_owned(),
@@ -359,7 +359,7 @@ mod tests {
 
     #[test]
     fn responses_use_protobuf_json_for_enums_bytes_int64_and_timestamps() {
-        let listen = encode_listen_response(ListenResponse {
+        let listen = encode_listen_response(&ListenResponse {
             response_type: Some(ResponseType::TargetChange(TargetChange {
                 target_change_type: TargetChangeType::Current as i32,
                 target_ids: vec![1002],
@@ -403,7 +403,7 @@ mod tests {
             ]),
             ..Document::default()
         };
-        let document_change = encode_listen_response(ListenResponse {
+        let document_change = encode_listen_response(&ListenResponse {
             response_type: Some(ResponseType::DocumentChange(DocumentChange {
                 document: Some(document),
                 target_ids: vec![1002],
@@ -424,7 +424,7 @@ mod tests {
             json!({"nullValue": "NULL_VALUE"})
         );
 
-        let write = encode_write_response(WriteResponse {
+        let write = encode_write_response(&WriteResponse {
             stream_id: "0".to_owned(),
             stream_token: vec![17, 16, 104, 66],
             write_results: vec![WriteResult::default()],
