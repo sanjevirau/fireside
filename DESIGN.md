@@ -914,6 +914,13 @@ Termination is a sendBeacon POST with `SID`, `RID`, and `TYPE=terminate`, often
 with an empty body. An unknown session returns HTTP 400 and a body containing
 the exact text `Unknown SID`; clients string-match it.
 
+The Java streaming oracle preserves a `CI=0` backchannel followed by a
+successful `TYPE=terminate` POST for the same SID. The pinned unminified client
+source dispatches that beacon and immediately cancels its active backchannel.
+Teardown therefore releases the live response as well as the session lookup;
+a server must not leave an orphaned streaming body consuming a browser
+connection after termination.
+
 Two easily missed wire invariants are mandatory tests:
 
 1. The frame length is UTF-16 code units of decoded text, not UTF-8 bytes.

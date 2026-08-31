@@ -195,6 +195,36 @@ async fn captured_java_and_cloud_requests_replay_through_the_transport() {
     }
 }
 
+#[test]
+fn captured_java_streaming_session_terminates_the_live_backchannel() {
+    let fixture: Fixture = serde_json::from_str(include_str!(
+        "../../../conformance/fixtures/webchannel-v8/java-v1.22.0/listen-streaming/decoded-contract.json"
+    ))
+    .expect("Java streaming fixture should parse");
+    let live_backchannel = fixture
+        .exchanges
+        .iter()
+        .position(|exchange| {
+            exchange.request.method == "GET"
+                && query_value(&exchange.request.query, "CI") == Some("0")
+                && query_value(&exchange.request.query, "TYPE") == Some("xmlhttp")
+        })
+        .expect("fixture should contain a live streaming backchannel");
+    let sid = query_value(&fixture.exchanges[live_backchannel].request.query, "SID")
+        .expect("streaming backchannel should carry SID");
+    let terminate = fixture
+        .exchanges
+        .iter()
+        .skip(live_backchannel + 1)
+        .find(|exchange| {
+            exchange.request.method == "POST"
+                && query_value(&exchange.request.query, "TYPE") == Some("terminate")
+                && query_value(&exchange.request.query, "SID") == Some(sid)
+        })
+        .expect("fixture should terminate the live streaming SID");
+    assert_eq!(terminate.response.status, 200);
+}
+
 async fn replay_fixture(name: &str, fixture: &str) {
     let fixture: Fixture = serde_json::from_str(fixture).expect("oracle fixture should parse");
     let application = router(EchoBackend);
