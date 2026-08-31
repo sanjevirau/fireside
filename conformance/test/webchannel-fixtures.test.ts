@@ -41,6 +41,41 @@ const fixtureRoot = join(
   "../fixtures/webchannel-v8",
 );
 
+test("pinned Firebase JS SDK gate mirrors Google's minified integration workflow", async () => {
+  const fixture = JSON.parse(
+    await readFile(
+      join(fixtureRoot, "firebase-js-sdk-integration-gate.json"),
+      "utf8",
+    ),
+  ) as {
+    readonly buildCommands: Readonly<Record<string, string>>;
+    readonly clientPersistenceMatrix: readonly string[];
+    readonly firebaseJsSdkRevision: string;
+    readonly packageDirectory: string;
+    readonly packageName: string;
+    readonly schemaVersion: number;
+    readonly testArtifact: string;
+    readonly testCommand: string;
+    readonly workflowJob: string;
+  };
+
+  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(
+    fixture.firebaseJsSdkRevision,
+    "6cde0c0230b4c1da01d4a058333daa7663322fd1",
+  );
+  assert.equal(fixture.workflowJob, "test-firestore-integration");
+  assert.equal(fixture.packageDirectory, "integration/firestore");
+  assert.equal(fixture.packageName, "firebase-firestore-integration-test");
+  assert.deepEqual(fixture.clientPersistenceMatrix, ["memory", "persistence"]);
+  assert.deepEqual(fixture.buildCommands, {
+    memory: "yarn build:memory",
+    persistence: "yarn build:persistence",
+  });
+  assert.equal(fixture.testCommand, "xvfb-run yarn karma:singlerun");
+  assert.equal(fixture.testArtifact, "dist/test-harness.js");
+});
+
 for (const target of TARGETS) {
   for (const captureCase of CASES) {
     test(`${target.name} WebChannel fixture is safe and internally exact: ${captureCase}`, async () => {

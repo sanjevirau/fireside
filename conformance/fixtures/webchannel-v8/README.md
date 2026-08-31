@@ -61,6 +61,14 @@ when `Unknown SID` occurs after offset zero in an HTTP 400 response. These are
 structural source confirmations; values that can vary remain locked by the
 captured Java and cloud artifacts instead.
 
+The pinned source checkout also supplies the executable integration-gate
+contract in `firebase-js-sdk-integration-gate.json`. At the captured revision,
+Google's own `test-firestore-integration` workflow runs the minified
+`integration/firestore` package and builds client memory and IndexedDB
+persistence as separate jobs. Fireside mirrors that upstream partition while
+crossing both client variants with its own memory and disk/WAL server modes;
+the partition changes process lifetime only and does not remove tests.
+
 Dynamic SID, RID, nonce, timestamp, resume-token, stream-token, Origin, and
 Date values are observations in the raw fixture, not constants for Fireside.
 The replay tests assert structural invariants and use the decoded contract.

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-31",
+  "firebaseJsSdkRevision": "6cde0c0230b4c1da01d4a058333daa7663322fd1",
+  "workflowSource": ".github/workflows/test-all.yml",
+  "workflowJob": "test-firestore-integration",
+  "packageDirectory": "integration/firestore",
+  "packageName": "firebase-firestore-integration-test",
+  "clientPersistenceMatrix": [
+    "memory",
+    "persistence"
+  ],
+  "buildCommands": {
+    "memory": "yarn build:memory",
+    "persistence": "yarn build:persistence"
+  },
+  "testCommand": "xvfb-run yarn karma:singlerun",
+  "testArtifact": "dist/test-harness.js",
+  "testSource": "packages/firestore/test/integration/api/*.ts",
+  "observations": [
+    "The official workflow builds and runs the minified integration package, not the packages/firestore legacy source bootstrap.",
+    "Client memory and IndexedDB persistence are compiled and executed in separate workflow jobs.",
+    "The package copies Google's API integration tests while excluding its three pipeline-specific suites."
+  ]
+}
