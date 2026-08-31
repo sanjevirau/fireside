@@ -24,6 +24,7 @@ async function main(): Promise<void> {
   const sdkDirectory = isAbsolute(arguments_.sdkDirectory)
     ? arguments_.sdkDirectory
     : resolve(process.cwd(), arguments_.sdkDirectory);
+  const firestoreDirectory = join(sdkDirectory, "packages", "firestore");
   const sdkRevision = await capturedCommand(
     "git",
     ["-C", sdkDirectory, "rev-parse", "HEAD"],
@@ -34,6 +35,12 @@ async function main(): Promise<void> {
       `firebase-js-sdk revision ${sdkRevision} does not match ${FIREBASE_JS_SDK_REVISION}`,
     );
   }
+
+  await runCommand(
+    "yarn",
+    ["--cwd", firestoreDirectory, "build:deps"],
+    sdkDirectory,
+  );
 
   await runCommand(
     "cargo",
@@ -78,7 +85,7 @@ async function main(): Promise<void> {
     await waitUntilListening(server, PORT);
     const karmaArguments = [
       "--cwd",
-      join(sdkDirectory, "packages", "firestore"),
+      firestoreDirectory,
       "karma",
       "start",
       "--integration",
@@ -103,6 +110,8 @@ async function main(): Promise<void> {
           mode: arguments_.diskMode ? "disk-wal" : "memory",
           projectId: PROJECT_ID,
           schemaVersion: 1,
+          sdkBuildCommand:
+            "yarn --cwd packages/firestore build:deps",
         },
         null,
         2,
