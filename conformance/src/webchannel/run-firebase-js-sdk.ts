@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { copyFile, mkdtemp, rm } from "node:fs/promises";
 import { createConnection } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
@@ -35,6 +35,11 @@ async function main(): Promise<void> {
       `firebase-js-sdk revision ${sdkRevision} does not match ${FIREBASE_JS_SDK_REVISION}`,
     );
   }
+
+  await copyFile(
+    join(sdkDirectory, "config", "ci.config.json"),
+    join(sdkDirectory, "config", "project.json"),
+  );
 
   await runCommand(
     "yarn",
@@ -110,6 +115,8 @@ async function main(): Promise<void> {
           mode: arguments_.diskMode ? "disk-wal" : "memory",
           projectId: PROJECT_ID,
           schemaVersion: 1,
+          sdkConfigCommand:
+            "cp config/ci.config.json config/project.json",
           sdkBuildCommand:
             "yarn --cwd packages/firestore build:deps",
         },
