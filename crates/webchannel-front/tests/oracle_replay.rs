@@ -4,7 +4,7 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use axum::http::header::CONTENT_TYPE;
-use axum::http::{Request, StatusCode};
+use axum::http::{Request, StatusCode, Version};
 use fireside_webchannel_front::{Backend, BackendChannel, ChannelKind, OpenRequest, router};
 use futures_util::StreamExt as _;
 use http_body_util::BodyExt as _;
@@ -281,7 +281,13 @@ async fn replay_fixture(name: &str, fixture: &str) {
     for exchange in &fixture.exchanges {
         let has_sid = query_value(&exchange.request.query, "SID").is_some();
         if exchange.request.method == "POST" && !has_sid {
-            let session = replay_handshake(&application, &exchange.request, name).await;
+            let session = replay_handshake(
+                &application,
+                &exchange.request,
+                name,
+                &fixture.metadata.target,
+            )
+            .await;
             sessions.insert(exchange.request.path.clone(), session);
         } else if let Some(session) = sessions.get(&exchange.request.path) {
             replay_session_request(&application, &exchange.request, session, name).await;
@@ -302,14 +308,18 @@ async fn replay_handshake(
     application: &Router,
     request: &CapturedRequest,
     fixture_name: &str,
+    oracle: &str,
 ) -> Session {
+    let mut request = build_request(request, &request.query, request.form.as_deref());
+    let expected_wire_protocol = if oracle == "production-cloud-firestore" {
+        *request.version_mut() = Version::HTTP_2;
+        Some("h2")
+    } else {
+        None
+    };
     let response = application
         .clone()
-        .oneshot(build_request(
-            request,
-            &request.query,
-            request.form.as_deref(),
-        ))
+        .oneshot(request)
         .await
         .unwrap_or_else(|error| panic!("{fixture_name} handshake failed: {error}"));
     assert_eq!(response.status(), StatusCode::OK, "{fixture_name}");
@@ -318,7 +328,7 @@ async fn replay_handshake(
             .headers()
             .get("x-client-wire-protocol")
             .and_then(|value| value.to_str().ok()),
-        Some("h2"),
+        expected_wire_protocol,
         "{fixture_name}"
     );
     let gsession_id = response

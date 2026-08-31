@@ -199,6 +199,7 @@ async fn open_session(application: &Router, ci: &str) -> Session {
         "{LISTEN_CHANNEL_PATH}?VER=8&RID={}&CVER=22&X-HTTP-Session-Id=gsessionid&database=projects%2Fchaos%2Fdatabases%2F(default)&CI={ci}",
         deterministic_rid(ci, 0, 99)
     ))
+    .version(axum::http::Version::HTTP_2)
     .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
     .body(Body::from(body))
     .expect("handshake request should build");

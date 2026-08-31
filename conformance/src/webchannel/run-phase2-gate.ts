@@ -581,7 +581,8 @@ async function writeDeviations(outputDirectory: string): Promise<void> {
       {
         area: "concurrent-forward advertisement",
         cloud: "returns X-Client-Wire-Protocol: h2 when HTTP/2 is negotiated",
-        fireside: "returns X-Client-Wire-Protocol: h2",
+        fireside:
+          "returns X-Client-Wire-Protocol: h2 only when HTTP/2 is negotiated",
         java: "header absent in captured HTTP/1.1 sessions",
       },
       {

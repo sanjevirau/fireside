@@ -1033,9 +1033,12 @@ The first product slice implements forced long polling (`CI=1`) before the
 streaming response path. A shared registry is bounded exactly as frozen in the
 manifest: 4,096 sessions, a 30-minute idle lifetime, 4,096 unacknowledged
 arrays or 64 MiB per replay buffer, 32 MiB per forward body, and 1,000 maps per
-request. Handshakes decode the body `headers` field before opening the backend,
-return wire version 8/server version 14, advertise `h2`, and return a distinct
-HTTP session value subsequently checked as `gsessionid`.
+request. Handshakes decode the body `headers` field before opening the backend
+and return wire version 8/server version 14 plus a distinct HTTP session value
+subsequently checked as `gsessionid`. Fireside advertises
+`X-Client-Wire-Protocol: h2` only when the browser-facing request actually
+negotiated HTTP/2; HTTP/1.1 handshakes omit it, matching the Java capture and
+preventing Closure from exceeding the HTTP/1.1 connection budget.
 
 Every backend response receives one consecutive array ID. `AID` removes only
 acknowledged prefixes; a reopened long poll receives every retained array above

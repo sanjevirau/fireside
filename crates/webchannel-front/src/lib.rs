@@ -22,7 +22,7 @@ use axum::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS,
     CACHE_CONTROL, CONTENT_TYPE, ORIGIN, VARY,
 };
-use axum::http::{HeaderMap, HeaderName, HeaderValue, Response, StatusCode};
+use axum::http::{HeaderMap, HeaderName, HeaderValue, Response, StatusCode, Version};
 use axum::routing::get;
 use fireside_grpc_front::FirestoreService;
 use futures_util::{StreamExt as _, stream};
@@ -325,6 +325,7 @@ async fn listen_get<B: Backend>(
 async fn listen_post<B: Backend>(
     State(state): State<AppState<B>>,
     RawQuery(query): RawQuery,
+    version: Version,
     headers: HeaderMap,
     body: Bytes,
 ) -> Response<Body> {
@@ -332,6 +333,7 @@ async fn listen_post<B: Backend>(
         state,
         ChannelKind::Listen,
         query.as_deref(),
+        version,
         &headers,
         &body,
     )
@@ -349,16 +351,26 @@ async fn write_get<B: Backend>(
 async fn write_post<B: Backend>(
     State(state): State<AppState<B>>,
     RawQuery(query): RawQuery,
+    version: Version,
     headers: HeaderMap,
     body: Bytes,
 ) -> Response<Body> {
-    post_channel(state, ChannelKind::Write, query.as_deref(), &headers, &body).await
+    post_channel(
+        state,
+        ChannelKind::Write,
+        query.as_deref(),
+        version,
+        &headers,
+        &body,
+    )
+    .await
 }
 
 async fn post_channel<B: Backend>(
     state: AppState<B>,
     kind: ChannelKind,
     raw_query: Option<&str>,
+    version: Version,
     request_headers: &HeaderMap,
     body: &[u8],
 ) -> Response<Body> {
@@ -430,15 +442,21 @@ async fn post_channel<B: Backend>(
             KEEPALIVE_MILLISECONDS
         ]
     ]]);
-    let extra_headers = [
+    let http_session_header = [("x-http-session-id", session.gsession_id.as_str())];
+    let http2_headers = [
         ("x-client-wire-protocol", "h2"),
         ("x-http-session-id", session.gsession_id.as_str()),
     ];
+    let extra_headers = if version == Version::HTTP_2 {
+        &http2_headers[..]
+    } else {
+        &http_session_header[..]
+    };
     text_response(
         StatusCode::OK,
         encode_frame(&handshake),
         origin.as_deref(),
-        &extra_headers,
+        extra_headers,
     )
 }
 
@@ -1409,10 +1427,7 @@ mod tests {
             .await
             .expect("router should answer");
         assert_eq!(handshake.status(), StatusCode::OK);
-        assert_eq!(
-            handshake.headers().get("x-client-wire-protocol"),
-            Some(&HeaderValue::from_static("h2"))
-        );
+        assert_eq!(handshake.headers().get("x-client-wire-protocol"), None);
         let gsession_id = handshake
             .headers()
             .get("x-http-session-id")

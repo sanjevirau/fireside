@@ -616,7 +616,7 @@ mod tests {
                 .headers()
                 .get("x-client-wire-protocol")
                 .and_then(|value| value.to_str().ok()),
-            Some("h2")
+            None
         );
         assert!(webchannel.headers().contains_key("x-http-session-id"));
     }
