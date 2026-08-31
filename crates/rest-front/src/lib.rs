@@ -749,10 +749,16 @@ fn decode_aggregations(
         .get("aggregations")
         .and_then(JsonValue::as_array)
         .ok_or_else(|| RestError::invalid("aggregations must be an array"))?;
-    if aggregations.is_empty() || aggregations.len() > 5 {
+    if aggregations.is_empty() {
         return Err(RestError::invalid(
             "aggregation query requires between one and five operations",
         ));
+    }
+    if aggregations.len() > 5 {
+        return Err(RestError::invalid(format!(
+            "The maximum number of aggregations allowed in an aggregation query is 5. Received: {}",
+            aggregations.len()
+        )));
     }
     let mut generated_alias = 1_u32;
     let mut operations = Vec::with_capacity(aggregations.len());
@@ -959,10 +965,31 @@ fn decode_nearest(query: StructuredQuery, value: &JsonValue) -> Result<Structure
 }
 
 fn decode_filter(value: &JsonValue) -> Result<Filter, RestError> {
-    let filter = value
-        .get("fieldFilter")
-        .and_then(JsonValue::as_object)
-        .ok_or_else(|| RestError::invalid("only fieldFilter is currently supported over REST"))?;
+    if let Some(filter) = value.get("fieldFilter").and_then(JsonValue::as_object) {
+        return decode_field_filter(filter);
+    }
+    if let Some(filter) = value.get("compositeFilter").and_then(JsonValue::as_object) {
+        let filters = filter
+            .get("filters")
+            .and_then(JsonValue::as_array)
+            .ok_or_else(|| RestError::invalid("compositeFilter filters must be an array"))?;
+        if filters.is_empty() {
+            return Err(RestError::invalid("composite filter cannot be empty"));
+        }
+        let filters = filters
+            .iter()
+            .map(decode_filter)
+            .collect::<Result<Vec<_>, _>>()?;
+        return match filter.get("op").and_then(JsonValue::as_str) {
+            Some("AND") => Ok(Filter::And(filters)),
+            Some("OR") => Ok(Filter::Or(filters)),
+            _ => Err(RestError::invalid("invalid composite operator")),
+        };
+    }
+    Err(RestError::invalid("query filter type is required"))
+}
+
+fn decode_field_filter(filter: &Map<String, JsonValue>) -> Result<Filter, RestError> {
     let field = filter
         .get("field")
         .and_then(JsonValue::as_object)
@@ -1605,6 +1632,12 @@ mod tests {
     const CLOUD_AGGREGATION_CONTRACT: &str = include_str!(
         "../../../conformance/fixtures/rest-v1/production-cloud-firestore/aggregation-count/decoded-contract.json"
     );
+    const JAVA_COMPOSITE_AGGREGATION_CONTRACT: &str = include_str!(
+        "../../../conformance/fixtures/rest-v1/java-v1.22.0/aggregation-composite-filter/decoded-contract.json"
+    );
+    const JAVA_AGGREGATION_LIMIT_CONTRACT: &str = include_str!(
+        "../../../conformance/fixtures/rest-v1/java-v1.22.0/aggregation-limit-error/decoded-contract.json"
+    );
 
     #[test]
     fn control_and_document_routes_can_share_one_router() {
@@ -1737,6 +1770,96 @@ mod tests {
         );
         assert!(response[0].get("readTime").is_some());
         assert!(response[0].get("done").is_none());
+    }
+
+    #[tokio::test]
+    async fn browser_aggregation_executes_the_java_composite_filter_fixture() {
+        let store = Store::default();
+        let database = DatabaseName::new("demo-fireside-phase2", "(default)")
+            .expect("fixture database should be valid");
+        let writes = [("oracle", 1), ("oracle-second", 2)].map(|(document, sequence)| Write::Set {
+            key: DocumentKey::new(
+                database.clone(),
+                format!("fireside_webchannel_capture/{document}"),
+            )
+            .expect("fixture document key should be valid"),
+            fields: Fields::from([
+                ("sequence".to_owned(), Value::Integer(sequence)),
+                ("synthetic".to_owned(), Value::Boolean(true)),
+            ]),
+            transforms: Vec::new(),
+            precondition: Precondition::None,
+        });
+        store
+            .commit(&writes)
+            .expect("fixture documents should commit");
+        let contract: JsonValue = serde_json::from_str(JAVA_COMPOSITE_AGGREGATION_CONTRACT)
+            .expect("Java composite aggregation contract should be valid JSON");
+        let response = router(store)
+            .oneshot(fixture_request(fixture_post_exchange(&contract)))
+            .await
+            .expect("REST router should respond");
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("aggregation response should be readable");
+        let response: JsonValue =
+            serde_json::from_slice(&body).expect("aggregation response should be JSON");
+        assert_eq!(
+            response[0]["result"]["aggregateFields"]["aggregate_0"]["integerValue"],
+            "1"
+        );
+        assert_eq!(
+            response[0]["result"]["aggregateFields"]["aggregate_1"]["integerValue"],
+            "1"
+        );
+    }
+
+    #[tokio::test]
+    async fn browser_aggregation_matches_the_java_operation_limit_error() {
+        let contract: JsonValue = serde_json::from_str(JAVA_AGGREGATION_LIMIT_CONTRACT)
+            .expect("Java aggregation-limit contract should be valid JSON");
+        let response = router(Store::default())
+            .oneshot(fixture_request(fixture_post_exchange(&contract)))
+            .await
+            .expect("REST router should respond");
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("aggregation error response should be readable");
+        let response: JsonValue =
+            serde_json::from_slice(&body).expect("aggregation error should be JSON");
+        assert_eq!(
+            response["error"]["message"],
+            "The maximum number of aggregations allowed in an aggregation query is 5. Received: 6"
+        );
+    }
+
+    fn fixture_post_exchange(contract: &JsonValue) -> &JsonValue {
+        contract["exchanges"]
+            .as_array()
+            .expect("fixture should contain exchanges")
+            .iter()
+            .find(|exchange| exchange["request"]["method"] == "POST")
+            .expect("fixture should contain the aggregation POST")
+    }
+
+    fn fixture_request(exchange: &JsonValue) -> Request<Body> {
+        Request::builder()
+            .method(Method::POST)
+            .uri(
+                exchange["request"]["path"]
+                    .as_str()
+                    .expect("fixture request path"),
+            )
+            .header(CONTENT_TYPE, "text/plain")
+            .body(Body::from(
+                exchange["request"]["bodyText"]
+                    .as_str()
+                    .expect("fixture request body")
+                    .to_owned(),
+            ))
+            .expect("fixture request should build")
     }
 
     #[tokio::test]
