@@ -323,10 +323,25 @@ pub(crate) fn classify_read_time(
     value: ProtoTimestamp,
     current: Timestamp,
 ) -> Result<ReadTimeClass, Status> {
+    classify_read_time_with_precision(value, current, false)
+}
+
+pub(crate) fn classify_listen_read_time(
+    value: ProtoTimestamp,
+    current: Timestamp,
+) -> Result<ReadTimeClass, Status> {
+    classify_read_time_with_precision(value, current, true)
+}
+
+fn classify_read_time_with_precision(
+    value: ProtoTimestamp,
+    current: Timestamp,
+    allow_nanoseconds: bool,
+) -> Result<ReadTimeClass, Status> {
     const MAX_AGE_SECONDS: i64 = 60 * 60;
 
     let read_time = decode_timestamp(value)?;
-    if !read_time.nanos().is_multiple_of(1_000) {
+    if !allow_nanoseconds && !read_time.nanos().is_multiple_of(1_000) {
         return Err(Status::invalid_argument(
             "read_time cannot have more than microseconds precision",
         ));
@@ -591,6 +606,28 @@ mod tests {
                 precondition: Precondition::UpdateTime(value),
                 ..
             } if value == Timestamp::new(123, 456_000).expect("timestamp is valid")
+        ));
+    }
+
+    #[test]
+    fn listen_read_times_accept_bundle_nanoseconds_without_weakening_unary_reads() {
+        let bundle_read_time = ProtoTimestamp {
+            seconds: 1_000,
+            nanos: 9_999,
+        };
+        let current = Timestamp::new(2_000, 0).expect("current timestamp should be valid");
+
+        let unary = classify_read_time(bundle_read_time, current)
+            .expect_err("unary historical reads require microseconds");
+        assert_eq!(unary.code(), tonic::Code::InvalidArgument);
+        assert_eq!(
+            unary.message(),
+            "read_time cannot have more than microseconds precision"
+        );
+        assert!(matches!(
+            classify_listen_read_time(bundle_read_time, current),
+            Ok(ReadTimeClass::Retained(read_time))
+                if read_time == Timestamp::new(1_000, 9_999).expect("bundle timestamp is valid")
         ));
     }
 }

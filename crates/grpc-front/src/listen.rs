@@ -17,8 +17,8 @@ use tokio_stream::{Stream, StreamExt as _};
 use tonic::{Code, Status};
 
 use crate::codec::{
-    ReadTimeClass, classify_read_time, decode_database_name, decode_document_name, decode_parent,
-    encode_fields, encode_timestamp,
+    ReadTimeClass, classify_listen_read_time, decode_database_name, decode_document_name,
+    decode_parent, encode_fields, encode_timestamp,
 };
 use crate::google::firestore::v1::listen_request::TargetChange as RequestedTargetChange;
 use crate::google::firestore::v1::listen_response::ResponseType;
@@ -252,7 +252,7 @@ fn decode_resume_point(target: &Target) -> Result<Option<ResumePoint>, Status> {
             .map(ResumePoint::Revision)
             .map(Some),
         Some(ResumeType::ReadTime(read_time)) => {
-            Ok(Some(match classify_read_time(*read_time, now())? {
+            Ok(Some(match classify_listen_read_time(*read_time, now())? {
                 ReadTimeClass::Retained(read_time) => ResumePoint::ReadTime(read_time),
                 ReadTimeClass::Expired(_) => ResumePoint::ExpiredReadTime,
             }))
@@ -743,5 +743,21 @@ mod tests {
         assert_eq!(two_bits.bitmap.len(), 7);
         assert_eq!(two_bits.padding, 3);
         assert_eq!(two.hash_count, 18);
+    }
+
+    #[test]
+    fn bundle_nanosecond_read_time_becomes_an_expired_listen_resume_point() {
+        let target = Target {
+            resume_type: Some(ResumeType::ReadTime(pbjson_types::Timestamp {
+                seconds: 1_000,
+                nanos: 9_999,
+            })),
+            ..Target::default()
+        };
+
+        assert!(matches!(
+            decode_resume_point(&target),
+            Ok(Some(ResumePoint::ExpiredReadTime))
+        ));
     }
 }
