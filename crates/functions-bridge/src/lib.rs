@@ -1701,7 +1701,7 @@ mod tests {
 
     async fn slow_handler(State(calls): State<Arc<AtomicUsize>>) -> StatusCode {
         calls.fetch_add(1, Ordering::SeqCst);
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_secs(2)).await;
         StatusCode::OK
     }
 
@@ -1734,7 +1734,7 @@ mod tests {
             registry,
             &format!("http://{address}/"),
             DeliveryPolicy {
-                request_timeout: Duration::from_millis(20),
+                request_timeout: Duration::from_millis(100),
                 initial_retry_delay: Duration::from_millis(1),
                 maximum_retry_delay: Duration::from_millis(2),
                 ..DeliveryPolicy::default()
@@ -1744,7 +1744,6 @@ mod tests {
         let (_, _, observation) = oracle_store();
         runtime.observer.committed(&observation);
         let health = runtime.shutdown().await;
-        tokio::time::sleep(Duration::from_millis(120)).await;
         server.abort();
 
         assert_eq!(health.assumed_delivered_after_response_loss, 1);
@@ -1774,7 +1773,11 @@ mod tests {
             &format!("http://{address}/"),
             DeliveryPolicy {
                 max_concurrent: 64,
-                request_timeout: Duration::from_millis(20),
+                // This is intentionally much longer than the CI scheduler's
+                // connection-admission jitter while remaining shorter than
+                // `slow_handler`. The fixture is proving response loss after
+                // handler entry, not pre-handler connection starvation.
+                request_timeout: Duration::from_secs(1),
                 initial_retry_delay: Duration::from_millis(1),
                 maximum_retry_delay: Duration::from_millis(2),
                 ..DeliveryPolicy::default()
@@ -1791,7 +1794,6 @@ mod tests {
                 .expect("enqueue");
         }
         let health = runtime.shutdown().await;
-        tokio::time::sleep(Duration::from_millis(120)).await;
         server.abort();
 
         assert_eq!(health.admitted, 50);
