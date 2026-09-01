@@ -1,0 +1,86 @@
+npm notice run fireside-conformance@0.0.1 test:fireside:disk
+npm notice run node --import tsx src/run-fireside.ts --disk
+fireside Firestore persistence: /tmp/fireside-conformance-disk-hREJ4Q (write-ahead journal enabled, redb cache 67108864 bytes)
+fireside Firestore listening on 127.0.0.1:40449 with 4 runtime worker thread(s); mimalloc purge delay 0 ms, decommit true
+(node:282333) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ collection-group queries honor an ancestor document (4002.093347ms)
+(node:282334) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ CreateDocument assigns an ID, preserves masked fields, and rejects conflicts (3329.215596ms)
+✔ BulkWriter commits independent writes and surfaces per-write errors (81.513533ms)
+✔ BulkWriter accepts a near-5-MiB batch of individually valid documents (912.09ms)
+✔ list RPCs paginate direct children and preserve masks (101.398608ms)
+✔ ListDocuments orders fields and requires a collection selector (597.56885ms)
+✔ ListDocuments showMissing returns name-only ancestor placeholders (50.813854ms)
+✔ BatchWrite reports per-write conflicts and commits independent writes (58.022654ms)
+(node:282335) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ write conflicts return the production gRPC status codes (4294.656546ms)
+✔ Admin SDK retries an aborted read-write transaction (1500.792461ms)
+(node:282341) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ target accepts an SDK write/read/delete round trip (4125.792276ms)
+(node:282342) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ read_time reconstructs committed versions after a later delete (4291.511379ms)
+(node:282348) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ raw Listen removes a malformed-token target without closing the stream (3278.653532ms)
+✔ query listeners deliver an initial snapshot and ordered changes (98.397322ms)
+✔ raw Listen resumes after a CURRENT checkpoint without replaying prior documents (43.008864ms)
+✔ raw Listen read_time delivers only changes after the historical snapshot (29.843141ms)
+✔ raw Listen falls back to the full target when read_time has expired (24.749338ms)
+(node:282354) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ named databases preserve isolation in the v1 resource path (4086.507267ms)
+(node:282361) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ partitionQuery returns ordered document-name split cursors (4710.156993ms)
+(node:282371) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ ExecutePipeline preserves the production database-edition gate (10071.917687ms)
+(node:282378) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ RunQuery explain separates planning from analyzed execution (3357.232439ms)
+✔ RunAggregationQuery explain reports the aggregate result count (784.853926ms)
+(node:282384) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ queries match the production operator and shaping contract (4931.456635ms)
+(node:282466) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ orderBy follows the production mixed-value order (3426.666378ms)
+✔ integer and double ordering does not lose int64 precision (72.038937ms)
+✔ REST v1 patches, reads, deletes, and reports missing documents (73.922163ms)
+✔ REST v1 commit, batchGet, and runQuery share document semantics (26.234595ms)
+✔ REST v1 commit applies update and document transforms (31.674899ms)
+✔ REST v1 preserves the production missing-index status (33.877685ms)
+(node:282484) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ streaming Write performs a tokened handshake and atomic write (3284.347404ms)
+(node:282491) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ nearest-vector queries match production distance semantics (3309.574761ms)
+(node:282498) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ field transforms use the production commit semantics (3304.132879ms)
+✔ array transforms use production numeric equality (36.189123ms)
+✔ minimum and maximum transforms preserve production numeric types (58.004494ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11293.407152
+✔ emulator control APIs register triggers and clear data (51.324523ms)
+✔ emulator export writes the named official-format directory (15.731099ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 729.270888
