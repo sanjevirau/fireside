@@ -1,0 +1,27 @@
+[package]
+name = "fireside-auth-front"
+description = "Firebase Auth-compatible HTTP surface for the fireside emulator suite"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[dependencies]
+axum.workspace = true
+base64.workspace = true
+fireside-functions-bridge = { path = "../functions-bridge" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+time.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
+tower = { version = "0.5.3", features = ["util"] }
+
+[lints]
+workspace = true

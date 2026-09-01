@@ -1655,6 +1655,15 @@ The oracle captures pin the following suite contracts before implementation:
   emulator token issue/refresh, and its JSON import/export format. Batch import
   is lifecycle-quiet. Admin create and delete each send one legacy
   `providers/firebase.auth/eventTypes/user.*` multicast event.
+- Auth state is Rust-owned and can be persisted by atomic JSON replacement;
+  client, Admin, and import/export paths share that state. Fireside-generated
+  passwords are salted and one-way hashed, emulator ID tokens retain the
+  official `alg:none` claim shape, refresh tokens rotate, fake IDP identities
+  remain linked by provider subject, and browser CORS/preflight is served on
+  every endpoint. Create/delete lifecycle events enter the same stable-ID,
+  bounded Functions dispatch queue used by Firestore and Pub/Sub, obey Hub
+  background enablement, and preserve Unicode user fields. Bulk import and
+  bulk clear deliberately remain trigger-quiet, matching the captured suite.
 - Storage implements Firebase `/v0` and GCS JSON media/resumable paths,
   download-token bypass, metadata mutation, per-bucket rules, byte-exact
   import/export, and paired legacy/v2 lifecycle dispatch. The official emulator
