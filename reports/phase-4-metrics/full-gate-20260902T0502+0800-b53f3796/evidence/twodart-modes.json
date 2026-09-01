@@ -1,0 +1,100 @@
+{
+  "modes": [
+    {
+      "mode": "memory",
+      "outcome": {
+        "functions": 21,
+        "schedules": 2,
+        "firestoreDocuments": 0,
+        "authUsers": 1,
+        "storageObjects": 2,
+        "storageBytes": 12264,
+        "delivery": {
+          "admitted": 811,
+          "deduplicated": 0,
+          "delivered": 811,
+          "assumedDeliveredAfterResponseLoss": 0,
+          "retries": 0,
+          "failed": 0,
+          "latency": {
+            "samples": 811,
+            "p50Micros": 722,
+            "p95Micros": 2115,
+            "p99Micros": 9365
+          }
+        }
+      },
+      "peakFiresideRssBytes": 17137664,
+      "peakFiresidePssBytes": null,
+      "peakProcessTreeRssBytes": 3190407168,
+      "peakProcessTreePssBytes": null,
+      "processBoundary": {
+        "allowedStorageRulesJavaProcesses": 2,
+        "firesideProcesses": 1,
+        "forbiddenDataServiceProcesses": 0,
+        "functionsWorkloadHostProcesses": 2,
+        "passed": true
+      },
+      "readyMilliseconds": 32798.615666,
+      "runtime": {
+        "command": "/Users/sanjevirau/.nvm/versions/node/v24.20.0/bin/node --import tsx /Users/sanjevirau/Desktop/fireside/conformance/src/suite/run-phase4-twodart-runtime.ts --host 127.0.0.1 --firestore-port 38106 --auth-port 38107 --storage-port 38108 --functions-port 38109 --pubsub-port 38110 --hub-port 38111 --ui-port 38112 --cache-websocket-port 38117 --project-id demo-twodart-local --twodart-dir /Users/sanjevirau/Desktop/Twodart/worktrees/ai-pilot --python /Users/sanjevirau/Desktop/Twodart/worktrees/ai-pilot/apps/papi/.venv/bin/python --output-dir /Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/runtime-memory",
+        "durationMilliseconds": 35765.664667,
+        "exitCode": 0,
+        "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/logs/twodart-runtime-memory.log",
+        "name": "twodart-runtime-memory",
+        "passed": true,
+        "signal": null
+      },
+      "shutdownMilliseconds": 8010.894291000004
+    },
+    {
+      "mode": "disk-wal",
+      "outcome": {
+        "functions": 21,
+        "schedules": 2,
+        "firestoreDocuments": 0,
+        "authUsers": 1,
+        "storageObjects": 2,
+        "storageBytes": 12264,
+        "delivery": {
+          "admitted": 811,
+          "deduplicated": 0,
+          "delivered": 811,
+          "assumedDeliveredAfterResponseLoss": 0,
+          "retries": 0,
+          "failed": 0,
+          "latency": {
+            "samples": 811,
+            "p50Micros": 1379,
+            "p95Micros": 4990,
+            "p99Micros": 15714
+          }
+        }
+      },
+      "peakFiresideRssBytes": 19267584,
+      "peakFiresidePssBytes": null,
+      "peakProcessTreeRssBytes": 3029188608,
+      "peakProcessTreePssBytes": null,
+      "processBoundary": {
+        "allowedStorageRulesJavaProcesses": 2,
+        "firesideProcesses": 1,
+        "forbiddenDataServiceProcesses": 0,
+        "functionsWorkloadHostProcesses": 2,
+        "passed": true
+      },
+      "readyMilliseconds": 25681.878083000003,
+      "runtime": {
+        "command": "/Users/sanjevirau/.nvm/versions/node/v24.20.0/bin/node --import tsx /Users/sanjevirau/Desktop/fireside/conformance/src/suite/run-phase4-twodart-runtime.ts --host 127.0.0.1 --firestore-port 32070 --auth-port 32071 --storage-port 32072 --functions-port 32073 --pubsub-port 32074 --hub-port 32075 --ui-port 32076 --cache-websocket-port 32081 --project-id demo-twodart-local --twodart-dir /Users/sanjevirau/Desktop/Twodart/worktrees/ai-pilot --python /Users/sanjevirau/Desktop/Twodart/worktrees/ai-pilot/apps/papi/.venv/bin/python --output-dir /Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/runtime-disk-wal",
+        "durationMilliseconds": 44751.35083300002,
+        "exitCode": 0,
+        "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/logs/twodart-runtime-disk-wal.log",
+        "name": "twodart-runtime-disk-wal",
+        "passed": true,
+        "signal": null
+      },
+      "shutdownMilliseconds": 440.42620800001896
+    }
+  ],
+  "passed": true,
+  "schemaVersion": 1
+}

@@ -1,0 +1,200 @@
+Firebase emulator runtime: Node 24.20.0 (/Users/sanjevirau/.nvm/versions/node/v24.20.0/bin/node)
+Local Functions use an isolated demo credential; firebase-tools may report ADC detected.
+🫙 Emulator JVM: HotSpot (/opt/homebrew/opt/openjdk/bin/java); no repository heap cap
+i  emulators: Starting emulators: auth, functions, firestore, pubsub, storage
+i  emulators: Detected demo project ID "demo-twodart-local", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+⚠  logging: Logging Emulator unable to start on port 4500, starting on 4501 instead.
+⚠  eventarc: Eventarc Emulator unable to start on port 9299, starting on 9300 instead.
+⚠  tasks: Cloud Tasks Emulator unable to start on port 9499, starting on 9500 instead.
+⚠  functions: Application Default Credentials detected. Non-emulated services will access production using these credentials. Be careful!
+i  firestore: Importing data from /Users/sanjevirau/Desktop/Twodart/worktrees/ai-pilot/apps/templates-firebase/loadData/datasets/full-data/firestore_export/firestore_export.overall_export_metadata
+i  firestore: downloading cloud-firestore-emulator-v1.21.0.jar...
+
+i  firestore: Removing outdated emulator files: cloud-firestore-emulator-v1.22.0.jar
+i  firestore: Firestore Emulator logging to firestore-debug.log
+✔  firestore: Firestore Emulator was started in standard edition.
+✔  firestore: Firestore Emulator UI websocket is running on 25512.
+i  auth: Importing config from /Users/sanjevirau/Desktop/Twodart/worktrees/ai-pilot/apps/templates-firebase/loadData/datasets/full-data/auth_export/config.json
+i  auth: Importing accounts from /Users/sanjevirau/Desktop/Twodart/worktrees/ai-pilot/apps/templates-firebase/loadData/datasets/full-data/auth_export/accounts.json
+i  pubsub: Pub/Sub Emulator logging to pubsub-debug.log
+⚠  Unexpected rules runtime error: WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.google.protobuf.UnsafeUtil$MemoryAccessor (file:/Users/sanjevirau/.cache/firebase/emulators/cloud-storage-rules-runtime-v1.1.3.jar)
+WARNING: Please consider reporting this to the maintainers of class com.google.protobuf.UnsafeUtil$MemoryAccessor
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+
+i  functions: Watching "/Users/sanjevirau/Desktop/Twodart/worktrees/ai-pilot/dist/apps/templates-firebase/functions" for Cloud Functions...
+✔  functions: Using node@24 from host.
+i  functions: Loaded environment variables from .env.demo-twodart-local.
+Serving at port 8545
+
+✔  functions: Loaded functions definitions from source: onDeleteUserFontDoc, onGetProratedInvoice, onReceiveStripeWebhook, onRunCronBackupAuth, onRunCronResetCredits, onUpdateInvitedLicenseUserDoc, onUpdateStripeSubscription, onUpdateUserDoc, onWriteInitiateCheckoutSession, onWriteLicenseDoc, onWriteSubscriptionDoc.
+✔  functions[us-central1-onDeleteUserFontDoc]: firestore function initialized.
+✔  functions[us-central1-onGetProratedInvoice]: http function initialized (http://127.0.0.1:25508/demo-twodart-local/us-central1/onGetProratedInvoice).
+✔  functions[us-central1-onReceiveStripeWebhook]: http function initialized (http://127.0.0.1:25508/demo-twodart-local/us-central1/onReceiveStripeWebhook).
+✔  functions[us-central1-onRunCronBackupAuth]: pubsub function initialized.
+✔  functions[us-central1-onRunCronResetCredits]: pubsub function initialized.
+✔  functions[us-central1-onUpdateInvitedLicenseUserDoc]: firestore function initialized.
+✔  functions[us-central1-onUpdateStripeSubscription]: http function initialized (http://127.0.0.1:25508/demo-twodart-local/us-central1/onUpdateStripeSubscription).
+✔  functions[us-central1-onUpdateUserDoc]: firestore function initialized.
+✔  functions[us-central1-onWriteInitiateCheckoutSession]: firestore function initialized.
+✔  functions[us-central1-onWriteLicenseDoc]: firestore function initialized.
+✔  functions[us-central1-onWriteSubscriptionDoc]: firestore function initialized.
+
+[90m┌─────────────────────────────────────────────────────────────┐[39m
+[90m│[39m ✔  All emulators ready! It is now safe to connect your app. [90m│[39m
+[90m│[39m i  View Emulator UI at http://127.0.0.1:25511/              [90m│[39m
+[90m└─────────────────────────────────────────────────────────────┘[39m
+
+[90m┌────────────────[39m[90m┬─────────────────[39m[90m┬──────────────────────────────────┐[39m
+[90m│[39m[33m Emulator       [39m[90m│[39m[33m Host:Port       [39m[90m│[39m[33m View in Emulator UI              [39m[90m│[39m
+[90m├────────────────[39m[90m┼─────────────────[39m[90m┼──────────────────────────────────┤[39m
+[90m│[39m Authentication [90m│[39m 127.0.0.1:25506 [90m│[39m http://127.0.0.1:25511/auth      [90m│[39m
+[90m├────────────────[39m[90m┼─────────────────[39m[90m┼──────────────────────────────────┤[39m
+[90m│[39m Functions      [90m│[39m 127.0.0.1:25508 [90m│[39m http://127.0.0.1:25511/functions [90m│[39m
+[90m├────────────────[39m[90m┼─────────────────[39m[90m┼──────────────────────────────────┤[39m
+[90m│[39m Firestore      [90m│[39m 127.0.0.1:25505 [90m│[39m http://127.0.0.1:25511/firestore [90m│[39m
+[90m├────────────────[39m[90m┼─────────────────[39m[90m┼──────────────────────────────────┤[39m
+[90m│[39m Pub/Sub        [90m│[39m 127.0.0.1:25509 [90m│[39m n/a                              [90m│[39m
+[90m├────────────────[39m[90m┼─────────────────[39m[90m┼──────────────────────────────────┤[39m
+[90m│[39m Storage        [90m│[39m 127.0.0.1:25507 [90m│[39m http://127.0.0.1:25511/storage   [90m│[39m
+[90m└────────────────[39m[90m┴─────────────────[39m[90m┴──────────────────────────────────┘[39m
+  Emulator Hub host: 127.0.0.1 port: 25510
+  Other reserved ports: 4501, 25512
+
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 
+ 
+i  emulators: Received SIGINT (Ctrl-C) for the first time. Starting a clean shutdown.
+i  emulators: Please wait for a clean shutdown or send the SIGINT (Ctrl-C) signal again to stop right now.
+i  Automatically exporting data using --export-on-exit "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/official-full-data-export" please wait for the export to finish...
+i  Found running emulator hub for project demo-twodart-local at http://127.0.0.1:25510
+i  Creating export directory /Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/official-full-data-export
+i  Exporting data to: /Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/official-full-data-export
+i  emulators: Received export request. Exporting data to /Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/official-full-data-export.
+i  emulators: Exporting Firestore...
+i  emulators: Firestore export is still running (10s elapsed).
+✔  emulators: Firestore export complete in 13s.
+i  emulators: Exporting Authentication...
+✔  emulators: Authentication export complete in 0s.
+i  emulators: Exporting Cloud Storage...
+i  storage: Exported 354/33,353 files, 63.9 MB/6.23 GB (1%).
+i  storage: Exported 695/33,353 files, 128 MB/6.23 GB (2%).
+i  storage: Exported 1,026/33,353 files, 191 MB/6.23 GB (3%).
+i  storage: Exported 1,366/33,353 files, 255 MB/6.23 GB (4%).
+i  storage: Exported 1,650/33,353 files, 319 MB/6.23 GB (5%).
+i  storage: Exported 2,001/33,353 files, 383 MB/6.23 GB (6%).
+i  storage: Exported 2,349/33,353 files, 447 MB/6.23 GB (7%).
+i  storage: Exported 2,685/33,353 files, 510 MB/6.23 GB (8%).
+i  emulators: Cloud Storage export is still running (10s elapsed).
+i  storage: Exported 3,040/33,353 files, 574 MB/6.23 GB (9%).
+i  storage: Exported 3,376/33,353 files, 638 MB/6.23 GB (10%).
+i  storage: Exported 3,729/33,353 files, 702 MB/6.23 GB (11%).
+i  storage: Exported 4,068/33,353 files, 766 MB/6.23 GB (12%).
+i  storage: Exported 4,416/33,353 files, 829 MB/6.23 GB (13%).
+i  storage: Exported 4,774/33,353 files, 893 MB/6.23 GB (14%).
+i  storage: Exported 5,074/33,353 files, 957 MB/6.23 GB (15%).
+i  storage: Exported 5,436/33,353 files, 1021 MB/6.23 GB (16%).
+i  storage: Exported 5,798/33,353 files, 1.06 GB/6.23 GB (17%).
+i  storage: Exported 6,147/33,353 files, 1.12 GB/6.23 GB (18%).
+i  storage: Exported 6,478/33,353 files, 1.18 GB/6.23 GB (19%).
+i  storage: Exported 6,802/33,353 files, 1.25 GB/6.23 GB (20%).
+i  storage: Exported 7,106/33,353 files, 1.31 GB/6.23 GB (21%).
+i  storage: Exported 7,436/33,353 files, 1.37 GB/6.23 GB (22%).
+i  storage: Exported 7,785/33,353 files, 1.43 GB/6.23 GB (23%).
+i  storage: Exported 8,073/33,353 files, 1.50 GB/6.23 GB (24%).
+i  storage: Exported 8,382/33,353 files, 1.56 GB/6.23 GB (25%).
+i  storage: Exported 8,705/33,353 files, 1.62 GB/6.23 GB (26%).
+i  storage: Exported 8,974/33,353 files, 1.68 GB/6.23 GB (27%).
+i  storage: Exported 9,316/33,353 files, 1.74 GB/6.23 GB (28%).
+i  emulators: Cloud Storage export is still running (20s elapsed).
+i  storage: Exported 9,636/33,353 files, 1.81 GB/6.23 GB (29%).
+i  storage: Exported 9,962/33,353 files, 1.87 GB/6.23 GB (30%).
+i  storage: Exported 10,300/33,353 files, 1.93 GB/6.23 GB (31%).
+i  storage: Exported 10,638/33,353 files, 1.99 GB/6.23 GB (32%).
+i  storage: Exported 11,001/33,353 files, 2.06 GB/6.23 GB (33%).
+i  storage: Exported 11,351/33,353 files, 2.12 GB/6.23 GB (34%).
+i  storage: Exported 11,697/33,353 files, 2.18 GB/6.23 GB (35%).
+i  storage: Exported 12,059/33,353 files, 2.24 GB/6.23 GB (36%).
+i  storage: Exported 12,411/33,353 files, 2.31 GB/6.23 GB (37%).
+i  storage: Exported 12,755/33,353 files, 2.37 GB/6.23 GB (38%).
+i  storage: Exported 13,045/33,353 files, 2.43 GB/6.23 GB (39%).
+i  storage: Exported 13,384/33,353 files, 2.49 GB/6.23 GB (40%).
+i  storage: Exported 13,691/33,353 files, 2.56 GB/6.23 GB (41%).
+i  storage: Exported 13,985/33,353 files, 2.62 GB/6.23 GB (42%).
+i  storage: Exported 14,331/33,353 files, 2.68 GB/6.23 GB (43%).
+i  storage: Exported 14,682/33,353 files, 2.74 GB/6.23 GB (44%).
+i  storage: Exported 14,964/33,353 files, 2.80 GB/6.23 GB (45%).
+i  storage: Exported 15,278/33,353 files, 2.87 GB/6.23 GB (46%).
+i  storage: Exported 15,626/33,353 files, 2.93 GB/6.23 GB (47%).
+i  storage: Exported 15,943/33,353 files, 2.99 GB/6.23 GB (48%).
+i  storage: Exported 16,244/33,353 files, 3.05 GB/6.23 GB (49%).
+i  emulators: Cloud Storage export is still running (30s elapsed).
+i  storage: Exported 16,605/33,353 files, 3.12 GB/6.23 GB (50%).
+i  storage: Exported 16,924/33,353 files, 3.18 GB/6.23 GB (51%).
+i  storage: Exported 17,271/33,353 files, 3.24 GB/6.23 GB (52%).
+i  storage: Exported 17,588/33,353 files, 3.30 GB/6.23 GB (53%).
+i  storage: Exported 17,911/33,353 files, 3.36 GB/6.23 GB (54%).
+i  storage: Exported 18,249/33,353 files, 3.43 GB/6.23 GB (55%).
+i  storage: Exported 18,578/33,353 files, 3.49 GB/6.23 GB (56%).
+i  storage: Exported 18,882/33,353 files, 3.55 GB/6.23 GB (57%).
+i  storage: Exported 19,237/33,353 files, 3.61 GB/6.23 GB (58%).
+i  storage: Exported 19,558/33,353 files, 3.68 GB/6.23 GB (59%).
+i  storage: Exported 19,889/33,353 files, 3.74 GB/6.23 GB (60%).
+i  storage: Exported 20,254/33,353 files, 3.80 GB/6.23 GB (61%).
+i  storage: Exported 20,586/33,353 files, 3.86 GB/6.23 GB (62%).
+i  storage: Exported 20,940/33,353 files, 3.93 GB/6.23 GB (63%).
+i  storage: Exported 21,253/33,353 files, 3.99 GB/6.23 GB (64%).
+i  storage: Exported 21,601/33,353 files, 4.05 GB/6.23 GB (65%).
+i  storage: Exported 21,909/33,353 files, 4.11 GB/6.23 GB (66%).
+i  emulators: Cloud Storage export is still running (40s elapsed).
+i  storage: Exported 22,208/33,353 files, 4.17 GB/6.23 GB (67%).
+i  storage: Exported 22,446/33,353 files, 4.24 GB/6.23 GB (68%).
+i  storage: Exported 22,798/33,353 files, 4.30 GB/6.23 GB (69%).
+i  storage: Exported 23,081/33,353 files, 4.37 GB/6.23 GB (70%).
+i  storage: Exported 23,390/33,353 files, 4.42 GB/6.23 GB (71%).
+i  storage: Exported 23,747/33,353 files, 4.49 GB/6.23 GB (72%).
+i  storage: Exported 24,081/33,353 files, 4.55 GB/6.23 GB (73%).
+i  storage: Exported 24,438/33,353 files, 4.61 GB/6.23 GB (74%).
+i  storage: Exported 24,783/33,353 files, 4.67 GB/6.23 GB (75%).
+i  storage: Exported 25,007/33,353 files, 4.74 GB/6.23 GB (76%).
+i  storage: Exported 25,347/33,353 files, 4.80 GB/6.23 GB (77%).
+i  storage: Exported 25,677/33,353 files, 4.86 GB/6.23 GB (78%).
+i  storage: Exported 26,039/33,353 files, 4.92 GB/6.23 GB (79%).
+i  storage: Exported 26,391/33,353 files, 4.98 GB/6.23 GB (80%).
+i  storage: Exported 26,722/33,353 files, 5.05 GB/6.23 GB (81%).
+i  storage: Exported 27,038/33,353 files, 5.11 GB/6.23 GB (82%).
+i  storage: Exported 27,399/33,353 files, 5.17 GB/6.23 GB (83%).
+i  storage: Exported 27,763/33,353 files, 5.23 GB/6.23 GB (84%).
+i  storage: Exported 28,098/33,353 files, 5.30 GB/6.23 GB (85%).
+i  storage: Exported 28,438/33,353 files, 5.36 GB/6.23 GB (86%).
+i  storage: Exported 28,792/33,353 files, 5.42 GB/6.23 GB (87%).
+i  emulators: Cloud Storage export is still running (50s elapsed).
+i  storage: Exported 29,163/33,353 files, 5.48 GB/6.23 GB (88%).
+i  storage: Exported 29,514/33,353 files, 5.54 GB/6.23 GB (89%).
+i  storage: Exported 29,865/33,353 files, 5.61 GB/6.23 GB (90%).
+i  storage: Exported 30,217/33,353 files, 5.67 GB/6.23 GB (91%).
+i  storage: Exported 30,580/33,353 files, 5.73 GB/6.23 GB (92%).
+i  storage: Exported 30,917/33,353 files, 5.79 GB/6.23 GB (93%).
+i  storage: Exported 31,271/33,353 files, 5.86 GB/6.23 GB (94%).
+i  storage: Exported 31,618/33,353 files, 5.92 GB/6.23 GB (95%).
+i  storage: Exported 31,939/33,353 files, 5.98 GB/6.23 GB (96%).
+i  storage: Exported 32,302/33,353 files, 6.04 GB/6.23 GB (97%).
+i  storage: Exported 32,631/33,353 files, 6.11 GB/6.23 GB (98%).
+i  storage: Exported 32,991/33,353 files, 6.17 GB/6.23 GB (99%).
+i  storage: Exported 33,353/33,353 files, 6.23 GB/6.23 GB (100%).
+✔  emulators: Cloud Storage export complete in 56s.
+i  emulators: Finalizing emulator export...
+✔  emulators: All emulator data exported in 1m 10s.
+✔  emulators: Export complete.
+✔  Export complete
+i  emulators: Shutting down emulators.
+i  ui: Stopping Emulator UI
+i  functions: Stopping Functions Emulator
+i  firestore: Stopping Firestore Emulator
+i  pubsub: Stopping Pub/Sub Emulator
+i  auth: Stopping Authentication Emulator
+i  storage: Stopping Storage Emulator
+i  eventarc: Stopping Eventarc Emulator
+i  tasks: Stopping Cloud Tasks Emulator
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator

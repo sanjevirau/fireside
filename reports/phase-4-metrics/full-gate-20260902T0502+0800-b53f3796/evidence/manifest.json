@@ -1,0 +1,317 @@
+{
+  "schemaVersion": 1,
+  "name": "phase-4-twodart-suite",
+  "frozen": true,
+  "frozenAt": "2026-09-01T21:33:27+08:00",
+  "objective": "Replace Twodart's official Firebase data emulators with Fireside while preserving the existing bun dev:mprocs workflow and retaining firebase-tools only as the Node Functions and Extensions workload host.",
+  "phase3Baseline": {
+    "tag": "phase-3",
+    "candidateRevision": "91e3c62e2fbec4c615f1b3018a578bfb55982b49",
+    "gateReport": "reports/phase-3-gate.md",
+    "manifest": "benchmarks/phase-3-rules.json",
+    "manifestSha256": "5b8547cb0cf7697df6fb98c29b05ccaf412b93c259c22127bd9050d8c495fcc2",
+    "evidenceDirectory": "reports/phase-3-metrics/full-gate-20260901T200051+0800-91e3c62"
+  },
+  "toolchain": {
+    "rust": "1.98.0",
+    "gateNode": "24.20.0",
+    "gateNpm": "12.0.2",
+    "gateJavaMajor": 26,
+    "officialFirestoreEmulator": "1.22.0",
+    "officialFirestoreEmulatorJarSha256": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c",
+    "conformanceFirebaseTools": "15.28.1",
+    "twodartFirebaseTools": "15.22.0",
+    "twodartNodeRuntime": "24",
+    "twodartBun": "1.3.14",
+    "twodartFirebaseJsSdk": "^12.12.1",
+    "twodartFirebaseAdmin": "^13.8.0",
+    "twodartFirebaseFunctions": "^7.2.5"
+  },
+  "oraclePolicy": {
+    "requiredBeforeProductImplementation": true,
+    "precedence": [
+      "production Firebase service on the allowlisted conformance project",
+      "official Firebase Emulator Suite through firebase-tools 15.22.0",
+      "official Firebase Emulator Suite through firebase-tools 15.28.1",
+      "pinned firebase-tools and Firebase SDK source"
+    ],
+    "classificationRule": "Match production when production exposes the contract; preserve official-emulator-only lifecycle and control behavior separately; never normalize a recorded divergence silently.",
+    "cloud": {
+      "projectId": "fireside-conformance",
+      "allowlistEnvironmentVariable": "CONFORMANCE_CLOUD_ALLOWLIST",
+      "syntheticDataOnly": true,
+      "cleanupRequired": true,
+      "maximumAuthUsersPerCapture": 16,
+      "maximumStorageObjectsPerCapture": 64,
+      "maximumStorageBytesPerCapture": 16777216,
+      "maximumFirestoreDocumentsPerCapture": 64
+    },
+    "fixtureRoot": "conformance/fixtures/firebase-suite-v1",
+    "fixtureSchemaVersion": 1,
+    "sensitiveHeadersStored": false,
+    "accessTokensStored": false,
+    "realTwodartDataStored": false,
+    "requiredFixtureSets": [
+      "firestore-trigger-registration-and-v1-v2-dispatch",
+      "auth-identity-toolkit-and-admin",
+      "auth-browser-oauth-and-token-refresh",
+      "auth-import-export-and-trigger-dispatch",
+      "storage-firebase-v0-and-download-tokens",
+      "storage-gcs-json-and-resumable-upload",
+      "storage-multi-bucket-rules-and-import-export",
+      "pubsub-schedule-and-function-dispatch",
+      "functions-callable-http-and-error-contract",
+      "extensions-stripe-and-algolia-trigger-inventory",
+      "hub-locator-export-and-background-controls",
+      "ui-config-logging-and-websocket",
+      "suite-startup-readiness-shutdown-and-restart"
+    ],
+    "checksumFilePerFixtureSet": "SHA256SUMS",
+    "captureCompletionBlocksImplementation": true
+  },
+  "twodartContract": {
+    "sourceRevision": "c4684b813fa4ef2d40cd42bf7d72450d011024b1",
+    "projectId": "demo-twodart-local",
+    "startCommand": "bun dev:mprocs",
+    "readyPattern": "All emulators ready",
+    "configurationChecksums": {
+      "apps/templates-firebase/firebase.json": "26d9aa3bfc45095ff174588027f525bc1ca7e39e45a0423a7d5f29ec2820a6e4",
+      "apps/templates-firebase/firestore.rules": "3d0d688215bc44a5049404dc3dcf6e89bd66dc38b9c3e2ec63c69ebabba84e70",
+      "apps/templates-firebase/firestore.indexes.json": "3adfb7f59f502f9c496db9245dcad5d27573c002de2a252b1839f2db8386add8",
+      "apps/templates-firebase/storage.default.rules": "c5334b21d576b18ca494fd540d1883ca2ca4287b5653b1b990136ec74475400d",
+      "apps/templates-firebase/storage.assets.rules": "0a8f28d9597961ecbb59ce8269cf4fecf71add0b9e0b539c13f38b25ca4c6997",
+      "scripts/dev/mprocs/js-dotnet.yaml": "79a428120b294d4963d0e93759e28ec4ac424dfdb5ab6fea2697cc4f70ae907b",
+      "scripts/dev/start-firebase-emulator.sh": "aee671c67cc380628717c9e5e99965d9e06fa3707cdf6e1a7ece2e659b5d2a89"
+    },
+    "ports": {
+      "firestore": 21000,
+      "auth": 21001,
+      "storage": 21002,
+      "functions": 21003,
+      "pubsub": 21004,
+      "hub": 21005,
+      "ui": 21006,
+      "firestoreUiWebsocket": 9150
+    },
+    "storageBuckets": [
+      "demo-twodart-local.appspot.com",
+      "assets-local.twodart.com"
+    ],
+    "extensions": {
+      "firestore-stripe-payments": "invertase/firestore-stripe-payments@0.3.12",
+      "firestore-algolia-search": "algolia/firestore-algolia-search@1.2.10",
+      "firestore-algolia-userimages": "algolia/firestore-algolia-search@1.2.10"
+    },
+    "customFunctions": {
+      "runtime": "nodejs24",
+      "codebase": "templates-firebase-function",
+      "firestoreBackground": 6,
+      "scheduled": 2,
+      "callable": 2,
+      "http": 1,
+      "total": 11
+    },
+    "sdkClients": [
+      "vanilla Firebase JavaScript browser SDK",
+      "Node Firebase Admin SDK",
+      "Python Firebase Admin SDK",
+      ".NET Firebase Admin SDK",
+      ".NET Google Cloud Firestore client",
+      ".NET Google Cloud Storage JSON client"
+    ],
+    "notRequiredForFirstReplacement": [
+      "Realtime Database",
+      "Firebase Hosting",
+      "Firebase App Hosting",
+      "Data Connect",
+      "Analytics",
+      "Cloud Messaging",
+      "Task queue functions",
+      "general Eventarc delivery",
+      "Storage-triggered Twodart functions",
+      "direct Twodart Pub/Sub clients"
+    ]
+  },
+  "services": {
+    "firestore": {
+      "baseline": "complete through Phase 3",
+      "phase4Requirements": [
+        "dispatch registered v1 and v2 Firestore triggers",
+        "preserve Phase 1 through Phase 3 behavior",
+        "pass Twodart rules and index corpus",
+        "serve browser, Node, Python, and .NET clients"
+      ]
+    },
+    "auth": {
+      "requiredApis": [
+        "Identity Toolkit REST",
+        "fake Google OAuth popup",
+        "custom token sign-in",
+        "unsigned emulator JWT issue and refresh",
+        "token verification",
+        "user create, get, get-by-email, update, delete, and paginated list",
+        "custom claims",
+        "emulator account and configuration management",
+        "accounts.json and config.json import and export",
+        "Auth create and delete trigger multicast"
+      ]
+    },
+    "storage": {
+      "requiredApis": [
+        "Firebase /v0 object API",
+        "GCS JSON object API",
+        "simple and resumable upload",
+        "download token URL",
+        "list, download, delete, and metadata",
+        "content type, cache control, gzip, and custom metadata",
+        "two-bucket isolation",
+        "Firebase Storage rules runtime",
+        "storage_export import and export"
+      ]
+    },
+    "functionsAndExtensions": {
+      "firebaseToolsBoundary": "firebase-tools may discover and execute Node Functions and Extensions but may not provide Firestore, Auth, Storage, Pub/Sub scheduling, Hub, or persistence services in the final Twodart gate.",
+      "requiredBehavior": [
+        "v1 background event delivery",
+        "v2 CloudEvent delivery",
+        "callable protocol, CORS, auth context, and HttpsError mapping",
+        "HTTP routing",
+        "retry deduplication",
+        "Stripe Auth, Firestore, callable, and webhook paths",
+        "two Algolia Firestore index trigger instances",
+        "preserve the official emulator's ignored unsupported full-index extension trigger"
+      ]
+    },
+    "scheduler": {
+      "scope": "Pub/Sub-backed onSchedule only",
+      "minimumScheduledFunctions": 2,
+      "generalPubsubRequired": false
+    },
+    "suite": {
+      "requiredBehavior": [
+        "firebase.json-compatible configuration",
+        "stable service environment variables",
+        "Hub GET /emulators",
+        "Hub POST /_admin/export",
+        "background trigger controls",
+        "locator file",
+        "official UI zip serving and GET /api/config",
+        "Firestore UI websocket compatibility",
+        "combined Firestore, Auth, and Storage import/export",
+        "All emulators ready only after transport readiness",
+        "shared-worktree mode",
+        "clean shutdown, export-on-exit, and restart"
+      ]
+    }
+  },
+  "gates": {
+    "oracleReplay": {
+      "allRequiredFixtureSets": true,
+      "unexplainedDivergences": 0
+    },
+    "officialSdk": {
+      "authBrowserAndAdmin": true,
+      "storageBrowserAndAdmin": true,
+      "memoryAndDiskWalWhereStateful": true
+    },
+    "twodartSynthetic": {
+      "browserAuthFirestoreStorageFunctions": true,
+      "nodeAdmin": true,
+      "pythonAdmin": true,
+      "dotnetAdminFirestoreStorage": true,
+      "cacheWatcher": true,
+      "stripeCustomAndExtensionWebhooks": true,
+      "algoliaTriggerFanout": true,
+      "allElevenCustomFunctionsDiscovered": true,
+      "allSixFirestoreTriggersExactlyOnce": true,
+      "bothSchedulesDispatch": true
+    },
+    "twodartFullData": {
+      "required": true,
+      "datasetEnvironmentVariable": "TWODART_PHASE4_FULL_DATA",
+      "observedDatasetKiB": 8180780,
+      "minimumStorageObjects": 33353,
+      "minimumStorageBytes": 6230000000,
+      "components": [
+        "firestore_export",
+        "auth_export/accounts.json",
+        "auth_export/config.json",
+        "storage_export/buckets.json",
+        "storage_export/blobs",
+        "storage_export/metadata"
+      ],
+      "requirements": [
+        "cold import",
+        "sampled logical and byte verification",
+        "restart without loss",
+        "combined export",
+        "re-import of the exported suite",
+        "bounded RSS without an OOM"
+      ]
+    },
+    "chaos": {
+      "droppedTriggerResponses": 50,
+      "duplicateFirestoreEvents": 50,
+      "concurrentWritesPerTriggerPattern": 100,
+      "authTriggerRetries": 50,
+      "resumableUploadInterruptions": 50,
+      "suiteForcedRestarts": 25,
+      "duplicateObservableEffects": 0,
+      "lostAcknowledgedEffects": 0
+    },
+    "performance": {
+      "comparisonTarget": "official Firebase Emulator Suite on the same host and corpus",
+      "measurements": [
+        "full mprocs readiness wall clock",
+        "entire emulator process-tree idle and loaded RSS/PSS",
+        "Auth operation latency",
+        "Storage upload, download, list, and metadata latency",
+        "Storage import and export wall clock and peak RSS",
+        "Firestore-to-Function delivery p50, p95, and p99",
+        "scheduled-function dispatch latency",
+        "clean shutdown and restart wall clock"
+      ],
+      "thresholds": {
+        "listenerRegressionFromPhase3MaximumPercent": 20,
+        "triggerDeliveryP99Milliseconds": 1000,
+        "authOperationP99Milliseconds": 500,
+        "smallStorageOperationP99Milliseconds": 1000,
+        "suiteReadyMaximumMilliseconds": 120000,
+        "fullDataPeakRssBytes": 1073741824,
+        "fullDataImportMaximumSeconds": 1200,
+        "fullDataExportMaximumSeconds": 1200
+      },
+      "claimsRequireMeasuredEvidence": true
+    },
+    "regression": {
+      "completePhase3Gate": true,
+      "allPhase2FirebaseJsSdkCells": true,
+      "existingConformance": true,
+      "rustFmt": true,
+      "strictClippy": true,
+      "rustTests": true,
+      "typescriptCheck": true,
+      "typescriptTests": true
+    },
+    "cutover": {
+      "normalCommand": "bun dev:mprocs",
+      "samePortsAndEnvironment": true,
+      "officialJavaFirestoreProcessAllowed": false,
+      "officialJavaPubsubProcessAllowed": false,
+      "officialFirebaseAuthServiceAllowed": false,
+      "officialFirebaseStorageServiceAllowed": false,
+      "firebaseToolsNodeWorkloadHostAllowed": true,
+      "officialFallbackMustRemainExplicit": true,
+      "firesideBecomesDefaultOnlyAfterFullPass": true
+    }
+  },
+  "releaseBoundary": {
+    "evidenceCommitRequired": true,
+    "greenGithubCiOnExactEvidenceCommitRequired": true,
+    "tagRequiresCompletePass": true,
+    "stopForMaintainerReviewBeforePhase5": true,
+    "thresholdWeakeningForbidden": true,
+    "silentRerunForbidden": true,
+    "unrelatedIntegrationForbidden": true
+  }
+}

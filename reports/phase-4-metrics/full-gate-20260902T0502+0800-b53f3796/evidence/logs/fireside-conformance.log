@@ -1,0 +1,56 @@
+npm notice run fireside-conformance@0.0.1 test:fireside
+npm notice run node --import tsx src/run-fireside.ts
+WARNING: fireside Security Rules are not configured; client access is open
+fireside Firestore listening on 127.0.0.1:59402 with 4 runtime worker thread(s); mimalloc purge delay 0 ms, decommit true
+✔ collection-group queries honor an ancestor document (191.46125ms)
+✔ CreateDocument assigns an ID, preserves masked fields, and rejects conflicts (210.556708ms)
+✔ BulkWriter commits independent writes and surfaces per-write errors (27.841958ms)
+✔ BulkWriter accepts a near-5-MiB batch of individually valid documents (170.055208ms)
+✔ list RPCs paginate direct children and preserve masks (38.389792ms)
+✔ ListDocuments orders fields and requires a collection selector (22.139042ms)
+✔ ListDocuments showMissing returns name-only ancestor placeholders (20.008375ms)
+✔ BatchWrite reports per-write conflicts and commits independent writes (22.585417ms)
+✔ write conflicts return the production gRPC status codes (331.118125ms)
+✔ Admin SDK retries an aborted read-write transaction (634.349666ms)
+✔ target accepts an SDK write/read/delete round trip (234.68ms)
+✔ read_time reconstructs committed versions after a later delete (260.15975ms)
+✔ raw Listen removes a malformed-token target without closing the stream (184.242167ms)
+✔ query listeners deliver an initial snapshot and ordered changes (72.821416ms)
+✔ raw Listen resumes after a CURRENT checkpoint without replaying prior documents (49.349125ms)
+✔ raw Listen read_time delivers only changes after the historical snapshot (41.433959ms)
+✔ raw Listen falls back to the full target when read_time has expired (43.055333ms)
+✔ named databases preserve isolation in the v1 resource path (244.862625ms)
+✔ partitionQuery returns ordered document-name split cursors (331.336833ms)
+✔ ExecutePipeline preserves the production database-edition gate (7230.979167ms)
+✔ RunQuery explain separates planning from analyzed execution (149.397417ms)
+✔ RunAggregationQuery explain reports the aggregate result count (48.108125ms)
+✔ queries match the production operator and shaping contract (476.059125ms)
+✔ orderBy follows the production mixed-value order (90.038875ms)
+✔ integer and double ordering does not lose int64 precision (16.115167ms)
+✔ REST v1 patches, reads, deletes, and reports missing documents (31.394292ms)
+✔ REST v1 commit, batchGet, and runQuery share document semantics (12.254208ms)
+✔ REST v1 commit applies update and document transforms (10.629791ms)
+✔ REST v1 preserves the production missing-index status (6.70825ms)
+✔ streaming Write performs a tokened handshake and atomic write (82.998958ms)
+✔ nearest-vector queries match production distance semantics (110.083666ms)
+✔ field transforms use the production commit semantics (84.58075ms)
+✔ array transforms use production numeric equality (11.5985ms)
+✔ minimum and maximum transforms preserve production numeric types (17.30125ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8025.620292
+✔ emulator control APIs register triggers and clear data (24.2475ms)
+✔ emulator export writes the named official-format directory (9.702167ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 288.683458

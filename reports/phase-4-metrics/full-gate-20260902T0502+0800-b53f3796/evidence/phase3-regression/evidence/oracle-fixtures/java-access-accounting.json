@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "target": "official-java-emulator",
+  "targetVersion": "1.22.0",
+  "targetProject": "demo-fireside-phase3-rules",
+  "capturedAt": "2026-09-01T08:53:23.625Z",
+  "credentialsStored": false,
+  "authorizationHeadersStored": false,
+  "javaJarSha256": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c",
+  "rulesSource": "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /probe/access-10 {\n      allow get: if get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a1).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a2).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a3).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a4).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a5).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a6).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a7).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a8).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a9).data.allowed == true;\n    }\n    match /probe/access-11 {\n      allow get: if get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a1).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a2).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a3).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a4).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a5).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a6).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a7).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a8).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a9).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a10).data.allowed == true;\n    }\n    match /probe/cached-11 {\n      allow get: if get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true;\n    }\n    match /probe/exists-10 {\n      allow get: if exists(/databases/$(database)/documents/access/e0) &&\n        exists(/databases/$(database)/documents/access/e1) &&\n        exists(/databases/$(database)/documents/access/e2) &&\n        exists(/databases/$(database)/documents/access/e3) &&\n        exists(/databases/$(database)/documents/access/e4) &&\n        exists(/databases/$(database)/documents/access/e5) &&\n        exists(/databases/$(database)/documents/access/e6) &&\n        exists(/databases/$(database)/documents/access/e7) &&\n        exists(/databases/$(database)/documents/access/e8) &&\n        exists(/databases/$(database)/documents/access/e9);\n    }\n    match /probe/exists-11 {\n      allow get: if exists(/databases/$(database)/documents/access/e0) &&\n        exists(/databases/$(database)/documents/access/e1) &&\n        exists(/databases/$(database)/documents/access/e2) &&\n        exists(/databases/$(database)/documents/access/e3) &&\n        exists(/databases/$(database)/documents/access/e4) &&\n        exists(/databases/$(database)/documents/access/e5) &&\n        exists(/databases/$(database)/documents/access/e6) &&\n        exists(/databases/$(database)/documents/access/e7) &&\n        exists(/databases/$(database)/documents/access/e8) &&\n        exists(/databases/$(database)/documents/access/e9) &&\n        exists(/databases/$(database)/documents/access/e10);\n    }\n    match /batch/{id} {\n      allow create, update: if exists(/databases/$(database)/documents/access/$(id));\n    }\n    match /state/counter {\n      allow update: if request.resource.data.version == resource.data.version + 1;\n    }\n    match /atomic/{id} {\n      allow create: if getAfter(/databases/$(database)/documents/state/counter).data.version == request.resource.data.expectedVersion;\n    }\n    match /runtime/missing-field {\n      allow get: if resource.data.missing == true;\n    }\n    match /runtime/division-zero {\n      allow get: if 1 / 0 == 0;\n    }\n    match /runtime/list-out-of-bounds {\n      allow get: if [1][2] == 1;\n    }\n    match /runtime/wrong-type-method {\n      allow get: if resource.data.ordinal.size() == 1;\n    }\n    match /runtime/missing-get-resource {\n      allow get: if get(/databases/$(database)/documents/missing/document).data.allowed == true;\n    }\n  }\n}\n",
+  "rulesSourceSha256": "5fabe1cc68443920238d2e61eda7fa5167150654412d26c77806d1605df82699",
+  "observations": [
+    {
+      "id": "probe/access-10",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-rules/databases/(default)/documents/probe/access-10",
+      "status": 200,
+      "body": {
+        "name": "projects/demo-fireside-phase3-rules/databases/(default)/documents/probe/access-10",
+        "fields": {
+          "marker": {
+            "stringValue": "access-10"
+          }
+        },
+        "createTime": "2026-09-01T08:53:23.319145Z",
+        "updateTime": "2026-09-01T08:53:23.319145Z"
+      }
+    },
+    {
+      "id": "probe/access-11",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-rules/databases/(default)/documents/probe/access-11",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "\nevaluation error at L17:21 for 'get' @ L17, Service call error. Function: [get], Argument: [path_value {\n  segments {\n    simple: \"databases\"\n  }\n  segments {\n    simple: \"(default)\"\n  }\n  segments {\n    simple: \"documents\"\n  }\n  segments {\n    simple: \"access\"\n  }\n  segments {\n    simple: \"a10\"\n  }\n}\n]. for 'get' @ L17",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "probe/cached-11",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-rules/databases/(default)/documents/probe/cached-11",
+      "status": 200,
+      "body": {
+        "name": "projects/demo-fireside-phase3-rules/databases/(default)/documents/probe/cached-11",
+        "fields": {
+          "marker": {
+            "stringValue": "cached-11"
+          }
+        },
+        "createTime": "2026-09-01T08:53:23.326563Z",
+        "updateTime": "2026-09-01T08:53:23.326563Z"
+      }
+    },
+    {
+      "id": "probe/exists-10",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-rules/databases/(default)/documents/probe/exists-10",
+      "status": 200,
+      "body": {
+        "name": "projects/demo-fireside-phase3-rules/databases/(default)/documents/probe/exists-10",
+        "fields": {
+          "marker": {
+            "stringValue": "exists-10"
+          }
+        },
+        "createTime": "2026-09-01T08:53:23.329768Z",
+        "updateTime": "2026-09-01T08:53:23.329768Z"
+      }
+    },
+    {
+      "id": "probe/exists-11",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-rules/databases/(default)/documents/probe/exists-11",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "\nevaluation error at L55:21 for 'get' @ L55, Service call error. Function: [exists], Argument: [path_value {\n  segments {\n    simple: \"databases\"\n  }\n  segments {\n    simple: \"(default)\"\n  }\n  segments {\n    simple: \"documents\"\n  }\n  segments {\n    simple: \"access\"\n  }\n  segments {\n    simple: \"e10\"\n  }\n}\n]. for 'get' @ L55",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "batch-20-distinct-access-calls",
+      "method": "POST",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-rules/databases/(default)/documents:commit",
+      "status": 200,
+      "body": {
+        "writeResults": [
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.544625Z"
+          }
+        ],
+        "commitTime": "2026-09-01T08:53:23.544625Z"
+      }
+    },
+    {
+      "id": "batch-21-distinct-access-calls",
+      "method": "POST",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-rules/databases/(default)/documents:commit",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "\nevaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, Service call error. Function: [exists], Argument: [path_value {\n  segments {\n    simple: \"databases\"\n  }\n  segments {\n    simple: \"(default)\"\n  }\n  segments {\n    simple: \"documents\"\n  }\n  segments {\n    simple: \"access\"\n  }\n  segments {\n    simple: \"b21-16\"\n  }\n}\n]. for 'create' @ L68",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    }
+  ],
+  "relevantLogLines": [
+    "evaluation error at L17:21 for 'get' @ L17, Service call error. Function: [get], Argument: [path_value {",
+    "evaluation error at L17:21 for 'get' @ L17, Service call error. Function: [get], Argument: [path_value {",
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "evaluation error at L17:21 for 'get' @ L17, Service call error. Function: [get], Argument: [path_value {",
+    "evaluation error at L55:21 for 'get' @ L55, Service call error. Function: [exists], Argument: [path_value {",
+    "evaluation error at L55:21 for 'get' @ L55, Service call error. Function: [exists], Argument: [path_value {",
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "evaluation error at L55:21 for 'get' @ L55, Service call error. Function: [exists], Argument: [path_value {",
+    "evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, Service call error. Function: [exists], Argument: [path_value {",
+    "evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, Service call error. Function: [exists], Argument: [path_value {",
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, evaluation error at L68:32 for 'create' @ L68, evaluation error at L68:32 for 'update' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, false for 'create' @ L68, Service call error. Function: [exists], Argument: [path_value {",
+    "evaluation error at L71:24 for 'update' @ L71, evaluation error at L74:24 for 'create' @ L74, false for 'update' @ L71, false for 'create' @ L74",
+    "evaluation error at L71:24 for 'update' @ L71, evaluation error at L74:24 for 'create' @ L74, false for 'update' @ L71, false for 'create' @ L74",
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "evaluation error at L71:24 for 'update' @ L71, evaluation error at L74:24 for 'create' @ L74, false for 'update' @ L71, false for 'create' @ L74",
+    "evaluation error at L77:21 for 'get' @ L77, Property missing is undefined on object. for 'get' @ L77",
+    "evaluation error at L77:21 for 'get' @ L77, Property missing is undefined on object. for 'get' @ L77",
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "evaluation error at L77:21 for 'get' @ L77, Property missing is undefined on object. for 'get' @ L77",
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "evaluation error at L86:21 for 'get' @ L86, Function not found error: Name: [size]. for 'get' @ L86",
+    "evaluation error at L86:21 for 'get' @ L86, Function not found error: Name: [size]. for 'get' @ L86",
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "evaluation error at L86:21 for 'get' @ L86, Function not found error: Name: [size]. for 'get' @ L86",
+    "evaluation error at L89:21 for 'get' @ L89, Null value error. for 'get' @ L89",
+    "evaluation error at L89:21 for 'get' @ L89, Null value error. for 'get' @ L89",
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "evaluation error at L89:21 for 'get' @ L89, Null value error. for 'get' @ L89"
+  ]
+}

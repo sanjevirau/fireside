@@ -1,0 +1,114 @@
+{
+  "commands": [
+    {
+      "command": "cargo build --release --locked -p fireside",
+      "durationMilliseconds": 528.46775,
+      "exitCode": 0,
+      "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/logs/release-build.log",
+      "name": "release-build",
+      "passed": true,
+      "signal": null
+    },
+    {
+      "command": "cargo test --locked -p fireside-functions-bridge phase4_fifty_response_losses_have_zero_duplicate_effects",
+      "durationMilliseconds": 2956.2815420000115,
+      "exitCode": 0,
+      "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/logs/chaos-response-loss.log",
+      "name": "chaos-response-loss",
+      "passed": true,
+      "signal": null
+    },
+    {
+      "command": "cargo test --locked -p fireside-functions-bridge phase4_fifty_duplicate_auth_retries_are_exactly_once",
+      "durationMilliseconds": 185.22679099999368,
+      "exitCode": 0,
+      "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/logs/chaos-auth-dedupe.log",
+      "name": "chaos-auth-dedupe",
+      "passed": true,
+      "signal": null
+    },
+    {
+      "command": "cargo test --locked -p fireside-functions-bridge phase4_six_trigger_patterns_deliver_one_hundred_concurrent_writes_each",
+      "durationMilliseconds": 288.2441670000553,
+      "exitCode": 0,
+      "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/logs/chaos-six-patterns.log",
+      "name": "chaos-six-patterns",
+      "passed": true,
+      "signal": null
+    },
+    {
+      "command": "cargo test --locked -p fireside-functions-bridge phase4_extension_trigger_fanout_is_local_and_exact",
+      "durationMilliseconds": 145.05195799993817,
+      "exitCode": 0,
+      "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/logs/extension-fanout.log",
+      "name": "extension-fanout",
+      "passed": true,
+      "signal": null
+    },
+    {
+      "command": "cargo test --locked -p fireside-storage-front phase4_fifty_resumable_uploads_survive_an_interruption",
+      "durationMilliseconds": 2025.4456250000512,
+      "exitCode": 0,
+      "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/logs/chaos-resumable.log",
+      "name": "chaos-resumable",
+      "passed": true,
+      "signal": null
+    },
+    {
+      "command": "cargo fmt --all -- --check",
+      "durationMilliseconds": 479.28733299998567,
+      "exitCode": 0,
+      "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/logs/rust-fmt.log",
+      "name": "rust-fmt",
+      "passed": true,
+      "signal": null
+    },
+    {
+      "command": "npm --prefix conformance run check",
+      "durationMilliseconds": 728.0903750000289,
+      "exitCode": 0,
+      "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/logs/typescript-check.log",
+      "name": "typescript-check",
+      "passed": true,
+      "signal": null
+    },
+    {
+      "command": "npm --prefix conformance test",
+      "durationMilliseconds": 844.3640000000596,
+      "exitCode": 0,
+      "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/logs/typescript-tests.log",
+      "name": "typescript-tests",
+      "passed": true,
+      "signal": null
+    },
+    {
+      "command": "cargo clippy --workspace --all-targets --all-features -- -D warnings",
+      "durationMilliseconds": 403.95254199998453,
+      "exitCode": 0,
+      "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/logs/rust-clippy.log",
+      "name": "rust-clippy",
+      "passed": true,
+      "signal": null
+    },
+    {
+      "command": "cargo test --workspace --locked",
+      "durationMilliseconds": 58191.835750000086,
+      "exitCode": 0,
+      "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/logs/rust-tests.log",
+      "name": "rust-tests",
+      "passed": true,
+      "signal": null
+    },
+    {
+      "command": "npm --prefix conformance run test:fireside",
+      "durationMilliseconds": 10735.694084000075,
+      "exitCode": 0,
+      "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/logs/fireside-conformance.log",
+      "name": "fireside-conformance",
+      "passed": true,
+      "signal": null
+    }
+  ],
+  "passed": true,
+  "schemaVersion": 1
+}

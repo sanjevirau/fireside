@@ -1,0 +1,56 @@
+npm notice run fireside-conformance@0.0.1 test:fireside
+npm notice run node --import tsx src/run-fireside.ts
+WARNING: fireside Security Rules are not configured; client access is open
+fireside Firestore listening on 127.0.0.1:55956 with 4 runtime worker thread(s); mimalloc purge delay 0 ms, decommit true
+✔ collection-group queries honor an ancestor document (189.014333ms)
+✔ CreateDocument assigns an ID, preserves masked fields, and rejects conflicts (188.998875ms)
+✔ BulkWriter commits independent writes and surfaces per-write errors (36.794541ms)
+✔ BulkWriter accepts a near-5-MiB batch of individually valid documents (75.444ms)
+✔ list RPCs paginate direct children and preserve masks (44.396ms)
+✔ ListDocuments orders fields and requires a collection selector (86.449833ms)
+✔ ListDocuments showMissing returns name-only ancestor placeholders (49.419041ms)
+✔ BatchWrite reports per-write conflicts and commits independent writes (21.319458ms)
+✔ write conflicts return the production gRPC status codes (233.706125ms)
+✔ Admin SDK retries an aborted read-write transaction (1355.247709ms)
+✔ target accepts an SDK write/read/delete round trip (118.072666ms)
+✔ read_time reconstructs committed versions after a later delete (202.343167ms)
+✔ raw Listen removes a malformed-token target without closing the stream (133.741583ms)
+✔ query listeners deliver an initial snapshot and ordered changes (103.739125ms)
+✔ raw Listen resumes after a CURRENT checkpoint without replaying prior documents (30.457625ms)
+✔ raw Listen read_time delivers only changes after the historical snapshot (102.040833ms)
+✔ raw Listen falls back to the full target when read_time has expired (17.493667ms)
+✔ named databases preserve isolation in the v1 resource path (102.763875ms)
+✔ partitionQuery returns ordered document-name split cursors (327.737375ms)
+✔ ExecutePipeline preserves the production database-edition gate (7175.459667ms)
+✔ RunQuery explain separates planning from analyzed execution (142.912291ms)
+✔ RunAggregationQuery explain reports the aggregate result count (30.76775ms)
+✔ queries match the production operator and shaping contract (342.521333ms)
+✔ orderBy follows the production mixed-value order (97.834583ms)
+✔ integer and double ordering does not lose int64 precision (16.333834ms)
+✔ REST v1 patches, reads, deletes, and reports missing documents (22.936166ms)
+✔ REST v1 commit, batchGet, and runQuery share document semantics (9.241125ms)
+✔ REST v1 commit applies update and document transforms (13.932708ms)
+✔ REST v1 preserves the production missing-index status (12.62675ms)
+✔ streaming Write performs a tokened handshake and atomic write (96.858167ms)
+✔ nearest-vector queries match production distance semantics (120.895625ms)
+✔ field transforms use the production commit semantics (94.655042ms)
+✔ array transforms use production numeric equality (12.369333ms)
+✔ minimum and maximum transforms preserve production numeric types (17.656292ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7751.510917
+✔ emulator control APIs register triggers and clear data (24.029125ms)
+✔ emulator export writes the named official-format directory (9.731541ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 290.466834

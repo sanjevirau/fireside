@@ -1,0 +1,19 @@
+npm notice run fireside-conformance@0.0.1 test:official-export-import
+npm notice run node --import tsx src/verify-official-export-import.ts
+/private/var/folders/17/97zrc8dn5kj9m8sn51kc0h3w0000gn/T/fireside-official-import-nFNY6p/firestore_export/firestore_export.overall_export_metadata
+i  emulators: Starting emulators: firestore
+i  emulators: Detected demo project ID "demo-fireside-export-oracle", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+⚠  logging: Logging Emulator unable to start on port 4500, starting on 4501 instead.
+i  firestore: Importing data from /var/folders/17/97zrc8dn5kj9m8sn51kc0h3w0000gn/T/fireside-official-import-nFNY6p/firestore_export/firestore_export.overall_export_metadata
+⚠  firestore: Cloud Firestore Emulator does not support multiple databases yet.
+⚠  firestore: Did not find a Cloud Firestore rules file specified in a firebase.json config file.
+⚠  firestore: The emulator will default to allowing all reads and writes. Learn more about this option: https://firebase.google.com/docs/emulator-suite/install_and_configure#security_rules_configuration.
+i  firestore: Firestore Emulator logging to firestore-debug.log
+✔  firestore: Firestore Emulator was started in standard edition.
+✔  firestore: Firestore Emulator UI websocket is running on 9151.
+i  Running script: node --import tsx src/assert-export-import.ts
+✔  Script exited successfully (code 0)
+i  emulators: Shutting down emulators.
+i  firestore: Stopping Firestore Emulator
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator

@@ -1,0 +1,135 @@
+{
+  "candidateRevision": "b53f37966b39540bf6defb9a6031d045607d630b",
+  "capturedAt": "2026-09-01T21:02:07.959Z",
+  "cpuCount": 12,
+  "cpuModel": "Apple M2 Pro",
+  "host": "MacBook-Pro.local",
+  "manifestSha256": "38697418c65d667dfcc64480e8b05ff4d16ed0f330beb19c64e9da04508dd3d2",
+  "os": {
+    "arch": "arm64",
+    "platform": "darwin",
+    "release": "25.6.0"
+  },
+  "schemaVersion": 1,
+  "smoke": false,
+  "toolchain": {
+    "bun": "1.3.14",
+    "firebaseAdmin": "13.10.0",
+    "firebaseFunctions": "7.2.5",
+    "firebaseJsSdk": "12.15.0",
+    "firebaseTools": "15.22.0",
+    "java": "openjdk 26.0.2.1 2026-08-18\nOpenJDK Runtime Environment Homebrew (build 26.0.2.1)\nOpenJDK 64-Bit Server VM Homebrew (build 26.0.2.1, mixed mode, sharing)",
+    "node": "v24.20.0",
+    "npm": "12.0.2",
+    "rust": "rustc 1.98.0 (88d9e12ae 2026-08-18)"
+  },
+  "totalMemoryBytes": 34359738368,
+  "configurationVerification": [
+    {
+      "currentSha256": "26d9aa3bfc45095ff174588027f525bc1ca7e39e45a0423a7d5f29ec2820a6e4",
+      "passed": true,
+      "path": "apps/templates-firebase/firebase.json"
+    },
+    {
+      "currentSha256": "3d0d688215bc44a5049404dc3dcf6e89bd66dc38b9c3e2ec63c69ebabba84e70",
+      "passed": true,
+      "path": "apps/templates-firebase/firestore.rules"
+    },
+    {
+      "currentSha256": "3adfb7f59f502f9c496db9245dcad5d27573c002de2a252b1839f2db8386add8",
+      "passed": true,
+      "path": "apps/templates-firebase/firestore.indexes.json"
+    },
+    {
+      "currentSha256": "c5334b21d576b18ca494fd540d1883ca2ca4287b5653b1b990136ec74475400d",
+      "passed": true,
+      "path": "apps/templates-firebase/storage.default.rules"
+    },
+    {
+      "currentSha256": "0a8f28d9597961ecbb59ce8269cf4fecf71add0b9e0b539c13f38b25ca4c6997",
+      "passed": true,
+      "path": "apps/templates-firebase/storage.assets.rules"
+    },
+    {
+      "currentSha256": "79a428120b294d4963d0e93759e28ec4ac424dfdb5ab6fea2697cc4f70ae907b",
+      "passed": true,
+      "path": "scripts/dev/mprocs/js-dotnet.yaml"
+    },
+    {
+      "currentSha256": "176144b1092f80b0a3ed72979b0f66e73936e06cdae1436291e4d000d8eb971c",
+      "expectedPinnedSha256": "aee671c67cc380628717c9e5e99965d9e06fa3707cdf6e1a7ece2e659b5d2a89",
+      "passed": true,
+      "path": "scripts/dev/start-firebase-emulator.sh",
+      "reason": "reviewed Phase 4 cutover with explicit official fallback"
+    }
+  ],
+  "fixtureVerification": [
+    {
+      "fixtureSet": "firestore-trigger-registration-and-v1-v2-dispatch",
+      "passed": true,
+      "verifiedFiles": 2
+    },
+    {
+      "fixtureSet": "auth-identity-toolkit-and-admin",
+      "passed": true,
+      "verifiedFiles": 2
+    },
+    {
+      "fixtureSet": "auth-browser-oauth-and-token-refresh",
+      "passed": true,
+      "verifiedFiles": 2
+    },
+    {
+      "fixtureSet": "auth-import-export-and-trigger-dispatch",
+      "passed": true,
+      "verifiedFiles": 2
+    },
+    {
+      "fixtureSet": "storage-firebase-v0-and-download-tokens",
+      "passed": true,
+      "verifiedFiles": 2
+    },
+    {
+      "fixtureSet": "storage-gcs-json-and-resumable-upload",
+      "passed": true,
+      "verifiedFiles": 2
+    },
+    {
+      "fixtureSet": "storage-multi-bucket-rules-and-import-export",
+      "passed": true,
+      "verifiedFiles": 2
+    },
+    {
+      "fixtureSet": "pubsub-schedule-and-function-dispatch",
+      "passed": true,
+      "verifiedFiles": 2
+    },
+    {
+      "fixtureSet": "functions-callable-http-and-error-contract",
+      "passed": true,
+      "verifiedFiles": 2
+    },
+    {
+      "fixtureSet": "extensions-stripe-and-algolia-trigger-inventory",
+      "passed": true,
+      "verifiedFiles": 2
+    },
+    {
+      "fixtureSet": "hub-locator-export-and-background-controls",
+      "passed": true,
+      "verifiedFiles": 2
+    },
+    {
+      "fixtureSet": "ui-config-logging-and-websocket",
+      "passed": true,
+      "verifiedFiles": 2
+    },
+    {
+      "fixtureSet": "suite-startup-readiness-shutdown-and-restart",
+      "passed": true,
+      "verifiedFiles": 2
+    }
+  ],
+  "twodartPinnedSourceRevision": "c4684b813fa4ef2d40cd42bf7d72450d011024b1",
+  "twodartRevision": "3478eb2e50d8e5c3e641bb6447119b499757e90a"
+}

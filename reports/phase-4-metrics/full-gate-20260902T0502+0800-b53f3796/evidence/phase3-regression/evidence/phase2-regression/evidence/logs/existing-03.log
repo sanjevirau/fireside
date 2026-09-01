@@ -1,0 +1,370 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.17s
+     Running unittests src/main.rs (target/debug/deps/fireside-a6b43abec8bbd3e3)
+
+running 24 tests
+test tests::allocator_explicit_environment_is_reported_without_reexec ... ok
+test tests::allocator_defaults_require_reexec_before_initialization ... ok
+test tests::allocator_environment_rejects_ambiguous_values ... ok
+test tests::allocator_reporter_returns_versioned_native_statistics ... ok
+test tests::listen_address_accepts_hostnames ... ok
+test tests::functions_endpoint_accepts_firebase_tools_host_port_and_http_origins ... ok
+test tests::duplicate_suite_storage_targets_are_rejected ... ok
+test tests::no_wal_requires_disk_mode ... ok
+test tests::parses_capture_proxy_command ... ok
+test tests::jar_flags_are_normalized_to_the_firestore_command ... ok
+test tests::parses_firestore_command ... ok
+test tests::parses_complete_suite_command_and_storage_targets ... ok
+test tests::enterprise_database_edition_is_preserved ... ok
+test tests::data_directory_enables_disk_mode_with_wal_by_default ... ok
+test tests::no_wal_is_an_explicit_disk_mode_opt_out ... ok
+test tests::redb_cache_budget_is_an_explicit_disk_mode_override ... ok
+test tests::redb_cache_budget_requires_disk_mode ... ok
+test tests::strict_index_mode_is_preserved ... ok
+test tests::zero_runtime_workers_fail_before_runtime_start ... ok
+test tests::runtime_worker_threads_are_bounded_and_overridable ... ok
+test tests::startup_import_remaps_document_project_but_preserves_reference_values ... ok
+test tests::one_http_router_serves_rest_and_webchannel ... ok
+test tests::no_wal_omits_the_journal_file ... ok
+test tests::disk_mode_store_survives_reopen_and_creates_default_wal ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+
+     Running unittests src/lib.rs (target/debug/deps/fireside_auth_front-7f506b38ac6ef630)
+
+running 8 tests
+test tests::frozen_fixture_contains_every_required_operation ... ok
+test tests::browser_sdk_preflight_accepts_the_firebase_client_header ... ok
+test tests::custom_token_claims_and_background_toggle_are_preserved ... ok
+test tests::fake_google_idp_and_browser_helpers_follow_capture ... ok
+test tests::import_is_quiet_but_admin_lifecycle_dispatches ... ok
+test tests::suite_directory_round_trip_preserves_users_and_config ... ok
+test tests::password_admin_and_refresh_contract ... ok
+test tests::durable_state_survives_runtime_restart ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/fireside_capture_proxy-123fad219c3cba54)
+
+running 7 tests
+test tests::redaction_is_case_insensitive ... ok
+test tests::validation_rejects_duplicate_or_reversed_sequences ... ok
+test tests::upstream_is_restricted_to_an_origin_without_embedded_credentials ... ok
+test tests::capture_bounds_fail_the_snapshot_instead_of_truncating_silently ... ok
+test tests::fixture_round_trips_through_json ... ok
+test tests::body_encoded_headers_and_query_credentials_are_redacted ... ok
+test tests::proxy_streams_the_response_and_exposes_only_a_redacted_snapshot ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/fireside_core_store-1daa636a3f178f5e)
+
+running 36 tests
+test disk::tests::disk_mode_defaults_to_the_deliberate_bounded_cache_budget ... ok
+test tests::array_transform_equality_encodes_the_raw_v1_oracle ... ok
+test tests::commit_timestamps_are_strictly_increasing_and_microsecond_aligned ... ok
+test tests::change_log_is_also_bounded_by_replay_document_bytes ... ok
+test tests::commit_observers_receive_only_successful_effective_changes_across_clones ... ok
+test tests::change_log_is_bounded_and_requests_reset_after_eviction ... ok
+test tests::document_paths_end_in_document_segments ... ok
+test tests::exact_update_time_compare_and_set_is_enforced ... ok
+test tests::document_paths_reject_reserved_resource_ids ... ok
+test tests::commit_timestamps_reconstruct_versions_after_deletion ... ok
+test tests::failed_commit_is_atomic ... ok
+test tests::identical_set_advances_commit_without_changing_document_version ... ok
+test tests::invalid_transform_keeps_the_entire_commit_atomic ... ok
+test tests::named_databases_are_isolated ... ok
+test tests::field_transforms_match_the_cloud_fixture ... ok
+test tests::numeric_datastore_resource_ids_are_valid_and_sort_by_signed_integer ... ok
+test tests::numeric_bounds_preserve_types_equality_signed_zero_and_nan ... ok
+test tests::patch_masks_delete_fields_and_preserve_unmasked_fields ... ok
+test tests::retained_historical_snapshots_are_reconstructed_from_changes ... ok
+test tests::runtime_registrations_leave_no_accounting_after_drop ... ok
+test tests::set_replaces_fields_before_applying_transforms ... ok
+test tests::short_firestore_strings_are_inline_and_round_trip ... ok
+test tests::snapshot_remains_stable_across_later_commits ... ok
+test tests::timestamp_index_expires_with_the_bounded_change_window ... ok
+test tests::timestamps_reject_one_billion_nanoseconds ... ok
+test tests::verify_write_is_atomic_and_does_not_change_document_version ... ok
+test tests::logical_accounting_pins_large_document_replay_retention ... ok
+test tests::intermediate_versions_are_reclaimed_with_an_old_snapshot_alive ... ok
+test disk::tests::journal_is_enabled_and_checkpointed_by_default ... ok
+test disk::tests::disk_memory_accounting_reports_the_configured_redb_cache ... ok
+test disk::tests::startup_replays_a_synced_record_not_yet_written_to_redb ... ok
+test disk::tests::startup_skips_a_journal_record_already_committed_to_redb ... ok
+test disk::tests::durable_documents_survive_reopen_with_special_float_values ... ok
+test disk::tests::startup_discards_only_a_partial_trailing_frame ... ok
+test disk::tests::acknowledged_large_document_commits_release_every_write_buffer ... ok
+test disk::tests::disk_snapshot_iteration_streams_a_stable_read_transaction ... ok
+
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.49s
+
+     Running unittests src/lib.rs (target/debug/deps/fireside_export_format-7f28f04079587153)
+
+running 14 tests
+test metadata::tests::metadata_rejects_path_traversal ... ok
+test entity::tests::negative_timestamps_use_euclidean_conversion ... ok
+test leveldb_log::tests::checksum_corruption_is_rejected ... ok
+test entity::tests::submicrosecond_timestamps_are_not_silently_truncated ... ok
+test metadata::tests::official_kind_metadata_round_trips_byte_for_byte ... ok
+test leveldb_log::tests::configured_record_limit_is_enforced_while_reassembling ... ok
+test metadata::tests::official_multi_shard_metadata_preserves_every_output_file ... ok
+test leveldb_log::tests::official_artifact_round_trips_byte_for_byte ... ok
+test metadata::tests::official_overall_metadata_round_trips_byte_for_byte ... ok
+test entity::tests::official_wire_entities_round_trip_byte_for_byte ... ok
+test entity::tests::official_entities_decode_to_typed_documents ... ok
+test directory::tests::official_directory_streams_every_declared_entity ... ok
+test entity::tests::semantic_entities_are_stable_through_encoding ... ok
+test directory::tests::written_directory_reads_back_with_bounded_streaming ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/generate_endurance_export.rs (target/debug/examples/generate_endurance_export-cdbd01d90b305ad8)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/rewrite_export.rs (target/debug/examples/rewrite_export-01cf820f1ab8297f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/fireside_functions_bridge-bb7ea155416d4104)
+
+running 13 tests
+test tests::mixed_inventory_normalizes_the_frozen_extension_shape ... ok
+test tests::functions_inventory_parses_the_frozen_backends_contract ... ok
+test tests::registrations_match_the_frozen_official_oracle ... ok
+test tests::phase4_extension_trigger_fanout_is_local_and_exact ... ok
+test tests::writes_match_create_update_delete_and_recursive_patterns_exactly ... ok
+test tests::observer_queues_each_matching_trigger_and_honors_hub_control ... ok
+test tests::v1_dispatch_replays_the_frozen_json_contract ... ok
+test tests::v2_dispatch_replays_the_frozen_binary_cloudevent_contract ... ok
+test tests::delivery_retries_with_one_stable_id_and_suppresses_duplicate_events ... ok
+test tests::phase4_fifty_duplicate_auth_retries_are_exactly_once ... ok
+test tests::response_loss_is_not_retried_and_cannot_duplicate_handler_effects ... ok
+test tests::phase4_six_trigger_patterns_deliver_one_hundred_concurrent_writes_each ... ok
+test tests::phase4_fifty_response_losses_have_zero_duplicate_effects ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+     Running unittests src/lib.rs (target/debug/deps/fireside_grpc_front-4dab70c642378b22)
+
+running 31 tests
+test listen::tests::bundle_nanosecond_read_time_becomes_an_expired_listen_resume_point ... ok
+test codec::tests::listen_read_times_accept_bundle_nanoseconds_without_weakening_unary_reads ... ok
+test codec::tests::rejects_collection_resources_as_documents ... ok
+test query_codec::tests::rejects_negative_offsets ... ok
+test listen::tests::bloom_dimensions_match_the_cloud_existence_filter_fixture ... ok
+test pipeline::tests::metadata_selections_are_not_document_fields ... ok
+test codec::tests::update_time_precondition_is_preserved ... ok
+test query_codec::tests::decodes_collection_group_order_projection_and_limit ... ok
+test codec::tests::values_round_trip_without_numeric_coercion ... ok
+test service::tests::list_order_parser_handles_ties_directions_and_quoted_commas ... ok
+test codec::tests::parses_named_database_documents_without_losing_the_path ... ok
+test service::tests::missing_direct_child_derives_only_the_requested_ancestor ... ok
+test query_codec::tests::decodes_vector_nearest_stage ... ok
+test service::tests::query_explain_helpers_report_the_virtual_index_and_execution ... ok
+test pipeline::tests::decodes_cloud_observed_core_pipeline_shape ... ok
+test tests::generated_types_preserve_named_database_resource_paths ... ok
+test tests::generated_values_preserve_int64_without_json_rounding ... ok
+test codec::tests::rejects_reserved_resource_ids_in_documents_and_query_parents ... ok
+test service::tests::standard_edition_rejects_pipeline_execution ... ok
+test write_stream::tests::a_token_the_stream_has_not_issued_is_rejected ... ok
+test write_stream::tests::overlapping_requests_may_reuse_the_last_acknowledged_token ... ok
+test write_stream::tests::acknowledgement_tokens_may_not_move_backwards ... ok
+test service::tests::crud_preserves_named_database_and_error_codes ... ok
+test service::tests::partition_rpc_executes_the_query_engine ... ok
+test service::tests::in_process_channels_share_the_grpc_stream_engines ... ok
+test service::tests::run_query_executes_the_query_engine ... ok
+test service::tests::aggregation_rpc_executes_the_query_engine ... ok
+test service::tests::concurrent_transactions_abort_one_writer ... ok
+test service::tests::security_rules_enforce_grpc_clients_and_preserve_admin_bypass ... ok
+test service::tests::security_rules_enforce_stream_writes_and_live_listen_rechecks ... ok
+test service::tests::present_document_pages_remain_ordered_and_consecutive ... ok
+
+test result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src/lib.rs (target/debug/deps/fireside_pubsub_front-17f893fbbf68caf4)
+
+running 3 tests
+test tests::twodart_and_oracle_schedule_expressions_have_deterministic_cadence ... ok
+test tests::functions_subscription_control_is_accepted_without_general_delivery ... ok
+test tests::topic_inventory_and_publish_replay_the_frozen_contract ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/fireside_query_engine-479b1ad892b6a5d0)
+
+running 17 tests
+test indexes::tests::collection_automatic_and_composite_indexes_are_distinguished ... ok
+test indexes::tests::collection_group_single_field_indexes_are_explicit ... ok
+test indexes::tests::vector_indexes_are_always_explicit ... ok
+test query::tests::wire_field_paths_preserve_quoted_literal_segments ... ok
+test tests::arrays_maps_references_and_vectors_follow_the_oracle_order ... ok
+test tests::numeric_types_are_compared_without_rounding_integers_to_f64 ... ok
+test tests::cloud_observed_mixed_type_order_is_encoded ... ok
+test query::tests::numeric_ranges_exclude_null_nan_and_missing_values ... ok
+test query::tests::membership_filters_ignore_null_and_nan_operands ... ok
+test tests::standard_edition_compares_only_the_indexed_scalar_prefix ... ok
+test query::tests::nearest_vectors_apply_all_distance_measures_and_thresholds ... ok
+test query::tests::inequality_fields_are_implicitly_ordered_lexicographically ... ok
+test query::tests::document_key_order_and_equality_validation_match_the_oracle ... ok
+test query::tests::partition_cursors_evenly_split_the_supported_query ... ok
+test query::tests::cloud_observed_filter_operators_are_encoded ... ok
+test query::tests::document_ids_collection_groups_and_aggregations_match_the_oracle ... ok
+test query::tests::ordering_cursors_limits_and_projection_match_the_oracle ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/fireside_rest_front-2d44e27bf2f10597)
+
+running 16 tests
+test tests::parses_linux_resident_page_categories ... ok
+test tests::debug_memory_exposes_versioned_store_accounting ... ok
+test tests::rest_values_preserve_int64_special_doubles_and_vectors ... ok
+test tests::control_and_document_routes_can_share_one_router ... ok
+test tests::browser_cors_matches_the_java_fixture ... ok
+test tests::run_query_rejects_reserved_resource_ids_with_the_oracle_error ... ok
+test tests::trigger_control_routes_replay_the_frozen_official_contract ... ok
+test tests::browser_aggregation_matches_the_java_operation_limit_error ... ok
+test tests::security_rules_hot_reload_is_atomic ... ok
+test tests::browser_transaction_matches_java_delete_then_update_error ... ok
+test tests::browser_aggregation_matches_the_cloud_envelope ... ok
+test tests::browser_transaction_matches_java_noop_replacement ... ok
+test tests::browser_transaction_verify_write_preserves_observed_version ... ok
+test tests::browser_transaction_applies_java_quoted_field_mask ... ok
+test tests::browser_aggregation_executes_the_java_composite_filter_fixture ... ok
+test tests::security_rules_enforce_rest_auth_reads_writes_and_queries ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/fireside_rules_engine-24ed79df92741c38)
+
+running 8 tests
+test lexer::tests::skips_both_comment_forms ... ok
+test lexer::tests::distinguishes_paths_from_division ... ok
+test parser::tests::rejects_two_recursive_wildcards ... ok
+test parser::tests::parses_nested_matches_functions_and_precedence ... ok
+test tests::rejects_recursive_functions ... ok
+test tests::rejects_oversized_source_before_parsing ... ok
+test tests::compiles_the_frozen_complex_ruleset ... ok
+test tests::replays_the_frozen_production_parse_boundary ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests/complex_rules.rs (target/debug/deps/complex_rules-436456ff49f4150c)
+
+running 1 test
+test replays_all_45_frozen_complex_rules_cases ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/oracle_replay.rs (target/debug/deps/oracle_replay-d504c983495351ca)
+
+running 7 tests
+test converts_the_frozen_runtime_errors_to_denials ... ok
+test get_after_uses_the_atomic_pending_snapshot ... ok
+test enforces_access_limits_cache_and_atomic_accounting ... ok
+test replays_the_targeted_language_contract ... ok
+test replays_the_frozen_call_depth_boundary ... ok
+test denies_at_the_frozen_evaluated_expression_limit ... ok
+test replays_all_1024_production_expression_cases ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.58s
+
+     Running unittests examples/phase3_benchmark.rs (target/debug/examples/phase3_benchmark-ec1e99cdcdd9e118)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/fireside_rules_runtime-00b3e6421c7462c7)
+
+running 3 tests
+test tests::invalid_reload_keeps_the_previous_ruleset ... ok
+test tests::parses_only_project_scoped_unsigned_emulator_tokens ... ok
+test tests::get_after_reads_the_complete_pending_write_set ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/fireside_storage_front-1141ea0d9734a392)
+
+running 9 tests
+test tests::official_rules_runtime_enforces_both_twodart_buckets_when_available ... ok
+test tests::browser_sdk_multipart_related_extracts_metadata_and_exact_object_bytes ... ok
+test tests::frozen_storage_fixture_inventory_is_complete ... ok
+test tests::browser_sdk_preflight_accepts_the_storage_version_header ... ok
+test tests::dotnet_gzip_resumable_metadata_matches_oracle ... ok
+test tests::gcs_client_multipart_reads_the_object_name_from_metadata ... ok
+test tests::firebase_v0_streams_unicode_tokens_metadata_and_events ... ok
+test tests::gcs_resumable_copy_and_export_import_are_byte_exact ... ok
+test tests::phase4_fifty_resumable_uploads_survive_an_interruption ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.89s
+
+     Running unittests src/lib.rs (target/debug/deps/fireside_suite_front-e8971e47b972df02)
+
+running 4 tests
+test tests::frozen_suite_fixture_inventory_is_present ... ok
+test tests::hub_replays_locator_directory_export_guard_and_controls ... ok
+test tests::logging_buffer_is_bounded_and_preserves_unicode ... ok
+test tests::logging_websocket_replays_the_captured_forty_json_records ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/fireside_suite_runtime-1f6cef9891f02763)
+
+running 3 tests
+test tests::coordinator_sigterm_is_a_clean_functions_shutdown ... ok
+test tests::suite_indexes_are_validated_but_queries_remain_emulator_permissive ... ok
+test tests::export_metadata_paths_tolerate_a_symlinked_staging_parent ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/fireside_watch_broker-4471d18be8f95ae2)
+
+running 1 test
+test tests::query_target_reports_initial_updates_removals_and_deletes ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/fireside_webchannel_front-2eff9cc38cd834c3)
+
+running 16 tests
+test tests::frame_lengths_use_decoded_utf16_code_units ... ok
+test firestore_json::tests::production_listen_fixture_decodes_without_shape_guesses ... ok
+test firestore_json::tests::responses_use_protobuf_json_for_enums_bytes_int64_and_timestamps ... ok
+test tests::forward_acknowledgement_reports_backchannel_presence ... ok
+test tests::unknown_sid_body_takes_the_specialized_closure_path ... ok
+test tests::duplicate_forward_maps_are_delivered_once ... ok
+test tests::folded_headers_and_ordered_maps_are_parsed_from_the_body ... ok
+test tests::replay_retains_only_arrays_above_aid_with_consecutive_ids ... ok
+test firestore_json::tests::sdk_null_enum_decodes_as_the_well_known_protobuf_value ... ok
+test firestore_json::tests::unicode_write_fixture_preserves_proto_json_scalars ... ok
+test firestore_json::tests::vector_special_doubles_round_trip_through_protobuf_json ... ok
+test tests::long_poll_http_flow_matches_the_version_8_contract ... ok
+test tests::streaming_flushes_noop_tracks_overlap_and_replays_after_loss ... ok
+test tests::firestore_backend_routes_write_handshakes_through_the_shared_engine ... ok
+test tests::firestore_backend_enforces_body_encoded_client_authorization ... ok
+test tests::capacity_reclaims_only_sessions_beyond_the_reconnect_lease ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.62s
+
+     Running tests/oracle_replay.rs (target/debug/deps/oracle_replay-bcf67adce4ee98c9)
+
+running 3 tests
+test captured_java_streaming_session_terminates_the_live_backchannel ... ok
+test captured_wire_advertisement_tracks_negotiated_protocol ... ok
+test captured_java_and_cloud_requests_replay_through_the_transport ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/session_chaos.rs (target/debug/deps/session_chaos-b0e2504ed3d2f8d4)
+
+running 1 test
+test deterministic_session_replay_chaos_covers_both_transport_variants ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+

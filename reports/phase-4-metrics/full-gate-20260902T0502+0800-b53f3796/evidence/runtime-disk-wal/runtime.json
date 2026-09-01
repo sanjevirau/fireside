@@ -1,0 +1,289 @@
+{
+  "authConfigPresent": true,
+  "cacheWatcher": {
+    "exitCode": 0,
+    "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/runtime-disk-wal/logs/cache-watcher.log",
+    "ready": true
+  },
+  "commands": [
+    {
+      "durationMilliseconds": 1520.80925,
+      "exitCode": 0,
+      "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/runtime-disk-wal/logs/node-admin.log",
+      "name": "node-admin",
+      "signal": null
+    },
+    {
+      "durationMilliseconds": 4246.89925,
+      "exitCode": 0,
+      "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/runtime-disk-wal/logs/browser.log",
+      "name": "browser",
+      "signal": null
+    },
+    {
+      "durationMilliseconds": 1014.4958749999996,
+      "exitCode": 0,
+      "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/runtime-disk-wal/logs/python-admin.log",
+      "name": "python-admin",
+      "signal": null
+    },
+    {
+      "durationMilliseconds": 1360.8312909999995,
+      "exitCode": 0,
+      "log": "/Users/sanjevirau/Desktop/fireside/reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796/evidence/runtime-disk-wal/logs/dotnet-admin.log",
+      "name": "dotnet-admin",
+      "signal": null
+    }
+  ],
+  "functions": {
+    "custom": [
+      {
+        "codebase": "templates-firebase-function",
+        "entryPoint": "onDeleteUserFontDoc",
+        "eventType": "google.cloud.firestore.document.v1.deleted",
+        "id": "us-central1-onDeleteUserFontDoc",
+        "name": "onDeleteUserFontDoc",
+        "path": "userFonts/{fontId}",
+        "platform": "gcfv2"
+      },
+      {
+        "codebase": "templates-firebase-function",
+        "entryPoint": "onGetProratedInvoice",
+        "eventType": null,
+        "id": "us-central1-onGetProratedInvoice",
+        "name": "onGetProratedInvoice",
+        "path": null,
+        "platform": "gcfv2"
+      },
+      {
+        "codebase": "templates-firebase-function",
+        "entryPoint": "onReceiveStripeWebhook",
+        "eventType": null,
+        "id": "us-central1-onReceiveStripeWebhook",
+        "name": "onReceiveStripeWebhook",
+        "path": null,
+        "platform": "gcfv2"
+      },
+      {
+        "codebase": "templates-firebase-function",
+        "entryPoint": "onRunCronBackupAuth",
+        "eventType": "pubsub",
+        "id": "us-central1-onRunCronBackupAuth",
+        "name": "onRunCronBackupAuth",
+        "path": "",
+        "platform": "gcfv2"
+      },
+      {
+        "codebase": "templates-firebase-function",
+        "entryPoint": "onRunCronResetCredits",
+        "eventType": "pubsub",
+        "id": "us-central1-onRunCronResetCredits",
+        "name": "onRunCronResetCredits",
+        "path": "",
+        "platform": "gcfv2"
+      },
+      {
+        "codebase": "templates-firebase-function",
+        "entryPoint": "onUpdateInvitedLicenseUserDoc",
+        "eventType": "google.cloud.firestore.document.v1.written",
+        "id": "us-central1-onUpdateInvitedLicenseUserDoc",
+        "name": "onUpdateInvitedLicenseUserDoc",
+        "path": "licenses/{parentId}/invitedUsers/{invitedLicenseId}",
+        "platform": "gcfv2"
+      },
+      {
+        "codebase": "templates-firebase-function",
+        "entryPoint": "onUpdateStripeSubscription",
+        "eventType": null,
+        "id": "us-central1-onUpdateStripeSubscription",
+        "name": "onUpdateStripeSubscription",
+        "path": null,
+        "platform": "gcfv2"
+      },
+      {
+        "codebase": "templates-firebase-function",
+        "entryPoint": "onUpdateUserDoc",
+        "eventType": "google.cloud.firestore.document.v1.written",
+        "id": "us-central1-onUpdateUserDoc",
+        "name": "onUpdateUserDoc",
+        "path": "users/{userId}",
+        "platform": "gcfv2"
+      },
+      {
+        "codebase": "templates-firebase-function",
+        "entryPoint": "onWriteInitiateCheckoutSession",
+        "eventType": "google.cloud.firestore.document.v1.written",
+        "id": "us-central1-onWriteInitiateCheckoutSession",
+        "name": "onWriteInitiateCheckoutSession",
+        "path": "licenses/{licenseId}/checkout_sessions/{checkoutSessionId}",
+        "platform": "gcfv2"
+      },
+      {
+        "codebase": "templates-firebase-function",
+        "entryPoint": "onWriteLicenseDoc",
+        "eventType": "google.cloud.firestore.document.v1.written",
+        "id": "us-central1-onWriteLicenseDoc",
+        "name": "onWriteLicenseDoc",
+        "path": "licenses/{licenseId}",
+        "platform": "gcfv2"
+      },
+      {
+        "codebase": "templates-firebase-function",
+        "entryPoint": "onWriteSubscriptionDoc",
+        "eventType": "google.cloud.firestore.document.v1.written",
+        "id": "us-central1-onWriteSubscriptionDoc",
+        "name": "onWriteSubscriptionDoc",
+        "path": "licenses/{licenseId}/subscriptions/{subscriptionId}",
+        "platform": "gcfv2"
+      }
+    ],
+    "customCheckoutDispatch": {
+      "bodyEncoding": "frozen oracle Base64 google.events.cloud.firestore.v1.DocumentEventData",
+      "entryPoint": "onWriteInitiateCheckoutSession",
+      "status": 200
+    },
+    "extensions": [
+      {
+        "codebase": null,
+        "entryPoint": "createCustomer",
+        "eventType": "providers/firebase.auth/eventTypes/user.create",
+        "id": null,
+        "name": "ext-firestore-stripe-payments-createCustomer",
+        "path": "projects/demo-twodart-local",
+        "platform": "gcfv1"
+      },
+      {
+        "codebase": null,
+        "entryPoint": "createCheckoutSession",
+        "eventType": "providers/cloud.firestore/eventTypes/document.create",
+        "id": null,
+        "name": "ext-firestore-stripe-payments-createCheckoutSession",
+        "path": "projects/demo-twodart-local/databases/(default)/documents/licenses/{uid}/checkout_sessions/{id}",
+        "platform": "gcfv1"
+      },
+      {
+        "codebase": null,
+        "entryPoint": "createPortalLink",
+        "eventType": null,
+        "id": null,
+        "name": "ext-firestore-stripe-payments-createPortalLink",
+        "path": null,
+        "platform": "gcfv1"
+      },
+      {
+        "codebase": null,
+        "entryPoint": "handleWebhookEvents",
+        "eventType": null,
+        "id": null,
+        "name": "ext-firestore-stripe-payments-handleWebhookEvents",
+        "path": null,
+        "platform": "gcfv1"
+      },
+      {
+        "codebase": null,
+        "entryPoint": "onUserDeleted",
+        "eventType": "providers/firebase.auth/eventTypes/user.delete",
+        "id": null,
+        "name": "ext-firestore-stripe-payments-onUserDeleted",
+        "path": "projects/demo-twodart-local",
+        "platform": "gcfv1"
+      },
+      {
+        "codebase": null,
+        "entryPoint": "onCustomerDataDeleted",
+        "eventType": "providers/cloud.firestore/eventTypes/document.delete",
+        "id": null,
+        "name": "ext-firestore-stripe-payments-onCustomerDataDeleted",
+        "path": "projects/demo-twodart-local/databases/(default)/documents/licenses/{uid}",
+        "platform": "gcfv1"
+      },
+      {
+        "codebase": null,
+        "entryPoint": "executeIndexOperation",
+        "eventType": "providers/cloud.firestore/eventTypes/document.write",
+        "id": null,
+        "name": "ext-firestore-algolia-search-executeIndexOperation",
+        "path": "projects/demo-twodart-local/databases/(default)/documents/presentations/{presentationId}/algolia/{documentID}",
+        "platform": "gcfv1"
+      },
+      {
+        "codebase": null,
+        "entryPoint": "executeFullIndexOperation",
+        "eventType": null,
+        "id": null,
+        "name": "ext-firestore-algolia-search-executeFullIndexOperation",
+        "path": null,
+        "platform": "gcfv1"
+      },
+      {
+        "codebase": null,
+        "entryPoint": "executeIndexOperation",
+        "eventType": "providers/cloud.firestore/eventTypes/document.write",
+        "id": null,
+        "name": "ext-firestore-algolia-userimages-executeIndexOperation",
+        "path": "projects/demo-twodart-local/databases/(default)/documents/userImages/{documentID}",
+        "platform": "gcfv1"
+      },
+      {
+        "codebase": null,
+        "entryPoint": "executeFullIndexOperation",
+        "eventType": null,
+        "id": null,
+        "name": "ext-firestore-algolia-userimages-executeFullIndexOperation",
+        "path": null,
+        "platform": "gcfv1"
+      }
+    ],
+    "stripeExtension": {
+      "authLifecycle": {
+        "createCustomer": "delivered with sync-on-create disabled",
+        "onUserDeleted": "delivered with auto-delete disabled"
+      },
+      "callable": {
+        "entryPoint": "createPortalLink",
+        "status": "UNAUTHENTICATED"
+      },
+      "externalProviderRequests": 0,
+      "webhook": {
+        "entryPoint": "handleWebhookEvents",
+        "status": 401
+      }
+    },
+    "total": 21
+  },
+  "hubServices": [
+    "auth",
+    "eventarc",
+    "firestore",
+    "firestore.websocket",
+    "functions",
+    "hub",
+    "logging",
+    "pubsub",
+    "storage",
+    "tasks",
+    "ui"
+  ],
+  "passed": true,
+  "projectId": "demo-twodart-local",
+  "schedules": [
+    {
+      "latencyMilliseconds": 0.8609169999999722,
+      "topic": "projects/demo-twodart-local/topics/firebase-schedule-onRunCronBackupAuth"
+    },
+    {
+      "latencyMilliseconds": 1.2159590000010212,
+      "topic": "projects/demo-twodart-local/topics/firebase-schedule-onRunCronResetCredits"
+    }
+  ],
+  "schemaVersion": 1,
+  "steadyStateTriggerWrites": {
+    "count": 800,
+    "paceMilliseconds": 20
+  },
+  "topics": [
+    "projects/demo-twodart-local/topics/firebase-schedule-onRunCronBackupAuth",
+    "projects/demo-twodart-local/topics/firebase-schedule-onRunCronResetCredits"
+  ],
+  "uiProjectId": "demo-twodart-local"
+}

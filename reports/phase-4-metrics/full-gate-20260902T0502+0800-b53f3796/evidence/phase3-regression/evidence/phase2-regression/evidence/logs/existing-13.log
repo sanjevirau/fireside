@@ -1,0 +1,77 @@
+npm notice run fireside-conformance@0.0.1 test:official
+npm notice run node --import tsx src/run-official.ts
+i  firestore: downloading cloud-firestore-emulator-v1.22.0.jar...
+
+i  firestore: Removing outdated emulator files: cloud-firestore-emulator-v1.21.0.jar
+i  emulators: Starting emulators: firestore
+i  emulators: Detected demo project ID "demo-fireside-phase0", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+⚠  logging: Logging Emulator unable to start on port 4500, starting on 4501 instead.
+⚠  firestore: The edition configured in your firebase.json#firestore and firebase.json#emulators.firestore do not match. The latter will be used to start up the Firestore emulator.
+⚠  firestore: Cloud Firestore Emulator does not support multiple databases yet.
+⚠  firestore: Did not find a Cloud Firestore rules file specified in a firebase.json config file.
+⚠  firestore: The emulator will default to allowing all reads and writes. Learn more about this option: https://firebase.google.com/docs/emulator-suite/install_and_configure#security_rules_configuration.
+i  firestore: Firestore Emulator logging to firestore-debug.log
+✔  firestore: Firestore Emulator was started in standard edition.
+✔  firestore: Firestore Emulator UI websocket is running on 9151.
+i  Running script: npm run test:firestore && npm run test:control
+npm notice run fireside-conformance@0.0.1 test:firestore
+npm notice run node --import tsx --test test/ancestor-collection-group.test.ts test/backend-rpcs.test.ts test/error-code-parity.test.ts test/firestore-smoke.test.ts test/historical-reads.test.ts test/listen.test.ts test/named-database.test.ts test/partition-query.test.ts test/pipeline-edition.test.ts test/query-explain.test.ts test/query-features.test.ts test/query-ordering.test.ts test/rest.test.ts test/streaming-write.test.ts test/vector-query.test.ts test/write-transforms.test.ts
+✔ collection-group queries honor an ancestor document (623.446292ms)
+✔ CreateDocument assigns an ID, preserves masked fields, and rejects conflicts (571.577417ms)
+✔ BulkWriter commits independent writes and surfaces per-write errors (55.006958ms)
+✔ BulkWriter accepts a near-5-MiB batch of individually valid documents (119.988792ms)
+✔ list RPCs paginate direct children and preserve masks (58.2ms)
+✔ ListDocuments orders fields and requires a collection selector (42.180583ms)
+✔ ListDocuments showMissing returns name-only ancestor placeholders (41.346416ms)
+✔ BatchWrite reports per-write conflicts and commits independent writes (35.265834ms)
+✔ write conflicts return the production gRPC status codes (2645.710875ms)
+✔ Admin SDK retries an aborted read-write transaction (3176.353208ms)
+✔ target accepts an SDK write/read/delete round trip (550.156833ms)
+✔ read_time reconstructs committed versions after a later delete (677.960042ms)
+✔ raw Listen removes a malformed-token target without closing the stream (464.22325ms)
+✔ query listeners deliver an initial snapshot and ordered changes (132.96425ms)
+✔ raw Listen resumes after a CURRENT checkpoint without replaying prior documents (56.311709ms)
+✔ raw Listen read_time delivers only changes after the historical snapshot (41.648584ms)
+✔ raw Listen falls back to the full target when read_time has expired (30.727791ms)
+✔ named databases preserve isolation in the v1 resource path (475.451083ms)
+✔ partitionQuery returns ordered document-name split cursors (238.5725ms)
+✔ ExecutePipeline preserves the production database-edition gate (6974.156292ms)
+✔ RunQuery explain separates planning from analyzed execution (500.123875ms)
+✔ RunAggregationQuery explain reports the aggregate result count (44.669291ms)
+✔ queries match the production operator and shaping contract (811.38825ms)
+✔ orderBy follows the production mixed-value order (159.717417ms)
+✔ integer and double ordering does not lose int64 precision (39.688917ms)
+✔ REST v1 patches, reads, deletes, and reports missing documents (46.892917ms)
+✔ REST v1 commit, batchGet, and runQuery share document semantics (29.789875ms)
+✔ REST v1 commit applies update and document transforms (26.446458ms)
+✔ REST v1 preserves the production missing-index status (13.97775ms)
+✔ streaming Write performs a tokened handshake and atomic write (81.479667ms)
+✔ nearest-vector queries match production distance semantics (130.490625ms)
+✔ field transforms use the production commit semantics (95.96475ms)
+✔ array transforms use production numeric equality (24.094709ms)
+✔ minimum and maximum transforms preserve production numeric types (22.160709ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7598.235375
+npm notice run fireside-conformance@0.0.1 test:control
+npm notice run node --import tsx --test test/control-api.test.ts
+✔ emulator control APIs register triggers and clear data (58.567208ms)
+✔ emulator export writes the named official-format directory (29.826625ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 343.692959
+✔  Script exited successfully (code 0)
+i  emulators: Shutting down emulators.
+i  firestore: Stopping Firestore Emulator
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator
