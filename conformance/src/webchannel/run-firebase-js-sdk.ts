@@ -16,6 +16,7 @@ import {
   isAcceptedKarmaProcess,
   parseKarmaEvidence,
 } from "./firebase-js-sdk-karma-evidence.ts";
+import { pinGeneratedMetadata } from "./firebase-js-sdk-metadata.ts";
 
 const FIREBASE_JS_SDK_REVISION = "6cde0c0230b4c1da01d4a058333daa7663322fd1";
 const HOST = "127.0.0.1";
@@ -96,12 +97,31 @@ async function main(): Promise<void> {
   const browserProcessPlan =
     browserProcessPlans.plans[arguments_.clientPersistence];
 
-  const generatedMetadataPaths = [
-    join(sdkDirectory, "packages", "app", "package.json"),
-    join(sdkDirectory, "packages", "firestore", "package.json"),
+  const generatedMetadataFiles = [
+    {
+      path: join(sdkDirectory, "packages", "app", "package.json"),
+      revisionPath: "packages/app/package.json",
+    },
+    {
+      path: join(sdkDirectory, "packages", "firestore", "package.json"),
+      revisionPath: "packages/firestore/package.json",
+    },
   ];
-  const generatedMetadata = await Promise.all(
-    generatedMetadataPaths.map(async (path) => await readFile(path, "utf8")),
+  const pinnedGeneratedMetadata = await Promise.all(
+    generatedMetadataFiles.map(
+      async ({ revisionPath }) =>
+        `${await capturedCommand(
+          "git",
+          ["-C", sdkDirectory, "show", `${sdkRevision}:${revisionPath}`],
+          repositoryRoot,
+        )}\n`,
+    ),
+  );
+  const restoreGeneratedMetadata = await pinGeneratedMetadata(
+    generatedMetadataFiles.map(({ path }, index) => ({
+      path,
+      pinnedContents: pinnedGeneratedMetadata[index]!,
+    })),
   );
 
   try {
@@ -249,12 +269,7 @@ async function main(): Promise<void> {
       await rm(temporaryDirectory, { recursive: true, force: true });
     }
   } finally {
-    await Promise.all(
-      generatedMetadataPaths.map(
-        async (path, index) =>
-          await writeFile(path, generatedMetadata[index]!, "utf8"),
-      ),
-    );
+    await restoreGeneratedMetadata();
   }
 }
 
