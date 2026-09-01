@@ -420,12 +420,17 @@ async fn finish_suite(
         )
         .await?;
     }
-    stop_functions_host(&mut suite.functions).await?;
     suite.scheduler.shutdown().await;
     let _ = suite.shutdown.send(true);
     for server in suite.servers {
         let _ = server.await;
     }
+    // Stop every ingress path before draining background delivery, while the
+    // Node workload host is still alive to acknowledge already-admitted work.
+    // Stopping the host first can strand in-flight handlers and makes the
+    // firebase-tools worker shutdown wait until the coordinator's hard timeout.
+    let delivery = suite.delivery.shutdown().await.into();
+    stop_functions_host(&mut suite.functions).await?;
     suite
         .hub
         .remove_locator()
@@ -437,7 +442,6 @@ async fn finish_suite(
     let firestore_documents = suite.store.snapshot().logical_memory_usage().entries;
     let storage_objects = suite.storage.object_count();
     let storage_bytes = suite.storage.object_bytes();
-    let delivery = suite.delivery.shutdown().await.into();
     let storage = Arc::try_unwrap(suite.storage)
         .map_err(|_| failure("Storage runtime still has active owners"))?;
     storage
