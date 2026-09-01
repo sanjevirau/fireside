@@ -1,0 +1,892 @@
+{
+  "allowCases": 27,
+  "completedAt": "2026-09-01T12:02:41.054Z",
+  "denyCases": 18,
+  "mismatches": [],
+  "nonBlankLines": 1193,
+  "observations": [
+    {
+      "id": "public-get",
+      "feature": "public-read",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/public/news",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.891938Z",
+        "fields": {
+          "published": {
+            "booleanValue": true
+          },
+          "title": {
+            "stringValue": "News"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/public/news",
+        "updateTime": "2026-09-01T12:02:40.891938Z"
+      }
+    },
+    {
+      "id": "public-list-bounded",
+      "feature": "query-limit-validation",
+      "expected": "ALLOW",
+      "method": "POST",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents:runQuery",
+      "status": 200,
+      "body": [
+        {
+          "document": {
+            "createTime": "2026-09-01T12:02:40.891938Z",
+            "fields": {
+              "published": {
+                "booleanValue": true
+              },
+              "title": {
+                "stringValue": "News"
+              }
+            },
+            "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/public/news",
+            "updateTime": "2026-09-01T12:02:40.891938Z"
+          },
+          "readTime": "2026-09-01T12:02:40.949968804Z"
+        }
+      ]
+    },
+    {
+      "id": "public-list-oversized",
+      "feature": "query-limit-validation",
+      "expected": "DENY",
+      "method": "POST",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents:runQuery",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "tenant-claim-read",
+      "feature": "auth-and-custom-claims",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.903598Z",
+        "fields": {
+          "name": {
+            "stringValue": "Tenant A"
+          },
+          "status": {
+            "stringValue": "active"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a",
+        "updateTime": "2026-09-01T12:02:40.903598Z"
+      }
+    },
+    {
+      "id": "tenant-wrong-claim",
+      "feature": "auth-and-custom-claims",
+      "expected": "DENY",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "tenant-admin-update",
+      "feature": "field-change-validation",
+      "expected": "ALLOW",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.903598Z",
+        "fields": {
+          "name": {
+            "stringValue": "Tenant A2"
+          },
+          "status": {
+            "stringValue": "active"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a",
+        "updateTime": "2026-09-01T12:02:40.957607Z"
+      }
+    },
+    {
+      "id": "tenant-editor-update",
+      "feature": "field-change-validation",
+      "expected": "DENY",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "member-self-read",
+      "feature": "nested-and-recursive-matches",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/members/alice",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.906604Z",
+        "fields": {
+          "active": {
+            "booleanValue": true
+          },
+          "role": {
+            "stringValue": "editor"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/members/alice",
+        "updateTime": "2026-09-01T12:02:40.906604Z"
+      }
+    },
+    {
+      "id": "member-other-read",
+      "feature": "nested-and-recursive-matches",
+      "expected": "DENY",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/members/alice",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "project-member-read",
+      "feature": "cross-document-access",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.909048Z",
+        "fields": {
+          "ownerId": {
+            "stringValue": "alice"
+          },
+          "status": {
+            "stringValue": "active"
+          },
+          "title": {
+            "stringValue": "Project"
+          },
+          "version": {
+            "integerValue": "1"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1",
+        "updateTime": "2026-09-01T12:02:40.909048Z"
+      }
+    },
+    {
+      "id": "project-nonmember-read",
+      "feature": "cross-document-access",
+      "expected": "DENY",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "project-owner-update",
+      "feature": "create-update-delete-resource-differences",
+      "expected": "ALLOW",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.909048Z",
+        "fields": {
+          "ownerId": {
+            "stringValue": "alice"
+          },
+          "status": {
+            "stringValue": "active"
+          },
+          "title": {
+            "stringValue": "Renamed"
+          },
+          "version": {
+            "integerValue": "2"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1",
+        "updateTime": "2026-09-01T12:02:40.969127Z"
+      }
+    },
+    {
+      "id": "project-owner-forbidden-change",
+      "feature": "field-change-validation",
+      "expected": "DENY",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "project-admin-delete",
+      "feature": "create-update-delete-resource-differences",
+      "expected": "ALLOW",
+      "method": "DELETE",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/delete-admin",
+      "status": 200,
+      "body": {}
+    },
+    {
+      "id": "project-member-delete",
+      "feature": "create-update-delete-resource-differences",
+      "expected": "DENY",
+      "method": "DELETE",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/delete-member",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "task-member-read",
+      "feature": "nested-and-recursive-matches",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1/tasks/task-1",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.916027Z",
+        "fields": {
+          "assigneeId": {
+            "stringValue": "alice"
+          },
+          "priority": {
+            "integerValue": "1"
+          },
+          "status": {
+            "stringValue": "open"
+          },
+          "title": {
+            "stringValue": "Task"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1/tasks/task-1",
+        "updateTime": "2026-09-01T12:02:40.916027Z"
+      }
+    },
+    {
+      "id": "task-nonmember-read",
+      "feature": "nested-and-recursive-matches",
+      "expected": "DENY",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1/tasks/task-1",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "task-self-create",
+      "feature": "create-update-delete-resource-differences",
+      "expected": "ALLOW",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1/tasks/task-create-alice",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.983436Z",
+        "fields": {
+          "assigneeId": {
+            "stringValue": "alice"
+          },
+          "priority": {
+            "integerValue": "1"
+          },
+          "status": {
+            "stringValue": "open"
+          },
+          "title": {
+            "stringValue": "Mine"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1/tasks/task-create-alice",
+        "updateTime": "2026-09-01T12:02:40.983436Z"
+      }
+    },
+    {
+      "id": "task-other-create",
+      "feature": "create-update-delete-resource-differences",
+      "expected": "DENY",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1/tasks/task-create-bob",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "task-assignee-update",
+      "feature": "field-change-validation",
+      "expected": "ALLOW",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1/tasks/task-update-allow",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.918213Z",
+        "fields": {
+          "assigneeId": {
+            "stringValue": "alice"
+          },
+          "priority": {
+            "integerValue": "1"
+          },
+          "status": {
+            "stringValue": "done"
+          },
+          "title": {
+            "stringValue": "Task"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1/tasks/task-update-allow",
+        "updateTime": "2026-09-01T12:02:40.989981Z"
+      }
+    },
+    {
+      "id": "task-forbidden-update",
+      "feature": "field-change-validation",
+      "expected": "DENY",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1/tasks/task-update-deny",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "comment-member-read",
+      "feature": "nested-and-recursive-matches",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1/tasks/task-1/comments/comment-1",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.922979Z",
+        "fields": {
+          "authorId": {
+            "stringValue": "alice"
+          },
+          "body": {
+            "stringValue": "first"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1/tasks/task-1/comments/comment-1",
+        "updateTime": "2026-09-01T12:02:40.922979Z"
+      }
+    },
+    {
+      "id": "comment-author-create",
+      "feature": "auth-and-custom-claims",
+      "expected": "ALLOW",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1/tasks/task-1/comments/comment-new",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.997703Z",
+        "fields": {
+          "authorId": {
+            "stringValue": "alice"
+          },
+          "body": {
+            "stringValue": "hello"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1/tasks/task-1/comments/comment-new",
+        "updateTime": "2026-09-01T12:02:40.997703Z"
+      }
+    },
+    {
+      "id": "comment-impersonation",
+      "feature": "auth-and-custom-claims",
+      "expected": "DENY",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/projects/project-1/tasks/task-1/comments/comment-bad",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "profile-self-read",
+      "feature": "auth-and-custom-claims",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/profiles/alice",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.925157Z",
+        "fields": {
+          "displayName": {
+            "stringValue": "Alice"
+          },
+          "timezone": {
+            "stringValue": "UTC"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/profiles/alice",
+        "updateTime": "2026-09-01T12:02:40.925157Z"
+      }
+    },
+    {
+      "id": "profile-other-read",
+      "feature": "auth-and-custom-claims",
+      "expected": "DENY",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/profiles/alice",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "profile-self-update",
+      "feature": "field-change-validation",
+      "expected": "ALLOW",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/profiles/alice",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.925157Z",
+        "fields": {
+          "displayName": {
+            "stringValue": "Alice 2"
+          },
+          "timezone": {
+            "stringValue": "UTC"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/profiles/alice",
+        "updateTime": "2026-09-01T12:02:41.008029Z"
+      }
+    },
+    {
+      "id": "profile-role-injection",
+      "feature": "field-change-validation",
+      "expected": "DENY",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/profiles/alice",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "audit-admin-create",
+      "feature": "timestamps-durations-and-helper-functions",
+      "expected": "ALLOW",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/audits/admin-event",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:41.013931Z",
+        "fields": {
+          "action": {
+            "stringValue": "update"
+          },
+          "actorId": {
+            "stringValue": "admin"
+          },
+          "at": {
+            "timestampValue": "2026-09-01T08:00:00Z"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/audits/admin-event",
+        "updateTime": "2026-09-01T12:02:41.013931Z"
+      }
+    },
+    {
+      "id": "audit-editor-create",
+      "feature": "timestamps-durations-and-helper-functions",
+      "expected": "DENY",
+      "method": "PATCH",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/audits/editor-event",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "recursive-asset-member",
+      "feature": "nested-and-recursive-matches",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/assets/folder/deep/file",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.92721Z",
+        "fields": {
+          "kind": {
+            "stringValue": "file"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/assets/folder/deep/file",
+        "updateTime": "2026-09-01T12:02:40.92721Z"
+      }
+    },
+    {
+      "id": "recursive-asset-nonmember",
+      "feature": "nested-and-recursive-matches",
+      "expected": "DENY",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/assets/folder/deep/file",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "stats-admin-read",
+      "feature": "auth-and-custom-claims",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/stats/overview",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.929112Z",
+        "fields": {
+          "count": {
+            "integerValue": "1"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/stats/overview",
+        "updateTime": "2026-09-01T12:02:40.929112Z"
+      }
+    },
+    {
+      "id": "stats-editor-read",
+      "feature": "auth-and-custom-claims",
+      "expected": "DENY",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/stats/overview",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "generated-entity-00",
+      "feature": "complex-generated-policy",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-00/document-00",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.93287Z",
+        "fields": {
+          "ownerId": {
+            "stringValue": "alice"
+          },
+          "status": {
+            "stringValue": "active"
+          },
+          "version": {
+            "integerValue": "1"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-00/document-00",
+        "updateTime": "2026-09-01T12:02:40.93287Z"
+      }
+    },
+    {
+      "id": "generated-entity-01",
+      "feature": "complex-generated-policy",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-01/document-01",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.934625Z",
+        "fields": {
+          "ownerId": {
+            "stringValue": "alice"
+          },
+          "status": {
+            "stringValue": "active"
+          },
+          "version": {
+            "integerValue": "1"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-01/document-01",
+        "updateTime": "2026-09-01T12:02:40.934625Z"
+      }
+    },
+    {
+      "id": "generated-entity-02",
+      "feature": "complex-generated-policy",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-02/document-02",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.936462Z",
+        "fields": {
+          "ownerId": {
+            "stringValue": "alice"
+          },
+          "status": {
+            "stringValue": "active"
+          },
+          "version": {
+            "integerValue": "1"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-02/document-02",
+        "updateTime": "2026-09-01T12:02:40.936462Z"
+      }
+    },
+    {
+      "id": "generated-entity-03",
+      "feature": "complex-generated-policy",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-03/document-03",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.938262Z",
+        "fields": {
+          "ownerId": {
+            "stringValue": "alice"
+          },
+          "status": {
+            "stringValue": "active"
+          },
+          "version": {
+            "integerValue": "1"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-03/document-03",
+        "updateTime": "2026-09-01T12:02:40.938262Z"
+      }
+    },
+    {
+      "id": "generated-entity-04",
+      "feature": "complex-generated-policy",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-04/document-04",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.94005Z",
+        "fields": {
+          "ownerId": {
+            "stringValue": "alice"
+          },
+          "status": {
+            "stringValue": "active"
+          },
+          "version": {
+            "integerValue": "1"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-04/document-04",
+        "updateTime": "2026-09-01T12:02:40.94005Z"
+      }
+    },
+    {
+      "id": "generated-entity-05",
+      "feature": "complex-generated-policy",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-05/document-05",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.941818Z",
+        "fields": {
+          "ownerId": {
+            "stringValue": "alice"
+          },
+          "status": {
+            "stringValue": "active"
+          },
+          "version": {
+            "integerValue": "1"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-05/document-05",
+        "updateTime": "2026-09-01T12:02:40.941818Z"
+      }
+    },
+    {
+      "id": "generated-entity-06",
+      "feature": "complex-generated-policy",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-06/document-06",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.943665Z",
+        "fields": {
+          "ownerId": {
+            "stringValue": "alice"
+          },
+          "status": {
+            "stringValue": "active"
+          },
+          "version": {
+            "integerValue": "1"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-06/document-06",
+        "updateTime": "2026-09-01T12:02:40.943665Z"
+      }
+    },
+    {
+      "id": "generated-entity-07",
+      "feature": "complex-generated-policy",
+      "expected": "ALLOW",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-07/document-07",
+      "status": 200,
+      "body": {
+        "createTime": "2026-09-01T12:02:40.945501Z",
+        "fields": {
+          "ownerId": {
+            "stringValue": "alice"
+          },
+          "status": {
+            "stringValue": "active"
+          },
+          "version": {
+            "integerValue": "1"
+          }
+        },
+        "name": "projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-07/document-07",
+        "updateTime": "2026-09-01T12:02:40.945501Z"
+      }
+    },
+    {
+      "id": "generated-entity-wrong-tenant",
+      "feature": "complex-generated-policy",
+      "expected": "DENY",
+      "method": "GET",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents/tenants/tenant-a/entity-00/document-00",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "get-after-atomic-allow",
+      "feature": "getAfter-batch-invariant",
+      "expected": "ALLOW",
+      "method": "POST",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents:commit",
+      "status": 200,
+      "body": {
+        "commitTime": "2026-09-01T12:02:41.050903Z",
+        "writeResults": [
+          {
+            "updateTime": "2026-09-01T12:02:41.050903Z"
+          },
+          {
+            "updateTime": "2026-09-01T12:02:41.050903Z"
+          }
+        ]
+      }
+    },
+    {
+      "id": "get-after-atomic-deny",
+      "feature": "getAfter-batch-invariant",
+      "expected": "DENY",
+      "method": "POST",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-complex/databases/(default)/documents:commit",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "Security Rules denied the request",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    }
+  ],
+  "passed": true,
+  "rulesSourceSha256": "60218bddbb680859f3379659e969379ff63dcf926b34bef0b99b85716ce3017c",
+  "schemaVersion": 1,
+  "target": "fireside"
+}

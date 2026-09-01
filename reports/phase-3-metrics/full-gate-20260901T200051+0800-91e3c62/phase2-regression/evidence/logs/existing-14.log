@@ -1,0 +1,30 @@
+npm notice run fireside-conformance@0.0.1 test:official:enterprise
+npm notice run node --import tsx src/run-official.ts --enterprise
+i  firestore: downloading cloud-firestore-emulator-v1.22.0.jar...
+
+i  emulators: Starting emulators: firestore
+i  emulators: Detected demo project ID "demo-fireside-phase0", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+⚠  firestore: The edition configured in your firebase.json#firestore and firebase.json#emulators.firestore do not match. The latter will be used to start up the Firestore emulator.
+⚠  firestore: Cloud Firestore Emulator does not support multiple databases yet.
+⚠  firestore: Did not find a Cloud Firestore rules file specified in a firebase.json config file.
+⚠  firestore: The emulator will default to allowing all reads and writes. Learn more about this option: https://firebase.google.com/docs/emulator-suite/install_and_configure#security_rules_configuration.
+i  firestore: Firestore Emulator logging to firestore-debug.log
+✔  firestore: Firestore Emulator was started in enterprise edition.
+✔  firestore: Firestore Emulator UI websocket is running on 9150.
+i  Running script: node --import tsx --test test/pipeline.test.ts
+(node:513017) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ Enterprise pipelines filter, sort, shape, and preserve selected metadata (3938.913499ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4515.090784
+✔  Script exited successfully (code 0)
+i  emulators: Shutting down emulators.
+i  firestore: Stopping Firestore Emulator
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator

@@ -1,0 +1,87 @@
+npm notice run fireside-conformance@0.0.1 test:fireside:disk
+npm notice run node --import tsx src/run-fireside.ts --disk
+WARNING: fireside Security Rules are not configured; client access is open
+fireside Firestore persistence: /tmp/fireside-conformance-disk-t0fqSt (write-ahead journal enabled, redb cache 67108864 bytes)
+fireside Firestore listening on 127.0.0.1:35455 with 4 runtime worker thread(s); mimalloc purge delay 0 ms, decommit true
+(node:511910) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ collection-group queries honor an ancestor document (4323.886344ms)
+(node:511911) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ CreateDocument assigns an ID, preserves masked fields, and rejects conflicts (4381.390981ms)
+✔ BulkWriter commits independent writes and surfaces per-write errors (1295.910262ms)
+✔ BulkWriter accepts a near-5-MiB batch of individually valid documents (549.285644ms)
+✔ list RPCs paginate direct children and preserve masks (72.75192ms)
+✔ ListDocuments orders fields and requires a collection selector (61.242833ms)
+✔ ListDocuments showMissing returns name-only ancestor placeholders (52.637762ms)
+✔ BatchWrite reports per-write conflicts and commits independent writes (43.527432ms)
+(node:511912) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ write conflicts return the production gRPC status codes (5700.891847ms)
+✔ Admin SDK retries an aborted read-write transaction (1055.423506ms)
+(node:511913) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ target accepts an SDK write/read/delete round trip (4426.018332ms)
+(node:511922) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ read_time reconstructs committed versions after a later delete (4707.605722ms)
+(node:511925) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ raw Listen removes a malformed-token target without closing the stream (3283.252451ms)
+✔ query listeners deliver an initial snapshot and ordered changes (1189.414139ms)
+✔ raw Listen resumes after a CURRENT checkpoint without replaying prior documents (1287.567711ms)
+✔ raw Listen read_time delivers only changes after the historical snapshot (57.636296ms)
+✔ raw Listen falls back to the full target when read_time has expired (341.834273ms)
+(node:511931) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ named databases preserve isolation in the v1 resource path (3542.769685ms)
+(node:511932) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ partitionQuery returns ordered document-name split cursors (5689.30048ms)
+(node:511948) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ ExecutePipeline preserves the production database-edition gate (11206.060299ms)
+(node:511954) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ RunQuery explain separates planning from analyzed execution (4351.747924ms)
+✔ RunAggregationQuery explain reports the aggregate result count (151.597653ms)
+(node:511956) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ queries match the production operator and shaping contract (6140.864611ms)
+(node:512053) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ orderBy follows the production mixed-value order (3459.491877ms)
+✔ integer and double ordering does not lose int64 precision (73.678578ms)
+✔ REST v1 patches, reads, deletes, and reports missing documents (658.786894ms)
+✔ REST v1 commit, batchGet, and runQuery share document semantics (22.997144ms)
+✔ REST v1 commit applies update and document transforms (36.17491ms)
+✔ REST v1 preserves the production missing-index status (278.347713ms)
+(node:512072) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ streaming Write performs a tokened handshake and atomic write (3258.908138ms)
+(node:512079) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ nearest-vector queries match production distance semantics (3318.779792ms)
+(node:512088) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ field transforms use the production commit semantics (3285.952228ms)
+✔ array transforms use production numeric equality (42.104804ms)
+✔ minimum and maximum transforms preserve production numeric types (34.776702ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12621.621878
+✔ emulator control APIs register triggers and clear data (56.444498ms)
+✔ emulator export writes the named official-format directory (16.726572ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 653.30298

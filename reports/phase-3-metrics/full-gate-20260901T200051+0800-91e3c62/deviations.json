@@ -1,0 +1,18 @@
+{
+  "explainedOracleClassifications": [
+    {
+      "id": "production-projects-test-debug-unavailable",
+      "behavior": "debug(request.auth.uid) returns a Function not found runtime error in production projects.test",
+      "policy": "preserve as a projects.test oracle limitation; test emulator debug behavior separately and record any production-runtime or Java divergence without normalizing the fixture",
+      "fixture": "conformance/fixtures/rules-v2/production-language-contract.json"
+    },
+    {
+      "id": "projects-test-large-source-envelope",
+      "behavior": "projects.test accepts 256001 source bytes but returns HTTP 400 INVALID_ARGUMENT for the probed 262143-byte request",
+      "policy": "enforce the official documented 262144-byte deployed-rules maximum and preserve the projects.test HTTP-envelope boundary separately",
+      "fixture": "conformance/fixtures/rules-v2/production-parse-errors.json"
+    }
+  ],
+  "unexplainedDeviations": 0,
+  "schemaVersion": 1
+}
