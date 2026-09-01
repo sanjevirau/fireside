@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "fixtureSet": "auth-identity-toolkit-and-admin",
+  "target": "official-firebase-tools-auth-emulator",
+  "targetVersion": "15.22.0",
+  "operationCount": 11,
+  "operations": [
+    {
+      "id": "readiness",
+      "method": "GET",
+      "path": "/",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "password-sign-up",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/accounts:signUp?key=phase4-fake-api-key",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "client-account-lookup",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/accounts:lookup?key=phase4-fake-api-key",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "client-profile-update",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/accounts:update?key=phase4-fake-api-key",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "admin-custom-claims-update",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-phase4-auth-oracle/accounts:update",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "admin-lookup-by-email",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-phase4-auth-oracle/accounts:lookup",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "admin-query-users",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-phase4-auth-oracle/accounts:query",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "password-sign-in",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=phase4-fake-api-key",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "strict-json-custom-token-sign-in",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=phase4-fake-api-key",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "secure-token-refresh",
+      "method": "POST",
+      "path": "/securetoken.googleapis.com/v1/token?key=phase4-fake-api-key",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "wrong-password-error",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=phase4-fake-api-key",
+      "status": 400,
+      "responseContentType": "application/json; charset=utf-8"
+    }
+  ]
+}

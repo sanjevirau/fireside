@@ -1,0 +1,285 @@
+{
+  "schemaVersion": 1,
+  "target": "official-firebase-tools-auth-emulator",
+  "targetVersion": "15.22.0",
+  "targetProject": "demo-fireside-phase4-auth-oracle",
+  "capturedAt": "2026-09-01T13:48:39.812Z",
+  "hypothesis": "Browser discovery, fake Google IdP, helper popup/iframe, and secure-token refresh routes expose the contract consumed by the Firebase browser SDK",
+  "credentialsStored": false,
+  "accessTokensStored": false,
+  "realUserDataStored": false,
+  "sourceHashes": {
+    "package.json": "bdaec59ef8484658506c54fc4bd5910722aaf77a77f5a6a3f6a057bec0797abf",
+    "lib/emulator/auth/apiSpec.js": "9014b6512f2adf4cc72ed244946bb942857a09d12dd77cd6c65bb7ce27ba76c8",
+    "lib/emulator/auth/cloudFunctions.js": "2647a6af6ee6a9915f256f499df9b6136161645d73482fec063441f52dea1368",
+    "lib/emulator/auth/handlers.js": "b228707e1a8dcab02ef8acb261a3b5f8b670589c3887d5a4fba02cba78e07853",
+    "lib/emulator/auth/operations.js": "dbc71e2a7919458709528c4a20ea051143032eded7ef1a39f75221be7c46b322",
+    "lib/emulator/auth/server.js": "40f4d7c16aca84829ee502f4bfebc84fb50ad2893650011f268c0b6e1f27c1a7",
+    "lib/emulator/auth/state.js": "79b3d0333f69448ec32217c513503bbb6dfe6e16fe1f5a274af3ac5a917b7fb5"
+  },
+  "observations": [
+    {
+      "id": "create-auth-uri-existing-password-user",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/accounts:createAuthUri?key=phase4-fake-api-key",
+      "request": {
+        "identifier": "phase4-auth-oracle@example.com",
+        "continueUri": "http://localhost:5173/auth/callback"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "kind": "identitytoolkit#CreateAuthUriResponse",
+        "registered": true,
+        "allProviders": [
+          "password"
+        ],
+        "sessionId": "<generated-sessionId>",
+        "signinMethods": [
+          "password"
+        ]
+      }
+    },
+    {
+      "id": "recaptcha-parameters",
+      "method": "GET",
+      "path": "/identitytoolkit.googleapis.com/v1/recaptchaParams?key=phase4-fake-api-key",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "kind": "identitytoolkit#GetRecaptchaParamResponse",
+        "recaptchaStoken": "This-is-a-fake-token__Dont-send-this-to-the-Recaptcha-service__The-Auth-Emulator-does-not-support-Recaptcha",
+        "recaptchaSiteKey": "Fake-key__Do-not-send-this-to-Recaptcha_"
+      }
+    },
+    {
+      "id": "fake-google-idp-sign-in",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=phase4-fake-api-key",
+      "request": {
+        "requestUri": "http://localhost:5173/auth/callback",
+        "postBody": "providerId=google.com&id_token=%7B%22sub%22%3A%22phase4-google-subject%22%2C%22email%22%3A%22phase4-google%40example.com%22%2C%22email_verified%22%3Atrue%2C%22name%22%3A%22Google+%E7%81%AB%F0%9F%94%A5%22%2C%22given_name%22%3A%22Google%22%2C%22family_name%22%3A%22Oracle%22%2C%22picture%22%3A%22https%3A%2F%2Fexample.invalid%2Favatar.png%22%7D",
+        "returnIdpCredential": true,
+        "returnSecureToken": true
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "kind": "identitytoolkit#VerifyAssertionResponse",
+        "context": "",
+        "providerId": "google.com",
+        "displayName": "Google 火🔥",
+        "fullName": "Google 火🔥",
+        "email": "phase4-google@example.com",
+        "emailVerified": true,
+        "photoUrl": "https://example.invalid/avatar.png",
+        "firstName": "Google",
+        "lastName": "Oracle",
+        "rawUserInfo": "{\"granted_scopes\":\"openid https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email\",\"id\":\"phase4-google-subject\",\"name\":\"Google 火🔥\",\"given_name\":\"Google\",\"family_name\":\"Oracle\",\"verified_email\":true,\"locale\":\"en\",\"email\":\"phase4-google@example.com\",\"picture\":\"https://example.invalid/avatar.png\"}",
+        "federatedId": "https://accounts.google.com/phase4-google-subject",
+        "oauthAccessToken": "FirebaseAuthEmulatorFakeAccessToken_google.com",
+        "oauthIdToken": "{\"sub\":\"phase4-google-subject\",\"email\":\"phase4-google@example.com\",\"email_verified\":true,\"name\":\"Google 火🔥\",\"given_name\":\"Google\",\"family_name\":\"Oracle\",\"picture\":\"https://example.invalid/avatar.png\"}",
+        "isNewUser": true,
+        "localId": "<generated-localId>",
+        "idToken": {
+          "redacted": "emulator-jwt",
+          "claims": {
+            "name": "Google 火🔥",
+            "picture": "https://example.invalid/avatar.png",
+            "email": "phase4-google@example.com",
+            "email_verified": true,
+            "auth_time": "<generated-auth_time>",
+            "user_id": "<generated-localId>",
+            "firebase": {
+              "identities": {
+                "email": [
+                  "phase4-google@example.com"
+                ],
+                "google.com": [
+                  "phase4-google-subject"
+                ]
+              },
+              "sign_in_provider": "google.com"
+            },
+            "iat": "<generated-iat>",
+            "exp": "<generated-exp>",
+            "aud": "demo-fireside-phase4-auth-oracle",
+            "iss": "https://securetoken.google.com/demo-fireside-phase4-auth-oracle",
+            "sub": "<generated-localId>"
+          }
+        },
+        "refreshToken": "<emulator-refresh-token>",
+        "expiresIn": "3600"
+      }
+    },
+    {
+      "id": "idp-secure-token-refresh",
+      "method": "POST",
+      "path": "/securetoken.googleapis.com/v1/token?key=phase4-fake-api-key",
+      "request": {
+        "grant_type": "refresh_token",
+        "refresh_token": "<emulator-refresh-token-redacted>"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "id_token": {
+          "redacted": "emulator-jwt",
+          "claims": {
+            "name": "Google 火🔥",
+            "picture": "https://example.invalid/avatar.png",
+            "email": "phase4-google@example.com",
+            "email_verified": true,
+            "auth_time": "<generated-auth_time>",
+            "user_id": "<generated-localId>",
+            "firebase": {
+              "identities": {
+                "email": [
+                  "phase4-google@example.com"
+                ],
+                "google.com": [
+                  "phase4-google-subject"
+                ]
+              },
+              "sign_in_provider": "google.com"
+            },
+            "iat": "<generated-iat>",
+            "exp": "<generated-exp>",
+            "aud": "demo-fireside-phase4-auth-oracle",
+            "iss": "https://securetoken.google.com/demo-fireside-phase4-auth-oracle",
+            "sub": "<generated-localId>"
+          }
+        },
+        "access_token": {
+          "redacted": "emulator-jwt",
+          "claims": {
+            "name": "Google 火🔥",
+            "picture": "https://example.invalid/avatar.png",
+            "email": "phase4-google@example.com",
+            "email_verified": true,
+            "auth_time": "<generated-auth_time>",
+            "user_id": "<generated-localId>",
+            "firebase": {
+              "identities": {
+                "email": [
+                  "phase4-google@example.com"
+                ],
+                "google.com": [
+                  "phase4-google-subject"
+                ]
+              },
+              "sign_in_provider": "google.com"
+            },
+            "iat": "<generated-iat>",
+            "exp": "<generated-exp>",
+            "aud": "demo-fireside-phase4-auth-oracle",
+            "iss": "https://securetoken.google.com/demo-fireside-phase4-auth-oracle",
+            "sub": "<generated-localId>"
+          }
+        },
+        "expires_in": "3600",
+        "refresh_token": "<emulator-refresh-token>",
+        "token_type": "Bearer",
+        "user_id": "<generated-localId>",
+        "project_id": "12345"
+      }
+    },
+    {
+      "id": "oauth-popup-handler",
+      "method": "GET",
+      "path": "/emulator/auth/handler?apiKey=phase4-fake-api-key&providerId=google.com",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "text/html; charset=utf-8"
+      },
+      "response": {
+        "byteLength": 19292,
+        "sha256": "96ee2effa5a13f1b884c716e6e2141d3ce8169ed72cdb1447d6f045ef9ac8330",
+        "contains": [
+          "sendAuthEvent"
+        ]
+      }
+    },
+    {
+      "id": "oauth-helper-iframe",
+      "method": "GET",
+      "path": "/emulator/auth/iframe?apiKey=phase4-fake-api-key&appName=phase4",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "text/html; charset=utf-8"
+      },
+      "response": {
+        "byteLength": 2768,
+        "sha256": "65cda1e41d0e987c9ea8c8a49575ed3eab51ee3213ce8de510b3d9d8eb4683e6",
+        "contains": [
+          "sendAuthEvent",
+          "gapi.iframes"
+        ]
+      }
+    }
+  ],
+  "decodedTokenContracts": [
+    {
+      "id": "fake-google-idp",
+      "claims": {
+        "name": "Google 火🔥",
+        "picture": "https://example.invalid/avatar.png",
+        "email": "phase4-google@example.com",
+        "email_verified": true,
+        "auth_time": "<generated-auth_time>",
+        "user_id": "<generated-localId>",
+        "firebase": {
+          "identities": {
+            "email": [
+              "phase4-google@example.com"
+            ],
+            "google.com": [
+              "phase4-google-subject"
+            ]
+          },
+          "sign_in_provider": "google.com"
+        },
+        "iat": "<generated-iat>",
+        "exp": "<generated-exp>",
+        "aud": "demo-fireside-phase4-auth-oracle",
+        "iss": "https://securetoken.google.com/demo-fireside-phase4-auth-oracle",
+        "sub": "<generated-localId>"
+      }
+    },
+    {
+      "id": "idp-refresh",
+      "claims": {
+        "name": "Google 火🔥",
+        "picture": "https://example.invalid/avatar.png",
+        "email": "phase4-google@example.com",
+        "email_verified": true,
+        "auth_time": "<generated-auth_time>",
+        "user_id": "<generated-localId>",
+        "firebase": {
+          "identities": {
+            "email": [
+              "phase4-google@example.com"
+            ],
+            "google.com": [
+              "phase4-google-subject"
+            ]
+          },
+          "sign_in_provider": "google.com"
+        },
+        "iat": "<generated-iat>",
+        "exp": "<generated-exp>",
+        "aud": "demo-fireside-phase4-auth-oracle",
+        "iss": "https://securetoken.google.com/demo-fireside-phase4-auth-oracle",
+        "sub": "<generated-localId>"
+      }
+    }
+  ]
+}

@@ -1,0 +1,542 @@
+{
+  "schemaVersion": 1,
+  "target": "official-firebase-tools-auth-emulator",
+  "targetVersion": "15.22.0",
+  "targetProject": "demo-fireside-phase4-auth-oracle",
+  "capturedAt": "2026-09-01T13:48:39.809Z",
+  "hypothesis": "Identity Toolkit client and privileged Admin routes preserve Firebase response, error, custom-claim, custom-token, and unsigned JWT contracts",
+  "credentialsStored": false,
+  "accessTokensStored": false,
+  "realUserDataStored": false,
+  "sourceHashes": {
+    "package.json": "bdaec59ef8484658506c54fc4bd5910722aaf77a77f5a6a3f6a057bec0797abf",
+    "lib/emulator/auth/apiSpec.js": "9014b6512f2adf4cc72ed244946bb942857a09d12dd77cd6c65bb7ce27ba76c8",
+    "lib/emulator/auth/cloudFunctions.js": "2647a6af6ee6a9915f256f499df9b6136161645d73482fec063441f52dea1368",
+    "lib/emulator/auth/handlers.js": "b228707e1a8dcab02ef8acb261a3b5f8b670589c3887d5a4fba02cba78e07853",
+    "lib/emulator/auth/operations.js": "dbc71e2a7919458709528c4a20ea051143032eded7ef1a39f75221be7c46b322",
+    "lib/emulator/auth/server.js": "40f4d7c16aca84829ee502f4bfebc84fb50ad2893650011f268c0b6e1f27c1a7",
+    "lib/emulator/auth/state.js": "79b3d0333f69448ec32217c513503bbb6dfe6e16fe1f5a274af3ac5a917b7fb5"
+  },
+  "observations": [
+    {
+      "id": "readiness",
+      "method": "GET",
+      "path": "/",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "response": {
+        "authEmulator": {
+          "ready": true,
+          "docs": "https://firebase.google.com/docs/emulator-suite",
+          "apiSpec": "/emulator/openapi.json"
+        }
+      }
+    },
+    {
+      "id": "password-sign-up",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/accounts:signUp?key=phase4-fake-api-key",
+      "request": {
+        "email": "phase4-auth-oracle@example.com",
+        "password": "<synthetic-password-redacted>",
+        "displayName": "火🔥 Auth Oracle",
+        "returnSecureToken": true
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "kind": "identitytoolkit#SignupNewUserResponse",
+        "localId": "<generated-localId>",
+        "displayName": "火🔥 Auth Oracle",
+        "email": "phase4-auth-oracle@example.com",
+        "idToken": {
+          "redacted": "emulator-jwt",
+          "claims": {
+            "name": "火🔥 Auth Oracle",
+            "email": "phase4-auth-oracle@example.com",
+            "email_verified": false,
+            "auth_time": "<generated-auth_time>",
+            "user_id": "<generated-localId>",
+            "firebase": {
+              "identities": {
+                "email": [
+                  "phase4-auth-oracle@example.com"
+                ]
+              },
+              "sign_in_provider": "password"
+            },
+            "iat": "<generated-iat>",
+            "exp": "<generated-exp>",
+            "aud": "demo-fireside-phase4-auth-oracle",
+            "iss": "https://securetoken.google.com/demo-fireside-phase4-auth-oracle",
+            "sub": "<generated-localId>"
+          }
+        },
+        "refreshToken": "<emulator-refresh-token>",
+        "expiresIn": "3600"
+      }
+    },
+    {
+      "id": "client-account-lookup",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/accounts:lookup?key=phase4-fake-api-key",
+      "request": {
+        "idToken": "<emulator-token-redacted>"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "kind": "identitytoolkit#GetAccountInfoResponse",
+        "users": [
+          {
+            "localId": "<generated-localId>",
+            "lastLoginAt": "<generated-lastLoginAt>",
+            "displayName": "火🔥 Auth Oracle",
+            "emailVerified": false,
+            "email": "phase4-auth-oracle@example.com",
+            "salt": "<salt>",
+            "passwordHash": "<passwordHash>",
+            "passwordUpdatedAt": "<generated-passwordUpdatedAt>",
+            "validSince": "<generated-validSince>",
+            "createdAt": "<generated-createdAt>",
+            "providerUserInfo": [
+              {
+                "providerId": "password",
+                "email": "phase4-auth-oracle@example.com",
+                "federatedId": "phase4-auth-oracle@example.com",
+                "rawId": "phase4-auth-oracle@example.com",
+                "displayName": "火🔥 Auth Oracle"
+              }
+            ],
+            "lastRefreshAt": "<generated-lastRefreshAt>"
+          }
+        ]
+      }
+    },
+    {
+      "id": "client-profile-update",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/accounts:update?key=phase4-fake-api-key",
+      "request": {
+        "idToken": "<emulator-token-redacted>",
+        "displayName": "更新済み 🔥",
+        "returnSecureToken": true
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "kind": "identitytoolkit#SetAccountInfoResponse",
+        "localId": "<generated-localId>",
+        "emailVerified": false,
+        "providerUserInfo": [
+          {
+            "providerId": "password",
+            "email": "phase4-auth-oracle@example.com",
+            "federatedId": "phase4-auth-oracle@example.com",
+            "rawId": "phase4-auth-oracle@example.com",
+            "displayName": "更新済み 🔥"
+          }
+        ],
+        "email": "phase4-auth-oracle@example.com",
+        "displayName": "更新済み 🔥",
+        "passwordHash": "<passwordHash>"
+      }
+    },
+    {
+      "id": "admin-custom-claims-update",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-phase4-auth-oracle/accounts:update",
+      "request": {
+        "localId": "<generated-localId>",
+        "customAttributes": "{\"role\":\"owner\",\"unicode\":\"火🔥\"}"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "kind": "identitytoolkit#SetAccountInfoResponse",
+        "localId": "<generated-localId>",
+        "emailVerified": false,
+        "providerUserInfo": [
+          {
+            "providerId": "password",
+            "email": "phase4-auth-oracle@example.com",
+            "federatedId": "phase4-auth-oracle@example.com",
+            "rawId": "phase4-auth-oracle@example.com",
+            "displayName": "更新済み 🔥"
+          }
+        ],
+        "email": "phase4-auth-oracle@example.com",
+        "displayName": "更新済み 🔥",
+        "passwordHash": "<passwordHash>"
+      }
+    },
+    {
+      "id": "admin-lookup-by-email",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-phase4-auth-oracle/accounts:lookup",
+      "request": {
+        "email": [
+          "phase4-auth-oracle@example.com"
+        ]
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "kind": "identitytoolkit#GetAccountInfoResponse",
+        "users": [
+          {
+            "localId": "<generated-localId>",
+            "lastLoginAt": "<generated-lastLoginAt>",
+            "displayName": "更新済み 🔥",
+            "emailVerified": false,
+            "email": "phase4-auth-oracle@example.com",
+            "salt": "<salt>",
+            "passwordHash": "<passwordHash>",
+            "passwordUpdatedAt": "<generated-passwordUpdatedAt>",
+            "validSince": "<generated-validSince>",
+            "createdAt": "<generated-createdAt>",
+            "providerUserInfo": [
+              {
+                "providerId": "password",
+                "email": "phase4-auth-oracle@example.com",
+                "federatedId": "phase4-auth-oracle@example.com",
+                "rawId": "phase4-auth-oracle@example.com",
+                "displayName": "更新済み 🔥"
+              }
+            ],
+            "lastRefreshAt": "<generated-lastRefreshAt>",
+            "customAttributes": "{\"role\":\"owner\",\"unicode\":\"火🔥\"}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "admin-query-users",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-phase4-auth-oracle/accounts:query",
+      "request": {
+        "returnUserInfo": true,
+        "sortBy": "USER_ID",
+        "order": "ASC"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "recordsCount": "1",
+        "userInfo": [
+          {
+            "localId": "<generated-localId>",
+            "lastLoginAt": "<generated-lastLoginAt>",
+            "displayName": "更新済み 🔥",
+            "emailVerified": false,
+            "email": "phase4-auth-oracle@example.com",
+            "salt": "<salt>",
+            "passwordHash": "<passwordHash>",
+            "passwordUpdatedAt": "<generated-passwordUpdatedAt>",
+            "validSince": "<generated-validSince>",
+            "createdAt": "<generated-createdAt>",
+            "providerUserInfo": [
+              {
+                "providerId": "password",
+                "email": "phase4-auth-oracle@example.com",
+                "federatedId": "phase4-auth-oracle@example.com",
+                "rawId": "phase4-auth-oracle@example.com",
+                "displayName": "更新済み 🔥"
+              }
+            ],
+            "lastRefreshAt": "<generated-lastRefreshAt>",
+            "customAttributes": "{\"role\":\"owner\",\"unicode\":\"火🔥\"}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "password-sign-in",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=phase4-fake-api-key",
+      "request": {
+        "email": "phase4-auth-oracle@example.com",
+        "password": "<synthetic-password-redacted>",
+        "returnSecureToken": true
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "kind": "identitytoolkit#VerifyPasswordResponse",
+        "registered": true,
+        "localId": "<generated-localId>",
+        "email": "phase4-auth-oracle@example.com",
+        "idToken": {
+          "redacted": "emulator-jwt",
+          "claims": {
+            "name": "更新済み 🔥",
+            "role": "owner",
+            "unicode": "火🔥",
+            "email": "phase4-auth-oracle@example.com",
+            "email_verified": false,
+            "auth_time": "<generated-auth_time>",
+            "user_id": "<generated-localId>",
+            "firebase": {
+              "identities": {
+                "email": [
+                  "phase4-auth-oracle@example.com"
+                ]
+              },
+              "sign_in_provider": "password"
+            },
+            "iat": "<generated-iat>",
+            "exp": "<generated-exp>",
+            "aud": "demo-fireside-phase4-auth-oracle",
+            "iss": "https://securetoken.google.com/demo-fireside-phase4-auth-oracle",
+            "sub": "<generated-localId>"
+          }
+        },
+        "refreshToken": "<emulator-refresh-token>",
+        "expiresIn": "3600"
+      }
+    },
+    {
+      "id": "strict-json-custom-token-sign-in",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=phase4-fake-api-key",
+      "request": {
+        "token": "<emulator-token-redacted>",
+        "returnSecureToken": true
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "kind": "identitytoolkit#VerifyCustomTokenResponse",
+        "isNewUser": true,
+        "idToken": {
+          "redacted": "emulator-jwt",
+          "claims": {
+            "tier": "oracle",
+            "emoji": "🔥",
+            "auth_time": "<generated-auth_time>",
+            "user_id": "phase4-custom-user",
+            "firebase": {
+              "identities": {},
+              "sign_in_provider": "custom"
+            },
+            "iat": "<generated-iat>",
+            "exp": "<generated-exp>",
+            "aud": "demo-fireside-phase4-auth-oracle",
+            "iss": "https://securetoken.google.com/demo-fireside-phase4-auth-oracle",
+            "sub": "phase4-custom-user"
+          }
+        },
+        "refreshToken": "<emulator-refresh-token>",
+        "expiresIn": "3600"
+      }
+    },
+    {
+      "id": "secure-token-refresh",
+      "method": "POST",
+      "path": "/securetoken.googleapis.com/v1/token?key=phase4-fake-api-key",
+      "request": {
+        "grant_type": "refresh_token",
+        "refresh_token": "<emulator-refresh-token-redacted>"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "id_token": {
+          "redacted": "emulator-jwt",
+          "claims": {
+            "name": "更新済み 🔥",
+            "role": "owner",
+            "unicode": "火🔥",
+            "email": "phase4-auth-oracle@example.com",
+            "email_verified": false,
+            "auth_time": "<generated-auth_time>",
+            "user_id": "<generated-localId>",
+            "firebase": {
+              "identities": {
+                "email": [
+                  "phase4-auth-oracle@example.com"
+                ]
+              },
+              "sign_in_provider": "password"
+            },
+            "iat": "<generated-iat>",
+            "exp": "<generated-exp>",
+            "aud": "demo-fireside-phase4-auth-oracle",
+            "iss": "https://securetoken.google.com/demo-fireside-phase4-auth-oracle",
+            "sub": "<generated-localId>"
+          }
+        },
+        "access_token": {
+          "redacted": "emulator-jwt",
+          "claims": {
+            "name": "更新済み 🔥",
+            "role": "owner",
+            "unicode": "火🔥",
+            "email": "phase4-auth-oracle@example.com",
+            "email_verified": false,
+            "auth_time": "<generated-auth_time>",
+            "user_id": "<generated-localId>",
+            "firebase": {
+              "identities": {
+                "email": [
+                  "phase4-auth-oracle@example.com"
+                ]
+              },
+              "sign_in_provider": "password"
+            },
+            "iat": "<generated-iat>",
+            "exp": "<generated-exp>",
+            "aud": "demo-fireside-phase4-auth-oracle",
+            "iss": "https://securetoken.google.com/demo-fireside-phase4-auth-oracle",
+            "sub": "<generated-localId>"
+          }
+        },
+        "expires_in": "3600",
+        "refresh_token": "<emulator-refresh-token>",
+        "token_type": "Bearer",
+        "user_id": "<generated-localId>",
+        "project_id": "12345"
+      }
+    },
+    {
+      "id": "wrong-password-error",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=phase4-fake-api-key",
+      "request": {
+        "email": "phase4-auth-oracle@example.com",
+        "password": "<synthetic-password-redacted>",
+        "returnSecureToken": true
+      },
+      "status": 400,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "INVALID_PASSWORD",
+          "errors": [
+            {
+              "message": "INVALID_PASSWORD",
+              "reason": "invalid",
+              "domain": "global"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "decodedTokenContracts": [
+    {
+      "id": "password-sign-up",
+      "claims": {
+        "name": "火🔥 Auth Oracle",
+        "email": "phase4-auth-oracle@example.com",
+        "email_verified": false,
+        "auth_time": "<generated-auth_time>",
+        "user_id": "<generated-localId>",
+        "firebase": {
+          "identities": {
+            "email": [
+              "phase4-auth-oracle@example.com"
+            ]
+          },
+          "sign_in_provider": "password"
+        },
+        "iat": "<generated-iat>",
+        "exp": "<generated-exp>",
+        "aud": "demo-fireside-phase4-auth-oracle",
+        "iss": "https://securetoken.google.com/demo-fireside-phase4-auth-oracle",
+        "sub": "<generated-localId>"
+      }
+    },
+    {
+      "id": "password-sign-in",
+      "claims": {
+        "name": "更新済み 🔥",
+        "role": "owner",
+        "unicode": "火🔥",
+        "email": "phase4-auth-oracle@example.com",
+        "email_verified": false,
+        "auth_time": "<generated-auth_time>",
+        "user_id": "<generated-localId>",
+        "firebase": {
+          "identities": {
+            "email": [
+              "phase4-auth-oracle@example.com"
+            ]
+          },
+          "sign_in_provider": "password"
+        },
+        "iat": "<generated-iat>",
+        "exp": "<generated-exp>",
+        "aud": "demo-fireside-phase4-auth-oracle",
+        "iss": "https://securetoken.google.com/demo-fireside-phase4-auth-oracle",
+        "sub": "<generated-localId>"
+      }
+    },
+    {
+      "id": "custom-token-sign-in",
+      "claims": {
+        "tier": "oracle",
+        "emoji": "🔥",
+        "auth_time": "<generated-auth_time>",
+        "user_id": "phase4-custom-user",
+        "firebase": {
+          "identities": {},
+          "sign_in_provider": "custom"
+        },
+        "iat": "<generated-iat>",
+        "exp": "<generated-exp>",
+        "aud": "demo-fireside-phase4-auth-oracle",
+        "iss": "https://securetoken.google.com/demo-fireside-phase4-auth-oracle",
+        "sub": "phase4-custom-user"
+      }
+    },
+    {
+      "id": "secure-token-refresh",
+      "claims": {
+        "name": "更新済み 🔥",
+        "role": "owner",
+        "unicode": "火🔥",
+        "email": "phase4-auth-oracle@example.com",
+        "email_verified": false,
+        "auth_time": "<generated-auth_time>",
+        "user_id": "<generated-localId>",
+        "firebase": {
+          "identities": {
+            "email": [
+              "phase4-auth-oracle@example.com"
+            ]
+          },
+          "sign_in_provider": "password"
+        },
+        "iat": "<generated-iat>",
+        "exp": "<generated-exp>",
+        "aud": "demo-fireside-phase4-auth-oracle",
+        "iss": "https://securetoken.google.com/demo-fireside-phase4-auth-oracle",
+        "sub": "<generated-localId>"
+      }
+    }
+  ]
+}
