@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "target": "official-firebase-tools-storage-emulator",
+  "targetVersion": "15.22.0",
+  "targetProject": "demo-twodart-local",
+  "capturedAt": "2026-09-02T00:22:59+08:00",
+  "hypothesis": "The Admin SDK GCS alias serves object media without Firebase client authorization",
+  "credentialsStored": false,
+  "accessTokensStored": false,
+  "realUserDataStored": false,
+  "sourceHashes": {
+    "lib/emulator/storage/apis/gcloud.js": "b1d8e85761662e42ceb46baf70ab83e87e3f69335114f318b61bc091ab175fc7"
+  },
+  "observations": [
+    {
+      "id": "admin-alias-media-download",
+      "method": "GET",
+      "path": "/b/demo-twodart-local.appspot.com/o/_firesideSmoke%2Fobject.txt?alt=media",
+      "authorizationHeaderPresent": false,
+      "status": 200,
+      "responseContentType": "application/octet-stream"
+    }
+  ]
+}
