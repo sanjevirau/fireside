@@ -493,122 +493,149 @@ async fn gcs_upload_start(
 ) -> Result<Response, StorageApiError> {
     let query = query_fields(query.as_deref());
     let upload_type = query.get("uploadType").map_or("media", String::as_str);
-    if upload_type == "multipart" {
-        let boundary = multipart_boundary(content_type(&headers))
-            .ok_or_else(|| bad_request("Multipart upload requires a boundary"))?;
-        let bytes = collect_limited(body, 64 * 1024 * 1024).await?;
-        let multipart = parse_related_multipart(&bytes, &boundary)?;
-        let name = query
-            .get("name")
-            .filter(|value| !value.is_empty())
-            .map(String::as_str)
-            .or_else(|| multipart.metadata.get("name").and_then(JsonValue::as_str))
-            .ok_or_else(|| bad_request("Missing object name"))?;
-        let path = staging_path(&state, "upload");
-        let mut file = tokio::fs::File::create(&path).await.map_err(io_error)?;
-        file.write_all(multipart.data).await.map_err(io_error)?;
-        file.sync_all().await.map_err(io_error)?;
-        let object = commit_staging(
-            &state,
-            CommitSpec {
-                bucket: &bucket,
-                name,
-                content_type: multipart
-                    .metadata
-                    .get("contentType")
-                    .and_then(JsonValue::as_str)
-                    .or(multipart.data_content_type)
-                    .unwrap_or("application/octet-stream"),
-                metadata: string_metadata(multipart.metadata.get("metadata")),
-                headers: &headers,
-                firebase: false,
-            },
-            summarize_file(path).await?,
-        )
-        .await?;
-        Ok(Json(gcs_metadata(&state, &object)).into_response())
-    } else if upload_type == "resumable" {
-        let bytes = collect_limited(body, 1_048_576).await?;
-        let bytes = decode_request_body(&headers, &bytes, 1_048_576)?;
-        let request = if bytes.is_empty() {
-            json!({})
-        } else {
-            serde_json::from_slice::<JsonValue>(&bytes)
-                .map_err(|_| bad_request("Invalid resumable metadata"))?
-        };
-        let name = query
-            .get("name")
-            .filter(|value| !value.is_empty())
-            .map(String::as_str)
-            .or_else(|| request.get("name").and_then(JsonValue::as_str))
-            .ok_or_else(|| bad_request("Missing object name"))?
-            .to_owned();
-        let metadata = string_metadata(request.get("metadata"));
-        let content_type = request
-            .get("contentType")
-            .and_then(JsonValue::as_str)
-            .unwrap_or_else(|| content_type(&headers))
-            .to_owned();
-        let (id, staging_file) = {
-            let mut data = lock(&state.inner);
-            data.next_id = data.next_id.saturating_add(1);
-            let id = stable_id(&[
-                &state.config.project,
-                &bucket,
-                &name,
-                "upload",
-                &data.next_id.to_string(),
-            ]);
-            let staging_file = format!("uploads/{id}.part");
-            data.uploads.insert(
-                id.clone(),
-                UploadSession {
-                    id: id.clone(),
-                    bucket: bucket.clone(),
-                    name: name.clone(),
-                    content_type,
-                    metadata,
-                    received: 0,
-                    staging_file: staging_file.clone(),
-                },
-            );
-            persist_state(&state, &data)?;
-            (id, staging_file)
-        };
-        tokio::fs::File::create(state.config.data_dir.join(staging_file))
-            .await
-            .map_err(io_error)?;
-        let location = format!(
-            "{}/upload/storage/v1/b/{}/o?name={}&uploadType=resumable&upload_id={}",
-            state.config.origin.trim_end_matches('/'),
-            percent_encode(&bucket),
-            percent_encode(&name),
-            percent_encode(&id)
-        );
-        Ok(([(header::LOCATION, location)], "OK").into_response())
-    } else if upload_type == "media" {
-        let name = query
-            .get("name")
-            .filter(|value| !value.is_empty())
-            .ok_or_else(|| bad_request("Missing object name"))?;
-        let uploaded = stream_to_staging(&state, body).await?;
-        let object = commit_staging(
-            &state,
-            CommitSpec {
-                bucket: &bucket,
-                name,
-                content_type: content_type(&headers),
-                metadata: BTreeMap::new(),
-                headers: &headers,
-                firebase: false,
-            },
-            uploaded,
-        )
-        .await?;
-        Ok(Json(gcs_metadata(&state, &object)).into_response())
-    } else {
-        Err(bad_request("Unsupported uploadType"))
+    match upload_type {
+        "multipart" => gcs_multipart_upload(&state, &bucket, &query, &headers, body).await,
+        "resumable" => gcs_resumable_start(&state, &bucket, &query, &headers, body).await,
+        "media" => gcs_media_upload(&state, &bucket, &query, &headers, body).await,
+        _ => Err(bad_request("Unsupported uploadType")),
     }
+}
+
+async fn gcs_multipart_upload(
+    state: &StorageState,
+    bucket: &str,
+    query: &BTreeMap<String, String>,
+    headers: &HeaderMap,
+    body: Body,
+) -> Result<Response, StorageApiError> {
+    let boundary = multipart_boundary(content_type(headers))
+        .ok_or_else(|| bad_request("Multipart upload requires a boundary"))?;
+    let bytes = collect_limited(body, 64 * 1024 * 1024).await?;
+    let multipart = parse_related_multipart(&bytes, &boundary)?;
+    let name = query
+        .get("name")
+        .filter(|value| !value.is_empty())
+        .map(String::as_str)
+        .or_else(|| multipart.metadata.get("name").and_then(JsonValue::as_str))
+        .ok_or_else(|| bad_request("Missing object name"))?;
+    let path = staging_path(state, "upload");
+    let mut file = tokio::fs::File::create(&path).await.map_err(io_error)?;
+    file.write_all(multipart.data).await.map_err(io_error)?;
+    file.sync_all().await.map_err(io_error)?;
+    let object = commit_staging(
+        state,
+        CommitSpec {
+            bucket,
+            name,
+            content_type: multipart
+                .metadata
+                .get("contentType")
+                .and_then(JsonValue::as_str)
+                .or(multipart.data_content_type)
+                .unwrap_or("application/octet-stream"),
+            metadata: string_metadata(multipart.metadata.get("metadata")),
+            headers,
+            firebase: false,
+        },
+        summarize_file(path).await?,
+    )
+    .await?;
+    Ok(Json(gcs_metadata(state, &object)).into_response())
+}
+
+async fn gcs_resumable_start(
+    state: &StorageState,
+    bucket: &str,
+    query: &BTreeMap<String, String>,
+    headers: &HeaderMap,
+    body: Body,
+) -> Result<Response, StorageApiError> {
+    let bytes = collect_limited(body, 1_048_576).await?;
+    let bytes = decode_request_body(headers, &bytes, 1_048_576)?;
+    let request = if bytes.is_empty() {
+        json!({})
+    } else {
+        serde_json::from_slice::<JsonValue>(&bytes)
+            .map_err(|_| bad_request("Invalid resumable metadata"))?
+    };
+    let name = query
+        .get("name")
+        .filter(|value| !value.is_empty())
+        .map(String::as_str)
+        .or_else(|| request.get("name").and_then(JsonValue::as_str))
+        .ok_or_else(|| bad_request("Missing object name"))?
+        .to_owned();
+    let metadata = string_metadata(request.get("metadata"));
+    let object_content_type = request
+        .get("contentType")
+        .and_then(JsonValue::as_str)
+        .unwrap_or_else(|| content_type(headers))
+        .to_owned();
+    let (id, staging_file) = {
+        let mut data = lock(&state.inner);
+        data.next_id = data.next_id.saturating_add(1);
+        let id = stable_id(&[
+            &state.config.project,
+            bucket,
+            &name,
+            "upload",
+            &data.next_id.to_string(),
+        ]);
+        let staging_file = format!("uploads/{id}.part");
+        data.uploads.insert(
+            id.clone(),
+            UploadSession {
+                id: id.clone(),
+                bucket: bucket.to_owned(),
+                name: name.clone(),
+                content_type: object_content_type,
+                metadata,
+                received: 0,
+                staging_file: staging_file.clone(),
+            },
+        );
+        persist_state(state, &data)?;
+        (id, staging_file)
+    };
+    tokio::fs::File::create(state.config.data_dir.join(staging_file))
+        .await
+        .map_err(io_error)?;
+    let location = format!(
+        "{}/upload/storage/v1/b/{}/o?name={}&uploadType=resumable&upload_id={}",
+        state.config.origin.trim_end_matches('/'),
+        percent_encode(bucket),
+        percent_encode(&name),
+        percent_encode(&id)
+    );
+    Ok(([(header::LOCATION, location)], "OK").into_response())
+}
+
+async fn gcs_media_upload(
+    state: &StorageState,
+    bucket: &str,
+    query: &BTreeMap<String, String>,
+    headers: &HeaderMap,
+    body: Body,
+) -> Result<Response, StorageApiError> {
+    let name = query
+        .get("name")
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("Missing object name"))?;
+    let uploaded = stream_to_staging(state, body).await?;
+    let object = commit_staging(
+        state,
+        CommitSpec {
+            bucket,
+            name,
+            content_type: content_type(headers),
+            metadata: BTreeMap::new(),
+            headers,
+            firebase: false,
+        },
+        uploaded,
+    )
+    .await?;
+    Ok(Json(gcs_metadata(state, &object)).into_response())
 }
 
 async fn gcs_resumable_chunk(
@@ -1108,17 +1135,16 @@ fn decode_request_body(
     let encoding = headers
         .get(header::CONTENT_ENCODING)
         .and_then(|value| value.to_str().ok())
-        .map(str::trim)
-        .unwrap_or("identity");
+        .map_or("identity", str::trim);
     if encoding.eq_ignore_ascii_case("identity") || encoding.is_empty() {
         return Ok(bytes.to_vec());
     }
     if !encoding.eq_ignore_ascii_case("gzip") {
         return Err(bad_request("Unsupported Content-Encoding"));
     }
-    let decoder = flate2::read::GzDecoder::new(bytes);
+    let gzip_reader = flate2::read::GzDecoder::new(bytes);
     let mut decoded = Vec::new();
-    decoder
+    gzip_reader
         .take(u64::try_from(maximum).unwrap_or(u64::MAX).saturating_add(1))
         .read_to_end(&mut decoded)
         .map_err(|_| bad_request("Invalid gzip request body"))?;
