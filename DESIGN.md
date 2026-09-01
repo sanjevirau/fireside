@@ -1670,6 +1670,20 @@ The oracle captures pin the following suite contracts before implementation:
   returns 501 for the canonical GCS `storage/v1/.../copyTo` route but accepts
   its emulator-only `/b/.../copyTo` alias; Fireside records this as a deviation
   rather than treating the alias as the production contract.
+- Storage object payloads are streamed between HTTP bodies and files in bounded
+  chunks; metadata and resumable-session state are committed by atomic JSON
+  replacement under one mutation coordinator. A restart therefore preserves
+  completed objects and resumable offsets without retaining object bodies in
+  the Rust heap. Export writes the official `blobs/`, `metadata/`, and
+  `buckets.json` layout, and import is deliberately lifecycle-quiet.
+- The pinned `cloud-storage-rules-runtime` jar remains a policy evaluator only:
+  Fireside owns the listener, routing, auth decoding, object state, persistence,
+  and trigger queue, and sends newline-delimited rule evaluation requests to the
+  child. Rules are loaded independently for each configured bucket, owner/Admin
+  requests bypass policy, and an absent ruleset denies client traffic. This jar
+  is not firebase-tools and does not host an emulator data service. Firestore
+  reads from Storage rules are outside Twodart's current rulesets and remain an
+  explicit unsupported callback until an oracle fixture requires the boundary.
 - Hub exposes `/`, `/emulators`, `/_admin/export`, and background-trigger
   controls and writes `hub-{project}.json` beneath `TMPDIR`. Export requests
   carrying `Origin` receive 403. The pinned official route omits a return after

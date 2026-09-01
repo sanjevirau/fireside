@@ -1,0 +1,31 @@
+[package]
+name = "fireside-storage-front"
+description = "Firebase and GCS-compatible object storage for the fireside emulator suite"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[dependencies]
+axum.workspace = true
+base64.workspace = true
+crc32c.workspace = true
+fireside-functions-bridge = { path = "../functions-bridge" }
+futures-util.workspace = true
+md-5.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+time.workspace = true
+tokio = { workspace = true, features = ["fs", "io-util", "process"] }
+tokio-util.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+tower = { version = "0.5.3", features = ["util"] }
+
+[lints]
+workspace = true
