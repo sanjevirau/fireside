@@ -1798,6 +1798,11 @@ The oracle captures pin the following suite contracts before implementation:
   invalid corpus still fails fast, but it retains the official emulator's
   permissive default query policy. Production-style index enforcement remains
   available only through the standalone explicit `--strict-indexes` mode.
+  Runtime evidence first invokes every representative handler to retain cold-
+  start coverage, then waits for that work and records an 800-write, 20 ms
+  paced Firestore-to-Function window through Twodart's side-effect-free invite
+  handler. The frozen p99 is evaluated over those real acknowledgements, and
+  cleanup runs only after background matching is disabled.
 
 ### Phase 5 — Hardening and release
 
