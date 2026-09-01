@@ -159,6 +159,7 @@ export function applyPhase5Ports(
 
 interface Arguments {
   readonly gateRoot: string;
+  readonly reuseDependenciesFrom?: string;
   readonly stack: Phase5StackName;
 }
 
@@ -180,7 +181,7 @@ async function main(): Promise<void> {
   await writeFile(path.join(stackRoot, ".env.local"), renderSafeTwodartEnvironment(), {
     mode: 0o600,
   });
-  await stageTree(
+  await stageDirectoryLink(
     datasetPaths.importPath,
     path.join(
       stackRoot,
@@ -188,7 +189,7 @@ async function main(): Promise<void> {
     ),
   );
   for (const name of ["globalFonts", "masterSlidesBase", "slides"] as const) {
-    await stageTree(
+    await stageDirectoryLink(
       path.join(inputRoot, "Assets", name),
       path.join(stackRoot, "engines/twodartnet/TwodartNet/Assets", name),
     );
@@ -207,7 +208,46 @@ async function main(): Promise<void> {
     TWODART_DISABLE_EXTERNALS: "1",
     TWODART_SETUP_SKIP_WORKTREE_BOOTSTRAP: "1",
   };
-  await run("bun", ["setup"], stackRoot, setupEnvironment);
+  if (args.reuseDependenciesFrom === undefined) {
+    await run("bun", ["setup"], stackRoot, setupEnvironment);
+  } else {
+    if (args.stack !== "fireside") {
+      throw new Error("Only the Fireside parity stack may reuse official dependencies");
+    }
+    const dependencyRoot = path.resolve(args.reuseDependenciesFrom);
+    const dependencyRevision = (
+      await capture("git", ["-C", dependencyRoot, "rev-parse", "HEAD"])
+    ).trim();
+    if (dependencyRevision !== revision) {
+      throw new Error("Dependency source does not use the measured Twodart revision");
+    }
+    await stageDirectoryLink(
+      path.join(dependencyRoot, "node_modules"),
+      path.join(stackRoot, "node_modules"),
+    );
+    await stageDirectoryLink(
+      path.join(dependencyRoot, "apps/papi/.venv"),
+      path.join(stackRoot, "apps/papi/.venv"),
+    );
+    await run(
+      "bash",
+      ["scripts/setup/check-prereqs.sh"],
+      stackRoot,
+      setupEnvironment,
+    );
+    await run(
+      "bun",
+      ["scripts/env.ts", "sync", "local"],
+      stackRoot,
+      setupEnvironment,
+    );
+    await run(
+      "bun",
+      ["--filter", "@twodart/templates-firebase", "build"],
+      stackRoot,
+      setupEnvironment,
+    );
+  }
 
   const configPath = path.join(stackRoot, "apps/templates-firebase/firebase.json");
   await writeFile(
@@ -241,6 +281,7 @@ async function main(): Promise<void> {
 
 function parseArguments(raw: readonly string[]): Arguments {
   let gateRoot = "";
+  let reuseDependenciesFrom = "";
   let stack: Phase5StackName | "" = "";
   for (let index = 0; index < raw.length; index += 1) {
     const value = raw[index];
@@ -254,6 +295,9 @@ function parseArguments(raw: readonly string[]): Arguments {
       }
       stack = candidate;
       index += 1;
+    } else if (value === "--reuse-dependencies-from") {
+      reuseDependenciesFrom = raw[index + 1] ?? "";
+      index += 1;
     } else {
       throw new Error(`Unknown argument: ${value ?? ""}`);
     }
@@ -264,7 +308,13 @@ function parseArguments(raw: readonly string[]): Arguments {
   ) {
     throw new Error("Usage: phase5-host-prepare.ts --gate-root PATH --stack official|fireside");
   }
-  return { gateRoot: path.resolve(gateRoot), stack };
+  return reuseDependenciesFrom.length === 0
+    ? { gateRoot: path.resolve(gateRoot), stack }
+    : {
+        gateRoot: path.resolve(gateRoot),
+        reuseDependenciesFrom: path.resolve(reuseDependenciesFrom),
+        stack,
+      };
 }
 
 async function assertDirectory(directory: string): Promise<void> {
@@ -273,7 +323,10 @@ async function assertDirectory(directory: string): Promise<void> {
   }
 }
 
-async function stageTree(source: string, destination: string): Promise<void> {
+async function stageDirectoryLink(
+  source: string,
+  destination: string,
+): Promise<void> {
   await assertDirectory(source);
   await mkdir(path.dirname(destination), { recursive: true });
   try {
