@@ -11,6 +11,8 @@ use std::fmt::{self, Display, Formatter};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
+use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD as BASE64;
 use fireside_core_store::{Change, CommitObservation, CommitObserver, Document, DocumentKey};
 use fireside_grpc_front::google::firestore::v1 as firestore_proto;
 use prost::Message as _;
@@ -28,6 +30,7 @@ const V2_CREATED: &str = "google.cloud.firestore.document.v1.created";
 const V2_UPDATED: &str = "google.cloud.firestore.document.v1.updated";
 const V2_DELETED: &str = "google.cloud.firestore.document.v1.deleted";
 const V2_WRITTEN: &str = "google.cloud.firestore.document.v1.written";
+const FIRESTORE_EVENT_DATA_SCHEMA: &str = "https://github.com/googleapis/google-cloudevents/blob/main/proto/google/events/cloud/firestore/v1/data.proto";
 
 /// Shared trigger inventory populated by the Functions workload host.
 #[derive(Clone, Default)]
@@ -439,31 +442,44 @@ fn build_v2_dispatch(
 ) -> Result<DispatchRequest, RegistrationError> {
     let value = optional_proto_document(&change.key, change.after.as_deref())?;
     let old_value = optional_proto_document(&change.key, change.before.as_deref())?;
-    let body = DocumentEventData {
+    let protobuf = DocumentEventData {
         value,
         old_value,
         update_mask: Some(firestore_proto::DocumentMask::default()),
     }
     .encode_to_vec();
-    let timestamp = format_timestamp(event_timestamp(change))?;
+    // The official Java emulator sends Base64 text here despite declaring an
+    // application/protobuf body. firebase-tools depends on that wire quirk.
+    let body = BASE64.encode(protobuf).into_bytes();
+    let timestamp = format_seconds_timestamp(event_timestamp(change))?;
     let source = format!(
         "//firestore.googleapis.com/projects/projects/{}/databases/{}",
         trigger.project, trigger.database
     );
+    let document = change.key.path().to_owned();
     let headers = BTreeMap::from([
         ("ce-specversion".to_owned(), "1.0".to_owned()),
         ("ce-type".to_owned(), trigger.event_type.clone()),
         ("ce-source".to_owned(), source),
         ("ce-id".to_owned(), event_id.clone()),
-        (
-            "ce-subject".to_owned(),
-            format!("documents/{}", change.key.path()),
-        ),
+        ("ce-subject".to_owned(), format!("documents/{document}")),
         ("ce-time".to_owned(), timestamp),
         (
             "ce-datacontenttype".to_owned(),
             "application/protobuf".to_owned(),
         ),
+        (
+            "ce-dataschema".to_owned(),
+            FIRESTORE_EVENT_DATA_SCHEMA.to_owned(),
+        ),
+        (
+            "ce-location".to_owned(),
+            trigger_location(&trigger.key).to_owned(),
+        ),
+        ("ce-project".to_owned(), trigger.project.clone()),
+        ("ce-database".to_owned(), trigger.database.clone()),
+        ("ce-namespace".to_owned(), "(default)".to_owned()),
+        ("ce-document".to_owned(), document),
         ("content-type".to_owned(), "application/protobuf".to_owned()),
     ]);
     Ok(DispatchRequest {
@@ -472,6 +488,13 @@ fn build_v2_dispatch(
         body,
         event_id,
     })
+}
+
+fn trigger_location(key: &str) -> &str {
+    let first_separator = key.find('-');
+    let second_separator =
+        first_separator.and_then(|index| key[index + 1..].find('-').map(|next| index + next + 1));
+    second_separator.map_or("us-central1", |index| &key[..index])
 }
 
 #[derive(Clone, PartialEq, prost::Message)]
@@ -526,6 +549,15 @@ fn format_timestamp(
 ) -> Result<String, RegistrationError> {
     OffsetDateTime::from_unix_timestamp(timestamp.seconds())
         .and_then(|value| value.replace_nanosecond(timestamp.nanos()))
+        .map_err(|error| invalid(format!("invalid event timestamp: {error}")))?
+        .format(&Rfc3339)
+        .map_err(|error| invalid(format!("failed to format event timestamp: {error}")))
+}
+
+fn format_seconds_timestamp(
+    timestamp: fireside_core_store::Timestamp,
+) -> Result<String, RegistrationError> {
+    OffsetDateTime::from_unix_timestamp(timestamp.seconds())
         .map_err(|error| invalid(format!("invalid event timestamp: {error}")))?
         .format(&Rfc3339)
         .map_err(|error| invalid(format!("failed to format event timestamp: {error}")))
@@ -1119,8 +1151,6 @@ mod tests {
     use axum::extract::State;
     use axum::http::{HeaderMap, StatusCode};
     use axum::routing::post;
-    use base64::Engine as _;
-    use base64::engine::general_purpose::STANDARD as BASE64;
     use fireside_core_store::{DatabaseName, Fields, Precondition, Store, Value, Write};
 
     use super::*;
@@ -1320,7 +1350,9 @@ mod tests {
         let expected_bytes = BASE64
             .decode(expected["body"].as_str().expect("base64 body"))
             .expect("captured protobuf");
-        let actual = DocumentEventData::decode(dispatch.body.as_slice()).expect("actual protobuf");
+        let encoded = String::from_utf8(dispatch.body.clone()).expect("base64 text body");
+        let actual_bytes = BASE64.decode(&encoded).expect("actual base64 protobuf");
+        let actual = DocumentEventData::decode(actual_bytes.as_slice()).expect("actual protobuf");
         let captured =
             DocumentEventData::decode(expected_bytes.as_slice()).expect("captured protobuf");
 
@@ -1336,6 +1368,31 @@ mod tests {
             expected["headers"]["ce-subject"]
         );
         assert_eq!(dispatch.headers["ce-id"], dispatch.event_id);
+        assert_eq!(
+            dispatch.headers["ce-dataschema"],
+            expected["headers"]["ce-dataschema"]
+        );
+        assert_eq!(
+            dispatch.headers["ce-location"],
+            expected["headers"]["ce-location"]
+        );
+        assert_eq!(
+            dispatch.headers["ce-project"],
+            expected["headers"]["ce-project"]
+        );
+        assert_eq!(
+            dispatch.headers["ce-database"],
+            expected["headers"]["ce-database"]
+        );
+        assert_eq!(
+            dispatch.headers["ce-namespace"],
+            expected["headers"]["ce-namespace"]
+        );
+        assert_eq!(
+            dispatch.headers["ce-document"],
+            expected["headers"]["ce-document"]
+        );
+        assert!(!dispatch.headers["ce-time"].contains('.'));
         assert_eq!(
             actual.value.as_ref().expect("actual value").name,
             captured.value.as_ref().expect("captured value").name
