@@ -273,7 +273,13 @@ pub fn decode_kind_metadata(bytes: &[u8]) -> Result<KindExportMetadata, Metadata
     let shards = metadata
         .shards
         .into_iter()
-        .map(|shard| ExportShard::new(shard.namespace, shard.file))
+        .flat_map(|shard| {
+            let namespace = shard.namespace;
+            shard
+                .files
+                .into_iter()
+                .map(move |file| ExportShard::new(namespace.clone(), file))
+        })
         .collect::<Result<Vec<_>, _>>()?;
     KindExportMetadata::new(
         metadata.header.export_prefix,
@@ -292,14 +298,14 @@ pub fn encode_kind_metadata(metadata: &KindExportMetadata) -> Vec<u8> {
             start_time_micros: metadata.start_time_micros,
             end_time_micros: metadata.end_time_micros,
         },
-        shards: metadata
-            .shards
-            .iter()
-            .map(|shard| wire::Shard {
-                namespace: shard.namespace.clone(),
-                file: shard.file.clone(),
-            })
-            .collect(),
+        shards: vec![wire::Shard {
+            namespace: String::new(),
+            files: metadata
+                .shards
+                .iter()
+                .map(|shard| shard.file.clone())
+                .collect(),
+        }],
     }
     .encode_to_vec()
 }
@@ -457,8 +463,8 @@ mod wire {
     pub(super) struct Shard {
         #[prost(string, required, tag = "1")]
         pub(super) namespace: String,
-        #[prost(string, required, tag = "2")]
-        pub(super) file: String,
+        #[prost(string, repeated, tag = "2")]
+        pub(super) files: Vec<String>,
     }
 }
 
@@ -506,6 +512,29 @@ mod tests {
     }
 
     #[test]
+    fn official_multi_shard_metadata_preserves_every_output_file() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../conformance/fixtures/firebase-suite-v1/",
+            "firestore-multi-shard-export-metadata/fixture.json"
+        )))
+        .expect("multi-shard fixture should decode");
+        let encoded = decode_hex(
+            fixture["kindMetadataHex"]
+                .as_str()
+                .expect("fixture should contain encoded metadata"),
+        );
+        let metadata = decode_kind_metadata(&encoded).expect("metadata should decode");
+        let files = metadata
+            .shards()
+            .iter()
+            .map(ExportShard::file)
+            .collect::<Vec<_>>();
+        assert_eq!(files, ["output-0", "output-1", "output-2", "output-3"]);
+        assert_eq!(encode_kind_metadata(&metadata), encoded);
+    }
+
+    #[test]
     fn metadata_rejects_path_traversal() {
         assert!(matches!(
             ExportMetadataEntry::new("../outside", 0, 0),
@@ -515,5 +544,17 @@ mod tests {
             ExportShard::new("", "/absolute/output-0"),
             Err(MetadataError::Invalid(_))
         ));
+    }
+
+    fn decode_hex(value: &str) -> Vec<u8> {
+        let (pairs, remainder) = value.as_bytes().as_chunks::<2>();
+        assert!(remainder.is_empty(), "hex must have even length");
+        pairs
+            .iter()
+            .map(|pair| {
+                let pair = std::str::from_utf8(pair).expect("hex should be UTF-8");
+                u8::from_str_radix(pair, 16).expect("fixture should contain hexadecimal bytes")
+            })
+            .collect()
     }
 }
