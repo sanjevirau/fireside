@@ -2737,12 +2737,8 @@ mod tests {
         let Some(jar) = std::env::var_os("FIRESIDE_STORAGE_RULES_JAR") else {
             return;
         };
-        let default_rules = include_str!(
-            "../../../../Twodart/worktrees/ai-pilot/apps/templates-firebase/storage.default.rules"
-        );
-        let assets_rules = include_str!(
-            "../../../../Twodart/worktrees/ai-pilot/apps/templates-firebase/storage.assets.rules"
-        );
+        let default_rules = include_str!("../testdata/twodart-storage.default.rules");
+        let assets_rules = include_str!("../testdata/twodart-storage.assets.rules");
         let rules = RulesRuntimeConfig {
             java: PathBuf::from("java"),
             jar: PathBuf::from(jar),

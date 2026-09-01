@@ -1,0 +1,13 @@
+rules_version = '2';
+// Default bucket (twodart-<env>.appspot.com) — client-SDK bucket.
+// Only self-scoped user content lives here (studio orders). Reads outside the
+// owner happen via getDownloadURL token URLs, which bypass rules — so there is
+// deliberately NO public-read fallback. Everything outside /users is deny-all.
+// Public CDN-served content belongs in the assets bucket (storage.assets.rules).
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /users/{uid}/{allPaths=**} {
+      allow read, write: if request.auth.uid == uid || request.auth.token.admin == true;
+    }
+  }
+}

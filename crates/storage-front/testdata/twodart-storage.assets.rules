@@ -1,0 +1,17 @@
+rules_version = '2';
+// Assets bucket (assets[-<env>].twodart.com) — public CDN bucket.
+// Content is read anonymously via direct URLs (getStorageFileUrl builds
+// https://<bucket>/<path> with no token): announcement images, branding,
+// fonts, catalog assets, firestore cache JSON. Public read is required.
+// Writes: self-scoped under /users, admin-only everywhere else.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /users/{uid}/{allPaths=**} {
+      allow read, write: if request.auth.uid == uid || request.auth.token.admin == true;
+    }
+    match /{allPaths=**} {
+      allow write: if request.auth.token.admin == true;
+      allow read: if true;
+    }
+  }
+}
