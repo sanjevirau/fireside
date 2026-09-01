@@ -1710,6 +1710,17 @@ The oracle captures pin the following suite contracts before implementation:
   share the same Firestore write and task-queue definition. Fixture generation
   reads only `firebase.json` and the pinned extension manifests; it never opens
   Twodart secret or environment files.
+- The retained Node workload host instantiates `FunctionsEmulator` and
+  `ExtensionsEmulator` directly from the exact firebase-tools 15.22.0 install.
+  Every non-Functions entry in its registry is a remote Fireside endpoint, so
+  the process cannot create an official Hub or data emulator. Explicitly
+  versioned Extension references still require a public Extensions Hub lookup
+  in this firebase-tools release; the parent process may use the developer's
+  normal Firebase CLI account for that lookup, but the account is never passed
+  to `FunctionsEmulator` or serialized into a worker environment. Startup
+  fails unless every configured custom source exports at least one function,
+  and the host announces readiness only after discovery, trigger registration,
+  and the Functions listener are complete.
 
 ### Phase 5 — Hardening and release
 
