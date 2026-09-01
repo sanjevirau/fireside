@@ -421,16 +421,17 @@ async fn finish_suite(
         .await?;
     }
     suite.scheduler.shutdown().await;
+    // Drain background delivery while both the Node workload host and the Rust
+    // data services it calls remain available. The scheduler is stopped first,
+    // and a coordinated suite shutdown has no external clients admitting new
+    // work. Stopping either side before this drain can strand handlers that use
+    // Admin SDK calls and make firebase-tools wait until the hard timeout.
+    let delivery = suite.delivery.shutdown().await.into();
+    stop_functions_host(&mut suite.functions).await?;
     let _ = suite.shutdown.send(true);
     for server in suite.servers {
         let _ = server.await;
     }
-    // Stop every ingress path before draining background delivery, while the
-    // Node workload host is still alive to acknowledge already-admitted work.
-    // Stopping the host first can strand in-flight handlers and makes the
-    // firebase-tools worker shutdown wait until the coordinator's hard timeout.
-    let delivery = suite.delivery.shutdown().await.into();
-    stop_functions_host(&mut suite.functions).await?;
     suite
         .hub
         .remove_locator()

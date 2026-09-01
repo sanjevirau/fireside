@@ -1772,12 +1772,12 @@ The oracle captures pin the following suite contracts before implementation:
   to `FunctionsEmulator` or serialized into a worker environment. Startup
   fails unless every configured custom source exports at least one function,
   and the host announces readiness only after discovery, trigger registration,
-  and the Functions listener are complete. Suite shutdown first stops scheduler
-  and network ingress, drains every admitted background delivery while the Node
-  workload host is still available to acknowledge it, and only then sends that
-  owned child `SIGTERM`; the resulting signal status is a clean coordinator
-  outcome, while an unsolicited pre-readiness or runtime exit remains a suite
-  failure.
+  and the Functions listener are complete. Suite shutdown first stops the
+  scheduler, drains every admitted background delivery while both the Node
+  workload host and the Rust data services its handlers call remain available,
+  and only then stops the child and listeners. The resulting `SIGTERM` status is
+  a clean coordinator outcome, while an unsolicited pre-readiness or runtime
+  exit remains a suite failure.
 - The Twodart runtime gate queries the workload host's real `/backends`
   response and requires exactly 21 definitions: eleven functions in the
   `templates-firebase-function` codebase and ten definitions across Stripe and
