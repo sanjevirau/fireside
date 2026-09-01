@@ -8,6 +8,7 @@
 
 use std::collections::BTreeMap;
 use std::fmt::{self, Display, Formatter};
+use std::io::Read as _;
 use std::path::{Path as FilePath, PathBuf};
 use std::process::Stdio;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -528,6 +529,7 @@ async fn gcs_upload_start(
         Ok(Json(gcs_metadata(&state, &object)).into_response())
     } else if upload_type == "resumable" {
         let bytes = collect_limited(body, 1_048_576).await?;
+        let bytes = decode_request_body(&headers, &bytes, 1_048_576)?;
         let request = if bytes.is_empty() {
             json!({})
         } else {
@@ -1096,6 +1098,34 @@ async fn collect_limited(body: Body, maximum: usize) -> Result<Bytes, StorageApi
     axum::body::to_bytes(body, maximum)
         .await
         .map_err(|_| bad_request("Request body is too large"))
+}
+
+fn decode_request_body(
+    headers: &HeaderMap,
+    bytes: &[u8],
+    maximum: usize,
+) -> Result<Vec<u8>, StorageApiError> {
+    let encoding = headers
+        .get(header::CONTENT_ENCODING)
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .unwrap_or("identity");
+    if encoding.eq_ignore_ascii_case("identity") || encoding.is_empty() {
+        return Ok(bytes.to_vec());
+    }
+    if !encoding.eq_ignore_ascii_case("gzip") {
+        return Err(bad_request("Unsupported Content-Encoding"));
+    }
+    let decoder = flate2::read::GzDecoder::new(bytes);
+    let mut decoded = Vec::new();
+    decoder
+        .take(u64::try_from(maximum).unwrap_or(u64::MAX).saturating_add(1))
+        .read_to_end(&mut decoded)
+        .map_err(|_| bad_request("Invalid gzip request body"))?;
+    if decoded.len() > maximum {
+        return Err(bad_request("Decoded request body is too large"));
+    }
+    Ok(decoded)
 }
 
 struct CommitSpec<'a> {
@@ -2275,6 +2305,42 @@ mod tests {
         assert_eq!(finalize.status(), StatusCode::OK);
         assert_eq!(json(finalize).await["metadata"]["oracle"], "火🔥");
         location
+    }
+
+    #[tokio::test]
+    async fn dotnet_gzip_resumable_metadata_matches_oracle() {
+        use std::io::Write as _;
+
+        let (runtime, _dispatches, root) = runtime("dotnet-gzip-resumable", None).await;
+        let body = serde_json::to_vec(&json!({
+            "bucket": DEFAULT_BUCKET,
+            "contentType": "text/plain; charset=utf-8",
+            "name": "_firesidePhase4/fixed-run/0-火🔥.txt"
+        }))
+        .expect("metadata JSON");
+        let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        encoder.write_all(&body).expect("gzip metadata");
+        let compressed = encoder.finish().expect("finish gzip");
+        let start = runtime
+            .application()
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri(format!(
+                        "/upload/storage/v1/b/{DEFAULT_BUCKET}/o?uploadType=resumable&userProject=test-project"
+                    ))
+                    .header(header::CONTENT_TYPE, "application/json; charset=utf-8")
+                    .header(header::CONTENT_ENCODING, "gzip")
+                    .header("x-upload-content-type", "text/plain; charset=utf-8")
+                    .body(Body::from(compressed))
+                    .expect("start request"),
+            )
+            .await
+            .expect("start response");
+        assert_eq!(start.status(), StatusCode::OK);
+        assert!(start.headers().contains_key(header::LOCATION));
+        runtime.shutdown().await.expect("shutdown");
+        std::fs::remove_dir_all(root).expect("remove test storage");
     }
 
     #[tokio::test]

@@ -1704,6 +1704,13 @@ The oracle captures pin the following suite contracts before implementation:
   the metadata JSON instead of the query string. Resumable starts may likewise
   carry `name` in metadata. Both forms feed the same exact-byte staging and
   checksum path as raw GCS uploads.
+- Twodart's pinned `Google.Cloud.Storage.V1` 4.13.0 client sends resumable-start
+  metadata as gzip-encoded JSON and supplies the object content type through
+  both the decoded document and `X-Upload-Content-Type`. The official Storage
+  emulator accepts this form. Fireside decodes only `identity` or `gzip`, caps
+  both the compressed and decoded metadata envelope at 1 MiB, obtains `name`
+  from the decoded document, and keeps the subsequent object body on the
+  existing streamed resumable path.
 - The pinned `cloud-storage-rules-runtime` jar remains a policy evaluator only:
   Fireside owns the listener, routing, auth decoding, object state, persistence,
   and trigger queue, and sends newline-delimited rule evaluation requests to the
