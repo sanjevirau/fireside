@@ -94,11 +94,16 @@ pub struct FunctionBackend {
 #[serde(rename_all = "camelCase")]
 pub struct FunctionDefinition {
     /// Region-qualified Functions emulator id.
+    #[serde(default)]
     pub id: String,
     /// Exported function name.
     pub name: String,
     /// Deployment region.
+    #[serde(default)]
     pub region: String,
+    /// Deployment regions used by pinned gcfv1 Extension definitions.
+    #[serde(default)]
+    pub regions: Vec<String>,
     /// v1 or v2 platform label.
     pub platform: String,
     /// Background event metadata.
@@ -173,8 +178,9 @@ impl FunctionsInventory {
             .bytes()
             .await
             .map_err(|error| BridgeError(format!("Functions discovery body failed: {error}")))?;
-        let response = serde_json::from_slice::<Response>(&body)
+        let mut response = serde_json::from_slice::<Response>(&body)
             .map_err(|error| BridgeError(format!("invalid Functions discovery body: {error}")))?;
+        normalize_inventory(&mut response.backends)?;
         Ok(Self {
             backends: response.backends,
         })
@@ -186,6 +192,25 @@ impl FunctionsInventory {
             .iter()
             .flat_map(|backend| backend.function_triggers.iter())
     }
+}
+
+fn normalize_inventory(backends: &mut [FunctionBackend]) -> Result<(), BridgeError> {
+    for backend in backends {
+        for function in &mut backend.function_triggers {
+            if function.region.is_empty() {
+                function.region = function.regions.first().cloned().ok_or_else(|| {
+                    BridgeError(format!(
+                        "Function {} has neither region nor regions",
+                        function.name
+                    ))
+                })?;
+            }
+            if function.id.is_empty() {
+                function.id = format!("{}-{}", function.region, function.name);
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Invalid Functions trigger registration.
@@ -1187,6 +1212,37 @@ mod tests {
                 .expect("topic trigger")
                 .event_filters["topic"],
             "projects/demo-fireside-phase4-suite-oracle/topics/phase4-topic"
+        );
+    }
+
+    #[test]
+    fn mixed_inventory_normalizes_the_frozen_extension_shape() {
+        #[derive(serde::Deserialize)]
+        struct Response {
+            backends: Vec<FunctionBackend>,
+        }
+        let response = json!({
+            "backends": [{
+                "functionTriggers": [{
+                    "name": "ext-firestore-stripe-payments-createCheckoutSession",
+                    "entryPoint": "createCheckoutSession",
+                    "platform": "gcfv1",
+                    "regions": ["us-central1"],
+                    "eventTrigger": {
+                        "eventType": "providers/cloud.firestore/eventTypes/document.create",
+                        "resource": "projects/demo-twodart-local/databases/(default)/documents/licenses/{uid}/checkout_sessions/{id}"
+                    }
+                }]
+            }]
+        });
+        let mut response = serde_json::from_value::<Response>(response).expect("mixed inventory");
+        normalize_inventory(&mut response.backends).expect("normalization");
+        let function = &response.backends[0].function_triggers[0];
+
+        assert_eq!(function.region, "us-central1");
+        assert_eq!(
+            function.id,
+            "us-central1-ext-firestore-stripe-payments-createCheckoutSession"
         );
     }
 
