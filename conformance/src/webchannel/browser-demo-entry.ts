@@ -1,6 +1,7 @@
 import { deleteApp, initializeApp } from "firebase/app";
 import {
   collection,
+  connectFirestoreEmulator,
   deleteDoc,
   doc,
   initializeFirestore,
@@ -14,6 +15,7 @@ import {
   type DocumentReference,
   type Query,
   type QuerySnapshot,
+  type EmulatorMockTokenOptions,
 } from "firebase/firestore";
 
 type TransportVariant =
@@ -23,6 +25,7 @@ type TransportVariant =
 
 interface BrowserDemoConfiguration {
   readonly host: string;
+  readonly mockUserToken?: EmulatorMockTokenOptions | string;
   readonly projectId: string;
   readonly runId: string;
   readonly variant: TransportVariant;
@@ -65,8 +68,12 @@ window.firesideRunWebChannelDemo = async (
     experimentalAutoDetectLongPolling:
       configuration.variant === "buffering-proxy-auto-detection",
     experimentalForceLongPolling: configuration.variant === "long-polling",
-    host: configuration.host,
-    ssl: false,
+  });
+  const { hostname, port } = emulatorAddress(configuration.host);
+  connectFirestoreEmulator(firestore, hostname, port, {
+    ...(configuration.mockUserToken === undefined
+      ? {}
+      : { mockUserToken: configuration.mockUserToken }),
   });
   const first = doc(firestore, COLLECTION, `${configuration.runId}-first`);
   const second = doc(firestore, COLLECTION, `${configuration.runId}-second`);
@@ -137,6 +144,18 @@ window.firesideRunWebChannelDemo = async (
     await delay(250);
   }
 };
+
+function emulatorAddress(host: string): { hostname: string; port: number } {
+  const separator = host.lastIndexOf(":");
+  if (separator <= 0) {
+    throw new Error(`invalid emulator address: ${host}`);
+  }
+  const port = Number(host.slice(separator + 1));
+  if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
+    throw new Error(`invalid emulator port: ${host}`);
+  }
+  return { hostname: host.slice(0, separator), port };
+}
 
 interface DemoDocument {
   readonly name: string;

@@ -35,6 +35,10 @@ if (nonBlankLines < 400) {
   throw new Error(`complex ruleset has only ${String(nonBlankLines)} nonblank lines`);
 }
 
+const externalOrigin = argumentValue("--origin");
+if (externalOrigin !== undefined) {
+  await captureFireside(externalOrigin, requiredArgumentValue("--output"));
+} else {
 if (process.env.CONFORMANCE_CLOUD_ALLOWLIST !== PHASE3_RULES_PROJECT_ID) {
   throw new Error(
     `complex rules compile capture requires CONFORMANCE_CLOUD_ALLOWLIST=${PHASE3_RULES_PROJECT_ID}`,
@@ -153,6 +157,50 @@ try {
 } finally {
   await stopProcess(child);
   await rm(temporaryDirectory, { recursive: true, force: true });
+}
+}
+
+async function captureFireside(originValue: string, outputPath: string): Promise<void> {
+  await seed(originValue);
+  const observations = await runCases(originValue);
+  const mismatches = observations.filter(
+    ({ expected, status }) =>
+      (expected === "ALLOW" && (status < 200 || status >= 300)) ||
+      (expected === "DENY" && status !== 403),
+  );
+  const allowCases = observations.filter(({ expected }) => expected === "ALLOW").length;
+  const denyCases = observations.filter(({ expected }) => expected === "DENY").length;
+  const result = {
+    allowCases,
+    completedAt: new Date().toISOString(),
+    denyCases,
+    mismatches,
+    nonBlankLines,
+    observations,
+    passed: mismatches.length === 0 && allowCases >= 24 && denyCases >= 12,
+    rulesSourceSha256: sha256(rulesSource),
+    schemaVersion: 1,
+    target: "fireside",
+  };
+  await mkdir(resolve(outputPath, ".."), { recursive: true });
+  await writeFile(outputPath, `${JSON.stringify(result, null, 2)}\n`, "utf8");
+  console.log(
+    JSON.stringify(
+      {
+        allowCases,
+        denyCases,
+        mismatchCount: mismatches.length,
+        nonBlankLines,
+        passed: result.passed,
+        rulesSourceSha256: result.rulesSourceSha256,
+      },
+      null,
+      2,
+    ),
+  );
+  if (!result.passed) {
+    throw new Error(`Fireside complex rules mismatches: ${JSON.stringify(mismatches)}`);
+  }
 }
 
 async function runCases(originValue: string): Promise<readonly ComplexObservation[]> {
@@ -786,6 +834,22 @@ function sha256(value: string | Uint8Array): string {
 
 function twoDigits(value: number): string {
   return String(value).padStart(2, "0");
+}
+
+function argumentValue(name: string): string | undefined {
+  const index = process.argv.indexOf(name);
+  if (index < 0) return undefined;
+  const value = process.argv[index + 1];
+  if (value === undefined || value.length === 0) {
+    throw new Error(`${name} requires a value`);
+  }
+  return value;
+}
+
+function requiredArgumentValue(name: string): string {
+  const value = argumentValue(name);
+  if (value === undefined) throw new Error(`${name} is required`);
+  return value;
 }
 
 async function reserveAvailablePort(): Promise<number> {

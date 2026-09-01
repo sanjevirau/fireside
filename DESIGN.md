@@ -1415,6 +1415,22 @@ an in-stream `PERMISSION_DENIED` target removal rather than leaking the new
 document state. Multi-target streams keep those decisions independent while
 sharing the stream and store snapshot machinery.
 
+The Phase 3 executable gate reuses the exact complex-oracle request generator
+against a release Fireside process in memory and disk/WAL modes. It preserves
+every raw frozen oracle file, then verifies all 45 transport verdicts, startup
+allow/deny, a valid per-project reload, invalid-reload rollback, malformed-token
+rejection, and the owner bypass. The wrapper-free browser demo now uses
+`connectFirestoreEmulator(..., { mockUserToken })`, which makes the stock SDK
+generate its unsigned emulator JWT and carry it through the real WebChannel
+body-encoded header path. All three transport variants run under active rules
+in both storage modes, including forced reconnect and buffering-proxy
+auto-detection. The rules benchmark times 1,000 direct evaluations of the
+compiled complex ruleset per mode; HTTP and listener timings remain separate.
+Listener p99 is compared with the exact Phase 2 evidence rows and may regress
+by at most the frozen 20 percent. A complete Phase 2 gate rerun, rather than a
+summary assertion, is the final regression stage of the immutable Phase 3
+gate.
+
 ## 10. Differential harness and fixtures
 
 Identical TypeScript cases use real Google SDKs against:

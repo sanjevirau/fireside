@@ -21,6 +21,8 @@ const VARIANTS = [
 ] as const;
 const diskMode = process.argv.includes("--disk");
 const outputPath = argumentValue("--output");
+const rulesPath = argumentValue("--rules");
+const mockUserToken = optionalJsonArgument("--mock-user-token");
 const releaseMode = process.argv.includes("--release");
 const skipBuild = process.argv.includes("--skip-build");
 const target = demoTarget(argumentValue("--target") ?? "fireside");
@@ -109,6 +111,9 @@ async function main(): Promise<void> {
       if (dataDirectory !== undefined) {
         serverArguments.push("--data-dir", dataDirectory);
       }
+      if (rulesPath !== undefined) {
+        serverArguments.push("--rules", resolve(rulesPath));
+      }
       targetProcess = startProcess(
         join(
           repositoryRoot,
@@ -177,10 +182,11 @@ async function main(): Promise<void> {
             Date.now().toString(36),
           ].join("-");
           const result = await page.evaluate(
-          async ({ host, projectId, runId, variant }) => {
+          async ({ host, mockUserToken, projectId, runId, variant }) => {
             const demoWindow = window as Window & {
               firesideRunWebChannelDemo(configuration: {
                 readonly host: string;
+                readonly mockUserToken?: Readonly<Record<string, unknown>> | string;
                 readonly projectId: string;
                 readonly runId: string;
                 readonly variant:
@@ -191,6 +197,7 @@ async function main(): Promise<void> {
             };
             return await demoWindow.firesideRunWebChannelDemo({
               host,
+              ...(mockUserToken === undefined ? {} : { mockUserToken }),
               projectId,
               runId,
               variant,
@@ -198,6 +205,7 @@ async function main(): Promise<void> {
           },
           {
             host: `${HOST}:${String(port)}`,
+            mockUserToken,
             projectId: PROJECT_ID,
             runId,
             variant,
@@ -226,6 +234,7 @@ async function main(): Promise<void> {
       browserVersion: await browser.version(),
       completedAt: new Date().toISOString(),
       mode: diskMode ? "disk-wal" : "memory",
+      mockUserTokenConfigured: mockUserToken !== undefined,
       passed: true,
       projectId: PROJECT_ID,
       repetitions,
@@ -256,6 +265,19 @@ async function main(): Promise<void> {
     }
     await rm(temporaryDirectory, { recursive: true, force: true });
   }
+}
+
+function optionalJsonArgument(
+  name: string,
+): Readonly<Record<string, unknown>> | string | undefined {
+  const value = argumentValue(name);
+  if (value === undefined) return undefined;
+  const parsed: unknown = JSON.parse(value);
+  if (typeof parsed === "string") return parsed;
+  if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+    return parsed as Readonly<Record<string, unknown>>;
+  }
+  throw new Error(`${name} must be a JSON object or string`);
 }
 
 function argumentValue(name: string): string | undefined {
