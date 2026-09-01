@@ -15,7 +15,8 @@ target, not the specification.
 > import, and 100-round randomized SIGKILL gate. The measurements and the
 > separate official Java v1.22.0 comparison are summarized below and preserved
 > in the [full gate report](reports/phase-1-full-gate.md). Browser WebChannel is
-> Phase 2 work and is not included in the Phase 1 compatibility claim.
+> a separately evidenced Phase 2 claim, summarized below; rules enforcement
+> remains Phase 3 work.
 
 The runtime bounds its default worker pool to at most four threads;
 `--worker-threads <n>` is the explicit override. The selected count is visible
@@ -60,12 +61,13 @@ of scope until the conformance gates are met.
 
 | Target / area | Harness smoke | Firestore APIs | Browser SDK | Rules | Suite |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Production cloud | pass (Standard 34/34; Enterprise 1/1; control N/A) | reference target | not implemented | not implemented | not implemented |
-| Official Java emulator | pass (Standard 36/36; Enterprise 1/1) | comparison target; 11 known deviations | not run | not run | not run |
-| fireside | pass (Standard 36/36 + strict 2/2; Enterprise 1/1) | current measured scope | not implemented | not implemented | not implemented |
+| Production cloud | pass (Standard 34/34; Enterprise 1/1; control N/A) | reference target | behavior oracle; tiny fixture captures | not evaluated | reference |
+| Official Java emulator | pass (Standard 36/36; Enterprise 1/1) | comparison target; 11 known deviations | comparison workload passed in all 3 variants | not evaluated | comparison |
+| fireside | pass (Standard 36/36 + strict 2/2; Enterprise 1/1) | current measured scope | Phase 2 gate passed in memory and disk/WAL modes | open/owner behavior; Phase 3 pending | Phase 2 complete, review pending |
 
-Cloud is the behavioral reference; Java is measured only for comparison. From
-Phase 2 onward this table will be generated from CI results.
+Cloud is the behavioral reference; Java is measured only for comparison. The
+Phase 2 rows summarize the frozen CI gate and the separately checksummed local
+Java comparison below.
 
 ## Phase 1 measured endurance
 
@@ -100,6 +102,45 @@ See the [full Phase 1 gate report](reports/phase-1-full-gate.md) for every
 immutable criterion, latency measurement, estimator, toolchain version, and
 the integrity trail for the [raw and derived evidence](reports/phase-1-metrics/phase1-full-gate-20260830T1200+0800-dc3438f/).
 
+## Phase 2 measured WebChannel
+
+The immutable Phase 2 gate ran on the same `sanjevi-linux` hardware and OS
+described above. Candidate `eee62330308dd8c1e1965fca9a1f094d582f72c5`
+passed the frozen manifest with SHA-256
+`cc54265ceaf9028f85418424f7275ac1a05f98886174bf2e4e869df6ae741b38`.
+The pinned Firebase JS SDK integration package completed 3,188 tests across
+the four memory/disk-WAL server and browser-persistence cells; 1,816 additional
+tests were upstream-native skips. The wrapper-free browser demo, Java/cloud
+fixture replay, UTF-16 cases, deterministic session chaos, and all existing
+conformance commands passed. See the [full Phase 2 gate report](reports/phase-2-gate.md)
+and [checksummed evidence](reports/phase-2-metrics/full-gate-20260901T121312+0800-eee6233/).
+
+The gate's 100-sample listener-delivery p99 measurements were 23.7, 19.6, and
+22.4 ms in memory mode and 22.2, 20.5, and 23.6 ms in disk/WAL mode for
+long-polling, streaming, and buffering-proxy auto-detection respectively.
+These are sequential acknowledged write-to-listener measurements, not maximum
+throughput results.
+
+The separate official Java v1.22.0 comparison used one warm-up plus three
+measured repetitions in each frozen ABBA block, with the same vanilla Firebase
+JS SDK workload and no JVM, allocator, or cache overrides. Both targets passed
+the workload in all three variants. Java has no comparable disk/WAL mode, so
+this table compares only Fireside release memory mode with Java's default
+in-memory mode. Times are milliseconds; RSS is the peak sampled target-process
+resident set.
+
+| Variant | Fireside listener p50 / p99 | Java listener p50 / p99 | Fireside reconnect p50 | Java reconnect p50 |
+| --- | ---: | ---: | ---: | ---: |
+| Long-polling | 14.2 / 21.6 | 16.6 / 22.6 | 3.479 | 3.035 |
+| Streaming | 10.4 / 16.9 | 11.4 / 17.5 | 3.445 | 2.973 |
+| Buffering-proxy auto-detection | 19.9 / 21.7 | 15.1 / 23.2 | 3.411 | 3.076 |
+
+Peak sampled RSS was 13.910 MiB for Fireside and 524.520 MiB for Java
+(37.708x Java/Fireside). Each listener row contains 600 samples; each reconnect
+row contains six forced-loss samples. The [full comparison report](reports/phase-2-java-webchannel-comparison.md)
+links the raw samples, per-block logs, environment record, and checksums. This
+post-pass comparison is descriptive and does not alter the Phase 2 verdict.
+
 Pass `--strict-indexes` to load `firestore.indexes.json` from the process
 working directory at startup. Invalid or missing configuration fails startup;
 default mode intentionally retains the official emulator's permissive index
@@ -112,7 +153,7 @@ workflow.
 - `DESIGN.md`: living architecture, wire contracts, evidence rules, and gates.
 - `reports/`: immutable phase-gate and name-availability evidence.
 
-The latest gate report is the [complete Phase 1 pass](reports/phase-1-full-gate.md).
+The latest gate report is the [complete Phase 2 pass](reports/phase-2-gate.md).
 The earlier [failed endurance attempt](reports/phase-1-gate.md) remains
 preserved as part of the evidence history, and Phase 0 remains
 [complete](reports/phase-0-gate.md).

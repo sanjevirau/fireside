@@ -15,6 +15,10 @@ test("Java WebChannel comparison plan is frozen, balanced, and non-gating", asyn
     ),
   ) as {
     readonly classification: string;
+    readonly evidence: {
+      readonly report: string;
+      readonly root: string;
+    };
     readonly failurePolicy: {
       readonly startPhase3: boolean;
       readonly tagPhase2: boolean;
@@ -67,6 +71,8 @@ test("Java WebChannel comparison plan is frozen, balanced, and non-gating", asyn
   assert.equal(manifest.interpretation.phase2VerdictMayNotBeChangedByComparison, true);
   assert.equal(manifest.failurePolicy.tagPhase2, false);
   assert.equal(manifest.failurePolicy.startPhase3, false);
+  assert.equal(manifest.evidence.root, "reports/phase-2-java-webchannel-comparison");
+  assert.equal(manifest.evidence.report, "reports/phase-2-java-webchannel-comparison.md");
 
   const phase2Manifest = await readFile(
     join(repositoryRoot, manifest.phase2.manifest),
@@ -91,4 +97,13 @@ test("browser runner exposes pinned Java and repeatable measurement controls", a
   ]) {
     assert.match(source, new RegExp(contract.replaceAll(/[()]/g, "\\$&")));
   }
+});
+
+test("comparison report links the frozen repository evidence location", async () => {
+  const source = await readFile(
+    join(repositoryRoot, "conformance/src/webchannel/run-webchannel-comparison.ts"),
+    "utf8",
+  );
+  assert.match(source, /manifest\.evidence\.root/);
+  assert.match(source, /resolve\(repositoryRoot, evidenceRoot\)/);
 });

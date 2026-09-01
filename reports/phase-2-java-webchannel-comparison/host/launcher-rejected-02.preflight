@@ -1,0 +1,49 @@
+RUN_STAMP=20260901T144401+0800
+CHECKOUT=/home/sanjevi/fireside-phase2-java-webchannel-comparison-checkout-20260901T144401+0800-360cbc6
+OUTPUT=/home/sanjevi/fireside-phase2-java-webchannel-comparison-20260901T144401+0800-360cbc6
+LOG=/home/sanjevi/fireside-phase2-java-webchannel-comparison-20260901T144401+0800-360cbc6.log
+EXIT_MARKER=/home/sanjevi/fireside-phase2-java-webchannel-comparison-20260901T144401+0800-360cbc6.exit
+PREFLIGHT=/home/sanjevi/fireside-phase2-java-webchannel-comparison-20260901T144401+0800-360cbc6.preflight
+VMSTAT=/home/sanjevi/fireside-phase2-java-webchannel-comparison-20260901T144401+0800-360cbc6.vmstat
+PREFLIGHT_STARTED=2026-09-01T14:44:01+08:00
+SYSTEM_STATE=running
+SSH_STATE=active
+FAILED_UNITS=0
+CURRENT_BOOT_OOM_LINES=0
+CURRENT_BOOT_RESOURCE_LINES=0
+VMSTAT_SAMPLES_BEGIN
+procs -----------memory---------- ---swap-- -----io---- -system-- -------cpu-------
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st gu
+ 1  0 399812 3099084 370524 10710516    0    2   118   878 15365   25  2  1 97  0  0  0
+ 0  0 399812 3100192 370524 10710520    0    0     0     0 14834 29018  0  0 99  0  0  0
+ 0  0 399812 3100972 370524 10710520    0    0     0     0 14749 28959  0  0 99  0  0  0
+ 0  0 399812 3100972 370532 10710512    0    0     0    48 14720 28955  0  0 99  0  0  0
+VMSTAT_SAMPLES_END
+live_swap_activity si=0 so=0
+live_swap_activity si=0 so=0
+live_swap_activity si=0 so=0
+SWAP_USED_BYTES=409407488
+CONFLICTING_PROCESSES=0
+LISTENERS_BEFORE_BEGIN
+State  Recv-Q Send-Q               Local Address:Port  Peer Address:PortProcess                         
+LISTEN 0      4096                    127.0.0.54:53         0.0.0.0:*                                   
+LISTEN 0      4096                     127.0.0.1:631        0.0.0.0:*                                   
+LISTEN 0      4096                       0.0.0.0:22         0.0.0.0:*                                   
+LISTEN 0      4096                 127.0.0.53%lo:53         0.0.0.0:*                                   
+LISTEN 0      4096                100.87.253.106:63121      0.0.0.0:*                                   
+LISTEN 0      4096   [fd7a:115c:a1e0::3c38:fd6b]:51738         [::]:*                                   
+LISTEN 0      4096                         [::1]:631           [::]:*                                   
+LISTEN 0      511                              *:1355             *:*    users:(("node",pid=1881,fd=22))
+LISTEN 0      4096                          [::]:22            [::]:*                                   
+LISTEN 0      511                              *:80               *:*                                   
+LISTEN 0      511                              *:443              *:*                                   
+LISTEN 0      5                                *:3389             *:*                                   
+LISTENERS_BEFORE_END
+HOSTNAME=sanjevi-linux
+CPU_COUNT=12
+TOTAL_MEMORY_BYTES=16146874368
+NODE_VERSION=v24.20.0
+NPM_VERSION=12.0.2
+JAVA_VERSION=openjdk version "26.0.2.1" 2026-08-18
+RUST_VERSION=rustc 1.98.0 (88d9e12ae 2026-08-18)
+JAR_SHA256=9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c

@@ -26,6 +26,10 @@ type Target = "fireside" | "java";
 type Variant = (typeof VARIANTS)[number];
 
 interface ComparisonManifest {
+  readonly evidence: {
+    readonly report: string;
+    readonly root: string;
+  };
   readonly frozen: boolean;
   readonly name: string;
   readonly phase2: {
@@ -315,7 +319,13 @@ async function main(): Promise<void> {
   await mkdir(dirname(reportPath), { recursive: true });
   await writeFile(
     reportPath,
-    reportMarkdown(summary, environment, outputDirectory, repositoryRoot),
+    reportMarkdown(
+      summary,
+      environment,
+      manifest.evidence.root,
+      reportPath,
+      repositoryRoot,
+    ),
     "utf8",
   );
   await writeChecksums(outputDirectory);
@@ -499,7 +509,8 @@ function reportMarkdown(
     >;
   },
   environment: EnvironmentEvidence,
-  outputDirectory: string,
+  evidenceRoot: string,
+  reportPath: string,
   repositoryRoot: string,
 ): string {
   const rows = VARIANTS.map((variant) => {
@@ -523,7 +534,7 @@ Completed: ${summary.completedAt}
 
 Frozen comparison manifest SHA-256: \`${summary.manifestSha256}\`
 
-Evidence directory: [\`${relative(repositoryRoot, outputDirectory)}\`](${relative(dirname(resolve(repositoryRoot, "reports/phase-2-java-webchannel-comparison.md")), outputDirectory)})
+Evidence directory: [\`${evidenceRoot}\`](${relative(dirname(reportPath), resolve(repositoryRoot, evidenceRoot))})
 
 The same pinned vanilla Firebase JS SDK workload ran against the Phase 2
 Fireside release build and official Java emulator v1.22.0 on one host. The

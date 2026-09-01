@@ -1,0 +1,186 @@
+{
+  "completedAt": "2026-09-01T06:48:26.618Z",
+  "manifestSha256": "d0654be1176bd628e8a95952a6e402ddba706b41c1692d6aa4325aa4ccd7bee9",
+  "passed": true,
+  "ratios": {
+    "long-polling": {
+      "listenerP50FiresideOverJava": 0.8554216881313316,
+      "listenerP95FiresideOverJava": 1.009852216155745,
+      "listenerP99FiresideOverJava": 0.9557522123777107,
+      "reconnectP50FiresideOverJava": 1.1463265010951953
+    },
+    "streaming": {
+      "listenerP50FiresideOverJava": 0.9122807041851694,
+      "listenerP95FiresideOverJava": 1.0256410260329036,
+      "listenerP99FiresideOverJava": 0.9657142860548836,
+      "reconnectP50FiresideOverJava": 1.1588034342126154
+    },
+    "buffering-proxy-auto-detection": {
+      "listenerP50FiresideOverJava": 1.3178807930158767,
+      "listenerP95FiresideOverJava": 1.0297029699756637,
+      "listenerP99FiresideOverJava": 0.935344827552985,
+      "reconnectP50FiresideOverJava": 1.1089906236000178
+    }
+  },
+  "runs": [
+    {
+      "block": 1,
+      "browserVersion": "150.0.7871.124",
+      "completedAt": "2026-09-01T06:46:40.325Z",
+      "resources": {
+        "peakRssBytes": 14585856,
+        "peakVmHwmBytes": 14585856,
+        "sampleCount": 245,
+        "supported": true
+      },
+      "target": "fireside"
+    },
+    {
+      "block": 2,
+      "browserVersion": "150.0.7871.124",
+      "completedAt": "2026-09-01T06:47:15.024Z",
+      "resources": {
+        "peakRssBytes": 543092736,
+        "peakVmHwmBytes": 543092736,
+        "sampleCount": 282,
+        "supported": true
+      },
+      "target": "java"
+    },
+    {
+      "block": 3,
+      "browserVersion": "150.0.7871.124",
+      "completedAt": "2026-09-01T06:47:50.173Z",
+      "resources": {
+        "peakRssBytes": 549998592,
+        "peakVmHwmBytes": 549998592,
+        "sampleCount": 286,
+        "supported": true
+      },
+      "target": "java"
+    },
+    {
+      "block": 4,
+      "browserVersion": "150.0.7871.124",
+      "completedAt": "2026-09-01T06:48:21.431Z",
+      "resources": {
+        "peakRssBytes": 14344192,
+        "peakVmHwmBytes": 14344192,
+        "sampleCount": 251,
+        "supported": true
+      },
+      "target": "fireside"
+    }
+  ],
+  "schemaVersion": 1,
+  "targets": {
+    "fireside": {
+      "listener": {
+        "long-polling": {
+          "maximum": 31.100000023841858,
+          "p50": 14.200000017881393,
+          "p95": 20.5,
+          "p99": 21.599999994039536,
+          "samples": 600
+        },
+        "streaming": {
+          "maximum": 19.799999982118607,
+          "p50": 10.400000005960464,
+          "p95": 16,
+          "p99": 16.900000005960464,
+          "samples": 600
+        },
+        "buffering-proxy-auto-detection": {
+          "maximum": 29.299999982118607,
+          "p50": 19.900000005960464,
+          "p95": 20.80000001192093,
+          "p99": 21.69999998807907,
+          "samples": 600
+        }
+      },
+      "reconnect": {
+        "long-polling": {
+          "maximum": 3.6840769999998884,
+          "p50": 3.4794069999989006,
+          "p95": 3.6840769999998884,
+          "p99": 3.6840769999998884,
+          "samples": 6
+        },
+        "streaming": {
+          "maximum": 4.403125000000728,
+          "p50": 3.4450159999978496,
+          "p95": 4.403125000000728,
+          "p99": 4.403125000000728,
+          "samples": 6
+        },
+        "buffering-proxy-auto-detection": {
+          "maximum": 4.699435999998968,
+          "p50": 3.411396000003151,
+          "p95": 4.699435999998968,
+          "p99": 4.699435999998968,
+          "samples": 6
+        }
+      },
+      "resources": {
+        "peakRssBytes": 14585856,
+        "peakVmHwmBytes": 14585856,
+        "samples": 496,
+        "supported": true
+      }
+    },
+    "java": {
+      "listener": {
+        "long-polling": {
+          "maximum": 28.299999982118607,
+          "p50": 16.599999994039536,
+          "p95": 20.30000001192093,
+          "p99": 22.599999994039536,
+          "samples": 600
+        },
+        "streaming": {
+          "maximum": 19.700000017881393,
+          "p50": 11.399999976158142,
+          "p95": 15.599999994039536,
+          "p99": 17.5,
+          "samples": 600
+        },
+        "buffering-proxy-auto-detection": {
+          "maximum": 25.299999982118607,
+          "p50": 15.100000023841858,
+          "p95": 20.200000017881393,
+          "p99": 23.19999998807907,
+          "samples": 600
+        }
+      },
+      "reconnect": {
+        "long-polling": {
+          "maximum": 4.475936000000729,
+          "p50": 3.035266999999294,
+          "p95": 4.475936000000729,
+          "p99": 4.475936000000729,
+          "samples": 6
+        },
+        "streaming": {
+          "maximum": 3.914625999999771,
+          "p50": 2.972907999999734,
+          "p95": 3.914625999999771,
+          "p99": 3.914625999999771,
+          "samples": 6
+        },
+        "buffering-proxy-auto-detection": {
+          "maximum": 3.8368159999990894,
+          "p50": 3.0761270000002696,
+          "p95": 3.8368159999990894,
+          "p99": 3.8368159999990894,
+          "samples": 6
+        }
+      },
+      "resources": {
+        "peakRssBytes": 549998592,
+        "peakVmHwmBytes": 549998592,
+        "samples": 568,
+        "supported": true
+      }
+    }
+  }
+}
