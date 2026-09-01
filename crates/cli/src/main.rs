@@ -21,8 +21,9 @@ use fireside_grpc_front::FirestoreService;
 use fireside_query_engine::{DatabaseEdition as QueryDatabaseEdition, IndexCatalog, QueryPolicy};
 use fireside_rest_front::{
     AllocatorMemoryReporter, AllocatorMemoryUsage,
-    router_with_query_policy_and_memory_reporter as rest_router,
+    router_with_query_policy_memory_and_rules as rest_router,
 };
+use fireside_rules_runtime::RulesRuntime;
 use fireside_webchannel_front::{FirestoreBackend, router as webchannel_router};
 
 // Snapshot and protobuf churn repeatedly frees similarly sized allocations.
@@ -416,7 +417,18 @@ async fn run_firestore(
             return ExitCode::FAILURE;
         }
     };
-    let service = FirestoreService::new_with_query_policy(store.clone(), query_policy.clone());
+    let rules = match load_rules(arguments.rules.as_deref()) {
+        Ok(rules) => rules,
+        Err(error) => {
+            eprintln!("{error}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let service = FirestoreService::new_with_query_policy_and_rules(
+        store.clone(),
+        query_policy.clone(),
+        rules.clone(),
+    );
     let http_routes = firestore_http_router(
         store,
         query_policy,
@@ -425,6 +437,7 @@ async fn run_firestore(
             runtime_config: allocator_config,
         })),
         service.clone(),
+        rules,
     );
     let routes = tonic::service::Routes::from(http_routes).add_service(service.into_server());
     if let Some(data_dir) = &arguments.data_dir {
@@ -467,8 +480,9 @@ fn firestore_http_router(
     query_policy: QueryPolicy,
     allocator_memory_reporter: Option<Arc<dyn AllocatorMemoryReporter>>,
     service: FirestoreService,
+    rules: RulesRuntime,
 ) -> axum::Router {
-    rest_router(store, query_policy, allocator_memory_reporter)
+    rest_router(store, query_policy, allocator_memory_reporter, rules)
         .merge(webchannel_router(FirestoreBackend::new(service)))
 }
 
@@ -490,6 +504,28 @@ fn open_store(arguments: &FirestoreArgs) -> Result<Store, String> {
         }
         None => Ok(Store::new(StoreOptions::default())),
     }
+}
+
+fn load_rules(path: Option<&std::path::Path>) -> Result<RulesRuntime, String> {
+    let rules = RulesRuntime::default();
+    let Some(path) = path else {
+        eprintln!("WARNING: fireside Security Rules are not configured; client access is open");
+        return Ok(rules);
+    };
+    let source = std::fs::read_to_string(path).map_err(|error| {
+        format!(
+            "Firestore rules failed to load from {}: {error}",
+            path.display()
+        )
+    })?;
+    rules.install_default(&source).map_err(|error| {
+        format!(
+            "Firestore rules failed to compile from {}: {error}",
+            path.display()
+        )
+    })?;
+    eprintln!("fireside Security Rules loaded from {}", path.display());
+    Ok(rules)
 }
 
 fn seed_store_from_export(
@@ -586,8 +622,13 @@ mod tests {
     async fn one_http_router_serves_rest_and_webchannel() {
         let store = Store::default();
         let query_policy = QueryPolicy::default();
-        let service = FirestoreService::new_with_query_policy(store.clone(), query_policy.clone());
-        let application = firestore_http_router(store, query_policy, None, service);
+        let rules = RulesRuntime::default();
+        let service = FirestoreService::new_with_query_policy_and_rules(
+            store.clone(),
+            query_policy.clone(),
+            rules.clone(),
+        );
+        let application = firestore_http_router(store, query_policy, None, service, rules);
 
         let rest = application
             .clone()

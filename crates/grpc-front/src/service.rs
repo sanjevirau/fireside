@@ -14,6 +14,7 @@ use fireside_query_engine::{
     Query as StructuredQuery, QueryDocument, QueryPolicy, QueryScope, aggregate, compare_values,
     execute, partition,
 };
+use fireside_rules_runtime::RulesRuntime;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::{Stream, StreamExt as _, iter};
@@ -62,6 +63,7 @@ const STREAM_REQUEST_BUFFER: usize = 128;
 pub struct FirestoreService {
     store: Store,
     query_policy: QueryPolicy,
+    rules: RulesRuntime,
     transactions: Arc<Mutex<HashMap<Vec<u8>, TransactionState>>>,
     commit_guard: Arc<Mutex<()>>,
     next_id: Arc<AtomicU64>,
@@ -83,9 +85,20 @@ impl FirestoreService {
     /// Creates a service with shared edition and strict-index query behavior.
     #[must_use]
     pub fn new_with_query_policy(store: Store, query_policy: QueryPolicy) -> Self {
+        Self::new_with_query_policy_and_rules(store, query_policy, RulesRuntime::default())
+    }
+
+    /// Creates a service with a rules runtime shared by gRPC and `WebChannel`.
+    #[must_use]
+    pub fn new_with_query_policy_and_rules(
+        store: Store,
+        query_policy: QueryPolicy,
+        rules: RulesRuntime,
+    ) -> Self {
         Self {
             store,
             query_policy,
+            rules,
             transactions: Arc::new(Mutex::new(HashMap::new())),
             commit_guard: Arc::new(Mutex::new(())),
             next_id: Arc::new(AtomicU64::new(1)),
@@ -102,6 +115,12 @@ impl FirestoreService {
     #[must_use]
     pub const fn store(&self) -> &Store {
         &self.store
+    }
+
+    /// Returns the shared Security Rules runtime.
+    #[must_use]
+    pub const fn rules(&self) -> &RulesRuntime {
+        &self.rules
     }
 
     /// Opens an in-process Listen channel backed by the same engine as the

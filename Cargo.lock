@@ -427,6 +427,7 @@ dependencies = [
  "fireside-grpc-front",
  "fireside-query-engine",
  "fireside-rest-front",
+ "fireside-rules-runtime",
  "fireside-webchannel-front",
  "mimalloc",
  "serde_json",
@@ -476,6 +477,7 @@ version = "0.0.1"
 dependencies = [
  "fireside-core-store",
  "fireside-query-engine",
+ "fireside-rules-runtime",
  "fireside-watch-broker",
  "md-5",
  "pbjson",
@@ -509,6 +511,7 @@ dependencies = [
  "fireside-core-store",
  "fireside-export-format",
  "fireside-query-engine",
+ "fireside-rules-runtime",
  "serde",
  "serde_json",
  "time",
@@ -526,6 +529,16 @@ dependencies = [
  "serde_json",
  "sha2",
  "time",
+]
+
+[[package]]
+name = "fireside-rules-runtime"
+version = "0.0.1"
+dependencies = [
+ "base64 0.23.1",
+ "fireside-core-store",
+ "fireside-rules-engine",
+ "serde_json",
 ]
 
 [[package]]

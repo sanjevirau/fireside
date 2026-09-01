@@ -1091,6 +1091,62 @@ impl Snapshot {
             SnapshotDocuments::Disk(documents) => documents.documents(database),
         }
     }
+
+    /// Previews an atomic write set at `request_time` without changing the
+    /// store. The result is suitable for Security Rules `request.resource`
+    /// and `getAfter()` evaluation.
+    pub fn preview_writes(
+        &self,
+        writes: &[Write],
+        request_time: Timestamp,
+    ) -> Result<WritePreview, CommitError> {
+        let databases = writes
+            .iter()
+            .map(write_key)
+            .map(|key| key.database().clone())
+            .collect::<std::collections::BTreeSet<_>>();
+        let mut documents = OrdMap::new();
+        for database in databases {
+            for (key, document) in self.documents(&database) {
+                documents.insert(key, document);
+            }
+        }
+        let mut pending = BTreeMap::new();
+        for write in writes {
+            let (key, next) = apply_write(&documents, write, request_time)?;
+            match &next {
+                Some(document) => {
+                    documents.insert(key.clone(), Arc::clone(document));
+                }
+                None => {
+                    documents.remove(&key);
+                }
+            }
+            pending.insert(key, next);
+        }
+        Ok(WritePreview {
+            snapshot: self.clone(),
+            pending,
+        })
+    }
+}
+
+/// Immutable post-write view produced without installing a commit.
+#[derive(Clone, Debug)]
+pub struct WritePreview {
+    snapshot: Snapshot,
+    pending: BTreeMap<DocumentKey, Option<Arc<Document>>>,
+}
+
+impl WritePreview {
+    /// Reads a document after applying the complete pending write set.
+    #[must_use]
+    pub fn get(&self, key: &DocumentKey) -> Option<Arc<Document>> {
+        self.pending
+            .get(key)
+            .cloned()
+            .unwrap_or_else(|| self.snapshot.get(key))
+    }
 }
 
 /// Successful atomic commit metadata.
@@ -1802,6 +1858,16 @@ fn apply_write(
             validate_precondition(key, document.as_ref(), *precondition)?;
             Ok((key.clone(), document))
         }
+    }
+}
+
+fn write_key(write: &Write) -> &DocumentKey {
+    match write {
+        Write::Create { key, .. }
+        | Write::Set { key, .. }
+        | Write::Patch { key, .. }
+        | Write::Delete { key, .. }
+        | Write::Verify { key, .. } => key,
     }
 }
 

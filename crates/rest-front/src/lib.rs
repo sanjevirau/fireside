@@ -29,6 +29,7 @@ use fireside_query_engine::{
     FieldPath as QueryFieldPath, Filter, Limit, Query as StructuredQuery, QueryPolicy, QueryScope,
     aggregate, execute,
 };
+use fireside_rules_runtime::RulesRuntime;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value as JsonValue, json};
 use time::OffsetDateTime;
@@ -69,6 +70,21 @@ pub fn router_with_query_policy_and_memory_reporter(
     query_policy: QueryPolicy,
     allocator_memory_reporter: Option<Arc<dyn AllocatorMemoryReporter>>,
 ) -> Router {
+    router_with_query_policy_memory_and_rules(
+        store,
+        query_policy,
+        allocator_memory_reporter,
+        RulesRuntime::default(),
+    )
+}
+
+/// Creates the shared HTTP router with allocator telemetry and Security Rules.
+pub fn router_with_query_policy_memory_and_rules(
+    store: Store,
+    query_policy: QueryPolicy,
+    allocator_memory_reporter: Option<Arc<dyn AllocatorMemoryReporter>>,
+    rules: RulesRuntime,
+) -> Router {
     Router::new()
         .route(
             DOCUMENT_ROUTE,
@@ -95,6 +111,7 @@ pub fn router_with_query_policy_and_memory_reporter(
         .with_state(RestState {
             store,
             query_policy,
+            rules,
             control: Arc::new(Mutex::new(ControlState::default())),
             allocator_memory_reporter,
         })
@@ -215,6 +232,7 @@ pub struct DebugMemoryUsage {
 struct RestState {
     store: Store,
     query_policy: QueryPolicy,
+    rules: RulesRuntime,
     control: Arc<Mutex<ControlState>>,
     allocator_memory_reporter: Option<Arc<dyn AllocatorMemoryReporter>>,
 }
@@ -223,7 +241,6 @@ struct RestState {
 struct ControlState {
     triggers: BTreeMap<(String, String), JsonValue>,
     eventarc_triggers: BTreeMap<(String, String), JsonValue>,
-    rules: BTreeMap<String, JsonValue>,
 }
 
 #[derive(Deserialize)]
@@ -473,12 +490,40 @@ async fn project_operation(
     }
     match (method, suffix) {
         (Method::PUT, "securityRules") => {
-            control_state(&state).rules.insert(project.to_owned(), body);
+            let source = rules_source(&body)?;
+            state
+                .rules
+                .install_project(project, source)
+                .map_err(|error| {
+                    RestError::invalid(format!("rules compilation failed: {error}"))
+                })?;
             Ok(Json(json!({})))
         }
         (Method::POST, "export") => export_database(&state, project, body).await,
         _ => Err(RestError::not_found("unknown emulator project operation")),
     }
+}
+
+fn rules_source(body: &JsonValue) -> Result<&str, RestError> {
+    body.as_str()
+        .or_else(|| body.get("source").and_then(JsonValue::as_str))
+        .or_else(|| body.get("rules").and_then(JsonValue::as_str))
+        .or_else(|| {
+            body.get("files")
+                .and_then(JsonValue::as_array)
+                .and_then(|files| files.first())
+                .and_then(|file| file.get("content"))
+                .and_then(JsonValue::as_str)
+        })
+        .or_else(|| {
+            body.get("rules")
+                .and_then(|rules| rules.get("files"))
+                .and_then(JsonValue::as_array)
+                .and_then(|files| files.first())
+                .and_then(|file| file.get("content"))
+                .and_then(JsonValue::as_str)
+        })
+        .ok_or_else(|| RestError::invalid("securityRules body must contain rules source"))
 }
 
 async fn export_database(
@@ -1706,6 +1751,63 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn security_rules_hot_reload_is_atomic() {
+        let runtime = RulesRuntime::default();
+        runtime
+            .install_project("demo-hot-reload", &test_rules("true"))
+            .expect("initial rules");
+        let previous = runtime
+            .rules_for("demo-hot-reload")
+            .expect("initial ruleset");
+        let application = router_with_query_policy_memory_and_rules(
+            Store::default(),
+            QueryPolicy::default(),
+            None,
+            runtime.clone(),
+        );
+        let valid = application
+            .clone()
+            .oneshot(
+                Request::put("/emulator/v1/projects/demo-hot-reload:securityRules")
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({"rules":{"files":[{"content":test_rules("false")}]}}).to_string(),
+                    ))
+                    .expect("valid reload request"),
+            )
+            .await
+            .expect("valid reload response");
+        assert_eq!(valid.status(), StatusCode::OK);
+        let installed = runtime
+            .rules_for("demo-hot-reload")
+            .expect("replacement ruleset");
+        assert!(!Arc::ptr_eq(&previous, &installed));
+
+        let invalid = application
+            .oneshot(
+                Request::put("/emulator/v1/projects/demo-hot-reload:securityRules")
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Body::from(json!({"source":"broken"}).to_string()))
+                    .expect("invalid reload request"),
+            )
+            .await
+            .expect("invalid reload response");
+        assert_eq!(invalid.status(), StatusCode::BAD_REQUEST);
+        assert!(Arc::ptr_eq(
+            &installed,
+            &runtime
+                .rules_for("demo-hot-reload")
+                .expect("previous rules retained")
+        ));
+    }
+
+    fn test_rules(condition: &str) -> String {
+        format!(
+            "rules_version = '2'; service cloud.firestore {{ match /databases/{{database}}/documents {{ match /{{document=**}} {{ allow read, write: if {condition}; }} }} }}"
+        )
+    }
+
+    #[tokio::test]
     async fn run_query_rejects_reserved_resource_ids_with_the_oracle_error() {
         let response = router(Store::default())
             .oneshot(
@@ -2156,6 +2258,7 @@ mod tests {
         let state = RestState {
             store: Store::default(),
             query_policy: QueryPolicy::default(),
+            rules: RulesRuntime::default(),
             control: Arc::new(Mutex::new(ControlState::default())),
             allocator_memory_reporter: None,
         };

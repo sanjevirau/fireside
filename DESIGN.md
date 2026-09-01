@@ -1374,6 +1374,22 @@ the frozen Java access/`getAfter`/runtime-error observations, the exact
 call-depth and evaluated-expression boundaries, and all 45 complex-rules
 allow/deny cases.
 
+The serving runtime keeps immutable compiled rulesets behind one shared,
+per-project registry. Startup `--rules` installs a fallback ruleset before the
+listener opens; without it the emulator prints an explicit open-access warning.
+`PUT /emulator/v1/projects/{project}:securityRules` accepts the source forms
+used by emulator clients, compiles outside the registry write lock, and swaps
+only a successful result. Every request retains one `Arc` snapshot, so a
+concurrent reload cannot split one operation across two rule versions and an
+invalid reload cannot disturb the previous ruleset.
+
+Rules document access is backed by the request's immutable store snapshot.
+Atomic writes first produce a non-mutating post-write preview using the same
+precondition, patch, transform, and timestamp semantics as a commit;
+`getAfter()` reads that complete preview while `get()` and `exists()` continue
+to read the original snapshot. The adapter is shared by REST, gRPC, and the
+gRPC engines beneath `WebChannel`.
+
 ## 10. Differential harness and fixtures
 
 Identical TypeScript cases use real Google SDKs against:
