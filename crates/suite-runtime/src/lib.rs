@@ -12,6 +12,9 @@ use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
 
+#[cfg(unix)]
+use std::os::unix::process::ExitStatusExt as _;
+
 use axum::extract::Request;
 use axum::extract::ws::{Message, WebSocketUpgrade};
 use axum::routing::get;
@@ -935,7 +938,7 @@ async fn stop_functions_host(child: &mut Child) -> Result<(), SuiteRuntimeError>
         }
     }
     match tokio::time::timeout(Duration::from_secs(30), child.wait()).await {
-        Ok(Ok(status)) if status.success() => Ok(()),
+        Ok(Ok(status)) if expected_functions_shutdown(status) => Ok(()),
         Ok(Ok(status)) => Err(failure(format!("Functions host shutdown failed: {status}"))),
         Ok(Err(error)) => Err(failure(format!("Functions host wait failed: {error}"))),
         Err(_) => {
@@ -945,6 +948,20 @@ async fn stop_functions_host(child: &mut Child) -> Result<(), SuiteRuntimeError>
             let _ = child.wait().await;
             Err(failure("Functions host did not stop within 30 seconds"))
         }
+    }
+}
+
+fn expected_functions_shutdown(status: std::process::ExitStatus) -> bool {
+    if status.success() {
+        return true;
+    }
+    #[cfg(unix)]
+    {
+        status.signal() == Some(15)
+    }
+    #[cfg(not(unix))]
+    {
+        false
     }
 }
 
@@ -1218,6 +1235,15 @@ fn failure(message: impl Into<String>) -> SuiteRuntimeError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn coordinator_sigterm_is_a_clean_functions_shutdown() {
+        use std::os::unix::process::ExitStatusExt as _;
+
+        let status = std::process::ExitStatus::from_raw(15);
+        assert!(expected_functions_shutdown(status));
+    }
 
     #[cfg(unix)]
     #[test]

@@ -1708,7 +1708,12 @@ The oracle captures pin the following suite contracts before implementation:
   combined exports run through a bounded command channel, and the external
   `Origin` rejection returns before export work is admitted. Hub and UI share
   one validated service directory, preventing their advertised ports from
-  drifting apart.
+  drifting apart. Combined export publishes through a sibling staging
+  directory after canonicalizing filesystem aliases such as macOS `/tmp`; a
+  failed component never replaces the destination. Firestore reimport batches
+  by both 500 writes and 8 MiB of logical payload so no valid corpus can create
+  an oversized WAL frame merely because large documents are adjacent in one
+  shard.
 - UI discovery comes from `/api/config`; the official UI archive is served at
   `/`, and the Logging emulator is a raw WebSocket endpoint that replays its
   buffered JSON log entries on connection. Eventarc and Tasks endpoints are
@@ -1733,7 +1738,9 @@ The oracle captures pin the following suite contracts before implementation:
   to `FunctionsEmulator` or serialized into a worker environment. Startup
   fails unless every configured custom source exports at least one function,
   and the host announces readiness only after discovery, trigger registration,
-  and the Functions listener are complete.
+  and the Functions listener are complete. Suite shutdown sends that owned
+  child `SIGTERM`; the resulting signal status is a clean coordinator outcome,
+  while an unsolicited pre-readiness or runtime exit remains a suite failure.
 
 ### Phase 5 — Hardening and release
 
