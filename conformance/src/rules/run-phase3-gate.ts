@@ -16,6 +16,12 @@ import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  assertPhase3TransitiveToolchain,
+  type Phase3GateManifest,
+} from "./phase3-gate-plan.ts";
+import type { ObservedGateToolchain } from "../webchannel/phase2-gate-plan.ts";
+
 const MANIFEST_SHA256 =
   "5b8547cb0cf7697df6fb98c29b05ccaf412b93c259c22127bd9050d8c495fcc2";
 const PROJECT_ID = "demo-fireside-phase3-complex";
@@ -27,6 +33,11 @@ const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "../../..");
 const conformanceDirectory = join(repositoryRoot, "conformance");
 const manifestPath = join(repositoryRoot, "benchmarks", "phase-3-rules.json");
+const phase2ManifestPath = join(
+  repositoryRoot,
+  "benchmarks",
+  "phase-2-webchannel.json",
+);
 const complexRulesPath = join(
   conformanceDirectory,
   "fixtures",
@@ -55,7 +66,7 @@ interface CommandRecord {
   readonly signal: NodeJS.Signals | null;
 }
 
-interface Manifest {
+interface Manifest extends Phase3GateManifest {
   readonly capture: {
     readonly frozenFixtureSha256: Readonly<Record<string, string>>;
     readonly requiredFixtures: readonly string[];
@@ -76,12 +87,22 @@ interface Manifest {
   readonly name: string;
   readonly oracleClassifications: readonly unknown[];
   readonly schemaVersion: number;
-  readonly toolchain: {
-    readonly java?: string;
-    readonly node: string;
-    readonly npm: string;
-    readonly rust: string;
+}
+
+interface EnvironmentEvidence extends ObservedGateToolchain {
+  readonly candidateRevision: string;
+  readonly capturedAt: string;
+  readonly cpuCount: number;
+  readonly cpuModel: string;
+  readonly hostname: string;
+  readonly manifestSha256: string;
+  readonly os: {
+    readonly arch: string;
+    readonly platform: NodeJS.Platform;
+    readonly release: string;
   };
+  readonly schemaVersion: number;
+  readonly totalMemoryBytes: number;
 }
 
 interface BrowserEvidence {
@@ -120,7 +141,12 @@ async function main(): Promise<void> {
   const manifestText = await readFile(manifestPath, "utf8");
   const manifest = JSON.parse(manifestText) as Manifest;
   assertFrozenManifest(manifest, manifestText);
+  const phase2ManifestText = await readFile(phase2ManifestPath, "utf8");
   await copyFile(manifestPath, join(outputDirectory, "manifest.json"));
+  await copyFile(
+    phase2ManifestPath,
+    join(outputDirectory, "phase2-baseline-manifest.json"),
+  );
   await copyOracleFixtures(outputDirectory, manifest);
 
   const candidateRevision = await capture("git", ["rev-parse", "HEAD"]);
@@ -128,7 +154,13 @@ async function main(): Promise<void> {
   await writeJson(join(outputDirectory, "environment.json"), environment);
 
   try {
-    if (!arguments_.smoke) assertFrozenToolchain(manifest, environment);
+    if (!arguments_.smoke) {
+      assertPhase3TransitiveToolchain(
+        manifest,
+        phase2ManifestText,
+        environment,
+      );
+    }
     const commands: CommandRecord[] = [];
     commands.push(
       await runCommand(
@@ -519,21 +551,7 @@ function assertFrozenManifest(manifest: Manifest, text: string): void {
   }
 }
 
-function assertFrozenToolchain(
-  manifest: Manifest,
-  environment: Readonly<Record<string, unknown>>,
-): void {
-  const node = String(environment.node).replace(/^v/u, "");
-  const npm = String(environment.npm);
-  const rust = /^rustc (?<version>\S+)/u.exec(String(environment.rust))?.groups?.version;
-  if (node !== manifest.toolchain.node || npm !== manifest.toolchain.npm || rust !== manifest.toolchain.rust) {
-    throw new Error(
-      `frozen toolchain mismatch: expected Node ${manifest.toolchain.node}, npm ${manifest.toolchain.npm}, Rust ${manifest.toolchain.rust}; found Node ${node}, npm ${npm}, Rust ${String(rust)}`,
-    );
-  }
-}
-
-async function collectEnvironment(candidateRevision: string): Promise<Readonly<Record<string, unknown>>> {
+async function collectEnvironment(candidateRevision: string): Promise<EnvironmentEvidence> {
   return {
     candidateRevision,
     capturedAt: new Date().toISOString(),
@@ -556,7 +574,7 @@ async function writeReport(
   context: {
     readonly browser: readonly BrowserEvidence[];
     readonly candidateRevision: string;
-    readonly environment: Readonly<Record<string, unknown>>;
+    readonly environment: EnvironmentEvidence;
     readonly manifestSha256: string;
     readonly modes: readonly Readonly<Record<string, unknown>>[];
     readonly outputDirectory: string;
