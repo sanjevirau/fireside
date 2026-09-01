@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "target": "official-firebase-tools-storage-emulator",
+  "targetVersion": "15.22.0",
+  "targetProject": "demo-fireside-phase4-storage-oracle",
+  "capturedAt": "2026-09-01T13:57:25.633Z",
+  "hypothesis": "GCS JSON media and resumable uploads, query/finalize idempotence, metadata/list/download, and object copy routes match Admin SDK behavior",
+  "credentialsStored": false,
+  "accessTokensStored": false,
+  "realUserDataStored": false,
+  "sourceHashes": {
+    "package.json": "bdaec59ef8484658506c54fc4bd5910722aaf77a77f5a6a3f6a057bec0797abf",
+    "lib/emulator/storage/apis/firebase.js": "1eb09e4461bb422edb05286a813ca791ec217bfa831e50534e2f9ba539500819",
+    "lib/emulator/storage/apis/gcloud.js": "b1d8e85761662e42ceb46baf70ab83e87e3f69335114f318b61bc091ab175fc7",
+    "lib/emulator/storage/cloudFunctions.js": "a7347016a308828236426def2158b30b7b26fffc2c65819519cf8766af96baa9",
+    "lib/emulator/storage/files.js": "05e012a87f4f23c59bb516730471b6e525790200062f6c8e5fee4a2800e898ac",
+    "lib/emulator/storage/metadata.js": "7b67d2cd37d0b513ec5184f1745d81f7280670bc6c972330d50a844f3011a1bf",
+    "lib/emulator/storage/persistence.js": "21c5734b33c95ac14a98ea37836626321a3ef58a71f50bb8bdf5ef099ef981bb",
+    "lib/emulator/storage/server.js": "5b01d9aabab7dfa35af97e05ab7e665d9185b3a7a793cba882eeb0e9a1dfeff0",
+    "lib/emulator/storage/upload.js": "f5606431d128644c80c57146cee9f354d6b73754d3a6e1d644d396cd12f6584d"
+  },
+  "rulesRuntimeSha256": "0cd52db6f6271d62078f805220706377c849220b73bd68aa27078d977df9c900",
+  "observations": [
+    {
+      "id": "gcs-json-media-upload",
+      "method": "POST",
+      "path": "/upload/storage/v1/b/assets-local.twodart.com/o?uploadType=media&name=admin%2Fgcs-media-%E7%81%AB.txt",
+      "request": {
+        "byteLength": 14,
+        "sha256": "1483cfbf9f1e561ae257e7192e8e46a86e09edbc3a5f48ba624443270e6f0605"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "779"
+      },
+      "response": {
+        "kind": "storage#object",
+        "name": "admin/gcs-media-火.txt",
+        "bucket": "assets-local.twodart.com",
+        "generation": "<generated-generation>",
+        "metageneration": "<generated-metageneration>",
+        "contentType": "application/octet-stream",
+        "timeCreated": "<generated-timeCreated>",
+        "updated": "<generated-updated>",
+        "storageClass": "STANDARD",
+        "size": "14",
+        "md5Hash": "e2eouljVxs88LZXEZgXooQ==",
+        "etag": "<generated-etag>",
+        "crc32c": "sS0Uwg==",
+        "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+        "id": "assets-local.twodart.com/admin/gcs-media-火.txt/<generation>",
+        "selfLink": "<storage-origin>/storage/v1/b/assets-local.twodart.com/o/admin%2Fgcs-media-%E7%81%AB.txt",
+        "mediaLink": "<storage-origin>/download/storage/v1/b/assets-local.twodart.com/o/admin%2Fgcs-media-%E7%81%AB.txt?generation=<generation>&alt=media"
+      }
+    },
+    {
+      "id": "gcs-resumable-start",
+      "method": "POST",
+      "path": "/upload/storage/v1/b/assets-local.twodart.com/o?uploadType=resumable&name=admin%2Fresumable-%F0%9F%94%A5.bin",
+      "request": {
+        "name": "admin/resumable-🔥.bin",
+        "metadata": {
+          "oracle": "火🔥"
+        }
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "text/plain; charset=utf-8",
+        "content-length": "2",
+        "location": "<storage-origin>/upload/storage/v1/b/assets-local.twodart.com/o?name=admin%2Fresumable-%F0%9F%94%A5.bin&uploadType=resumable&upload_id=<upload-id>"
+      },
+      "response": "OK"
+    },
+    {
+      "id": "gcs-resumable-upload-and-finalize",
+      "method": "PUT",
+      "path": "/upload/storage/v1/b/assets-local.twodart.com/o?name=admin%2Fresumable-%F0%9F%94%A5.bin&uploadType=resumable&upload_id=<upload-id>",
+      "request": {
+        "byteLength": 28,
+        "sha256": "25b9f933fc66afd3e2158d096c2e5868b4dc69d39339c47606ccb99d183ea059"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "819"
+      },
+      "response": {
+        "kind": "storage#object",
+        "name": "admin/resumable-🔥.bin",
+        "bucket": "assets-local.twodart.com",
+        "generation": "<generated-generation>",
+        "metageneration": "<generated-metageneration>",
+        "contentType": "application/octet-stream",
+        "timeCreated": "<generated-timeCreated>",
+        "updated": "<generated-updated>",
+        "storageClass": "STANDARD",
+        "size": "28",
+        "md5Hash": "HpyFgxpR3kzwE/c7pLhqvg==",
+        "etag": "<generated-etag>",
+        "metadata": {
+          "oracle": "火🔥"
+        },
+        "crc32c": "KJO4Xw==",
+        "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+        "id": "assets-local.twodart.com/admin/resumable-🔥.bin/<generation>",
+        "selfLink": "<storage-origin>/storage/v1/b/assets-local.twodart.com/o/admin%2Fresumable-%F0%9F%94%A5.bin",
+        "mediaLink": "<storage-origin>/download/storage/v1/b/assets-local.twodart.com/o/admin%2Fresumable-%F0%9F%94%A5.bin?generation=<generation>&alt=media"
+      }
+    },
+    {
+      "id": "gcs-resumable-duplicate-finalize",
+      "method": "PUT",
+      "path": "/upload/storage/v1/b/assets-local.twodart.com/o?name=admin%2Fresumable-%F0%9F%94%A5.bin&uploadType=resumable&upload_id=<upload-id>",
+      "request": {
+        "byteLength": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "status": 400,
+      "responseHeaders": {
+        "content-type": "text/plain; charset=utf-8",
+        "content-length": "11"
+      },
+      "response": "Bad Request"
+    },
+    {
+      "id": "gcs-list-objects",
+      "method": "GET",
+      "path": "/storage/v1/b/assets-local.twodart.com/o?prefix=admin%2F&maxResults=100",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "1636"
+      },
+      "response": {
+        "kind": "storage#objects",
+        "items": [
+          {
+            "kind": "storage#object",
+            "name": "admin/gcs-media-火.txt",
+            "bucket": "assets-local.twodart.com",
+            "generation": "<generated-generation>",
+            "metageneration": "<generated-metageneration>",
+            "contentType": "application/octet-stream",
+            "timeCreated": "<generated-timeCreated>",
+            "updated": "<generated-updated>",
+            "storageClass": "STANDARD",
+            "size": "14",
+            "md5Hash": "e2eouljVxs88LZXEZgXooQ==",
+            "etag": "<generated-etag>",
+            "crc32c": "sS0Uwg==",
+            "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+            "id": "assets-local.twodart.com/admin/gcs-media-火.txt/<generation>",
+            "selfLink": "<storage-origin>/storage/v1/b/assets-local.twodart.com/o/admin%2Fgcs-media-%E7%81%AB.txt",
+            "mediaLink": "<storage-origin>/download/storage/v1/b/assets-local.twodart.com/o/admin%2Fgcs-media-%E7%81%AB.txt?generation=<generation>&alt=media"
+          },
+          {
+            "kind": "storage#object",
+            "name": "admin/resumable-🔥.bin",
+            "bucket": "assets-local.twodart.com",
+            "generation": "<generated-generation>",
+            "metageneration": "<generated-metageneration>",
+            "contentType": "application/octet-stream",
+            "timeCreated": "<generated-timeCreated>",
+            "updated": "<generated-updated>",
+            "storageClass": "STANDARD",
+            "size": "28",
+            "md5Hash": "HpyFgxpR3kzwE/c7pLhqvg==",
+            "etag": "<generated-etag>",
+            "metadata": {
+              "oracle": "火🔥"
+            },
+            "crc32c": "KJO4Xw==",
+            "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+            "id": "assets-local.twodart.com/admin/resumable-🔥.bin/<generation>",
+            "selfLink": "<storage-origin>/storage/v1/b/assets-local.twodart.com/o/admin%2Fresumable-%F0%9F%94%A5.bin",
+            "mediaLink": "<storage-origin>/download/storage/v1/b/assets-local.twodart.com/o/admin%2Fresumable-%F0%9F%94%A5.bin?generation=<generation>&alt=media"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gcs-download-resumable-object",
+      "method": "GET",
+      "path": "/download/storage/v1/b/assets-local.twodart.com/o/admin%2Fresumable-%F0%9F%94%A5.bin?alt=media",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/octet-stream",
+        "content-length": "28",
+        "content-disposition": "attachment; filename*=resumable-%F0%9F%94%A5.bin",
+        "cache-control": ""
+      },
+      "response": {
+        "byteLength": 28,
+        "sha256": "25b9f933fc66afd3e2158d096c2e5868b4dc69d39339c47606ccb99d183ea059",
+        "utf8": "chunk-one-火|chunk-two-🔥"
+      }
+    },
+    {
+      "id": "gcs-canonical-copy-path-not-implemented",
+      "method": "POST",
+      "path": "/storage/v1/b/assets-local.twodart.com/o/admin%2Fgcs-media-%E7%81%AB.txt/copyTo/b/assets-local.twodart.com/o/admin%2Fcopied-%E7%81%AB.txt",
+      "request": {
+        "metadata": {
+          "copied": "true"
+        }
+      },
+      "status": 501,
+      "responseHeaders": {
+        "content-type": "text/plain; charset=utf-8",
+        "content-length": "15"
+      },
+      "response": "Not Implemented"
+    },
+    {
+      "id": "gcs-emulator-copy-alias",
+      "method": "POST",
+      "path": "/b/assets-local.twodart.com/o/admin%2Fgcs-media-%E7%81%AB.txt/copyTo/b/assets-local.twodart.com/o/admin%2Fcopied-%E7%81%AB.txt",
+      "request": {
+        "metadata": {
+          "copied": "true"
+        }
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "796"
+      },
+      "response": {
+        "kind": "storage#object",
+        "name": "admin/copied-火.txt",
+        "bucket": "assets-local.twodart.com",
+        "generation": "<generated-generation>",
+        "metageneration": "<generated-metageneration>",
+        "contentType": "application/octet-stream",
+        "timeCreated": "<generated-timeCreated>",
+        "updated": "<generated-updated>",
+        "storageClass": "STANDARD",
+        "size": "14",
+        "md5Hash": "e2eouljVxs88LZXEZgXooQ==",
+        "etag": "<generated-etag>",
+        "metadata": {
+          "copied": "true"
+        },
+        "crc32c": "sS0Uwg==",
+        "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+        "id": "assets-local.twodart.com/admin/copied-火.txt/<generation>",
+        "selfLink": "<storage-origin>/storage/v1/b/assets-local.twodart.com/o/admin%2Fcopied-%E7%81%AB.txt",
+        "mediaLink": "<storage-origin>/download/storage/v1/b/assets-local.twodart.com/o/admin%2Fcopied-%E7%81%AB.txt?generation=<generation>&alt=media"
+      }
+    }
+  ],
+  "invariants": {
+    "media": {
+      "name": "admin/gcs-media-火.txt",
+      "bytes": 14,
+      "sha256": "1483cfbf9f1e561ae257e7192e8e46a86e09edbc3a5f48ba624443270e6f0605"
+    },
+    "resumable": {
+      "name": "admin/resumable-🔥.bin",
+      "bytes": 28,
+      "sha256": "25b9f933fc66afd3e2158d096c2e5868b4dc69d39339c47606ccb99d183ea059"
+    },
+    "duplicateFinalizeStatus": 400,
+    "duplicateFinalizeCreatesNoSecondObject": true,
+    "canonicalCopyPathStatus": 501,
+    "emulatorCopyAliasStatus": 200,
+    "uploadIdStored": false
+  }
+}

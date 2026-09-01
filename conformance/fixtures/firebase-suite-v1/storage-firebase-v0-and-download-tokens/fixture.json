@@ -1,0 +1,274 @@
+{
+  "schemaVersion": 1,
+  "target": "official-firebase-tools-storage-emulator",
+  "targetVersion": "15.22.0",
+  "targetProject": "demo-fireside-phase4-storage-oracle",
+  "capturedAt": "2026-09-01T13:57:25.631Z",
+  "hypothesis": "Firebase Storage v0 metadata, token bypass, list, media, metadata update, and token mutation routes match the browser SDK contract",
+  "credentialsStored": false,
+  "accessTokensStored": false,
+  "realUserDataStored": false,
+  "sourceHashes": {
+    "package.json": "bdaec59ef8484658506c54fc4bd5910722aaf77a77f5a6a3f6a057bec0797abf",
+    "lib/emulator/storage/apis/firebase.js": "1eb09e4461bb422edb05286a813ca791ec217bfa831e50534e2f9ba539500819",
+    "lib/emulator/storage/apis/gcloud.js": "b1d8e85761662e42ceb46baf70ab83e87e3f69335114f318b61bc091ab175fc7",
+    "lib/emulator/storage/cloudFunctions.js": "a7347016a308828236426def2158b30b7b26fffc2c65819519cf8766af96baa9",
+    "lib/emulator/storage/files.js": "05e012a87f4f23c59bb516730471b6e525790200062f6c8e5fee4a2800e898ac",
+    "lib/emulator/storage/metadata.js": "7b67d2cd37d0b513ec5184f1745d81f7280670bc6c972330d50a844f3011a1bf",
+    "lib/emulator/storage/persistence.js": "21c5734b33c95ac14a98ea37836626321a3ef58a71f50bb8bdf5ef099ef981bb",
+    "lib/emulator/storage/server.js": "5b01d9aabab7dfa35af97e05ab7e665d9185b3a7a793cba882eeb0e9a1dfeff0",
+    "lib/emulator/storage/upload.js": "f5606431d128644c80c57146cee9f354d6b73754d3a6e1d644d396cd12f6584d"
+  },
+  "rulesRuntimeSha256": "0cd52db6f6271d62078f805220706377c849220b73bd68aa27078d977df9c900",
+  "observations": [
+    {
+      "id": "readiness",
+      "method": "GET",
+      "path": "/v0/",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "22"
+      },
+      "response": {
+        "emulator": "storage"
+      }
+    },
+    {
+      "id": "firebase-v0-media-upload",
+      "method": "POST",
+      "path": "/v0/b/demo-twodart-local.appspot.com/o?name=users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt",
+      "request": {
+        "byteLength": 25,
+        "sha256": "7af3d180928e3fe141956f75e3dae33210ef6b7159e61b7cd088973a5a42f56e"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "507"
+      },
+      "response": {
+        "name": "users/alice/火🔥.txt",
+        "bucket": "demo-twodart-local.appspot.com",
+        "generation": "<generated-generation>",
+        "metageneration": "<generated-metageneration>",
+        "contentType": "application/octet-stream",
+        "timeCreated": "<generated-timeCreated>",
+        "updated": "<generated-updated>",
+        "storageClass": "STANDARD",
+        "size": "25",
+        "md5Hash": "VLzJ6zhZZwIM14YxnjHG+g==",
+        "crc32c": "278959577",
+        "etag": "<generated-etag>",
+        "downloadTokens": "<1-download-token>",
+        "contentEncoding": "identity",
+        "contentDisposition": "inline",
+        "metadata": {}
+      }
+    },
+    {
+      "id": "default-bucket-public-read-denied",
+      "method": "GET",
+      "path": "/v0/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt?alt=media",
+      "status": 403,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "73"
+      },
+      "response": {
+        "error": {
+          "code": 403,
+          "message": "Permission denied. No READ permission."
+        }
+      }
+    },
+    {
+      "id": "download-token-bypasses-rules",
+      "method": "GET",
+      "path": "/v0/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt?alt=media&token=<download-token>",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/octet-stream",
+        "content-length": "25",
+        "content-disposition": "inline; filename*=%E7%81%AB%F0%9F%94%A5.txt",
+        "cache-control": ""
+      },
+      "response": {
+        "byteLength": 25,
+        "sha256": "7af3d180928e3fe141956f75e3dae33210ef6b7159e61b7cd088973a5a42f56e",
+        "utf8": "Firebase v0 says 火🔥\n"
+      }
+    },
+    {
+      "id": "firebase-v0-get-metadata",
+      "method": "GET",
+      "path": "/v0/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "507"
+      },
+      "response": {
+        "name": "users/alice/火🔥.txt",
+        "bucket": "demo-twodart-local.appspot.com",
+        "generation": "<generated-generation>",
+        "metageneration": "<generated-metageneration>",
+        "contentType": "application/octet-stream",
+        "timeCreated": "<generated-timeCreated>",
+        "updated": "<generated-updated>",
+        "storageClass": "STANDARD",
+        "size": "25",
+        "md5Hash": "VLzJ6zhZZwIM14YxnjHG+g==",
+        "crc32c": "278959577",
+        "etag": "<generated-etag>",
+        "downloadTokens": "<1-download-token>",
+        "contentEncoding": "identity",
+        "contentDisposition": "inline",
+        "metadata": {}
+      }
+    },
+    {
+      "id": "firebase-v0-list-prefix",
+      "method": "GET",
+      "path": "/v0/b/demo-twodart-local.appspot.com/o?prefix=users%2Falice%2F&delimiter=%2F&maxResults=100",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "102"
+      },
+      "response": {
+        "prefixes": [],
+        "items": [
+          {
+            "name": "users/alice/火🔥.txt",
+            "bucket": "demo-twodart-local.appspot.com"
+          }
+        ]
+      }
+    },
+    {
+      "id": "firebase-v0-update-metadata",
+      "method": "PATCH",
+      "path": "/v0/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt",
+      "request": {
+        "cacheControl": "public,max-age=60",
+        "contentLanguage": "ja",
+        "metadata": {
+          "phase": "4",
+          "unicode": "火🔥"
+        }
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "596",
+        "content-disposition": "inline",
+        "cache-control": "public,max-age=60"
+      },
+      "response": {
+        "name": "users/alice/火🔥.txt",
+        "bucket": "demo-twodart-local.appspot.com",
+        "generation": "<generated-generation>",
+        "metageneration": "<generated-metageneration>",
+        "contentType": "application/octet-stream",
+        "timeCreated": "<generated-timeCreated>",
+        "updated": "<generated-updated>",
+        "storageClass": "STANDARD",
+        "size": "25",
+        "md5Hash": "VLzJ6zhZZwIM14YxnjHG+g==",
+        "crc32c": "278959577",
+        "etag": "<generated-etag>",
+        "downloadTokens": "<1-download-token>",
+        "contentEncoding": "identity",
+        "contentDisposition": "inline",
+        "metadata": {
+          "phase": "4",
+          "unicode": "火🔥"
+        },
+        "contentLanguage": "ja",
+        "cacheControl": "public,max-age=60"
+      }
+    },
+    {
+      "id": "firebase-v0-create-download-token",
+      "method": "POST",
+      "path": "/v0/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt?create_token=true",
+      "request": {},
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "633",
+        "content-disposition": "inline",
+        "cache-control": "public,max-age=60"
+      },
+      "response": {
+        "name": "users/alice/火🔥.txt",
+        "bucket": "demo-twodart-local.appspot.com",
+        "generation": "<generated-generation>",
+        "metageneration": "<generated-metageneration>",
+        "contentType": "application/octet-stream",
+        "timeCreated": "<generated-timeCreated>",
+        "updated": "<generated-updated>",
+        "storageClass": "STANDARD",
+        "size": "25",
+        "md5Hash": "VLzJ6zhZZwIM14YxnjHG+g==",
+        "crc32c": "278959577",
+        "etag": "<generated-etag>",
+        "downloadTokens": "<2-download-tokens>",
+        "contentEncoding": "identity",
+        "contentDisposition": "inline",
+        "metadata": {
+          "phase": "4",
+          "unicode": "火🔥"
+        },
+        "contentLanguage": "ja",
+        "cacheControl": "public,max-age=60"
+      }
+    },
+    {
+      "id": "firebase-v0-delete-download-token",
+      "method": "POST",
+      "path": "/v0/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt?delete_token=<download-token>",
+      "request": {},
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "596",
+        "content-disposition": "inline",
+        "cache-control": "public,max-age=60"
+      },
+      "response": {
+        "name": "users/alice/火🔥.txt",
+        "bucket": "demo-twodart-local.appspot.com",
+        "generation": "<generated-generation>",
+        "metageneration": "<generated-metageneration>",
+        "contentType": "application/octet-stream",
+        "timeCreated": "<generated-timeCreated>",
+        "updated": "<generated-updated>",
+        "storageClass": "STANDARD",
+        "size": "25",
+        "md5Hash": "VLzJ6zhZZwIM14YxnjHG+g==",
+        "crc32c": "278959577",
+        "etag": "<generated-etag>",
+        "downloadTokens": "<1-download-token>",
+        "contentEncoding": "identity",
+        "contentDisposition": "inline",
+        "metadata": {
+          "phase": "4",
+          "unicode": "火🔥"
+        },
+        "contentLanguage": "ja",
+        "cacheControl": "public,max-age=60"
+      }
+    }
+  ],
+  "invariants": {
+    "objectName": "users/alice/火🔥.txt",
+    "byteLength": 25,
+    "sha256": "7af3d180928e3fe141956f75e3dae33210ef6b7159e61b7cd088973a5a42f56e",
+    "generatedTokenOnUpload": true,
+    "tokenBypassesReadRules": true,
+    "unauthenticatedDefaultReadStatus": 403,
+    "createTokenRetainsExistingTokens": true
+  }
+}

@@ -1,0 +1,1138 @@
+{
+  "schemaVersion": 1,
+  "target": "official-firebase-tools-storage-emulator",
+  "targetVersion": "15.22.0",
+  "targetProject": "demo-fireside-phase4-storage-oracle",
+  "capturedAt": "2026-09-01T13:57:25.634Z",
+  "hypothesis": "Twodart's two bucket-specific rules remain distinct, and the official buckets/blobs/metadata export layout re-imports byte-identically without lifecycle events",
+  "credentialsStored": false,
+  "accessTokensStored": false,
+  "realUserDataStored": false,
+  "sourceHashes": {
+    "package.json": "bdaec59ef8484658506c54fc4bd5910722aaf77a77f5a6a3f6a057bec0797abf",
+    "lib/emulator/storage/apis/firebase.js": "1eb09e4461bb422edb05286a813ca791ec217bfa831e50534e2f9ba539500819",
+    "lib/emulator/storage/apis/gcloud.js": "b1d8e85761662e42ceb46baf70ab83e87e3f69335114f318b61bc091ab175fc7",
+    "lib/emulator/storage/cloudFunctions.js": "a7347016a308828236426def2158b30b7b26fffc2c65819519cf8766af96baa9",
+    "lib/emulator/storage/files.js": "05e012a87f4f23c59bb516730471b6e525790200062f6c8e5fee4a2800e898ac",
+    "lib/emulator/storage/metadata.js": "7b67d2cd37d0b513ec5184f1745d81f7280670bc6c972330d50a844f3011a1bf",
+    "lib/emulator/storage/persistence.js": "21c5734b33c95ac14a98ea37836626321a3ef58a71f50bb8bdf5ef099ef981bb",
+    "lib/emulator/storage/server.js": "5b01d9aabab7dfa35af97e05ab7e665d9185b3a7a793cba882eeb0e9a1dfeff0",
+    "lib/emulator/storage/upload.js": "f5606431d128644c80c57146cee9f354d6b73754d3a6e1d644d396cd12f6584d"
+  },
+  "rulesRuntimeSha256": "0cd52db6f6271d62078f805220706377c849220b73bd68aa27078d977df9c900",
+  "twodartRules": {
+    "demo-twodart-local.appspot.com": "c5334b21d576b18ca494fd540d1883ca2ca4287b5653b1b990136ec74475400d",
+    "assets-local.twodart.com": "0a8f28d9597961ecbb59ce8269cf4fecf71add0b9e0b539c13f38b25ca4c6997"
+  },
+  "observations": [
+    {
+      "id": "default-bucket-owner-upload",
+      "method": "POST",
+      "path": "/v0/b/demo-twodart-local.appspot.com/o?name=users%2Falice%2Fprivate.txt",
+      "request": {
+        "byteLength": 22,
+        "sha256": "df61e36bbdde28baef492a6d70e655c80e47a01b6ceb3f0e18d3e6038842d00f"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "508"
+      },
+      "response": {
+        "name": "users/alice/private.txt",
+        "bucket": "demo-twodart-local.appspot.com",
+        "generation": "<generated-generation>",
+        "metageneration": "<generated-metageneration>",
+        "contentType": "application/octet-stream",
+        "timeCreated": "<generated-timeCreated>",
+        "updated": "<generated-updated>",
+        "storageClass": "STANDARD",
+        "size": "22",
+        "md5Hash": "bpLObDWOZ7VohbNCiEb8hw==",
+        "crc32c": "2740261136",
+        "etag": "<generated-etag>",
+        "downloadTokens": "<1-download-token>",
+        "contentEncoding": "identity",
+        "contentDisposition": "inline",
+        "metadata": {}
+      }
+    },
+    {
+      "id": "default-bucket-owner-read",
+      "method": "GET",
+      "path": "/v0/b/demo-twodart-local.appspot.com/o/users%2Falice%2Fprivate.txt?alt=media",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/octet-stream",
+        "content-length": "22",
+        "content-disposition": "inline; filename*=private.txt",
+        "cache-control": ""
+      },
+      "response": {
+        "byteLength": 22,
+        "sha256": "df61e36bbdde28baef492a6d70e655c80e47a01b6ceb3f0e18d3e6038842d00f",
+        "utf8": "private default bucket"
+      }
+    },
+    {
+      "id": "default-bucket-other-user-denied",
+      "method": "GET",
+      "path": "/v0/b/demo-twodart-local.appspot.com/o/users%2Falice%2Fprivate.txt?alt=media",
+      "status": 403,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "73"
+      },
+      "response": {
+        "error": {
+          "code": 403,
+          "message": "Permission denied. No READ permission."
+        }
+      }
+    },
+    {
+      "id": "assets-bucket-admin-upload",
+      "method": "POST",
+      "path": "/v0/b/assets-local.twodart.com/o?name=catalog%2Fpublic-%E7%81%AB.txt",
+      "request": {
+        "byteLength": 21,
+        "sha256": "cdd4b82a8429bcce2d983327d5630aad492bd26ca8e502935146c15f451bfe0a"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "501"
+      },
+      "response": {
+        "name": "catalog/public-火.txt",
+        "bucket": "assets-local.twodart.com",
+        "generation": "<generated-generation>",
+        "metageneration": "<generated-metageneration>",
+        "contentType": "application/octet-stream",
+        "timeCreated": "<generated-timeCreated>",
+        "updated": "<generated-updated>",
+        "storageClass": "STANDARD",
+        "size": "21",
+        "md5Hash": "4JsA9n4F0RvfVcZpWfDWrA==",
+        "crc32c": "1518838082",
+        "etag": "<generated-etag>",
+        "downloadTokens": "<1-download-token>",
+        "contentEncoding": "identity",
+        "contentDisposition": "inline",
+        "metadata": {}
+      }
+    },
+    {
+      "id": "assets-bucket-public-read",
+      "method": "GET",
+      "path": "/v0/b/assets-local.twodart.com/o/catalog%2Fpublic-%E7%81%AB.txt?alt=media",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/octet-stream",
+        "content-length": "21",
+        "content-disposition": "inline; filename*=public-%E7%81%AB.txt",
+        "cache-control": ""
+      },
+      "response": {
+        "byteLength": 21,
+        "sha256": "cdd4b82a8429bcce2d983327d5630aad492bd26ca8e502935146c15f451bfe0a",
+        "utf8": "public assets 火🔥"
+      }
+    },
+    {
+      "id": "internal-export",
+      "method": "POST",
+      "path": "/internal/export",
+      "request": {
+        "path": "/var/folders/17/97zrc8dn5kj9m8sn51kc0h3w0000gn/T/fireside-phase4-storage-oracle-afQnoE/storage-export",
+        "initiatedBy": "phase4-oracle"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "text/plain; charset=utf-8",
+        "content-length": "2"
+      },
+      "response": "OK"
+    },
+    {
+      "id": "internal-reset",
+      "method": "POST",
+      "path": "/internal/reset",
+      "request": {},
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "text/plain; charset=utf-8",
+        "content-length": "2"
+      },
+      "response": "OK"
+    },
+    {
+      "id": "reimported-default-object-byte-check",
+      "method": "GET",
+      "path": "/download/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2Fprivate.txt?alt=media",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/octet-stream",
+        "content-length": "22",
+        "content-disposition": "inline; filename*=private.txt",
+        "cache-control": ""
+      },
+      "response": {
+        "byteLength": 22,
+        "sha256": "df61e36bbdde28baef492a6d70e655c80e47a01b6ceb3f0e18d3e6038842d00f",
+        "utf8": "private default bucket"
+      }
+    },
+    {
+      "id": "reimported-assets-object-byte-check",
+      "method": "GET",
+      "path": "/download/storage/v1/b/assets-local.twodart.com/o/catalog%2Fpublic-%E7%81%AB.txt?alt=media",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/octet-stream",
+        "content-length": "21",
+        "content-disposition": "inline; filename*=public-%E7%81%AB.txt",
+        "cache-control": ""
+      },
+      "response": {
+        "byteLength": 21,
+        "sha256": "cdd4b82a8429bcce2d983327d5630aad492bd26ca8e502935146c15f451bfe0a",
+        "utf8": "public assets 火🔥"
+      }
+    }
+  ],
+  "exportInventory": [
+    {
+      "path": "blobs/74134cf1-fe87-4f62-87f2-4aa14f7d410c",
+      "byteLength": 22,
+      "sha256": "df61e36bbdde28baef492a6d70e655c80e47a01b6ceb3f0e18d3e6038842d00f"
+    },
+    {
+      "path": "blobs/7bef03ac-69c3-4139-9480-d20ea8bdbde1",
+      "byteLength": 28,
+      "sha256": "25b9f933fc66afd3e2158d096c2e5868b4dc69d39339c47606ccb99d183ea059"
+    },
+    {
+      "path": "blobs/bc9b3a5c-6973-4d89-ab61-1140881a44fa",
+      "byteLength": 25,
+      "sha256": "7af3d180928e3fe141956f75e3dae33210ef6b7159e61b7cd088973a5a42f56e"
+    },
+    {
+      "path": "blobs/ccbc0744-fafc-4bb7-a7ae-e893f369ba7c",
+      "byteLength": 14,
+      "sha256": "1483cfbf9f1e561ae257e7192e8e46a86e09edbc3a5f48ba624443270e6f0605"
+    },
+    {
+      "path": "blobs/da549053-5ef3-42c0-89d4-b85fd90cda20",
+      "byteLength": 21,
+      "sha256": "cdd4b82a8429bcce2d983327d5630aad492bd26ca8e502935146c15f451bfe0a"
+    },
+    {
+      "path": "blobs/f72788f9-5a1d-4121-b839-5c0c73efc189",
+      "byteLength": 14,
+      "sha256": "1483cfbf9f1e561ae257e7192e8e46a86e09edbc3a5f48ba624443270e6f0605"
+    },
+    {
+      "path": "buckets.json",
+      "byteLength": 131,
+      "sha256": "123c78ba95d7ec6da5805d6b6fa5ddd9286a337e5325fef316b8d3cddd397de4",
+      "json": {
+        "buckets": [
+          {
+            "id": "demo-twodart-local.appspot.com"
+          },
+          {
+            "id": "assets-local.twodart.com"
+          }
+        ]
+      }
+    },
+    {
+      "path": "metadata/74134cf1-fe87-4f62-87f2-4aa14f7d410c.json",
+      "byteLength": 550,
+      "sha256": "831b82c94ea23a8d54983f4ebf17f8ff04f750bb2c066277655829abf8728c11",
+      "json": {
+        "name": "users/alice/private.txt",
+        "bucket": "demo-twodart-local.appspot.com",
+        "metageneration": "<generated-metageneration>",
+        "generation": "<generated-generation>",
+        "contentType": "application/octet-stream",
+        "storageClass": "STANDARD",
+        "contentDisposition": "inline",
+        "downloadTokens": "<1-download-token>",
+        "etag": "<generated-etag>",
+        "customMetadata": {},
+        "timeCreated": "<generated-timeCreated>",
+        "updated": "<generated-updated>",
+        "size": 22,
+        "md5Hash": "bpLObDWOZ7VohbNCiEb8hw==",
+        "crc32c": "2740261136"
+      }
+    },
+    {
+      "path": "metadata/7bef03ac-69c3-4139-9480-d20ea8bdbde1.json",
+      "byteLength": 491,
+      "sha256": "fa6d2f0ff2247751d40330174bb6ec4109806149a16819fb4478952767221456",
+      "json": {
+        "name": "admin/resumable-🔥.bin",
+        "bucket": "assets-local.twodart.com",
+        "metageneration": "<generated-metageneration>",
+        "generation": "<generated-generation>",
+        "contentType": "application/octet-stream",
+        "storageClass": "STANDARD",
+        "downloadTokens": "<0-download-tokens>",
+        "etag": "<generated-etag>",
+        "customMetadata": {
+          "oracle": "火🔥"
+        },
+        "timeCreated": "<generated-timeCreated>",
+        "updated": "<generated-updated>",
+        "size": 28,
+        "md5Hash": "HpyFgxpR3kzwE/c7pLhqvg==",
+        "crc32c": "680769631"
+      }
+    },
+    {
+      "path": "metadata/bc9b3a5c-6973-4d89-ab61-1140881a44fa.json",
+      "byteLength": 661,
+      "sha256": "2c2d5676299f11af677f2f22b9e95f745c25d7fb9f4a18a5dadeedf59b72fa91",
+      "json": {
+        "name": "users/alice/火🔥.txt",
+        "bucket": "demo-twodart-local.appspot.com",
+        "metageneration": "<generated-metageneration>",
+        "generation": "<generated-generation>",
+        "contentType": "application/octet-stream",
+        "storageClass": "STANDARD",
+        "contentDisposition": "inline",
+        "cacheControl": "public,max-age=60",
+        "contentLanguage": "ja",
+        "downloadTokens": "<1-download-token>",
+        "etag": "<generated-etag>",
+        "customMetadata": {
+          "phase": "4",
+          "unicode": "火🔥"
+        },
+        "timeCreated": "<generated-timeCreated>",
+        "updated": "<generated-updated>",
+        "size": 25,
+        "md5Hash": "VLzJ6zhZZwIM14YxnjHG+g==",
+        "crc32c": "278959577"
+      }
+    },
+    {
+      "path": "metadata/ccbc0744-fafc-4bb7-a7ae-e893f369ba7c.json",
+      "byteLength": 485,
+      "sha256": "e39cca2a500ae7dfca282a10cb20565511f096413a2abb6a4984612dc5441a85",
+      "json": {
+        "name": "admin/copied-火.txt",
+        "bucket": "assets-local.twodart.com",
+        "metageneration": "<generated-metageneration>",
+        "generation": "<generated-generation>",
+        "contentType": "application/octet-stream",
+        "storageClass": "STANDARD",
+        "downloadTokens": "<0-download-tokens>",
+        "etag": "<generated-etag>",
+        "customMetadata": {
+          "copied": "true"
+        },
+        "timeCreated": "<generated-timeCreated>",
+        "updated": "<generated-updated>",
+        "size": 14,
+        "md5Hash": "e2eouljVxs88LZXEZgXooQ==",
+        "crc32c": "2972521666"
+      }
+    },
+    {
+      "path": "metadata/da549053-5ef3-42c0-89d4-b85fd90cda20.json",
+      "byteLength": 543,
+      "sha256": "0014f726246a4f9fb74b23ac1c6e149b946548636e822407c765938179111378",
+      "json": {
+        "name": "catalog/public-火.txt",
+        "bucket": "assets-local.twodart.com",
+        "metageneration": "<generated-metageneration>",
+        "generation": "<generated-generation>",
+        "contentType": "application/octet-stream",
+        "storageClass": "STANDARD",
+        "contentDisposition": "inline",
+        "downloadTokens": "<1-download-token>",
+        "etag": "<generated-etag>",
+        "customMetadata": {},
+        "timeCreated": "<generated-timeCreated>",
+        "updated": "<generated-updated>",
+        "size": 21,
+        "md5Hash": "4JsA9n4F0RvfVcZpWfDWrA==",
+        "crc32c": "1518838082"
+      }
+    },
+    {
+      "path": "metadata/f72788f9-5a1d-4121-b839-5c0c73efc189.json",
+      "byteLength": 440,
+      "sha256": "d0985b34d568371ed2e3a6015dbfb86d7eced56cacf50bdede11476b80b1585d",
+      "json": {
+        "name": "admin/gcs-media-火.txt",
+        "bucket": "assets-local.twodart.com",
+        "metageneration": "<generated-metageneration>",
+        "generation": "<generated-generation>",
+        "contentType": "application/octet-stream",
+        "storageClass": "STANDARD",
+        "downloadTokens": "<0-download-tokens>",
+        "etag": "<generated-etag>",
+        "timeCreated": "<generated-timeCreated>",
+        "updated": "<generated-updated>",
+        "size": 14,
+        "md5Hash": "e2eouljVxs88LZXEZgXooQ==",
+        "crc32c": "2972521666"
+      }
+    }
+  ],
+  "dispatches": [
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "1189",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "eventId": "<generated-eventId>",
+        "timestamp": "<generated-timestamp>",
+        "eventType": "google.storage.object.finalize",
+        "resource": {
+          "service": "storage.googleapis.com",
+          "name": "projects/_/buckets/demo-twodart-local.appspot.com/objects/users/alice/火🔥.txt",
+          "type": "storage#object"
+        },
+        "data": {
+          "kind": "storage#object",
+          "name": "users/alice/火🔥.txt",
+          "bucket": "demo-twodart-local.appspot.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "25",
+          "md5Hash": "VLzJ6zhZZwIM14YxnjHG+g==",
+          "etag": "<generated-etag>",
+          "metadata": {
+            "firebaseStorageDownloadTokens": "<1-download-token>"
+          },
+          "crc32c": "EKCV2Q==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "demo-twodart-local.appspot.com/users/alice/火🔥.txt/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/cloudevents+json; charset=UTF-8",
+        "content-length": "1182",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "specversion": "1.0",
+        "id": "<generated-id>",
+        "type": "google.cloud.storage.object.v1.finalized",
+        "source": "//storage.googleapis.com/projects/_/buckets/demo-twodart-local.appspot.com/objects/users/alice/火🔥.txt",
+        "time": "<generated-time>",
+        "data": {
+          "kind": "storage#object",
+          "name": "users/alice/火🔥.txt",
+          "bucket": "demo-twodart-local.appspot.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "25",
+          "md5Hash": "VLzJ6zhZZwIM14YxnjHG+g==",
+          "etag": "<generated-etag>",
+          "metadata": {
+            "firebaseStorageDownloadTokens": "<1-download-token>"
+          },
+          "crc32c": "EKCV2Q==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "demo-twodart-local.appspot.com/users/alice/火🔥.txt/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "1315",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "eventId": "<generated-eventId>",
+        "timestamp": "<generated-timestamp>",
+        "eventType": "google.storage.object.metadataUpdate",
+        "resource": {
+          "service": "storage.googleapis.com",
+          "name": "projects/_/buckets/demo-twodart-local.appspot.com/objects/users/alice/火🔥.txt",
+          "type": "storage#object"
+        },
+        "data": {
+          "kind": "storage#object",
+          "name": "users/alice/火🔥.txt",
+          "bucket": "demo-twodart-local.appspot.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "contentDisposition": "inline",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "25",
+          "md5Hash": "VLzJ6zhZZwIM14YxnjHG+g==",
+          "etag": "<generated-etag>",
+          "metadata": {
+            "phase": "4",
+            "unicode": "火🔥",
+            "firebaseStorageDownloadTokens": "<1-download-token>"
+          },
+          "contentLanguage": "ja",
+          "cacheControl": "public,max-age=60",
+          "crc32c": "EKCV2Q==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "demo-twodart-local.appspot.com/users/alice/火🔥.txt/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/cloudevents+json; charset=UTF-8",
+        "content-length": "1308",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "specversion": "1.0",
+        "id": "<generated-id>",
+        "type": "google.cloud.storage.object.v1.metadataUpdated",
+        "source": "//storage.googleapis.com/projects/_/buckets/demo-twodart-local.appspot.com/objects/users/alice/火🔥.txt",
+        "time": "<generated-time>",
+        "data": {
+          "kind": "storage#object",
+          "name": "users/alice/火🔥.txt",
+          "bucket": "demo-twodart-local.appspot.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "contentDisposition": "inline",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "25",
+          "md5Hash": "VLzJ6zhZZwIM14YxnjHG+g==",
+          "etag": "<generated-etag>",
+          "metadata": {
+            "phase": "4",
+            "unicode": "火🔥",
+            "firebaseStorageDownloadTokens": "<1-download-token>"
+          },
+          "contentLanguage": "ja",
+          "cacheControl": "public,max-age=60",
+          "crc32c": "EKCV2Q==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "demo-twodart-local.appspot.com/users/alice/火🔥.txt/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "1352",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "eventId": "<generated-eventId>",
+        "timestamp": "<generated-timestamp>",
+        "eventType": "google.storage.object.metadataUpdate",
+        "resource": {
+          "service": "storage.googleapis.com",
+          "name": "projects/_/buckets/demo-twodart-local.appspot.com/objects/users/alice/火🔥.txt",
+          "type": "storage#object"
+        },
+        "data": {
+          "kind": "storage#object",
+          "name": "users/alice/火🔥.txt",
+          "bucket": "demo-twodart-local.appspot.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "contentDisposition": "inline",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "25",
+          "md5Hash": "VLzJ6zhZZwIM14YxnjHG+g==",
+          "etag": "<generated-etag>",
+          "metadata": {
+            "phase": "4",
+            "unicode": "火🔥",
+            "firebaseStorageDownloadTokens": "<2-download-tokens>"
+          },
+          "contentLanguage": "ja",
+          "cacheControl": "public,max-age=60",
+          "crc32c": "EKCV2Q==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "demo-twodart-local.appspot.com/users/alice/火🔥.txt/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/cloudevents+json; charset=UTF-8",
+        "content-length": "1345",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "specversion": "1.0",
+        "id": "<generated-id>",
+        "type": "google.cloud.storage.object.v1.metadataUpdated",
+        "source": "//storage.googleapis.com/projects/_/buckets/demo-twodart-local.appspot.com/objects/users/alice/火🔥.txt",
+        "time": "<generated-time>",
+        "data": {
+          "kind": "storage#object",
+          "name": "users/alice/火🔥.txt",
+          "bucket": "demo-twodart-local.appspot.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "contentDisposition": "inline",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "25",
+          "md5Hash": "VLzJ6zhZZwIM14YxnjHG+g==",
+          "etag": "<generated-etag>",
+          "metadata": {
+            "phase": "4",
+            "unicode": "火🔥",
+            "firebaseStorageDownloadTokens": "<2-download-tokens>"
+          },
+          "contentLanguage": "ja",
+          "cacheControl": "public,max-age=60",
+          "crc32c": "EKCV2Q==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "demo-twodart-local.appspot.com/users/alice/火🔥.txt/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "1315",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "eventId": "<generated-eventId>",
+        "timestamp": "<generated-timestamp>",
+        "eventType": "google.storage.object.metadataUpdate",
+        "resource": {
+          "service": "storage.googleapis.com",
+          "name": "projects/_/buckets/demo-twodart-local.appspot.com/objects/users/alice/火🔥.txt",
+          "type": "storage#object"
+        },
+        "data": {
+          "kind": "storage#object",
+          "name": "users/alice/火🔥.txt",
+          "bucket": "demo-twodart-local.appspot.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "contentDisposition": "inline",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "25",
+          "md5Hash": "VLzJ6zhZZwIM14YxnjHG+g==",
+          "etag": "<generated-etag>",
+          "metadata": {
+            "phase": "4",
+            "unicode": "火🔥",
+            "firebaseStorageDownloadTokens": "<1-download-token>"
+          },
+          "contentLanguage": "ja",
+          "cacheControl": "public,max-age=60",
+          "crc32c": "EKCV2Q==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "demo-twodart-local.appspot.com/users/alice/火🔥.txt/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "1055",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "eventId": "<generated-eventId>",
+        "timestamp": "<generated-timestamp>",
+        "eventType": "google.storage.object.finalize",
+        "resource": {
+          "service": "storage.googleapis.com",
+          "name": "projects/_/buckets/assets-local.twodart.com/objects/admin/gcs-media-火.txt",
+          "type": "storage#object"
+        },
+        "data": {
+          "kind": "storage#object",
+          "name": "admin/gcs-media-火.txt",
+          "bucket": "assets-local.twodart.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "14",
+          "md5Hash": "e2eouljVxs88LZXEZgXooQ==",
+          "etag": "<generated-etag>",
+          "crc32c": "sS0Uwg==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "assets-local.twodart.com/admin/gcs-media-火.txt/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/assets-local.twodart.com/o/admin%2Fgcs-media-%E7%81%AB.txt",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/assets-local.twodart.com/o/admin%2Fgcs-media-%E7%81%AB.txt?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/cloudevents+json; charset=UTF-8",
+        "content-length": "1308",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "specversion": "1.0",
+        "id": "<generated-id>",
+        "type": "google.cloud.storage.object.v1.metadataUpdated",
+        "source": "//storage.googleapis.com/projects/_/buckets/demo-twodart-local.appspot.com/objects/users/alice/火🔥.txt",
+        "time": "<generated-time>",
+        "data": {
+          "kind": "storage#object",
+          "name": "users/alice/火🔥.txt",
+          "bucket": "demo-twodart-local.appspot.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "contentDisposition": "inline",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "25",
+          "md5Hash": "VLzJ6zhZZwIM14YxnjHG+g==",
+          "etag": "<generated-etag>",
+          "metadata": {
+            "phase": "4",
+            "unicode": "火🔥",
+            "firebaseStorageDownloadTokens": "<1-download-token>"
+          },
+          "contentLanguage": "ja",
+          "cacheControl": "public,max-age=60",
+          "crc32c": "EKCV2Q==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "demo-twodart-local.appspot.com/users/alice/火🔥.txt/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2F%E7%81%AB%F0%9F%94%A5.txt?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/cloudevents+json; charset=UTF-8",
+        "content-length": "1048",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "specversion": "1.0",
+        "id": "<generated-id>",
+        "type": "google.cloud.storage.object.v1.finalized",
+        "source": "//storage.googleapis.com/projects/_/buckets/assets-local.twodart.com/objects/admin/gcs-media-火.txt",
+        "time": "<generated-time>",
+        "data": {
+          "kind": "storage#object",
+          "name": "admin/gcs-media-火.txt",
+          "bucket": "assets-local.twodart.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "14",
+          "md5Hash": "e2eouljVxs88LZXEZgXooQ==",
+          "etag": "<generated-etag>",
+          "crc32c": "sS0Uwg==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "assets-local.twodart.com/admin/gcs-media-火.txt/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/assets-local.twodart.com/o/admin%2Fgcs-media-%E7%81%AB.txt",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/assets-local.twodart.com/o/admin%2Fgcs-media-%E7%81%AB.txt?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "1096",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "eventId": "<generated-eventId>",
+        "timestamp": "<generated-timestamp>",
+        "eventType": "google.storage.object.finalize",
+        "resource": {
+          "service": "storage.googleapis.com",
+          "name": "projects/_/buckets/assets-local.twodart.com/objects/admin/resumable-🔥.bin",
+          "type": "storage#object"
+        },
+        "data": {
+          "kind": "storage#object",
+          "name": "admin/resumable-🔥.bin",
+          "bucket": "assets-local.twodart.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "28",
+          "md5Hash": "HpyFgxpR3kzwE/c7pLhqvg==",
+          "etag": "<generated-etag>",
+          "metadata": {
+            "oracle": "火🔥"
+          },
+          "crc32c": "KJO4Xw==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "assets-local.twodart.com/admin/resumable-🔥.bin/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/assets-local.twodart.com/o/admin%2Fresumable-%F0%9F%94%A5.bin",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/assets-local.twodart.com/o/admin%2Fresumable-%F0%9F%94%A5.bin?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/cloudevents+json; charset=UTF-8",
+        "content-length": "1089",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "specversion": "1.0",
+        "id": "<generated-id>",
+        "type": "google.cloud.storage.object.v1.finalized",
+        "source": "//storage.googleapis.com/projects/_/buckets/assets-local.twodart.com/objects/admin/resumable-🔥.bin",
+        "time": "<generated-time>",
+        "data": {
+          "kind": "storage#object",
+          "name": "admin/resumable-🔥.bin",
+          "bucket": "assets-local.twodart.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "28",
+          "md5Hash": "HpyFgxpR3kzwE/c7pLhqvg==",
+          "etag": "<generated-etag>",
+          "metadata": {
+            "oracle": "火🔥"
+          },
+          "crc32c": "KJO4Xw==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "assets-local.twodart.com/admin/resumable-🔥.bin/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/assets-local.twodart.com/o/admin%2Fresumable-%F0%9F%94%A5.bin",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/assets-local.twodart.com/o/admin%2Fresumable-%F0%9F%94%A5.bin?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "1069",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "eventId": "<generated-eventId>",
+        "timestamp": "<generated-timestamp>",
+        "eventType": "google.storage.object.finalize",
+        "resource": {
+          "service": "storage.googleapis.com",
+          "name": "projects/_/buckets/assets-local.twodart.com/objects/admin/copied-火.txt",
+          "type": "storage#object"
+        },
+        "data": {
+          "kind": "storage#object",
+          "name": "admin/copied-火.txt",
+          "bucket": "assets-local.twodart.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "14",
+          "md5Hash": "e2eouljVxs88LZXEZgXooQ==",
+          "etag": "<generated-etag>",
+          "metadata": {
+            "copied": "true"
+          },
+          "crc32c": "sS0Uwg==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "assets-local.twodart.com/admin/copied-火.txt/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/assets-local.twodart.com/o/admin%2Fcopied-%E7%81%AB.txt",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/assets-local.twodart.com/o/admin%2Fcopied-%E7%81%AB.txt?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/cloudevents+json; charset=UTF-8",
+        "content-length": "1062",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "specversion": "1.0",
+        "id": "<generated-id>",
+        "type": "google.cloud.storage.object.v1.finalized",
+        "source": "//storage.googleapis.com/projects/_/buckets/assets-local.twodart.com/objects/admin/copied-火.txt",
+        "time": "<generated-time>",
+        "data": {
+          "kind": "storage#object",
+          "name": "admin/copied-火.txt",
+          "bucket": "assets-local.twodart.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "14",
+          "md5Hash": "e2eouljVxs88LZXEZgXooQ==",
+          "etag": "<generated-etag>",
+          "metadata": {
+            "copied": "true"
+          },
+          "crc32c": "sS0Uwg==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "assets-local.twodart.com/admin/copied-火.txt/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/assets-local.twodart.com/o/admin%2Fcopied-%E7%81%AB.txt",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/assets-local.twodart.com/o/admin%2Fcopied-%E7%81%AB.txt?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "1161",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "eventId": "<generated-eventId>",
+        "timestamp": "<generated-timestamp>",
+        "eventType": "google.storage.object.finalize",
+        "resource": {
+          "service": "storage.googleapis.com",
+          "name": "projects/_/buckets/demo-twodart-local.appspot.com/objects/users/alice/private.txt",
+          "type": "storage#object"
+        },
+        "data": {
+          "kind": "storage#object",
+          "name": "users/alice/private.txt",
+          "bucket": "demo-twodart-local.appspot.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "22",
+          "md5Hash": "bpLObDWOZ7VohbNCiEb8hw==",
+          "etag": "<generated-etag>",
+          "metadata": {
+            "firebaseStorageDownloadTokens": "<1-download-token>"
+          },
+          "crc32c": "o1UREA==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "demo-twodart-local.appspot.com/users/alice/private.txt/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2Fprivate.txt",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2Fprivate.txt?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/cloudevents+json; charset=UTF-8",
+        "content-length": "1154",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "specversion": "1.0",
+        "id": "<generated-id>",
+        "type": "google.cloud.storage.object.v1.finalized",
+        "source": "//storage.googleapis.com/projects/_/buckets/demo-twodart-local.appspot.com/objects/users/alice/private.txt",
+        "time": "<generated-time>",
+        "data": {
+          "kind": "storage#object",
+          "name": "users/alice/private.txt",
+          "bucket": "demo-twodart-local.appspot.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "22",
+          "md5Hash": "bpLObDWOZ7VohbNCiEb8hw==",
+          "etag": "<generated-etag>",
+          "metadata": {
+            "firebaseStorageDownloadTokens": "<1-download-token>"
+          },
+          "crc32c": "o1UREA==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "demo-twodart-local.appspot.com/users/alice/private.txt/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2Fprivate.txt",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2Fprivate.txt?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "1134",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "eventId": "<generated-eventId>",
+        "timestamp": "<generated-timestamp>",
+        "eventType": "google.storage.object.finalize",
+        "resource": {
+          "service": "storage.googleapis.com",
+          "name": "projects/_/buckets/assets-local.twodart.com/objects/catalog/public-火.txt",
+          "type": "storage#object"
+        },
+        "data": {
+          "kind": "storage#object",
+          "name": "catalog/public-火.txt",
+          "bucket": "assets-local.twodart.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "21",
+          "md5Hash": "4JsA9n4F0RvfVcZpWfDWrA==",
+          "etag": "<generated-etag>",
+          "metadata": {
+            "firebaseStorageDownloadTokens": "<1-download-token>"
+          },
+          "crc32c": "WoehQg==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "assets-local.twodart.com/catalog/public-火.txt/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/assets-local.twodart.com/o/catalog%2Fpublic-%E7%81%AB.txt",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/assets-local.twodart.com/o/catalog%2Fpublic-%E7%81%AB.txt?generation=<generation>&alt=media"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-storage-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/cloudevents+json; charset=UTF-8",
+        "content-length": "1127",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "specversion": "1.0",
+        "id": "<generated-id>",
+        "type": "google.cloud.storage.object.v1.finalized",
+        "source": "//storage.googleapis.com/projects/_/buckets/assets-local.twodart.com/objects/catalog/public-火.txt",
+        "time": "<generated-time>",
+        "data": {
+          "kind": "storage#object",
+          "name": "catalog/public-火.txt",
+          "bucket": "assets-local.twodart.com",
+          "generation": "<generated-generation>",
+          "metageneration": "<generated-metageneration>",
+          "contentType": "application/octet-stream",
+          "timeCreated": "<generated-timeCreated>",
+          "updated": "<generated-updated>",
+          "storageClass": "STANDARD",
+          "size": "21",
+          "md5Hash": "4JsA9n4F0RvfVcZpWfDWrA==",
+          "etag": "<generated-etag>",
+          "metadata": {
+            "firebaseStorageDownloadTokens": "<1-download-token>"
+          },
+          "crc32c": "WoehQg==",
+          "timeStorageClassUpdated": "<generated-timeStorageClassUpdated>",
+          "id": "assets-local.twodart.com/catalog/public-火.txt/<generation>",
+          "selfLink": "<storage-origin>/storage/v1/b/assets-local.twodart.com/o/catalog%2Fpublic-%E7%81%AB.txt",
+          "mediaLink": "<storage-origin>/download/storage/v1/b/assets-local.twodart.com/o/catalog%2Fpublic-%E7%81%AB.txt?generation=<generation>&alt=media"
+        }
+      }
+    }
+  ],
+  "invariants": {
+    "buckets": [
+      "demo-twodart-local.appspot.com",
+      "assets-local.twodart.com"
+    ],
+    "defaultOwnerReadStatus": 200,
+    "defaultOtherUserReadStatus": 403,
+    "assetsPublicReadStatus": 200,
+    "reimportedDefaultSha256": "df61e36bbdde28baef492a6d70e655c80e47a01b6ceb3f0e18d3e6038842d00f",
+    "reimportedAssetsSha256": "cdd4b82a8429bcce2d983327d5630aad492bd26ca8e502935146c15f451bfe0a",
+    "exportImportDispatchCount": 0,
+    "importTriggersFinalizeEvents": false
+  }
+}

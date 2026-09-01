@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "fixtureSet": "storage-gcs-json-and-resumable-upload",
+  "target": "official-firebase-tools-storage-emulator",
+  "targetVersion": "15.22.0",
+  "operationCount": 8,
+  "operations": [
+    {
+      "id": "gcs-json-media-upload",
+      "method": "POST",
+      "path": "/upload/storage/v1/b/assets-local.twodart.com/o?uploadType=media&name=admin%2Fgcs-media-%E7%81%AB.txt",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "gcs-resumable-start",
+      "method": "POST",
+      "path": "/upload/storage/v1/b/assets-local.twodart.com/o?uploadType=resumable&name=admin%2Fresumable-%F0%9F%94%A5.bin",
+      "status": 200,
+      "responseContentType": "text/plain; charset=utf-8"
+    },
+    {
+      "id": "gcs-resumable-upload-and-finalize",
+      "method": "PUT",
+      "path": "/upload/storage/v1/b/assets-local.twodart.com/o?name=admin%2Fresumable-%F0%9F%94%A5.bin&uploadType=resumable&upload_id=<upload-id>",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "gcs-resumable-duplicate-finalize",
+      "method": "PUT",
+      "path": "/upload/storage/v1/b/assets-local.twodart.com/o?name=admin%2Fresumable-%F0%9F%94%A5.bin&uploadType=resumable&upload_id=<upload-id>",
+      "status": 400,
+      "responseContentType": "text/plain; charset=utf-8"
+    },
+    {
+      "id": "gcs-list-objects",
+      "method": "GET",
+      "path": "/storage/v1/b/assets-local.twodart.com/o?prefix=admin%2F&maxResults=100",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "gcs-download-resumable-object",
+      "method": "GET",
+      "path": "/download/storage/v1/b/assets-local.twodart.com/o/admin%2Fresumable-%F0%9F%94%A5.bin?alt=media",
+      "status": 200,
+      "responseContentType": "application/octet-stream"
+    },
+    {
+      "id": "gcs-canonical-copy-path-not-implemented",
+      "method": "POST",
+      "path": "/storage/v1/b/assets-local.twodart.com/o/admin%2Fgcs-media-%E7%81%AB.txt/copyTo/b/assets-local.twodart.com/o/admin%2Fcopied-%E7%81%AB.txt",
+      "status": 501,
+      "responseContentType": "text/plain; charset=utf-8"
+    },
+    {
+      "id": "gcs-emulator-copy-alias",
+      "method": "POST",
+      "path": "/b/assets-local.twodart.com/o/admin%2Fgcs-media-%E7%81%AB.txt/copyTo/b/assets-local.twodart.com/o/admin%2Fcopied-%E7%81%AB.txt",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    }
+  ],
+  "invariants": {
+    "media": {
+      "name": "admin/gcs-media-火.txt",
+      "bytes": 14,
+      "sha256": "1483cfbf9f1e561ae257e7192e8e46a86e09edbc3a5f48ba624443270e6f0605"
+    },
+    "resumable": {
+      "name": "admin/resumable-🔥.bin",
+      "bytes": 28,
+      "sha256": "25b9f933fc66afd3e2158d096c2e5868b4dc69d39339c47606ccb99d183ea059"
+    },
+    "duplicateFinalizeStatus": 400,
+    "duplicateFinalizeCreatesNoSecondObject": true,
+    "canonicalCopyPathStatus": 501,
+    "emulatorCopyAliasStatus": 200,
+    "uploadIdStored": false
+  }
+}

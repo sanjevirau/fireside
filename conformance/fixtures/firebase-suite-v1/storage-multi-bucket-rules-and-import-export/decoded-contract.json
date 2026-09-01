@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "fixtureSet": "storage-multi-bucket-rules-and-import-export",
+  "target": "official-firebase-tools-storage-emulator",
+  "targetVersion": "15.22.0",
+  "operationCount": 9,
+  "operations": [
+    {
+      "id": "default-bucket-owner-upload",
+      "method": "POST",
+      "path": "/v0/b/demo-twodart-local.appspot.com/o?name=users%2Falice%2Fprivate.txt",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "default-bucket-owner-read",
+      "method": "GET",
+      "path": "/v0/b/demo-twodart-local.appspot.com/o/users%2Falice%2Fprivate.txt?alt=media",
+      "status": 200,
+      "responseContentType": "application/octet-stream"
+    },
+    {
+      "id": "default-bucket-other-user-denied",
+      "method": "GET",
+      "path": "/v0/b/demo-twodart-local.appspot.com/o/users%2Falice%2Fprivate.txt?alt=media",
+      "status": 403,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "assets-bucket-admin-upload",
+      "method": "POST",
+      "path": "/v0/b/assets-local.twodart.com/o?name=catalog%2Fpublic-%E7%81%AB.txt",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "assets-bucket-public-read",
+      "method": "GET",
+      "path": "/v0/b/assets-local.twodart.com/o/catalog%2Fpublic-%E7%81%AB.txt?alt=media",
+      "status": 200,
+      "responseContentType": "application/octet-stream"
+    },
+    {
+      "id": "internal-export",
+      "method": "POST",
+      "path": "/internal/export",
+      "status": 200,
+      "responseContentType": "text/plain; charset=utf-8"
+    },
+    {
+      "id": "internal-reset",
+      "method": "POST",
+      "path": "/internal/reset",
+      "status": 200,
+      "responseContentType": "text/plain; charset=utf-8"
+    },
+    {
+      "id": "reimported-default-object-byte-check",
+      "method": "GET",
+      "path": "/download/storage/v1/b/demo-twodart-local.appspot.com/o/users%2Falice%2Fprivate.txt?alt=media",
+      "status": 200,
+      "responseContentType": "application/octet-stream"
+    },
+    {
+      "id": "reimported-assets-object-byte-check",
+      "method": "GET",
+      "path": "/download/storage/v1/b/assets-local.twodart.com/o/catalog%2Fpublic-%E7%81%AB.txt?alt=media",
+      "status": 200,
+      "responseContentType": "application/octet-stream"
+    }
+  ],
+  "invariants": {
+    "buckets": [
+      "demo-twodart-local.appspot.com",
+      "assets-local.twodart.com"
+    ],
+    "defaultOwnerReadStatus": 200,
+    "defaultOtherUserReadStatus": 403,
+    "assetsPublicReadStatus": 200,
+    "reimportedDefaultSha256": "df61e36bbdde28baef492a6d70e655c80e47a01b6ceb3f0e18d3e6038842d00f",
+    "reimportedAssetsSha256": "cdd4b82a8429bcce2d983327d5630aad492bd26ca8e502935146c15f451bfe0a",
+    "exportImportDispatchCount": 0,
+    "importTriggersFinalizeEvents": false
+  }
+}
