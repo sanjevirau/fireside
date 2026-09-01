@@ -252,7 +252,14 @@ fn routes(state: StorageState) -> Router {
             "/download/storage/v1/b/{bucket}/o/{*object}",
             get(gcs_download),
         )
-        .route("/b/{bucket}/o/{*object}", post(gcs_alias_copy))
+        .route("/b/{bucket}/o", get(gcs_list))
+        .route(
+            "/b/{bucket}/o/{*object}",
+            get(gcs_metadata_or_copy)
+                .patch(gcs_patch)
+                .post(gcs_alias_copy)
+                .delete(gcs_delete),
+        )
         .route("/internal/export", post(internal_export))
         .route("/internal/reset", post(internal_reset))
         .fallback(not_found)
@@ -428,6 +435,7 @@ async fn v0_patch(
         &decoded_object(&object),
         &headers,
         &request,
+        true,
     )
     .await?;
     Ok(Json(firebase_metadata(&object)))
@@ -470,7 +478,7 @@ async fn v0_delete(
     Path((bucket, object)): Path<(String, String)>,
     headers: HeaderMap,
 ) -> Result<StatusCode, StorageApiError> {
-    delete_object(&state, &bucket, &decoded_object(&object), &headers).await?;
+    delete_object(&state, &bucket, &decoded_object(&object), &headers, true).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -630,9 +638,8 @@ async fn gcs_list(
     State(state): State<StorageState>,
     Path(bucket): Path<String>,
     RawQuery(query): RawQuery,
-    headers: HeaderMap,
+    _headers: HeaderMap,
 ) -> Result<Json<JsonValue>, StorageApiError> {
-    authorize_list(&state, &bucket, &headers).await?;
     let query = query_fields(query.as_deref());
     let prefix = query.get("prefix").map_or("", String::as_str);
     let maximum = query
@@ -654,7 +661,7 @@ async fn gcs_metadata_or_copy(
     State(state): State<StorageState>,
     Path((bucket, object)): Path<(String, String)>,
     RawQuery(query): RawQuery,
-    headers: HeaderMap,
+    _headers: HeaderMap,
 ) -> Result<Response, StorageApiError> {
     if object.contains("/copyTo/b/") {
         return Err(StorageApiError::plain(
@@ -668,10 +675,8 @@ async fn gcs_metadata_or_copy(
         .map(String::as_str)
         == Some("media")
     {
-        authorize_read(&state, &object, &headers, None).await?;
         file_response(&state, &object, true).await
     } else {
-        authorize_read(&state, &object, &headers, None).await?;
         Ok(Json(gcs_metadata(&state, &object)).into_response())
     }
 }
@@ -679,12 +684,10 @@ async fn gcs_metadata_or_copy(
 async fn gcs_download(
     State(state): State<StorageState>,
     Path((bucket, object)): Path<(String, String)>,
-    RawQuery(query): RawQuery,
-    headers: HeaderMap,
+    RawQuery(_query): RawQuery,
+    _headers: HeaderMap,
 ) -> Result<Response, StorageApiError> {
     let object = get_object(&state, &bucket, &decoded_object(&object))?;
-    let token = query_fields(query.as_deref()).get("token").cloned();
-    authorize_read(&state, &object, &headers, token.as_deref()).await?;
     file_response(&state, &object, true).await
 }
 
@@ -700,6 +703,7 @@ async fn gcs_patch(
         &decoded_object(&object),
         &headers,
         &request,
+        false,
     )
     .await?;
     Ok(Json(gcs_metadata(&state, &object)))
@@ -710,7 +714,7 @@ async fn gcs_delete(
     Path((bucket, object)): Path<(String, String)>,
     headers: HeaderMap,
 ) -> Result<StatusCode, StorageApiError> {
-    delete_object(&state, &bucket, &decoded_object(&object), &headers).await?;
+    delete_object(&state, &bucket, &decoded_object(&object), &headers, false).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -731,7 +735,6 @@ async fn gcs_alias_copy(
 ) -> Result<Json<JsonValue>, StorageApiError> {
     let (source, destination) = parse_copy_path(&decoded_object(&path))?;
     let source = get_object(&state, &bucket, &source)?;
-    authorize_read(&state, &source, &headers, None).await?;
     let request = if body.is_empty() {
         json!({})
     } else {
@@ -813,12 +816,15 @@ async fn update_metadata(
     name: &str,
     headers: &HeaderMap,
     request: &JsonValue,
+    enforce_rules: bool,
 ) -> Result<StoredObject, StorageApiError> {
     let _guard = state.mutation.lock().await;
     let mut object = get_object(state, bucket, name)?;
     let before = object.clone();
     apply_metadata(&mut object, request);
-    authorize(state, "update", Some(&before), Some(&object), headers).await?;
+    if enforce_rules {
+        authorize(state, "update", Some(&before), Some(&object), headers).await?;
+    }
     object.metageneration = object.metageneration.saturating_add(1);
     object.updated = now_rfc3339();
     object.etag = etag(object.generation, object.metageneration);
@@ -837,10 +843,13 @@ async fn delete_object(
     bucket: &str,
     name: &str,
     headers: &HeaderMap,
+    enforce_rules: bool,
 ) -> Result<(), StorageApiError> {
     let _guard = state.mutation.lock().await;
     let object = get_object(state, bucket, name)?;
-    authorize(state, "delete", Some(&object), None, headers).await?;
+    if enforce_rules {
+        authorize(state, "delete", Some(&object), None, headers).await?;
+    }
     {
         let mut data = lock(&state.inner);
         data.objects.remove(&object_key(bucket, name));
@@ -994,14 +1003,15 @@ async fn commit_staging(
         object.time_created.clone_from(&previous.time_created);
     }
     let operation = if before.is_some() { "update" } else { "create" };
-    if let Err(error) = authorize(
-        state,
-        operation,
-        before.as_ref(),
-        Some(&object),
-        spec.headers,
-    )
-    .await
+    if spec.firebase
+        && let Err(error) = authorize(
+            state,
+            operation,
+            before.as_ref(),
+            Some(&object),
+            spec.headers,
+        )
+        .await
     {
         let _ = tokio::fs::remove_file(uploaded.path).await;
         return Err(error);
@@ -2234,6 +2244,22 @@ mod tests {
             .await
             .expect("download");
         assert_eq!(downloaded, bytes);
+        let response = runtime
+            .application()
+            .oneshot(request(
+                Method::GET,
+                &format!("/b/{ASSETS_BUCKET}/o/admin%2Fresumable-%F0%9F%94%A5.bin?alt=media"),
+                Body::empty(),
+            ))
+            .await
+            .expect("Admin alias download");
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            to_bytes(response.into_body(), usize::MAX)
+                .await
+                .expect("Admin alias body"),
+            bytes
+        );
 
         runtime.shutdown().await.expect("shutdown");
         std::fs::remove_dir_all(root).expect("remove test storage");
@@ -2300,6 +2326,18 @@ mod tests {
             .await
             .expect("other read");
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        let response = runtime
+            .application()
+            .oneshot(request(
+                Method::POST,
+                &format!(
+                    "/upload/storage/v1/b/{DEFAULT_BUCKET}/o?uploadType=media&name=admin%2Fno-auth.txt"
+                ),
+                Body::from("admin"),
+            ))
+            .await
+            .expect("Admin GCS upload");
+        assert_eq!(response.status(), StatusCode::OK);
         runtime.shutdown().await.expect("shutdown");
         std::fs::remove_dir_all(root).expect("remove test storage");
     }

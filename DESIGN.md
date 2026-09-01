@@ -1683,7 +1683,10 @@ The oracle captures pin the following suite contracts before implementation:
   Fireside owns the listener, routing, auth decoding, object state, persistence,
   and trigger queue, and sends newline-delimited rule evaluation requests to the
   child. Rules are loaded independently for each configured bucket, owner/Admin
-  requests bypass policy, and an absent ruleset denies client traffic. This jar
+  requests bypass policy, and an absent ruleset denies client traffic. The
+  Admin SDK's GCS JSON routes are themselves the observed admin boundary and
+  bypass rules without requiring an Authorization header; Firebase `/v0`
+  routes remain client traffic and always enforce policy. This jar
   is not firebase-tools and does not host an emulator data service. Firestore
   reads from Storage rules are outside Twodart's current rulesets and remain an
   explicit unsupported callback until an oracle fixture requires the boundary.
