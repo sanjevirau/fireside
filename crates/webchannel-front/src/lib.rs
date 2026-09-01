@@ -100,12 +100,14 @@ impl FirestoreBackend {
 }
 
 impl Backend for FirestoreBackend {
-    fn open(&self, kind: ChannelKind, _request: &OpenRequest) -> BackendChannel {
+    fn open(&self, kind: ChannelKind, request: &OpenRequest) -> BackendChannel {
         let (json_requests, mut request_receiver) = mpsc::channel(128);
         let (response_sender, json_responses) = mpsc::channel(128);
+        let authorization = request.initial_headers.get("authorization").cloned();
         match kind {
             ChannelKind::Listen => {
-                let (typed_requests, mut typed_responses) = self.service.open_listen_channel();
+                let (typed_requests, mut typed_responses) =
+                    self.service.open_client_listen_channel(authorization);
                 let request_errors = response_sender.clone();
                 tokio::spawn(async move {
                     while let Some(value) = request_receiver.recv().await {
@@ -141,7 +143,8 @@ impl Backend for FirestoreBackend {
                 });
             }
             ChannelKind::Write => {
-                let (typed_requests, mut typed_responses) = self.service.open_write_channel();
+                let (typed_requests, mut typed_responses) =
+                    self.service.open_client_write_channel(authorization);
                 let request_errors = response_sender.clone();
                 tokio::spawn(async move {
                     while let Some(value) = request_receiver.recv().await {
@@ -1191,6 +1194,101 @@ mod tests {
                 .as_str()
                 .is_some_and(|token| !token.is_empty())
         );
+    }
+
+    #[tokio::test]
+    async fn firestore_backend_enforces_body_encoded_client_authorization() {
+        let service = FirestoreService::default();
+        service
+            .rules()
+            .install_default(
+                "rules_version = '2'; service cloud.firestore { match /databases/{database}/documents { match /{document=**} { allow read, write: if false; } } }",
+            )
+            .expect("deny rules");
+        let backend = FirestoreBackend::new(service);
+
+        let mut client = backend.open(
+            ChannelKind::Write,
+            &OpenRequest {
+                database: Some("projects/demo/databases/(default)".to_owned()),
+                initial_headers: BTreeMap::new(),
+            },
+        );
+        client
+            .requests
+            .send(json!({"database":"projects/demo/databases/(default)"}))
+            .await
+            .expect("client handshake");
+        let handshake = client
+            .responses
+            .recv()
+            .await
+            .expect("client handshake response")
+            .expect("handshake is not a document operation");
+        let token = handshake["streamToken"]
+            .as_str()
+            .expect("stream token")
+            .to_owned();
+        client
+            .requests
+            .send(json!({
+                "streamToken": token,
+                "writes": [{
+                    "update": {
+                        "name": "projects/demo/databases/(default)/documents/locked/item",
+                        "fields": {"value": {"integerValue": "1"}}
+                    }
+                }]
+            }))
+            .await
+            .expect("client write");
+        let denial = client
+            .responses
+            .recv()
+            .await
+            .expect("client denial")
+            .expect_err("missing browser auth must not inherit gRPC admin bypass");
+        assert_eq!(denial.status, "PERMISSION_DENIED");
+
+        let mut owner_headers = BTreeMap::new();
+        owner_headers.insert("authorization".to_owned(), "Bearer owner".to_owned());
+        let mut owner = backend.open(
+            ChannelKind::Write,
+            &OpenRequest {
+                database: Some("projects/demo/databases/(default)".to_owned()),
+                initial_headers: owner_headers,
+            },
+        );
+        owner
+            .requests
+            .send(json!({"database":"projects/demo/databases/(default)"}))
+            .await
+            .expect("owner handshake");
+        let handshake = owner
+            .responses
+            .recv()
+            .await
+            .expect("owner handshake response")
+            .expect("owner handshake");
+        owner
+            .requests
+            .send(json!({
+                "streamToken": handshake["streamToken"].as_str().expect("stream token"),
+                "writes": [{
+                    "update": {
+                        "name": "projects/demo/databases/(default)/documents/locked/owner",
+                        "fields": {"value": {"integerValue": "2"}}
+                    }
+                }]
+            }))
+            .await
+            .expect("owner write");
+        owner
+            .responses
+            .recv()
+            .await
+            .expect("owner write response")
+            .expect("body-encoded owner bypass should succeed");
     }
 
     #[test]

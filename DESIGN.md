@@ -1390,6 +1390,31 @@ precondition, patch, transform, and timestamp semantics as a commit;
 to read the original snapshot. The adapter is shared by REST, gRPC, and the
 gRPC engines beneath `WebChannel`.
 
+Client enforcement occurs before a protected read is exposed and while the
+shared write guard still covers both policy evaluation and commit. REST
+requests and browser `WebChannel` sessions treat a missing Authorization header
+as `request.auth == null`; body-encoded WebChannel headers are propagated into
+the shared streaming engines. Raw gRPC retains the emulator backend contract:
+missing metadata is an owner/admin request, while any supplied non-owner
+emulator credential opts that RPC into normal client evaluation. `Bearer
+owner` is the explicit bypass on all three transports. Other bearer values are
+accepted only when they are project-scoped, unsigned `alg: none` Firebase
+emulator tokens with the frozen required claims and a live `iat`/`exp` window;
+this parser is not general JWT verification.
+
+Single reads, multi-document reads, unary and streaming writes, commits,
+queries, aggregation queries, and listeners use the same evaluator. Query
+authorization evaluates `list` against the collection candidate path with no
+materialized resource, so rules are never applied as a result filter;
+`request.query` retains the requested limit, offset, and ordering. Document
+targets are checked as one multi-read. A listener stores its authorization and
+target policy, checks the initial snapshot before emitting `ADD` or documents,
+and checks the policy again against each newer snapshot before incremental
+delivery. A later rule change or document transition that revokes access emits
+an in-stream `PERMISSION_DENIED` target removal rather than leaking the new
+document state. Multi-target streams keep those decisions independent while
+sharing the stream and store snapshot machinery.
+
 ## 10. Differential harness and fixtures
 
 Identical TypeScript cases use real Google SDKs against:

@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use base64::Engine as _;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -14,10 +14,14 @@ use fireside_core_store::{
     Value as StoreValue, Write, WritePreview,
 };
 use fireside_rules_engine::{
-    Auth, Diagnostic, DocumentAccess, DocumentAccessError, EvaluationRequest, EvaluationResult,
-    Query, RequestOperation, Resource, Ruleset, Timestamp, Value, compile,
+    Auth, Diagnostic, DocumentAccess, DocumentAccessError, EvaluationRequest, Resource, Ruleset,
+    Timestamp, Value, compile,
 };
 use serde_json::Value as JsonValue;
+
+pub use fireside_rules_engine::{
+    AtomicEvaluationResult, EvaluationResult, Query as RulesQuery, RequestOperation,
+};
 
 /// Owner/admin bypass token used by the emulator control plane and backend SDKs.
 pub const OWNER_BEARER_TOKEN: &str = "Bearer owner";
@@ -26,6 +30,7 @@ pub const OWNER_BEARER_TOKEN: &str = "Bearer owner";
 #[derive(Clone, Default)]
 pub struct RulesRuntime {
     state: Arc<RwLock<RuntimeState>>,
+    write_guard: Arc<Mutex<()>>,
 }
 
 #[derive(Default)]
@@ -63,6 +68,13 @@ impl RulesRuntime {
             .get(project)
             .cloned()
             .or_else(|| state.default.clone())
+    }
+
+    /// Serializes policy evaluation and installation of a store write across
+    /// every frontend sharing this runtime.
+    #[must_use]
+    pub fn write_lock(&self) -> RulesWriteGuard<'_> {
+        RulesWriteGuard(mutex_lock(&self.write_guard))
     }
 
     /// Evaluates one operation, returning an allow result immediately when no
@@ -121,7 +133,53 @@ impl RulesRuntime {
             .collect::<Vec<_>>();
         rules.evaluate_atomic(&requests, access)
     }
+
+    /// Evaluates a transaction or batch against the original snapshot and a
+    /// complete non-mutating post-write preview.
+    pub fn evaluate_writes(
+        &self,
+        project: &str,
+        authorization: &Authorization,
+        writes: &[Write],
+        snapshot: &Snapshot,
+        time: StoreTimestamp,
+    ) -> Result<AtomicEvaluationResult, fireside_core_store::CommitError> {
+        if writes.is_empty() {
+            return Ok(AtomicEvaluationResult {
+                allowed: true,
+                operations: Vec::new(),
+                document_accesses: 0,
+                document_cache_hits: 0,
+            });
+        }
+        let preview = snapshot.preview_writes(writes, time)?;
+        let access = SnapshotAccess {
+            snapshot: snapshot.clone(),
+            preview: Some(preview.clone()),
+            project: project.to_owned(),
+        };
+        let requests = writes
+            .iter()
+            .map(|write| {
+                let (operation, key) = write_operation(write, snapshot);
+                let current = snapshot.get(&key);
+                let proposed = preview.get(&key);
+                evaluation_request(
+                    operation,
+                    &key,
+                    time,
+                    current.as_deref(),
+                    proposed.as_deref(),
+                    RulesQuery::default(),
+                )
+            })
+            .collect::<Vec<_>>();
+        Ok(self.evaluate_atomic(project, authorization, &requests, &access))
+    }
 }
+
+/// Held while one rules-protected write is evaluated and committed.
+pub struct RulesWriteGuard<'a>(#[allow(dead_code)] MutexGuard<'a, ()>);
 
 fn allowed_result() -> EvaluationResult {
     EvaluationResult {
@@ -394,7 +452,7 @@ pub fn evaluation_request(
     time: StoreTimestamp,
     current: Option<&Document>,
     proposed: Option<&Document>,
-    query: Query,
+    query: RulesQuery,
 ) -> EvaluationRequest {
     let mut request = EvaluationRequest::new(operation, rules_path(key), rules_timestamp(time));
     request.resource = current.map(|document| resource(key, document));
@@ -510,6 +568,11 @@ fn read_lock<T>(lock: &RwLock<T>) -> RwLockReadGuard<'_, T> {
 
 fn write_lock<T>(lock: &RwLock<T>) -> RwLockWriteGuard<'_, T> {
     lock.write()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+fn mutex_lock<T>(lock: &Mutex<T>) -> MutexGuard<'_, T> {
+    lock.lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 

@@ -10,9 +10,10 @@ use axum::body::Body;
 use axum::extract::{OriginalUri, Path, Query, State};
 use axum::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS,
-    ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_REQUEST_HEADERS, CONTENT_TYPE, ORIGIN,
+    ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_REQUEST_HEADERS, AUTHORIZATION, CONTENT_TYPE,
+    ORIGIN,
 };
-use axum::http::{HeaderValue, Method, Request, StatusCode};
+use axum::http::{HeaderMap, HeaderValue, Method, Request, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
@@ -29,7 +30,10 @@ use fireside_query_engine::{
     FieldPath as QueryFieldPath, Filter, Limit, Query as StructuredQuery, QueryPolicy, QueryScope,
     aggregate, execute,
 };
-use fireside_rules_runtime::RulesRuntime;
+use fireside_rules_runtime::RequestOperation;
+use fireside_rules_runtime::{
+    Authorization, RulesQuery, RulesRuntime, SnapshotAccess, evaluation_request,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value as JsonValue, json};
 use time::OffsetDateTime;
@@ -363,11 +367,29 @@ struct WriteParameters {
 async fn get_document(
     State(state): State<RestState>,
     Path(path): Path<DocumentPath>,
+    headers: HeaderMap,
 ) -> Result<Json<JsonValue>, RestError> {
+    let project = path.project.clone();
     let key = document_key(path)?;
-    let document = state
-        .store
-        .snapshot()
+    let authorization = request_authorization(&headers, &project)?;
+    let snapshot = state.store.snapshot();
+    let current = snapshot.get(&key);
+    let request = evaluation_request(
+        RequestOperation::Get,
+        &key,
+        now_timestamp(),
+        current.as_deref(),
+        None,
+        RulesQuery::default(),
+    );
+    let verdict = state.rules.evaluate(
+        &project,
+        &authorization,
+        &request,
+        &SnapshotAccess::current(snapshot.clone(), &project),
+    );
+    require_allowed(verdict)?;
+    let document = snapshot
         .get(&key)
         .ok_or_else(|| RestError::not_found(format!("document not found: {key}")))?;
     Ok(Json(encode_document(&key, &document)?))
@@ -377,8 +399,10 @@ async fn patch_document(
     State(state): State<RestState>,
     Path(path): Path<DocumentPath>,
     Query(parameters): Query<WriteParameters>,
+    headers: HeaderMap,
     Json(body): Json<JsonValue>,
 ) -> Result<Json<JsonValue>, RestError> {
+    let project = path.project.clone();
     let key = document_key(path)?;
     let fields = decode_document_fields(&body)?;
     let precondition = decode_precondition(&parameters)?;
@@ -409,6 +433,21 @@ async fn patch_document(
             precondition,
         }
     };
+    let authorization = request_authorization(&headers, &project)?;
+    let _guard = state.rules.write_lock();
+    let snapshot = state.store.snapshot();
+    let request_time = now_timestamp();
+    let verdict = state
+        .rules
+        .evaluate_writes(
+            &project,
+            &authorization,
+            std::slice::from_ref(&write),
+            &snapshot,
+            request_time,
+        )
+        .map_err(|error| RestError::commit(&error))?;
+    require_atomic_allowed(verdict)?;
     state
         .store
         .commit(&[write])
@@ -425,14 +464,31 @@ async fn delete_document(
     State(state): State<RestState>,
     Path(path): Path<DocumentPath>,
     Query(parameters): Query<WriteParameters>,
+    headers: HeaderMap,
 ) -> Result<Json<JsonValue>, RestError> {
+    let project = path.project.clone();
     let key = document_key(path)?;
+    let authorization = request_authorization(&headers, &project)?;
+    let write = Write::Delete {
+        key,
+        precondition: decode_precondition(&parameters)?,
+    };
+    let _guard = state.rules.write_lock();
+    let snapshot = state.store.snapshot();
+    let verdict = state
+        .rules
+        .evaluate_writes(
+            &project,
+            &authorization,
+            std::slice::from_ref(&write),
+            &snapshot,
+            now_timestamp(),
+        )
+        .map_err(|error| RestError::commit(&error))?;
+    require_atomic_allowed(verdict)?;
     state
         .store
-        .commit(&[Write::Delete {
-            key,
-            precondition: decode_precondition(&parameters)?,
-        }])
+        .commit(&[write])
         .map_err(|error| RestError::commit(&error))?;
     Ok(Json(json!({})))
 }
@@ -587,8 +643,10 @@ fn control_state(state: &RestState) -> MutexGuard<'_, ControlState> {
 async fn commit(
     State(state): State<RestState>,
     Path(path): Path<DatabasePath>,
+    headers: HeaderMap,
     Json(body): Json<JsonValue>,
 ) -> Result<Json<JsonValue>, RestError> {
+    let project = path.project.clone();
     let database = database_name(path)?;
     let writes = body
         .get("writes")
@@ -598,6 +656,20 @@ async fn commit(
         .map(|write| decode_write(write, &database))
         .collect::<Result<Vec<_>, _>>()?;
     validate_commit_write_sequence(&writes)?;
+    let authorization = request_authorization(&headers, &project)?;
+    let _guard = state.rules.write_lock();
+    let snapshot = state.store.snapshot();
+    let verdict = state
+        .rules
+        .evaluate_writes(
+            &project,
+            &authorization,
+            &writes,
+            &snapshot,
+            now_timestamp(),
+        )
+        .map_err(|error| RestError::commit(&error))?;
+    require_atomic_allowed(verdict)?;
     let result = state
         .store
         .commit(&writes)
@@ -639,16 +711,21 @@ async fn commit(
 async fn batch_get(
     State(state): State<RestState>,
     Path(path): Path<DatabasePath>,
+    headers: HeaderMap,
     Json(body): Json<JsonValue>,
 ) -> Result<Json<JsonValue>, RestError> {
+    let project = path.project.clone();
     let database = database_name(path)?;
     let names = body
         .get("documents")
         .and_then(JsonValue::as_array)
         .ok_or_else(|| RestError::invalid("batchGet documents must be an array"))?;
     let snapshot = state.store.snapshot();
-    let read_time = format_timestamp(now_timestamp())?;
+    let authorization = request_authorization(&headers, &project)?;
+    let request_time = now_timestamp();
+    let read_time = format_timestamp(request_time)?;
     let mut responses = Vec::with_capacity(names.len());
+    let mut evaluations = Vec::with_capacity(names.len());
     for name in names {
         let name = name
             .as_str()
@@ -659,6 +736,14 @@ async fn batch_get(
                 "batchGet document belongs to a different database",
             ));
         }
+        evaluations.push(evaluation_request(
+            RequestOperation::Get,
+            &key,
+            request_time,
+            snapshot.get(&key).as_deref(),
+            None,
+            RulesQuery::default(),
+        ));
         let response = if let Some(document) = snapshot.get(&key) {
             json!({
                 "found": encode_document(&key, &document)?,
@@ -669,31 +754,49 @@ async fn batch_get(
         };
         responses.push(response);
     }
+    let verdict = state.rules.evaluate_atomic(
+        &project,
+        &authorization,
+        &evaluations,
+        &SnapshotAccess::current(snapshot, &project),
+    );
+    require_atomic_allowed(verdict)?;
     Ok(Json(JsonValue::Array(responses)))
 }
 
 async fn run_query_at_root(
     State(state): State<RestState>,
     Path(path): Path<DatabasePath>,
+    headers: HeaderMap,
     Json(body): Json<JsonValue>,
 ) -> Result<Json<JsonValue>, RestError> {
-    run_query(&state, &database_name(path)?, None, &body)
+    let project = path.project.clone();
+    run_query(
+        &state,
+        &database_name(path)?,
+        None,
+        &body,
+        &request_authorization(&headers, &project)?,
+    )
 }
 
 async fn run_query_at_parent(
     State(state): State<RestState>,
     Path(path): Path<DocumentPath>,
+    headers: HeaderMap,
     Json(body): Json<JsonValue>,
 ) -> Result<Json<JsonValue>, RestError> {
+    let project = path.project.clone();
+    let authorization = request_authorization(&headers, &project)?;
     let database = DatabaseName::new(path.project, path.database)
         .map_err(|error| RestError::invalid(error.to_string()))?;
     if let Some(parent) = path.document.strip_suffix(":runQuery") {
         validate_parent(parent)?;
-        return run_query(&state, &database, Some(parent), &body);
+        return run_query(&state, &database, Some(parent), &body, &authorization);
     }
     if let Some(parent) = path.document.strip_suffix(":runAggregationQuery") {
         validate_parent(parent)?;
-        return run_aggregation_query(&state, &database, Some(parent), &body);
+        return run_aggregation_query(&state, &database, Some(parent), &body, &authorization);
     }
     Err(RestError::not_found("unknown REST document operation"))
 }
@@ -701,9 +804,17 @@ async fn run_query_at_parent(
 async fn run_aggregation_query_at_root(
     State(state): State<RestState>,
     Path(path): Path<DatabasePath>,
+    headers: HeaderMap,
     Json(body): Json<JsonValue>,
 ) -> Result<Json<JsonValue>, RestError> {
-    run_aggregation_query(&state, &database_name(path)?, None, &body)
+    let project = path.project.clone();
+    run_aggregation_query(
+        &state,
+        &database_name(path)?,
+        None,
+        &body,
+        &request_authorization(&headers, &project)?,
+    )
 }
 
 fn run_query(
@@ -711,6 +822,7 @@ fn run_query(
     database: &DatabaseName,
     parent: Option<&str>,
     body: &JsonValue,
+    authorization: &Authorization,
 ) -> Result<Json<JsonValue>, RestError> {
     let structured = body
         .get("structuredQuery")
@@ -721,13 +833,20 @@ fn run_query(
         .query_policy
         .validate(&query)
         .map_err(|error| RestError::streaming_failed_precondition(error.to_string()))?;
-    let documents = execute(
-        &state.store.snapshot(),
+    let snapshot = state.store.snapshot();
+    let documents = execute(&snapshot, database, &query, state.query_policy.edition())
+        .map_err(|error| RestError::invalid(error.to_string()))?;
+    authorize_query(
+        state,
         database,
-        &query,
-        state.query_policy.edition(),
-    )
-    .map_err(|error| RestError::invalid(error.to_string()))?;
+        parent,
+        structured,
+        documents
+            .first()
+            .map(fireside_query_engine::QueryDocument::key),
+        authorization,
+        &snapshot,
+    )?;
     let read_time = format_timestamp(now_timestamp())?;
     let mut responses = documents
         .iter()
@@ -754,6 +873,7 @@ fn run_aggregation_query(
     database: &DatabaseName,
     parent: Option<&str>,
     body: &JsonValue,
+    authorization: &Authorization,
 ) -> Result<Json<JsonValue>, RestError> {
     let aggregation_query = body
         .get("structuredAggregationQuery")
@@ -769,13 +889,20 @@ fn run_aggregation_query(
         .validate(&query)
         .map_err(|error| RestError::streaming_failed_precondition(error.to_string()))?;
     let (operations, count_bounds) = decode_aggregations(aggregation_query)?;
-    let documents = execute(
-        &state.store.snapshot(),
+    let snapshot = state.store.snapshot();
+    let documents = execute(&snapshot, database, &query, state.query_policy.edition())
+        .map_err(|error| RestError::invalid(error.to_string()))?;
+    authorize_query(
+        state,
         database,
-        &query,
-        state.query_policy.edition(),
-    )
-    .map_err(|error| RestError::invalid(error.to_string()))?;
+        parent,
+        structured,
+        documents
+            .first()
+            .map(fireside_query_engine::QueryDocument::key),
+        authorization,
+        &snapshot,
+    )?;
     let mut fields = aggregate(&documents, &operations);
     for (alias, bound) in count_bounds {
         if let Some(Value::Integer(count)) = fields.get_mut(&alias) {
@@ -786,6 +913,122 @@ fn run_aggregation_query(
         "result": { "aggregateFields": encode_fields(&fields)? },
         "readTime": format_timestamp(now_timestamp())?,
     })])))
+}
+
+fn authorize_query(
+    state: &RestState,
+    database: &DatabaseName,
+    parent: Option<&str>,
+    structured: &Map<String, JsonValue>,
+    first_result: Option<&DocumentKey>,
+    authorization: &Authorization,
+    snapshot: &fireside_core_store::Snapshot,
+) -> Result<(), RestError> {
+    let candidate = first_result
+        .cloned()
+        .map_or_else(|| query_candidate_key(database, parent, structured), Ok)?;
+    let query = RulesQuery {
+        limit: structured
+            .get("limit")
+            .and_then(JsonValue::as_u64)
+            .and_then(|value| i64::try_from(value).ok()),
+        offset: structured
+            .get("offset")
+            .and_then(JsonValue::as_u64)
+            .and_then(|value| i64::try_from(value).ok()),
+        order_by: structured
+            .get("orderBy")
+            .and_then(JsonValue::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(|order| {
+                let field = order
+                    .get("field")?
+                    .get("fieldPath")?
+                    .as_str()
+                    .unwrap_or_default();
+                let direction = order
+                    .get("direction")
+                    .and_then(JsonValue::as_str)
+                    .unwrap_or("ASCENDING");
+                Some(format!("{field} {direction}"))
+            })
+            .collect(),
+    };
+    let request = evaluation_request(
+        RequestOperation::List,
+        &candidate,
+        now_timestamp(),
+        None,
+        None,
+        query,
+    );
+    require_allowed(state.rules.evaluate(
+        database.project_id(),
+        authorization,
+        &request,
+        &SnapshotAccess::current(snapshot.clone(), database.project_id()),
+    ))
+}
+
+fn query_candidate_key(
+    database: &DatabaseName,
+    parent: Option<&str>,
+    structured: &Map<String, JsonValue>,
+) -> Result<DocumentKey, RestError> {
+    let selector = structured
+        .get("from")
+        .and_then(JsonValue::as_array)
+        .and_then(|selectors| selectors.first())
+        .ok_or_else(|| RestError::invalid("query collection selector is required"))?;
+    let collection = selector
+        .get("collectionId")
+        .and_then(JsonValue::as_str)
+        .ok_or_else(|| RestError::invalid("collectionId is required"))?;
+    let path = parent.map_or_else(
+        || format!("{collection}/rules-candidate"),
+        |parent| format!("{parent}/{collection}/rules-candidate"),
+    );
+    DocumentKey::new(database.clone(), path).map_err(|error| RestError::invalid(error.to_string()))
+}
+
+fn request_authorization(headers: &HeaderMap, project: &str) -> Result<Authorization, RestError> {
+    let header = headers
+        .get(AUTHORIZATION)
+        .map(HeaderValue::to_str)
+        .transpose()
+        .map_err(|_| RestError::unauthenticated("Authorization header is not valid text"))?;
+    Authorization::parse(header, project, now_timestamp().seconds())
+        .map_err(|error| RestError::unauthenticated(error.to_string()))
+}
+
+fn require_allowed(verdict: fireside_rules_runtime::EvaluationResult) -> Result<(), RestError> {
+    if verdict.allowed {
+        Ok(())
+    } else {
+        Err(RestError::permission_denied(verdict.error.map_or_else(
+            || "Security Rules denied the request".to_owned(),
+            |error| error.message,
+        )))
+    }
+}
+
+fn require_atomic_allowed(
+    verdict: fireside_rules_runtime::AtomicEvaluationResult,
+) -> Result<(), RestError> {
+    if verdict.allowed {
+        return Ok(());
+    }
+    let message = verdict
+        .operations
+        .into_iter()
+        .find(|operation| !operation.allowed)
+        .and_then(|operation| operation.error)
+        .map_or_else(
+            || "Security Rules denied the request".to_owned(),
+            |error| error.message,
+        );
+    Err(RestError::permission_denied(message))
 }
 
 fn decode_aggregations(
@@ -1659,6 +1902,24 @@ impl RestError {
         }
     }
 
+    fn unauthenticated(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::UNAUTHORIZED,
+            code: "UNAUTHENTICATED",
+            message: message.into(),
+            streaming: false,
+        }
+    }
+
+    fn permission_denied(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::FORBIDDEN,
+            code: "PERMISSION_DENIED",
+            message: message.into(),
+            streaming: false,
+        }
+    }
+
     fn internal(message: impl Into<String>) -> Self {
         Self {
             status: StatusCode::INTERNAL_SERVER_ERROR,
@@ -1801,10 +2062,152 @@ mod tests {
         ));
     }
 
+    #[tokio::test]
+    async fn security_rules_enforce_rest_auth_reads_writes_and_queries() {
+        let (application, base, token) = rest_rules_application();
+
+        assert_eq!(
+            response_status(
+                &application,
+                Request::get(format!("{base}/public/news"))
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await,
+            StatusCode::OK
+        );
+        assert_eq!(
+            response_status(
+                &application,
+                Request::get(format!("{base}/users/alice"))
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await,
+            StatusCode::FORBIDDEN
+        );
+        assert_eq!(
+            response_status(
+                &application,
+                Request::get(format!("{base}/users/alice"))
+                    .header(AUTHORIZATION, token.as_str())
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await,
+            StatusCode::OK
+        );
+        assert_eq!(
+            response_status(
+                &application,
+                Request::patch(format!("{base}/users/bob"))
+                    .header(AUTHORIZATION, token.as_str())
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({"fields":{"name":{"stringValue":"Bob"}}}).to_string(),
+                    ))
+                    .expect("request"),
+            )
+            .await,
+            StatusCode::FORBIDDEN
+        );
+        assert_eq!(
+            rules_query_status(&application, &base, 5).await,
+            StatusCode::OK
+        );
+        assert_eq!(
+            rules_query_status(&application, &base, 6).await,
+            StatusCode::FORBIDDEN
+        );
+    }
+
+    fn rest_rules_application() -> (Router, String, String) {
+        let project = "demo-rest-rules";
+        let database = DatabaseName::new(project, "(default)").expect("database");
+        let store = Store::default();
+        store
+            .commit(&[
+                Write::Create {
+                    key: DocumentKey::new(database.clone(), "public/news").expect("public key"),
+                    fields: Fields::from([("title".to_owned(), Value::String("News".into()))]),
+                },
+                Write::Create {
+                    key: DocumentKey::new(database, "users/alice").expect("user key"),
+                    fields: Fields::from([("name".to_owned(), Value::String("Alice".into()))]),
+                },
+            ])
+            .expect("seed");
+        let runtime = RulesRuntime::default();
+        runtime
+            .install_project(project, &rest_enforcement_rules())
+            .expect("rules");
+        (
+            router_with_query_policy_memory_and_rules(store, QueryPolicy::default(), None, runtime),
+            format!("/v1/projects/{project}/databases/(default)/documents"),
+            emulator_token(project, "alice"),
+        )
+    }
+
+    async fn rules_query_status(application: &Router, base: &str, limit: u64) -> StatusCode {
+        response_status(
+            application,
+            Request::post(format!("{base}:runQuery"))
+                .header(CONTENT_TYPE, "application/json")
+                .body(Body::from(
+                    json!({"structuredQuery":{"from":[{"collectionId":"public"}],"limit":limit}})
+                        .to_string(),
+                ))
+                .expect("request"),
+        )
+        .await
+    }
+
+    async fn response_status(application: &Router, request: Request<Body>) -> StatusCode {
+        application
+            .clone()
+            .oneshot(request)
+            .await
+            .expect("response")
+            .status()
+    }
+
     fn test_rules(condition: &str) -> String {
         format!(
             "rules_version = '2'; service cloud.firestore {{ match /databases/{{database}}/documents {{ match /{{document=**}} {{ allow read, write: if {condition}; }} }} }}"
         )
+    }
+
+    fn rest_enforcement_rules() -> String {
+        "rules_version = '2'; service cloud.firestore {
+          match /databases/{database}/documents {
+            match /public/{id} {
+              allow get: if true;
+              allow list: if request.query.limit != null && request.query.limit <= 5;
+            }
+            match /users/{uid} {
+              allow get, create, update: if request.auth != null && request.auth.uid == uid;
+            }
+          }
+        }"
+        .to_owned()
+    }
+
+    fn emulator_token(project: &str, uid: &str) -> String {
+        use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+        let now = now_timestamp().seconds();
+        let header = URL_SAFE_NO_PAD.encode(json!({"alg":"none","typ":"JWT"}).to_string());
+        let payload = URL_SAFE_NO_PAD.encode(
+            json!({
+                "aud": project,
+                "exp": now + 300,
+                "iat": now - 300,
+                "iss": format!("https://securetoken.google.com/{project}"),
+                "sub": uid,
+                "user_id": uid
+            })
+            .to_string(),
+        );
+        format!("Bearer {header}.{payload}.")
     }
 
     #[tokio::test]

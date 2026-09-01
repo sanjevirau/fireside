@@ -2,10 +2,13 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
 
 use fireside_core_store::{
-    DatabaseName, ListenerMemoryRegistration, Revision, RuntimeMemoryAccounting, SnapshotError,
-    Store, Timestamp,
+    DatabaseName, DocumentKey, ListenerMemoryRegistration, Revision, RuntimeMemoryAccounting,
+    Snapshot, SnapshotError, Store, Timestamp,
 };
 use fireside_query_engine::QueryPolicy;
+use fireside_rules_runtime::{
+    Authorization, RequestOperation, RulesQuery, RulesRuntime, SnapshotAccess, evaluation_request,
+};
 use fireside_watch_broker::{
     ChangeBatch, ChangeKind, TargetSpec, WatchChange, WatchDocument, WatchTarget,
 };
@@ -32,7 +35,10 @@ use crate::google::firestore::v1::{
 };
 use crate::google::rpc;
 use crate::query_codec::{decode_query, query_status};
-use crate::service::ResponseStream;
+use crate::service::{
+    AuthorizationSource, ResponseStream, query_candidate_key, require_atomic_rules_allowed,
+    require_rules_allowed, rules_query_from_structured,
+};
 
 const POLL_INTERVAL: Duration = Duration::from_millis(10);
 const RESPONSE_BUFFER: usize = 128;
@@ -56,9 +62,41 @@ struct InitialTarget {
     filter: InitialFilter,
 }
 
+struct ActiveTarget {
+    watch: WatchTarget,
+    policy: TargetPolicy,
+    authorization: Authorization,
+}
+
+enum TargetPolicy {
+    Documents(Vec<DocumentKey>),
+    Query {
+        candidate: DocumentKey,
+        query: RulesQuery,
+    },
+}
+
+struct ListenContext<'a> {
+    store: &'a Store,
+    sender: &'a mpsc::Sender<Result<ListenResponse, Status>>,
+    query_policy: &'a QueryPolicy,
+    rules: &'a RulesRuntime,
+    authorization: &'a AuthorizationSource,
+}
+
+struct TargetInitialization {
+    id: i32,
+    database: DatabaseName,
+    spec: TargetSpec,
+    resume_point: Option<ResumePoint>,
+    expected_count: Option<i32>,
+}
+
 pub(crate) fn stream<S>(
     store: Store,
     query_policy: QueryPolicy,
+    rules: RulesRuntime,
+    authorization: AuthorizationSource,
     memory_accounting: RuntimeMemoryAccounting,
     input: S,
 ) -> ResponseStream<ListenResponse>
@@ -66,20 +104,30 @@ where
     S: Stream<Item = Result<ListenRequest, Status>> + Send + Unpin + 'static,
 {
     let (sender, receiver) = mpsc::channel(RESPONSE_BUFFER);
-    tokio::spawn(run(store, query_policy, memory_accounting, input, sender));
+    tokio::spawn(run(
+        store,
+        query_policy,
+        rules,
+        authorization,
+        memory_accounting,
+        input,
+        sender,
+    ));
     Box::pin(ReceiverStream::new(receiver))
 }
 
 async fn run<S>(
     store: Store,
     query_policy: QueryPolicy,
+    rules: RulesRuntime,
+    authorization: AuthorizationSource,
     memory_accounting: RuntimeMemoryAccounting,
     mut input: S,
     sender: mpsc::Sender<Result<ListenResponse, Status>>,
 ) where
     S: Stream<Item = Result<ListenRequest, Status>> + Send + Unpin,
 {
-    let mut targets = BTreeMap::<i32, WatchTarget>::new();
+    let mut targets = BTreeMap::<i32, ActiveTarget>::new();
     let memory_registration = memory_accounting.register_listener_stream();
     let mut next_assigned_id = 1;
     let mut poll = interval(POLL_INTERVAL);
@@ -90,12 +138,17 @@ async fn run<S>(
             request = input.next() => {
                 match request {
                     Some(Ok(request)) => {
+                        let context = ListenContext {
+                            store: &store,
+                            sender: &sender,
+                            query_policy: &query_policy,
+                            rules: &rules,
+                            authorization: &authorization,
+                        };
                         if let Err(error) = handle_request(
-                            &store,
-                            &sender,
+                            &context,
                             &mut targets,
                             &mut next_assigned_id,
-                            &query_policy,
                             request,
                         ).await {
                             let _ = sender.send(Err(error)).await;
@@ -111,7 +164,7 @@ async fn run<S>(
                 }
             }
             _ = poll.tick(), if !targets.is_empty() => {
-                if let Err(error) = refresh_targets(&store, &sender, &mut targets).await {
+                if let Err(error) = refresh_targets(&store, &rules, &sender, &mut targets).await {
                     let _ = sender.send(Err(error)).await;
                     break;
                 }
@@ -123,13 +176,13 @@ async fn run<S>(
 
 fn record_target_memory(
     registration: &ListenerMemoryRegistration,
-    targets: &BTreeMap<i32, WatchTarget>,
+    targets: &BTreeMap<i32, ActiveTarget>,
 ) {
     let (documents, logical_bytes) =
         targets
             .values()
             .fold((0_u64, 0_u64), |(documents, logical_bytes), target| {
-                let usage = target.logical_memory_usage();
+                let usage = target.watch.logical_memory_usage();
                 (
                     documents.saturating_add(usage.entries),
                     logical_bytes.saturating_add(usage.logical_bytes),
@@ -143,30 +196,26 @@ fn record_target_memory(
 }
 
 async fn handle_request(
-    store: &Store,
-    sender: &mpsc::Sender<Result<ListenResponse, Status>>,
-    targets: &mut BTreeMap<i32, WatchTarget>,
+    context: &ListenContext<'_>,
+    targets: &mut BTreeMap<i32, ActiveTarget>,
     next_assigned_id: &mut i32,
-    query_policy: &QueryPolicy,
     request: ListenRequest,
 ) -> Result<(), Status> {
     let database = decode_database_name(&request.database)?;
     match request.target_change {
         Some(RequestedTargetChange::AddTarget(target)) => {
-            add_target(
-                store,
-                sender,
-                targets,
-                next_assigned_id,
-                query_policy,
-                database,
-                target,
-            )
-            .await
+            add_target(context, targets, next_assigned_id, database, target).await
         }
         Some(RequestedTargetChange::RemoveTarget(id)) => {
             targets.remove(&id);
-            send_target_change(sender, TargetChangeType::Remove, vec![id], None, None).await
+            send_target_change(
+                context.sender,
+                TargetChangeType::Remove,
+                vec![id],
+                None,
+                None,
+            )
+            .await
         }
         None => Err(Status::invalid_argument(
             "listen request requires a target change",
@@ -175,11 +224,9 @@ async fn handle_request(
 }
 
 async fn add_target(
-    store: &Store,
-    sender: &mpsc::Sender<Result<ListenResponse, Status>>,
-    targets: &mut BTreeMap<i32, WatchTarget>,
+    context: &ListenContext<'_>,
+    targets: &mut BTreeMap<i32, ActiveTarget>,
     next_assigned_id: &mut i32,
-    query_policy: &QueryPolicy,
     database: DatabaseName,
     target: Target,
 ) -> Result<(), Status> {
@@ -195,7 +242,7 @@ async fn add_target(
     }
     if targets.contains_key(&id) {
         send_target_error(
-            sender,
+            context.sender,
             id,
             Code::AlreadyExists,
             "target ID is already active",
@@ -206,42 +253,70 @@ async fn add_target(
     let resume_point = match decode_resume_point(&target) {
         Ok(resume_point) => resume_point,
         Err(_) if matches!(target.resume_type, Some(ResumeType::ResumeToken(_))) => {
-            send_target_error(sender, id, Code::InvalidArgument, "bad resume token").await?;
+            send_target_error(
+                context.sender,
+                id,
+                Code::InvalidArgument,
+                "bad resume token",
+            )
+            .await?;
             return Ok(());
         }
         Err(error) => return Err(error),
     };
-    let spec = match decode_target_spec(&database, target.target_type) {
-        Ok(spec) => spec,
+    let authorization = context.authorization.resolve(database.project_id())?;
+    let (spec, policy) = match decode_target_spec(&database, target.target_type) {
+        Ok(decoded) => decoded,
         Err(error) => {
-            send_target_error(sender, id, error.code(), error.message()).await?;
+            send_target_error(context.sender, id, error.code(), error.message()).await?;
             return Ok(());
         }
     };
     if let TargetSpec::Query(query) = &spec
-        && let Err(error) = query_policy.validate(query)
+        && let Err(error) = context.query_policy.validate(query)
     {
-        send_target_error(sender, id, Code::FailedPrecondition, &error.to_string()).await?;
+        send_target_error(
+            context.sender,
+            id,
+            Code::FailedPrecondition,
+            &error.to_string(),
+        )
+        .await?;
+        return Ok(());
+    }
+    let snapshot = context.store.snapshot();
+    if let Err(error) = authorize_target(context.rules, &authorization, &policy, &snapshot) {
+        send_target_error(context.sender, id, error.code(), error.message()).await?;
         return Ok(());
     }
     let initial = match initialize_target(
-        store,
-        id,
-        database,
-        spec,
-        query_policy,
-        resume_point.as_ref(),
-        expected_count,
+        context.store,
+        context.query_policy,
+        &snapshot,
+        TargetInitialization {
+            id,
+            database,
+            spec,
+            resume_point,
+            expected_count,
+        },
     ) {
         Ok(initial) => initial,
         Err(error) => {
-            send_target_error(sender, id, error.code(), error.message()).await?;
+            send_target_error(context.sender, id, error.code(), error.message()).await?;
             return Ok(());
         }
     };
-    send_initial_target(sender, id, &initial).await?;
+    send_initial_target(context.sender, id, &initial).await?;
     if !target.once {
-        targets.insert(id, initial.watch);
+        targets.insert(
+            id,
+            ActiveTarget {
+                watch: initial.watch,
+                policy,
+                authorization,
+            },
+        );
     }
     Ok(())
 }
@@ -272,15 +347,18 @@ fn assign_target_id(requested: i32, next_assigned_id: &mut i32) -> i32 {
 
 fn initialize_target(
     store: &Store,
-    id: i32,
-    database: DatabaseName,
-    spec: TargetSpec,
     query_policy: &QueryPolicy,
-    resume_point: Option<&ResumePoint>,
-    expected_count: Option<i32>,
+    snapshot: &Snapshot,
+    initialization: TargetInitialization,
 ) -> Result<InitialTarget, Status> {
-    let snapshot = store.snapshot();
-    let (watch, changes, filter) = match resume_point {
+    let TargetInitialization {
+        id,
+        database,
+        spec,
+        resume_point,
+        expected_count,
+    } = initialization;
+    let (watch, changes, filter) = match resume_point.as_ref() {
         Some(ResumePoint::Revision(revision)) => {
             let baseline = store
                 .snapshot_at(*revision)
@@ -291,7 +369,7 @@ fn initialize_target(
                 spec,
                 query_policy,
                 &baseline,
-                &snapshot,
+                snapshot,
                 expected_count,
             )?
         }
@@ -305,19 +383,19 @@ fn initialize_target(
                 spec,
                 query_policy,
                 &baseline,
-                &snapshot,
+                snapshot,
                 expected_count,
             )?
         }
         Some(ResumePoint::ExpiredReadTime) => {
             let (watch, initial) =
-                WatchTarget::initialize(id, database, spec, query_policy.edition(), &snapshot)
+                WatchTarget::initialize(id, database, spec, query_policy.edition(), snapshot)
                     .map_err(|error| query_status(&error))?;
             (watch, initial, InitialFilter::CountOnly)
         }
         None => {
             let (watch, initial) =
-                WatchTarget::initialize(id, database, spec, query_policy.edition(), &snapshot)
+                WatchTarget::initialize(id, database, spec, query_policy.edition(), snapshot)
                     .map_err(|error| query_status(&error))?;
             (watch, initial, InitialFilter::None)
         }
@@ -404,7 +482,7 @@ fn resumed_target(
 fn decode_target_spec(
     database: &DatabaseName,
     target_type: Option<TargetType>,
-) -> Result<TargetSpec, Status> {
+) -> Result<(TargetSpec, TargetPolicy), Status> {
     match target_type {
         Some(TargetType::Query(target)) => {
             let (target_database, parent) = decode_parent(&target.parent)?;
@@ -418,7 +496,12 @@ fn decode_target_spec(
                     "listen target requires a structured query",
                 ));
             };
-            decode_query(parent.as_deref(), query).map(|query| TargetSpec::Query(Box::new(query)))
+            let policy = TargetPolicy::Query {
+                candidate: query_candidate_key(database, parent.as_deref(), &query)?,
+                query: rules_query_from_structured(&query),
+            };
+            decode_query(parent.as_deref(), query)
+                .map(|query| (TargetSpec::Query(Box::new(query)), policy))
         }
         Some(TargetType::Documents(target)) => {
             let documents = target
@@ -434,37 +517,103 @@ fn decode_target_spec(
                     Ok(key)
                 })
                 .collect::<Result<BTreeSet<_>, _>>()?;
-            Ok(TargetSpec::Documents(documents))
+            let policy = TargetPolicy::Documents(documents.iter().cloned().collect());
+            Ok((TargetSpec::Documents(documents), policy))
         }
         None => Err(Status::invalid_argument("listen target type is required")),
     }
 }
 
+fn authorize_target(
+    rules: &RulesRuntime,
+    authorization: &Authorization,
+    policy: &TargetPolicy,
+    snapshot: &Snapshot,
+) -> Result<(), Status> {
+    match policy {
+        TargetPolicy::Documents(documents) => {
+            let request_time = now();
+            let requests = documents
+                .iter()
+                .map(|key| {
+                    let document = snapshot.get(key);
+                    evaluation_request(
+                        RequestOperation::Get,
+                        key,
+                        request_time,
+                        document.as_deref(),
+                        None,
+                        RulesQuery::default(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            let project = documents
+                .first()
+                .map_or("", |key| key.database().project_id());
+            require_atomic_rules_allowed(rules.evaluate_atomic(
+                project,
+                authorization,
+                &requests,
+                &SnapshotAccess::current(snapshot.clone(), project),
+            ))
+        }
+        TargetPolicy::Query { candidate, query } => {
+            let request = evaluation_request(
+                RequestOperation::List,
+                candidate,
+                now(),
+                None,
+                None,
+                query.clone(),
+            );
+            require_rules_allowed(rules.evaluate(
+                candidate.database().project_id(),
+                authorization,
+                &request,
+                &SnapshotAccess::current(snapshot.clone(), candidate.database().project_id()),
+            ))
+        }
+    }
+}
+
 async fn refresh_targets(
     store: &Store,
+    rules: &RulesRuntime,
     sender: &mpsc::Sender<Result<ListenResponse, Status>>,
-    targets: &mut BTreeMap<i32, WatchTarget>,
+    targets: &mut BTreeMap<i32, ActiveTarget>,
 ) -> Result<(), Status> {
     let snapshot = store.snapshot();
     if targets
         .values()
-        .all(|target| target.revision() >= snapshot.revision())
+        .all(|target| target.watch.revision() >= snapshot.revision())
     {
         return Ok(());
     }
     let mut changed = false;
+    let mut denied = Vec::new();
     for target in targets.values_mut() {
-        if target.revision() >= snapshot.revision() {
+        if target.watch.revision() >= snapshot.revision() {
             continue;
         }
-        let id = target.id();
+        let id = target.watch.id();
+        if let Err(error) =
+            authorize_target(rules, &target.authorization, &target.policy, &snapshot)
+        {
+            send_target_error(sender, id, error.code(), error.message()).await?;
+            denied.push(id);
+            continue;
+        }
         let batch = target
+            .watch
             .refresh(&snapshot)
             .map_err(|error| query_status(&error))?;
         for change in batch.changes {
             changed = true;
             send_document_change(sender, id, change).await?;
         }
+    }
+    for id in denied {
+        targets.remove(&id);
     }
     if changed {
         send_target_change(

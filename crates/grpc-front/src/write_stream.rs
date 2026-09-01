@@ -5,28 +5,33 @@ use tonic::Status;
 
 use crate::codec::decode_database_name;
 use crate::google::firestore::v1::{WriteRequest, WriteResponse};
-use crate::service::{FirestoreService, ResponseStream};
+use crate::service::{AuthorizationSource, FirestoreService, ResponseStream};
 
 const RESPONSE_BUFFER: usize = 128;
 const STREAM_TOKEN_PREFIX: &[u8] = b"fireside-write-token-";
 
-pub(crate) fn stream<S>(service: FirestoreService, input: S) -> ResponseStream<WriteResponse>
+pub(crate) fn stream<S>(
+    service: FirestoreService,
+    authorization: AuthorizationSource,
+    input: S,
+) -> ResponseStream<WriteResponse>
 where
     S: Stream<Item = Result<WriteRequest, Status>> + Send + Unpin + 'static,
 {
     let (sender, receiver) = mpsc::channel(RESPONSE_BUFFER);
-    tokio::spawn(run(service, input, sender));
+    tokio::spawn(run(service, authorization, input, sender));
     Box::pin(ReceiverStream::new(receiver))
 }
 
 async fn run<S>(
     service: FirestoreService,
+    authorization: AuthorizationSource,
     mut input: S,
     sender: mpsc::Sender<Result<WriteResponse, Status>>,
 ) where
     S: Stream<Item = Result<WriteRequest, Status>> + Send + Unpin,
 {
-    let result = run_inner(&service, &mut input, &sender).await;
+    let result = run_inner(&service, &authorization, &mut input, &sender).await;
     if let Err(error) = result {
         let _ = sender.send(Err(error)).await;
     }
@@ -34,6 +39,7 @@ async fn run<S>(
 
 async fn run_inner<S>(
     service: &FirestoreService,
+    authorization_source: &AuthorizationSource,
     input: &mut S,
     sender: &mpsc::Sender<Result<WriteResponse, Status>>,
 ) -> Result<(), Status>
@@ -46,6 +52,7 @@ where
         ));
     };
     let database = decode_database_name(&first.database)?;
+    let authorization = authorization_source.resolve(database.project_id())?;
     if !first.writes.is_empty() {
         return Err(Status::invalid_argument(
             "streaming Write handshake cannot contain writes",
@@ -97,7 +104,7 @@ where
         }
         acknowledged_sequence = request_acknowledgement;
 
-        let commit = service.apply_stream_writes(request.writes)?;
+        let commit = service.apply_stream_writes(&authorization, &database, request.writes)?;
         token_sequence = token_sequence.saturating_add(1);
         send(
             sender,

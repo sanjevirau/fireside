@@ -14,10 +14,14 @@ use fireside_query_engine::{
     Query as StructuredQuery, QueryDocument, QueryPolicy, QueryScope, aggregate, compare_values,
     execute, partition,
 };
-use fireside_rules_runtime::RulesRuntime;
+use fireside_rules_runtime::{
+    AtomicEvaluationResult, Authorization, EvaluationResult, RequestOperation, RulesQuery,
+    RulesRuntime, RulesWriteGuard, SnapshotAccess, evaluation_request,
+};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::{Stream, StreamExt as _, iter};
+use tonic::metadata::MetadataMap;
 use tonic::{Request, Response, Status};
 
 use crate::codec::{
@@ -58,6 +62,24 @@ pub type ResponseStream<T> = Pin<Box<dyn Stream<Item = Result<T, Status>> + Send
 
 const STREAM_REQUEST_BUFFER: usize = 128;
 
+#[derive(Clone)]
+pub(crate) enum AuthorizationSource {
+    Owner,
+    ClientHeader(Option<String>),
+}
+
+impl AuthorizationSource {
+    pub(crate) fn resolve(&self, project: &str) -> Result<Authorization, Status> {
+        match self {
+            Self::Owner => Ok(Authorization::Owner),
+            Self::ClientHeader(header) => {
+                Authorization::parse(header.as_deref(), project, now().seconds())
+                    .map_err(|error| Status::unauthenticated(error.to_string()))
+            }
+        }
+    }
+}
+
 /// Handwritten Firestore v1 service adapter over the MVCC store.
 #[derive(Clone)]
 pub struct FirestoreService {
@@ -65,7 +87,6 @@ pub struct FirestoreService {
     query_policy: QueryPolicy,
     rules: RulesRuntime,
     transactions: Arc<Mutex<HashMap<Vec<u8>, TransactionState>>>,
-    commit_guard: Arc<Mutex<()>>,
     next_id: Arc<AtomicU64>,
 }
 
@@ -100,7 +121,6 @@ impl FirestoreService {
             query_policy,
             rules,
             transactions: Arc::new(Mutex::new(HashMap::new())),
-            commit_guard: Arc::new(Mutex::new(())),
             next_id: Arc::new(AtomicU64::new(1)),
         }
     }
@@ -129,11 +149,32 @@ impl FirestoreService {
     pub fn open_listen_channel(
         &self,
     ) -> (mpsc::Sender<ListenRequest>, ResponseStream<ListenResponse>) {
+        self.open_listen_channel_with_authorization(AuthorizationSource::Owner)
+    }
+
+    /// Opens a browser-client Listen channel whose optional body-encoded
+    /// Authorization header is evaluated by Security Rules.
+    #[must_use]
+    pub fn open_client_listen_channel(
+        &self,
+        authorization_header: Option<String>,
+    ) -> (mpsc::Sender<ListenRequest>, ResponseStream<ListenResponse>) {
+        self.open_listen_channel_with_authorization(AuthorizationSource::ClientHeader(
+            authorization_header,
+        ))
+    }
+
+    fn open_listen_channel_with_authorization(
+        &self,
+        authorization: AuthorizationSource,
+    ) -> (mpsc::Sender<ListenRequest>, ResponseStream<ListenResponse>) {
         let (sender, receiver) = mpsc::channel(STREAM_REQUEST_BUFFER);
         let input = ReceiverStream::new(receiver).map(Ok);
         let responses = crate::listen::stream(
             self.store.clone(),
             self.query_policy.clone(),
+            self.rules.clone(),
+            authorization,
             self.store.runtime_memory_accounting(),
             input,
         );
@@ -146,9 +187,28 @@ impl FirestoreService {
     pub fn open_write_channel(
         &self,
     ) -> (mpsc::Sender<WriteRequest>, ResponseStream<WriteResponse>) {
+        self.open_write_channel_with_authorization(AuthorizationSource::Owner)
+    }
+
+    /// Opens a browser-client Write channel whose optional body-encoded
+    /// Authorization header is evaluated by Security Rules.
+    #[must_use]
+    pub fn open_client_write_channel(
+        &self,
+        authorization_header: Option<String>,
+    ) -> (mpsc::Sender<WriteRequest>, ResponseStream<WriteResponse>) {
+        self.open_write_channel_with_authorization(AuthorizationSource::ClientHeader(
+            authorization_header,
+        ))
+    }
+
+    fn open_write_channel_with_authorization(
+        &self,
+        authorization: AuthorizationSource,
+    ) -> (mpsc::Sender<WriteRequest>, ResponseStream<WriteResponse>) {
         let (sender, receiver) = mpsc::channel(STREAM_REQUEST_BUFFER);
         let input = ReceiverStream::new(receiver).map(Ok);
-        let responses = crate::write_stream::stream(self.clone(), input);
+        let responses = crate::write_stream::stream(self.clone(), authorization, input);
         (sender, responses)
     }
 
@@ -243,15 +303,84 @@ impl FirestoreService {
         })
     }
 
+    fn authorize_document(
+        &self,
+        authorization: &Authorization,
+        operation: RequestOperation,
+        key: &DocumentKey,
+        snapshot: &Snapshot,
+        query: RulesQuery,
+    ) -> Result<(), Status> {
+        let current = snapshot.get(key);
+        let request = evaluation_request(operation, key, now(), current.as_deref(), None, query);
+        require_rules_allowed(self.rules.evaluate(
+            key.database().project_id(),
+            authorization,
+            &request,
+            &SnapshotAccess::current(snapshot.clone(), key.database().project_id()),
+        ))
+    }
+
+    fn authorize_query(
+        &self,
+        authorization: &Authorization,
+        candidate: &DocumentKey,
+        snapshot: &Snapshot,
+        query: RulesQuery,
+    ) -> Result<(), Status> {
+        let request =
+            evaluation_request(RequestOperation::List, candidate, now(), None, None, query);
+        require_rules_allowed(self.rules.evaluate(
+            candidate.database().project_id(),
+            authorization,
+            &request,
+            &SnapshotAccess::current(snapshot.clone(), candidate.database().project_id()),
+        ))
+    }
+
+    fn authorize_writes(
+        &self,
+        authorization: &Authorization,
+        database: &DatabaseName,
+        decoded: &[DecodedWrite],
+        snapshot: &Snapshot,
+        request_time: Timestamp,
+    ) -> Result<(), Status> {
+        let writes = decoded
+            .iter()
+            .map(|decoded| decoded.write.clone())
+            .collect::<Vec<_>>();
+        let verdict = self
+            .rules
+            .evaluate_writes(
+                database.project_id(),
+                authorization,
+                &writes,
+                snapshot,
+                request_time,
+            )
+            .map_err(commit_status)?;
+        require_atomic_rules_allowed(verdict)
+    }
+
     pub(crate) fn apply_stream_writes(
         &self,
+        authorization: &Authorization,
+        database: &DatabaseName,
         writes: Vec<proto::Write>,
     ) -> Result<CommitResponse, Status> {
         let decoded = writes
             .into_iter()
             .map(decode_write)
             .collect::<Result<Vec<_>, _>>()?;
+        if decoded.iter().any(|write| write.key.database() != database) {
+            return Err(Status::invalid_argument(
+                "streaming Write belongs to a different database",
+            ));
+        }
         let _guard = self.write_lock();
+        let snapshot = self.store.snapshot();
+        self.authorize_writes(authorization, database, &decoded, &snapshot, now())?;
         self.apply_writes(&decoded)
     }
 
@@ -265,10 +394,8 @@ impl FirestoreService {
             .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
-    fn write_lock(&self) -> MutexGuard<'_, ()> {
-        self.commit_guard
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    fn write_lock(&self) -> RulesWriteGuard<'_> {
+        self.rules.write_lock()
     }
 
     fn collect_list_documents(
@@ -343,6 +470,43 @@ impl Default for FirestoreService {
     }
 }
 
+fn grpc_authorization_source(metadata: &MetadataMap) -> Result<AuthorizationSource, Status> {
+    let header = metadata
+        .get("authorization")
+        .map(|value| value.to_str())
+        .transpose()
+        .map_err(|_| Status::unauthenticated("Authorization metadata is not valid text"))?;
+    Ok(header.map_or(AuthorizationSource::Owner, |header| {
+        AuthorizationSource::ClientHeader(Some(header.to_owned()))
+    }))
+}
+
+pub(crate) fn require_rules_allowed(verdict: EvaluationResult) -> Result<(), Status> {
+    if verdict.allowed {
+        return Ok(());
+    }
+    Err(Status::permission_denied(verdict.error.map_or_else(
+        || "Security Rules denied the request".to_owned(),
+        |error| error.message,
+    )))
+}
+
+pub(crate) fn require_atomic_rules_allowed(verdict: AtomicEvaluationResult) -> Result<(), Status> {
+    if verdict.allowed {
+        return Ok(());
+    }
+    let message = verdict
+        .operations
+        .into_iter()
+        .find(|operation| !operation.allowed)
+        .and_then(|operation| operation.error)
+        .map_or_else(
+            || "Security Rules denied the request".to_owned(),
+            |error| error.message,
+        );
+    Err(Status::permission_denied(message))
+}
+
 struct TransactionState {
     database: DatabaseName,
     snapshot: Snapshot,
@@ -357,8 +521,10 @@ impl Firestore for FirestoreService {
         &self,
         request: Request<GetDocumentRequest>,
     ) -> Result<Response<proto::Document>, Status> {
+        let authorization_source = grpc_authorization_source(request.metadata())?;
         let request = request.into_inner();
         let key = decode_document_name(&request.name)?;
+        let authorization = authorization_source.resolve(key.database().project_id())?;
         let token = match request.consistency_selector {
             None => Vec::new(),
             Some(get_document_request::ConsistencySelector::Transaction(token)) => token,
@@ -367,6 +533,13 @@ impl Firestore for FirestoreService {
                     .store
                     .snapshot_at_time(decode_read_time(read_time, now())?)
                     .map_err(snapshot_status)?;
+                self.authorize_document(
+                    &authorization,
+                    RequestOperation::Get,
+                    &key,
+                    &snapshot,
+                    RulesQuery::default(),
+                )?;
                 let document = snapshot
                     .get(&key)
                     .ok_or_else(|| Status::not_found(format!("document not found: {key}")))?;
@@ -382,6 +555,13 @@ impl Firestore for FirestoreService {
         } else {
             self.snapshot_for_transaction(key.database(), &token)?
         };
+        self.authorize_document(
+            &authorization,
+            RequestOperation::Get,
+            &key,
+            &snapshot,
+            RulesQuery::default(),
+        )?;
         let document = snapshot
             .get(&key)
             .ok_or_else(|| Status::not_found(format!("document not found: {key}")))?;
@@ -393,12 +573,15 @@ impl Firestore for FirestoreService {
         )?))
     }
 
+    #[allow(clippy::too_many_lines)]
     async fn list_documents(
         &self,
         request: Request<ListDocumentsRequest>,
     ) -> Result<Response<ListDocumentsResponse>, Status> {
+        let authorization_source = grpc_authorization_source(request.metadata())?;
         let request = request.into_inner();
         let (database, parent) = decode_parent(&request.parent)?;
+        let authorization = authorization_source.resolve(database.project_id())?;
         let (token, historical) = match request.consistency_selector.as_ref() {
             None => (Vec::new(), None),
             Some(list_documents_request::ConsistencySelector::Transaction(token)) => {
@@ -459,6 +642,26 @@ impl Firestore for FirestoreService {
             &request,
             &orders,
         )?;
+        let candidate = documents.first().map_or_else(
+            || list_candidate_key(&database, parent.as_deref(), &request.collection_id),
+            |document| Ok(document.key.clone()),
+        )?;
+        self.authorize_query(
+            &authorization,
+            &candidate,
+            &snapshot,
+            RulesQuery {
+                limit: (request.page_size > 0).then_some(i64::from(request.page_size)),
+                offset: None,
+                order_by: request
+                    .order_by
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|order| !order.is_empty())
+                    .map(ToOwned::to_owned)
+                    .collect(),
+            },
+        )?;
         for document in &documents {
             self.record_read(&token, &document.key, document.document.as_deref());
         }
@@ -484,6 +687,7 @@ impl Firestore for FirestoreService {
         &self,
         request: Request<UpdateDocumentRequest>,
     ) -> Result<Response<proto::Document>, Status> {
+        let authorization_source = grpc_authorization_source(request.metadata())?;
         let request = request.into_inner();
         let write = proto::Write {
             update_mask: request.update_mask,
@@ -497,7 +701,16 @@ impl Firestore for FirestoreService {
         };
         let decoded = decode_write(write)?;
         let key = decoded.key.clone();
+        let authorization = authorization_source.resolve(key.database().project_id())?;
         let _guard = self.write_lock();
+        let snapshot = self.store.snapshot();
+        self.authorize_writes(
+            &authorization,
+            key.database(),
+            std::slice::from_ref(&decoded),
+            &snapshot,
+            now(),
+        )?;
         self.apply_writes(&[decoded])?;
         let snapshot = self.store.snapshot();
         let document = snapshot
@@ -514,13 +727,23 @@ impl Firestore for FirestoreService {
         &self,
         request: Request<DeleteDocumentRequest>,
     ) -> Result<Response<pbjson_types::Empty>, Status> {
+        let authorization_source = grpc_authorization_source(request.metadata())?;
         let request = request.into_inner();
         let decoded = decode_write(proto::Write {
             current_document: request.current_document,
             operation: Some(Operation::Delete(request.name)),
             ..proto::Write::default()
         })?;
+        let authorization = authorization_source.resolve(decoded.key.database().project_id())?;
         let _guard = self.write_lock();
+        let snapshot = self.store.snapshot();
+        self.authorize_writes(
+            &authorization,
+            decoded.key.database(),
+            std::slice::from_ref(&decoded),
+            &snapshot,
+            now(),
+        )?;
         self.apply_writes(&[decoded])?;
         Ok(Response::new(pbjson_types::Empty {}))
     }
@@ -531,8 +754,10 @@ impl Firestore for FirestoreService {
         &self,
         request: Request<BatchGetDocumentsRequest>,
     ) -> Result<Response<Self::BatchGetDocumentsStream>, Status> {
+        let authorization_source = grpc_authorization_source(request.metadata())?;
         let request = request.into_inner();
         let database = decode_database_name(&request.database)?;
+        let authorization = authorization_source.resolve(database.project_id())?;
         let (token, new_transaction, historical) = match request.consistency_selector {
             None => (Vec::new(), false, None),
             Some(batch_get_documents_request::ConsistencySelector::Transaction(token)) => {
@@ -561,8 +786,11 @@ impl Firestore for FirestoreService {
             self.snapshot_for_transaction(&database, &token)?
         };
         let read_time = Some(encode_timestamp(now()));
+        let request_time = now();
         let mut seen = BTreeSet::new();
         let mut responses = Vec::new();
+        let mut evaluations = Vec::new();
+        let mut reads = Vec::new();
         for name in request.documents {
             if !seen.insert(name.clone()) {
                 continue;
@@ -574,7 +802,15 @@ impl Firestore for FirestoreService {
                 ));
             }
             let document = snapshot.get(&key);
-            self.record_read(&token, &key, document.as_deref());
+            evaluations.push(evaluation_request(
+                RequestOperation::Get,
+                &key,
+                request_time,
+                document.as_deref(),
+                None,
+                RulesQuery::default(),
+            ));
+            reads.push((key.clone(), document.clone()));
             let result = if let Some(document) = document {
                 batch_get_documents_response::Result::Found(encode_document_masked(
                     &key,
@@ -593,6 +829,15 @@ impl Firestore for FirestoreService {
                 read_time,
                 result: Some(result),
             });
+        }
+        require_atomic_rules_allowed(self.rules.evaluate_atomic(
+            database.project_id(),
+            &authorization,
+            &evaluations,
+            &SnapshotAccess::current(snapshot, database.project_id()),
+        ))?;
+        for (key, document) in reads {
+            self.record_read(&token, &key, document.as_deref());
         }
         if new_transaction && responses.is_empty() {
             responses.push(BatchGetDocumentsResponse {
@@ -618,8 +863,10 @@ impl Firestore for FirestoreService {
         &self,
         request: Request<CommitRequest>,
     ) -> Result<Response<CommitResponse>, Status> {
+        let authorization_source = grpc_authorization_source(request.metadata())?;
         let request = request.into_inner();
         let database = decode_database_name(&request.database)?;
+        let authorization = authorization_source.resolve(database.project_id())?;
         let decoded = request
             .writes
             .into_iter()
@@ -635,6 +882,7 @@ impl Firestore for FirestoreService {
         }
 
         let _guard = self.write_lock();
+        let current = self.store.snapshot();
         if !request.transaction.is_empty() {
             let transaction = self
                 .transaction_states()
@@ -650,7 +898,6 @@ impl Firestore for FirestoreService {
                     "read-only transaction cannot contain writes",
                 ));
             }
-            let current = self.store.snapshot();
             for (key, expected) in transaction.reads {
                 let actual = current.get(&key).map(|document| document.update_time());
                 if actual != expected {
@@ -660,6 +907,7 @@ impl Firestore for FirestoreService {
                 }
             }
         }
+        self.authorize_writes(&authorization, &database, &decoded, &current, now())?;
         Ok(Response::new(self.apply_writes(&decoded)?))
     }
 
@@ -683,13 +931,16 @@ impl Firestore for FirestoreService {
 
     type RunQueryStream = ResponseStream<RunQueryResponse>;
 
+    #[allow(clippy::too_many_lines)]
     async fn run_query(
         &self,
         request: Request<RunQueryRequest>,
     ) -> Result<Response<Self::RunQueryStream>, Status> {
+        let authorization_source = grpc_authorization_source(request.metadata())?;
         let request = request.into_inner();
         let explain_options = request.explain_options;
         let (database, parent) = decode_parent(&request.parent)?;
+        let authorization = authorization_source.resolve(database.project_id())?;
         let Some(run_query_request::QueryType::StructuredQuery(structured)) = request.query_type
         else {
             return Err(Status::invalid_argument("structured query is required"));
@@ -698,6 +949,8 @@ impl Firestore for FirestoreService {
             .as_ref()
             .map(|_| query_plan_summary(&structured));
         let skipped_results = structured.offset;
+        let rules_query = rules_query_from_structured(&structured);
+        let rules_candidate = query_candidate_key(&database, parent.as_deref(), &structured)?;
         let query = decode_query(parent.as_deref(), structured)?;
         self.query_policy
             .validate(&query)
@@ -729,6 +982,7 @@ impl Firestore for FirestoreService {
         } else {
             self.snapshot_for_transaction(&database, &token)?
         };
+        self.authorize_query(&authorization, &rules_candidate, &snapshot, rules_query)?;
         if explain_options
             .as_ref()
             .is_some_and(|options| !options.analyze)
@@ -838,9 +1092,11 @@ impl Firestore for FirestoreService {
         &self,
         request: Request<RunAggregationQueryRequest>,
     ) -> Result<Response<Self::RunAggregationQueryStream>, Status> {
+        let authorization_source = grpc_authorization_source(request.metadata())?;
         let request = request.into_inner();
         let explain_options = request.explain_options;
         let (database, parent) = decode_parent(&request.parent)?;
+        let authorization = authorization_source.resolve(database.project_id())?;
         let Some(run_aggregation_query_request::QueryType::StructuredAggregationQuery(
             aggregation_query,
         )) = request.query_type
@@ -853,6 +1109,8 @@ impl Firestore for FirestoreService {
         let explain_plan = explain_options
             .as_ref()
             .map(|_| query_plan_summary(&structured));
+        let rules_query = rules_query_from_structured(&structured);
+        let rules_candidate = query_candidate_key(&database, parent.as_deref(), &structured)?;
         let query = decode_query(parent.as_deref(), structured)?;
         self.query_policy
             .validate(&query)
@@ -884,6 +1142,7 @@ impl Firestore for FirestoreService {
         } else {
             self.snapshot_for_transaction(&database, &token)?
         };
+        self.authorize_query(&authorization, &rules_candidate, &snapshot, rules_query)?;
         if explain_options
             .as_ref()
             .is_some_and(|options| !options.analyze)
@@ -1010,8 +1269,10 @@ impl Firestore for FirestoreService {
         &self,
         request: Request<tonic::Streaming<WriteRequest>>,
     ) -> Result<Response<Self::WriteStream>, Status> {
+        let authorization = grpc_authorization_source(request.metadata())?;
         Ok(Response::new(crate::write_stream::stream(
             self.clone(),
+            authorization,
             request.into_inner(),
         )))
     }
@@ -1022,9 +1283,12 @@ impl Firestore for FirestoreService {
         &self,
         request: Request<tonic::Streaming<ListenRequest>>,
     ) -> Result<Response<Self::ListenStream>, Status> {
+        let authorization = grpc_authorization_source(request.metadata())?;
         Ok(Response::new(crate::listen::stream(
             self.store.clone(),
             self.query_policy.clone(),
+            self.rules.clone(),
+            authorization,
             self.store.runtime_memory_accounting(),
             request.into_inner(),
         )))
@@ -1079,8 +1343,10 @@ impl Firestore for FirestoreService {
         &self,
         request: Request<BatchWriteRequest>,
     ) -> Result<Response<BatchWriteResponse>, Status> {
+        let authorization_source = grpc_authorization_source(request.metadata())?;
         let request = request.into_inner();
         let database = decode_database_name(&request.database)?;
+        let authorization = authorization_source.resolve(database.project_id())?;
         let decoded = request
             .writes
             .into_iter()
@@ -1100,7 +1366,15 @@ impl Firestore for FirestoreService {
         let mut write_results = Vec::with_capacity(decoded.len());
         let mut statuses = Vec::with_capacity(decoded.len());
         for write in decoded {
-            match self.apply_writes(&[write]) {
+            let snapshot = self.store.snapshot();
+            let authorized = self.authorize_writes(
+                &authorization,
+                &database,
+                std::slice::from_ref(&write),
+                &snapshot,
+                now(),
+            );
+            match authorized.and_then(|()| self.apply_writes(&[write])) {
                 Ok(response) => {
                     write_results.extend(response.write_results);
                     statuses.push(rpc::Status::default());
@@ -1121,8 +1395,10 @@ impl Firestore for FirestoreService {
         &self,
         request: Request<CreateDocumentRequest>,
     ) -> Result<Response<proto::Document>, Status> {
+        let authorization_source = grpc_authorization_source(request.metadata())?;
         let request = request.into_inner();
         let (database, parent) = decode_parent(&request.parent)?;
+        let authorization = authorization_source.resolve(database.project_id())?;
         if request.collection_id.is_empty() || request.collection_id.contains('/') {
             return Err(Status::invalid_argument("invalid collection_id"));
         }
@@ -1153,13 +1429,24 @@ impl Firestore for FirestoreService {
         let key = DocumentKey::new(database, path)
             .map_err(|error| Status::invalid_argument(error.to_string()))?;
         let fields = decode_fields(document.fields)?;
-        let _guard = self.write_lock();
-        self.store
-            .commit(&[Write::Create {
+        let write = DecodedWrite {
+            key: key.clone(),
+            write: Write::Create {
                 key: key.clone(),
                 fields,
-            }])
-            .map_err(commit_status)?;
+            },
+            transforms: Vec::new(),
+        };
+        let _guard = self.write_lock();
+        let snapshot = self.store.snapshot();
+        self.authorize_writes(
+            &authorization,
+            key.database(),
+            std::slice::from_ref(&write),
+            &snapshot,
+            now(),
+        )?;
+        self.apply_writes(&[write])?;
         let snapshot = self.store.snapshot();
         let document = snapshot
             .get(&key)
@@ -1170,6 +1457,58 @@ impl Firestore for FirestoreService {
             request.mask.as_ref(),
         )?))
     }
+}
+
+pub(crate) fn rules_query_from_structured(structured: &proto::StructuredQuery) -> RulesQuery {
+    RulesQuery {
+        limit: structured.limit.map(|limit| i64::from(limit.value)),
+        offset: Some(i64::from(structured.offset)),
+        order_by: structured
+            .order_by
+            .iter()
+            .map(|order| {
+                let field = order
+                    .field
+                    .as_ref()
+                    .map(|field| field.field_path.as_str())
+                    .unwrap_or_default();
+                let direction = proto::structured_query::Direction::try_from(order.direction)
+                    .map_or("DIRECTION_UNSPECIFIED", |direction| direction.as_str_name());
+                format!("{field} {direction}")
+            })
+            .collect(),
+    }
+}
+
+pub(crate) fn query_candidate_key(
+    database: &DatabaseName,
+    parent: Option<&str>,
+    structured: &proto::StructuredQuery,
+) -> Result<DocumentKey, Status> {
+    let [selector] = structured.from.as_slice() else {
+        return Err(Status::invalid_argument(
+            "structured query requires exactly one collection selector",
+        ));
+    };
+    list_candidate_key(database, parent, &selector.collection_id)
+}
+
+fn list_candidate_key(
+    database: &DatabaseName,
+    parent: Option<&str>,
+    collection: &str,
+) -> Result<DocumentKey, Status> {
+    let collection = if collection.is_empty() {
+        "rules-candidate"
+    } else {
+        collection
+    };
+    let path = parent.map_or_else(
+        || format!("{collection}/rules-candidate"),
+        |parent| format!("{parent}/{collection}/rules-candidate"),
+    );
+    DocumentKey::new(database.clone(), path)
+        .map_err(|error| Status::invalid_argument(error.to_string()))
 }
 
 fn write_result(
@@ -1594,6 +1933,8 @@ mod tests {
         DocumentMask, ExecutePipelineRequest, StructuredAggregationQuery, StructuredQuery,
         precondition,
     };
+    use base64::Engine as _;
+    use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 
     #[tokio::test]
     async fn standard_edition_rejects_pipeline_execution() {
@@ -1709,6 +2050,76 @@ mod tests {
     const DATABASE: &str = "projects/demo/databases/tenant-a";
     const DOCUMENT: &str = "projects/demo/databases/tenant-a/documents/cities/kl";
 
+    const RULES_PROJECT: &str = "demo-grpc-rules";
+    const RULES_DATABASE: &str = "projects/demo-grpc-rules/databases/(default)";
+
+    fn rules_document(path: &str) -> String {
+        format!("{RULES_DATABASE}/documents/{path}")
+    }
+
+    fn emulator_token(project: &str, uid: &str) -> String {
+        let now = now().seconds();
+        let header = URL_SAFE_NO_PAD.encode(r#"{"alg":"none","typ":"JWT"}"#);
+        let payload = URL_SAFE_NO_PAD.encode(format!(
+            r#"{{"aud":"{project}","exp":{},"iat":{},"iss":"https://securetoken.google.com/{project}","sub":"{uid}","user_id":"{uid}"}}"#,
+            now + 300,
+            now - 300,
+        ));
+        format!("Bearer {header}.{payload}.")
+    }
+
+    fn authenticated<T>(message: T, uid: &str) -> Request<T> {
+        let mut request = Request::new(message);
+        request.metadata_mut().insert(
+            "authorization",
+            emulator_token(RULES_PROJECT, uid)
+                .parse()
+                .expect("token metadata"),
+        );
+        request
+    }
+
+    fn rules_service() -> FirestoreService {
+        let database = DatabaseName::new(RULES_PROJECT, "(default)").expect("database");
+        let store = Store::default();
+        store
+            .commit(&[
+                Write::Create {
+                    key: DocumentKey::new(database.clone(), "public/news").expect("public key"),
+                    fields: fireside_core_store::Fields::from([(
+                        "title".to_owned(),
+                        Value::String("News".into()),
+                    )]),
+                },
+                Write::Create {
+                    key: DocumentKey::new(database, "users/alice").expect("user key"),
+                    fields: fireside_core_store::Fields::from([(
+                        "name".to_owned(),
+                        Value::String("Alice".into()),
+                    )]),
+                },
+            ])
+            .expect("seed");
+        let rules = RulesRuntime::default();
+        rules
+            .install_project(
+                RULES_PROJECT,
+                "rules_version = '2'; service cloud.firestore {
+                  match /databases/{database}/documents {
+                    match /public/{id} {
+                      allow get: if true;
+                      allow list: if request.query.limit != null && request.query.limit <= 5;
+                    }
+                    match /users/{uid} {
+                      allow get, create, update: if request.auth != null && request.auth.uid == uid;
+                    }
+                  }
+                }",
+            )
+            .expect("rules");
+        FirestoreService::new_with_query_policy_and_rules(store, QueryPolicy::default(), rules)
+    }
+
     fn integer_document(name: &str, value: i64) -> proto::Document {
         proto::Document {
             name: name.to_owned(),
@@ -1720,6 +2131,270 @@ mod tests {
             )]),
             ..proto::Document::default()
         }
+    }
+
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)]
+    async fn security_rules_enforce_grpc_clients_and_preserve_admin_bypass() {
+        let service = rules_service();
+
+        service
+            .get_document(Request::new(GetDocumentRequest {
+                name: rules_document("users/alice"),
+                ..GetDocumentRequest::default()
+            }))
+            .await
+            .expect("missing gRPC auth is the backend/admin owner policy");
+
+        service
+            .get_document(authenticated(
+                GetDocumentRequest {
+                    name: rules_document("users/alice"),
+                    ..GetDocumentRequest::default()
+                },
+                "alice",
+            ))
+            .await
+            .expect("matching client auth should read");
+        let denied = service
+            .get_document(authenticated(
+                GetDocumentRequest {
+                    name: rules_document("users/alice"),
+                    ..GetDocumentRequest::default()
+                },
+                "bob",
+            ))
+            .await
+            .expect_err("non-matching client auth must be denied");
+        assert_eq!(denied.code(), tonic::Code::PermissionDenied);
+
+        let mut malformed = Request::new(GetDocumentRequest {
+            name: rules_document("users/alice"),
+            ..GetDocumentRequest::default()
+        });
+        malformed
+            .metadata_mut()
+            .insert("authorization", "Bearer broken".parse().expect("metadata"));
+        let unauthenticated = service
+            .get_document(malformed)
+            .await
+            .expect_err("malformed emulator auth must be rejected");
+        assert_eq!(unauthenticated.code(), tonic::Code::Unauthenticated);
+
+        service
+            .update_document(authenticated(
+                UpdateDocumentRequest {
+                    document: Some(integer_document(&rules_document("users/alice"), 1)),
+                    ..UpdateDocumentRequest::default()
+                },
+                "alice",
+            ))
+            .await
+            .expect("matching client auth should write");
+        let denied_write = service
+            .update_document(authenticated(
+                UpdateDocumentRequest {
+                    document: Some(integer_document(&rules_document("users/bob"), 1)),
+                    ..UpdateDocumentRequest::default()
+                },
+                "alice",
+            ))
+            .await
+            .expect_err("client writes to another uid must be denied");
+        assert_eq!(denied_write.code(), tonic::Code::PermissionDenied);
+
+        let allowed_query = RunQueryRequest {
+            parent: format!("{RULES_DATABASE}/documents"),
+            query_type: Some(run_query_request::QueryType::StructuredQuery(
+                StructuredQuery {
+                    from: vec![CollectionSelector {
+                        collection_id: "public".to_owned(),
+                        all_descendants: false,
+                    }],
+                    limit: Some(pbjson_types::Int32Value { value: 5 }),
+                    ..StructuredQuery::default()
+                },
+            )),
+            ..RunQueryRequest::default()
+        };
+        service
+            .run_query(authenticated(allowed_query.clone(), "alice"))
+            .await
+            .expect("bounded query should be allowed");
+        let mut denied_query = allowed_query;
+        denied_query
+            .query_type
+            .as_mut()
+            .map(|query| match query {
+                run_query_request::QueryType::StructuredQuery(query) => query,
+            })
+            .expect("structured query")
+            .limit = Some(pbjson_types::Int32Value { value: 6 });
+        let Err(denied_query) = service
+            .run_query(authenticated(denied_query, "alice"))
+            .await
+        else {
+            panic!("unbounded query must be denied");
+        };
+        assert_eq!(denied_query.code(), tonic::Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)]
+    async fn security_rules_enforce_stream_writes_and_live_listen_rechecks() {
+        use crate::google::firestore::v1::listen_request::TargetChange;
+        use crate::google::firestore::v1::listen_response::ResponseType;
+        use crate::google::firestore::v1::target::TargetType;
+        use tokio_stream::StreamExt as _;
+
+        let service = rules_service();
+        let token = emulator_token(RULES_PROJECT, "alice");
+
+        let (write_requests, mut write_responses) =
+            service.open_client_write_channel(Some(token.clone()));
+        write_requests
+            .send(WriteRequest {
+                database: RULES_DATABASE.to_owned(),
+                ..WriteRequest::default()
+            })
+            .await
+            .expect("write handshake");
+        let handshake = write_responses
+            .next()
+            .await
+            .expect("write handshake response")
+            .expect("write handshake succeeds");
+        write_requests
+            .send(WriteRequest {
+                database: RULES_DATABASE.to_owned(),
+                stream_id: handshake.stream_id,
+                stream_token: handshake.stream_token,
+                writes: vec![proto::Write {
+                    operation: Some(Operation::Update(integer_document(
+                        &rules_document("users/alice"),
+                        2,
+                    ))),
+                    ..proto::Write::default()
+                }],
+                ..WriteRequest::default()
+            })
+            .await
+            .expect("authorized stream write");
+        write_responses
+            .next()
+            .await
+            .expect("authorized stream response")
+            .expect("matching stream write should succeed");
+
+        let (listen_requests, mut listen_responses) =
+            service.open_client_listen_channel(Some(token));
+        listen_requests
+            .send(ListenRequest {
+                database: RULES_DATABASE.to_owned(),
+                target_change: Some(TargetChange::AddTarget(proto::Target {
+                    target_type: Some(TargetType::Documents(proto::target::DocumentsTarget {
+                        documents: vec![rules_document("users/alice")],
+                    })),
+                    target_id: 7,
+                    ..proto::Target::default()
+                })),
+                ..ListenRequest::default()
+            })
+            .await
+            .expect("listen target");
+        let mut saw_document = false;
+        for _ in 0..6 {
+            let response = listen_responses
+                .next()
+                .await
+                .expect("initial listen response")
+                .expect("initial listen succeeds");
+            if matches!(
+                response.response_type,
+                Some(ResponseType::DocumentChange(_))
+            ) {
+                saw_document = true;
+                break;
+            }
+        }
+        assert!(
+            saw_document,
+            "authorized listener must receive its document"
+        );
+
+        service
+            .rules()
+            .install_project(
+                RULES_PROJECT,
+                "rules_version = '2'; service cloud.firestore { match /databases/{database}/documents { match /{document=**} { allow read, write: if false; } } }",
+            )
+            .expect("deny reload");
+        service
+            .store()
+            .commit(&[Write::Set {
+                key: DocumentKey::new(
+                    DatabaseName::new(RULES_PROJECT, "(default)").expect("database"),
+                    "users/alice",
+                )
+                .expect("key"),
+                fields: fireside_core_store::Fields::from([(
+                    "value".to_owned(),
+                    Value::Integer(3),
+                )]),
+                transforms: Vec::new(),
+                precondition: fireside_core_store::Precondition::None,
+            }])
+            .expect("store revision");
+
+        let removed = tokio::time::timeout(Duration::from_secs(1), async {
+            loop {
+                let response = listen_responses
+                    .next()
+                    .await
+                    .expect("revocation response")
+                    .expect("target revocation is an in-stream response");
+                if let Some(ResponseType::TargetChange(change)) = response.response_type
+                    && change.cause.is_some()
+                {
+                    break change;
+                }
+            }
+        })
+        .await
+        .expect("listener should be rechecked after the store revision");
+        assert_eq!(
+            removed.cause.expect("revocation cause").code,
+            tonic::Code::PermissionDenied as i32
+        );
+
+        let (unauthenticated_requests, mut unauthenticated_responses) =
+            service.open_client_listen_channel(None);
+        unauthenticated_requests
+            .send(ListenRequest {
+                database: RULES_DATABASE.to_owned(),
+                target_change: Some(TargetChange::AddTarget(proto::Target {
+                    target_type: Some(TargetType::Documents(proto::target::DocumentsTarget {
+                        documents: vec![rules_document("users/alice")],
+                    })),
+                    target_id: 8,
+                    ..proto::Target::default()
+                })),
+                ..ListenRequest::default()
+            })
+            .await
+            .expect("unauthenticated target");
+        let denial = unauthenticated_responses
+            .next()
+            .await
+            .expect("denial response")
+            .expect("listen denial is in-stream");
+        let Some(ResponseType::TargetChange(denial)) = denial.response_type else {
+            panic!("denied target must return a target change");
+        };
+        assert_eq!(
+            denial.cause.expect("denial cause").code,
+            tonic::Code::PermissionDenied as i32
+        );
     }
 
     #[tokio::test]
