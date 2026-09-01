@@ -1888,6 +1888,37 @@ mod tests {
         StatusCode::OK
     }
 
+    fn phase4_register_six_patterns(registry: &TriggerRegistry, project: &str) {
+        let patterns = [
+            "users/{userId}",
+            "licenses/{licenseId}",
+            "licenses/{parentId}/invitedUsers/{invitedLicenseId}",
+            "licenses/{licenseId}/checkout_sessions/{checkoutSessionId}",
+            "licenses/{licenseId}/subscriptions/{subscriptionId}",
+            "userFonts/{fontId}",
+        ];
+        let mut state = lock(&registry.inner);
+        for (index, pattern) in patterns.iter().enumerate() {
+            let event_type = if *pattern == "userFonts/{fontId}" {
+                V2_DELETED
+            } else {
+                V2_WRITTEN
+            };
+            let key = format!("us-central1-phase4-pattern-{index}");
+            state.v2.insert(
+                (project.to_owned(), key.clone()),
+                Trigger {
+                    project: project.to_owned(),
+                    key,
+                    generation: TriggerGeneration::V2,
+                    event_type: event_type.to_owned(),
+                    database: "(default)".to_owned(),
+                    document_pattern: (*pattern).to_owned(),
+                },
+            );
+        }
+    }
+
     #[tokio::test]
     async fn phase4_six_trigger_patterns_deliver_one_hundred_concurrent_writes_each() {
         let calls = Arc::new(AtomicUsize::new(0));
@@ -1907,36 +1938,7 @@ mod tests {
         let project = "demo-fireside-phase4-chaos";
         let database = DatabaseName::new(project, "(default)").expect("database");
         let registry = TriggerRegistry::default();
-        let patterns = [
-            "users/{userId}",
-            "licenses/{licenseId}",
-            "licenses/{parentId}/invitedUsers/{invitedLicenseId}",
-            "licenses/{licenseId}/checkout_sessions/{checkoutSessionId}",
-            "licenses/{licenseId}/subscriptions/{subscriptionId}",
-            "userFonts/{fontId}",
-        ];
-        {
-            let mut state = lock(&registry.inner);
-            for (index, pattern) in patterns.iter().enumerate() {
-                let event_type = if *pattern == "userFonts/{fontId}" {
-                    V2_DELETED
-                } else {
-                    V2_WRITTEN
-                };
-                let key = format!("us-central1-phase4-pattern-{index}");
-                state.v2.insert(
-                    (project.to_owned(), key.clone()),
-                    Trigger {
-                        project: project.to_owned(),
-                        key,
-                        generation: TriggerGeneration::V2,
-                        event_type: event_type.to_owned(),
-                        database: "(default)".to_owned(),
-                        document_pattern: (*pattern).to_owned(),
-                    },
-                );
-            }
-        }
+        phase4_register_six_patterns(&registry, project);
         let store = Store::default();
         for index in 0..100 {
             store
