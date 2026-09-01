@@ -19,6 +19,7 @@ use axum::{Json, Router};
 use fireside_auth_front::AuthRuntime;
 use fireside_core_store::{
     DatabaseName, DiskOptions, DocumentKey, Precondition, Store, StoreOptions, Write,
+    document_key_logical_bytes, fields_logical_bytes,
 };
 use fireside_export_format::{ExportReader, ExportedDocument, write_export};
 use fireside_functions_bridge::{
@@ -49,6 +50,7 @@ use tokio_stream::wrappers::TcpListenerStream;
 const FUNCTIONS_HOST_SOURCE: &str = include_str!("../../../support/functions-host.cjs");
 const EXPORT_VERSION: &str = "15.22.0";
 const IMPORT_BATCH_SIZE: usize = 500;
+const IMPORT_BATCH_LOGICAL_BYTES: u64 = 8 * 1024 * 1024;
 const READY_TIMEOUT: Duration = Duration::from_secs(120);
 
 /// Fixed suite listener ports.
@@ -1052,6 +1054,7 @@ fn seed_store(store: &Store, path: &Path, project: &str) -> Result<u64, SuiteRun
     let reader = ExportReader::open(path)
         .map_err(|error| failure(format!("Firestore import failed: {error}")))?;
     let mut writes = Vec::with_capacity(IMPORT_BATCH_SIZE);
+    let mut batch_logical_bytes = 0_u64;
     let mut count = 0_u64;
     for document in reader {
         let document =
@@ -1060,19 +1063,27 @@ fn seed_store(store: &Store, path: &Path, project: &str) -> Result<u64, SuiteRun
             .map_err(|error| failure(error.to_string()))?;
         let key = DocumentKey::new(database, document.key().path())
             .map_err(|error| failure(error.to_string()))?;
+        let write_logical_bytes = document_key_logical_bytes(&key)
+            .saturating_add(fields_logical_bytes(document.fields()));
+        if !writes.is_empty()
+            && (writes.len() == IMPORT_BATCH_SIZE
+                || batch_logical_bytes.saturating_add(write_logical_bytes)
+                    > IMPORT_BATCH_LOGICAL_BYTES)
+        {
+            store
+                .commit(&writes)
+                .map_err(|error| failure(error.to_string()))?;
+            writes.clear();
+            batch_logical_bytes = 0;
+        }
         writes.push(Write::Set {
             key,
             fields: document.fields().clone(),
             transforms: Vec::new(),
             precondition: Precondition::None,
         });
+        batch_logical_bytes = batch_logical_bytes.saturating_add(write_logical_bytes);
         count = count.saturating_add(1);
-        if writes.len() == IMPORT_BATCH_SIZE {
-            store
-                .commit(&writes)
-                .map_err(|error| failure(error.to_string()))?;
-            writes.clear();
-        }
     }
     if !writes.is_empty() {
         store
