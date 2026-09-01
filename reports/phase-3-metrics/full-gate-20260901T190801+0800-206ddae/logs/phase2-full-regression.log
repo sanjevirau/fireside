@@ -1,0 +1,11 @@
+$ /home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node --import tsx /home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae/conformance/src/webchannel/run-phase2-gate.ts --sdk-dir /home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae-support/firebase-js-sdk --output-dir /home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae/conformance/reports/phase-3-metrics/full-gate-20260901T190801+0800-206ddae/phase2-regression/evidence --report /home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae/conformance/reports/phase-3-metrics/full-gate-20260901T190801+0800-206ddae/phase2-regression/report.md
+/home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae/conformance/src/webchannel/phase2-gate-plan.ts:48
+    throw new Error(`frozen toolchain mismatch: ${mismatches.join("; ")}`);
+          ^
+
+Error: frozen toolchain mismatch: java expected major 26, observed openjdk 21.0.2 2024-01-16
+    at assertFrozenGateToolchain (/home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae/conformance/src/webchannel/phase2-gate-plan.ts:48:11)
+    at main (/home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae/conformance/src/webchannel/run-phase2-gate.ts:203:5)
+    at async <anonymous> (/home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae/conformance/src/webchannel/run-phase2-gate.ts:1039:1)
+
+Node.js v24.20.0

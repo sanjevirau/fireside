@@ -1,0 +1,1193 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function uid() {
+      return request.auth.uid;
+    }
+    function role() {
+      return request.auth.token.role;
+    }
+    function isAdmin() {
+      return signedIn()
+        && role() == 'admin';
+    }
+    function editorOrAdmin() {
+      return signedIn()
+        && role() in ['editor', 'admin'];
+    }
+    function sameTenant(tenant) {
+      return signedIn()
+        && request.auth.token.tenant_id == tenant;
+    }
+    function memberPath(tenant) {
+      return /databases/$(database)/documents/tenants/$(tenant)/members/$(uid());
+    }
+    function activeMember(tenant) {
+      return signedIn()
+        && exists(memberPath(tenant))
+        && get(memberPath(tenant)).data.active == true;
+    }
+    function boundedQuery(maximum) {
+      return request.query.limit != null
+        && request.query.limit <= maximum;
+    }
+    function validProjectShape(data) {
+      return data.keys().hasAll(['ownerId', 'title', 'status', 'version'])
+        && data.keys().hasOnly(['ownerId', 'title', 'status', 'version'])
+        && data.ownerId is string
+        && data.title is string
+        && data.status in ['active', 'archived']
+        && data.version is int;
+    }
+    function validTaskShape(data) {
+      return data.keys().hasAll(['assigneeId', 'title', 'status', 'priority'])
+        && data.keys().hasOnly(['assigneeId', 'title', 'status', 'priority'])
+        && data.assigneeId is string
+        && data.title is string
+        && data.status in ['open', 'doing', 'done']
+        && data.priority is int;
+    }
+    function validEntityShape(data) {
+      return data.keys().hasAll(['ownerId', 'status', 'version'])
+        && data.keys().hasOnly(['ownerId', 'status', 'version'])
+        && data.ownerId is string
+        && data.status in ['active', 'archived']
+        && data.version is int;
+    }
+    function recentTimestamp(value) {
+      return value is timestamp
+        && value <= request.time
+        && value >= request.time - duration.value(30, 'd');
+    }
+    match /public/{documentId} {
+      allow get: if true;
+      allow list: if boundedQuery(50);
+      allow write: if isAdmin();
+    }
+    match /tenants/{tenant} {
+      allow get: if isAdmin()
+        || sameTenant(tenant)
+        || activeMember(tenant);
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name', 'status']);
+      match /members/{memberId} {
+        allow get: if isAdmin()
+          || (sameTenant(tenant) && memberId == uid());
+        allow list: if isAdmin()
+          && boundedQuery(100);
+        allow create, delete: if isAdmin();
+        allow update: if sameTenant(tenant)
+          && memberId == uid()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['displayName', 'timezone']);
+      }
+      match /projects/{projectId} {
+        allow get: if activeMember(tenant);
+        allow list: if activeMember(tenant)
+          && boundedQuery(50);
+        allow create: if activeMember(tenant)
+          && editorOrAdmin()
+          && request.resource.data.ownerId == uid()
+          && validProjectShape(request.resource.data);
+        allow update: if activeMember(tenant)
+          && (isAdmin() || resource.data.ownerId == uid())
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['title', 'status', 'version'])
+          && request.resource.data.version == resource.data.version + 1
+          && validProjectShape(request.resource.data);
+        allow delete: if isAdmin();
+        match /tasks/{taskId} {
+          allow get: if activeMember(tenant);
+          allow list: if activeMember(tenant)
+            && boundedQuery(100);
+          allow create: if activeMember(tenant)
+            && request.resource.data.assigneeId == uid()
+            && validTaskShape(request.resource.data);
+          allow update: if activeMember(tenant)
+            && resource.data.assigneeId == uid()
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['title', 'status'])
+            && validTaskShape(request.resource.data);
+          allow delete: if isAdmin()
+            || resource.data.assigneeId == uid();
+          match /comments/{commentId} {
+            allow get: if activeMember(tenant);
+            allow list: if activeMember(tenant)
+              && boundedQuery(100);
+            allow create: if activeMember(tenant)
+              && request.resource.data.keys().hasOnly(['authorId', 'body'])
+              && request.resource.data.authorId == uid()
+              && request.resource.data.body is string;
+            allow update, delete: if isAdmin()
+              || (signedIn() && resource.data.authorId == uid());
+          }
+        }
+      }
+      match /assets/{assetPath=**} {
+        allow get: if activeMember(tenant);
+        allow write: if isAdmin();
+      }
+    }
+    match /profiles/{profileId} {
+      allow get: if signedIn()
+        && profileId == uid();
+      allow update: if signedIn()
+        && profileId == uid()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['displayName', 'timezone']);
+      allow create, delete: if isAdmin();
+    }
+    match /audits/{auditId} {
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['actorId', 'action', 'at'])
+        && request.resource.data.actorId == uid()
+        && recentTimestamp(request.resource.data.at);
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+    match /stats/{documentId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    match /invariants/global {
+      allow update: if signedIn()
+        && request.resource.data.version == resource.data.version + 1;
+    }
+    match /atomic/{documentId} {
+      allow create: if signedIn()
+        && getAfter(/databases/$(database)/documents/invariants/global).data.version
+          == request.resource.data.expectedVersion;
+    }
+    match /tenants/{tenant}/entity-00/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-01/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-02/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-03/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-04/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-05/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-06/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-07/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-08/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-09/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-10/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-11/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-12/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-13/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-14/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-15/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-16/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-17/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-18/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-19/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-20/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-21/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-22/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-23/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-24/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-25/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-26/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-27/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-28/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-29/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-30/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-31/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-32/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-33/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-34/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-35/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-36/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-37/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-38/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-39/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-40/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-41/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-42/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-43/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-44/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-45/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-46/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-47/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-48/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-49/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-50/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-51/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-52/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-53/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-54/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-55/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-56/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-57/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-58/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-59/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-60/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-61/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-62/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /tenants/{tenant}/entity-63/{documentId} {
+      allow get: if sameTenant(tenant)
+        || activeMember(tenant);
+      allow list: if activeMember(tenant)
+        && boundedQuery(25);
+      allow create: if activeMember(tenant)
+        && editorOrAdmin()
+        && request.resource.data.ownerId == uid()
+        && validEntityShape(request.resource.data);
+      allow update: if activeMember(tenant)
+        && (isAdmin() || resource.data.ownerId == uid())
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'version'])
+        && request.resource.data.version == resource.data.version + 1;
+      allow delete: if isAdmin();
+    }
+    match /{unmatched=**} {
+      allow read, write: if false;
+    }
+  }
+}

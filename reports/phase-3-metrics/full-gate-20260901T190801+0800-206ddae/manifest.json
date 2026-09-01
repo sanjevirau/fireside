@@ -1,0 +1,331 @@
+{
+  "schemaVersion": 1,
+  "name": "phase-3-rules",
+  "frozen": true,
+  "frozenAt": "2026-09-01T17:01:19+08:00",
+  "phase2Baseline": {
+    "tag": "phase-2",
+    "candidateRevision": "eee62330308dd8c1e1965fca9a1f094d582f72c5",
+    "gateReport": "reports/phase-2-gate.md",
+    "manifestSha256": "cc54265ceaf9028f85418424f7275ac1a05f98886174bf2e4e869df6ae741b38",
+    "evidenceDirectory": "reports/phase-2-metrics/full-gate-20260901T121312+0800-eee6233",
+    "javaComparisonReport": "reports/phase-2-java-webchannel-comparison.md",
+    "javaComparisonCommit": "948c06e038c7617e9bf076c963b0d056509387de"
+  },
+  "toolchain": {
+    "rust": "1.98.0",
+    "node": "24.20.0",
+    "npm": "12.0.2",
+    "officialFirestoreEmulator": "1.22.0",
+    "officialFirestoreEmulatorJarSha256": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c",
+    "firebase": "12.18.0",
+    "firebaseTools": "15.28.1",
+    "googleCloudFirestore": "9.0.0"
+  },
+  "oracles": {
+    "precedence": [
+      "production-firebase-rules-projects-test",
+      "production-cloud-firestore",
+      "official-java-emulator-v1.22.0",
+      "official-language-reference"
+    ],
+    "classificationRule": "match production; preserve every Java-only divergence separately",
+    "cloud": {
+      "projectId": "fireside-conformance",
+      "allowlistEnvironmentVariable": "CONFORMANCE_CLOUD_ALLOWLIST",
+      "rulesEndpoint": "https://firebaserules.googleapis.com/v1/projects/fireside-conformance:test",
+      "databaseId": "(default)",
+      "syntheticDataOnly": true,
+      "cleanupRequired": true,
+      "maximumPersistentDocumentsPerCapture": 64,
+      "maximumPersistentWritesPerCapture": 256,
+      "maximumRulesApiRequestsPerCapture": 128
+    },
+    "java": {
+      "version": "1.22.0",
+      "jarSha256": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c"
+    }
+  },
+  "capture": {
+    "requiredBeforeProductImplementation": true,
+    "root": "conformance/fixtures/rules-v2",
+    "fixtureSchemaVersion": 1,
+    "generatorSeed": "fireside-phase-3-rules-v1",
+    "minimumGeneratedProductionCases": 1024,
+    "casesPerRulesApiRequest": 32,
+    "expressionReportLevel": "FULL",
+    "pathEncoding": "PLAIN",
+    "expectationProbe": "ALLOW",
+    "sensitiveHeadersStored": false,
+    "accessTokensStored": false,
+    "requiredFixtures": [
+      "production-expression-corpus.json",
+      "production-language-contract.json",
+      "production-parse-errors.json",
+      "production-limit-probes.json",
+      "java-access-accounting.json",
+      "java-get-after.json",
+      "java-runtime-errors.json",
+      "complex-firestore.rules",
+      "complex-rules-cases.json",
+      "SHA256SUMS"
+    ],
+    "requiredExpressionCategories": [
+      "literals-and-coercion",
+      "boolean-short-circuit-and-errors",
+      "numeric-arithmetic-and-comparison",
+      "string-list-map-and-map-diff",
+      "timestamp-duration-latlng-bytes-and-path",
+      "math-hashing-timestamp-duration-latlng-namespaces",
+      "request-auth-method-time-query-resource-and-existing-resource",
+      "nested-match-single-and-recursive-wildcards",
+      "parameterized-functions-and-v2-let",
+      "get-exists-getAfter-existsAfter-and-access-cache"
+    ],
+    "requiredParseIssueClasses": [
+      "unexpected-token",
+      "unclosed-block",
+      "duplicate-let",
+      "undefined-name",
+      "invalid-function-arity",
+      "recursive-function",
+      "invalid-recursive-wildcard",
+      "oversized-source"
+    ],
+    "frozenFixtureSha256": {
+      "production-expression-corpus.json": "cfe64606464b46a56fb2ff32ca088e742570fc168ad1ba1c64bc21d2619d42d1",
+      "production-language-contract.json": "08041f4ceae7856f8abf9b463adb25433b378a90755ee5d5b286eb145c3d57fb",
+      "production-parse-errors.json": "21aa166345b9794b5cd2142b000735fd0405bde5d624aa0d79947fd54887f2d2",
+      "production-limit-probes.json": "d721561fa998437fb99279d821c8504b1b3374f0c2025d1b71e974cd2abc823a",
+      "java-access-accounting.json": "8f96b510467ca875cebd48d4af5b8a05ca21aa077fd7f7ab9a95d51ab16612cc",
+      "java-get-after.json": "df4fbeb21833622ad3bf0ba2df6467f73f947add319ae2c3bf0b07403b9be0fc",
+      "java-runtime-errors.json": "a8793d7e86cf0f2396a43dcb26acec7d89c681c1b566a4cc0baaaeb49c45222d",
+      "complex-firestore.rules": "60218bddbb680859f3379659e969379ff63dcf926b34bef0b99b85716ce3017c",
+      "complex-rules-cases.json": "f490c214849ec4921b3e07c4fcd14347486e64e0e86dcb168fd5ab820e949f81",
+      "SHA256SUMS": "fa73f7efa39b95784a78324a4b7a6bf16ce10ad2afb809f1cb61d6541dae6b52"
+    }
+  },
+  "language": {
+    "rulesVersion": "2",
+    "services": ["cloud.firestore"],
+    "statements": [
+      "service",
+      "match",
+      "allow",
+      "function",
+      "return",
+      "let"
+    ],
+    "matchFeatures": [
+      "literal-segments",
+      "single-segment-wildcards",
+      "recursive-wildcards-at-any-position",
+      "nested-relative-matches",
+      "overlapping-allows-are-or-composed"
+    ],
+    "methods": [
+      "get",
+      "list",
+      "read",
+      "create",
+      "update",
+      "delete",
+      "write"
+    ],
+    "valueTypes": [
+      "null",
+      "bool",
+      "int",
+      "float",
+      "string",
+      "list",
+      "map",
+      "timestamp",
+      "duration",
+      "path",
+      "bytes",
+      "latlng",
+      "firestore-resource"
+    ],
+    "namespaces": [
+      "math",
+      "hashing",
+      "timestamp",
+      "duration",
+      "latlng",
+      "debug"
+    ],
+    "accessFunctions": [
+      "get",
+      "exists",
+      "getAfter"
+    ]
+  },
+  "empiricalLimits": {
+    "oracleResolutionAt": "2026-09-01T16:47:00+08:00",
+    "maximumSourceBytes": 262144,
+    "maximumSourceBytesBasis": "official documented deployed-rules maximum; projects.test accepted 256001 source bytes but its HTTP request envelope returned INVALID_ARGUMENT beginning below 262144, so the raw test-envelope boundary is retained separately and is not substituted for the documented deployment limit",
+    "singleDocumentOrQueryAccessCalls": 10,
+    "multiDocumentTransactionOrBatchAccessCalls": 20,
+    "cachedRepeatedAccessIsFree": true,
+    "recursionAllowed": false,
+    "functionCallDepth": {
+      "status": "frozen-from-production-limit-probe",
+      "maximum": 20,
+      "acceptedGeneratedFunctionChainLength": 21,
+      "firstRejectedGeneratedFunctionChainLength": 22,
+      "failureText": "Maximum allowed call depth of 20 is reached",
+      "fixture": "conformance/fixtures/rules-v2/production-limit-probes.json"
+    },
+    "evaluatedExpressionsPerRequest": {
+      "status": "frozen-from-production-limit-probe",
+      "maximum": 1000,
+      "balancedTermsAccepted": 100,
+      "firstBalancedTermsProbedAndDenied": 125,
+      "failureText": "maximum of 1000 expressions to evaluate has been reached",
+      "fixture": "conformance/fixtures/rules-v2/production-limit-probes.json"
+    },
+    "limitFailureVerdict": "deny",
+    "limitFailureTransportStatus": "PERMISSION_DENIED"
+  },
+  "authentication": {
+    "ownerBypass": "Bearer owner",
+    "ownerBypassAppliesTo": ["grpc", "rest", "webchannel"],
+    "emulatorUnsignedJwt": {
+      "allowedOnlyOnEmulatedEndpoints": true,
+      "algorithm": "none",
+      "issuerTemplate": "https://securetoken.google.com/{projectId}",
+      "requiredClaims": ["sub", "user_id", "iat", "exp", "iss", "aud"],
+      "cryptographicVerification": false,
+      "mustNeverBecomeGeneralJwtVerification": true
+    },
+    "unauthenticatedRequestAuth": null
+  },
+  "loading": {
+    "startupFlag": "--rules <file>",
+    "hotReloadRoute": "PUT /emulator/v1/projects/{project}:securityRules",
+    "hotReloadAtomic": true,
+    "invalidReloadKeepsPreviousRules": true,
+    "missingRulesFileBehavior": "open-with-explicit-warning",
+    "rulesArePerProject": true
+  },
+  "enforcement": {
+    "transports": ["rest", "webchannel"],
+    "grpcClientPolicy": "admin-owner-bypass-unless-a-non-owner-emulator-token-is-present",
+    "operations": [
+      "single-document-get",
+      "single-document-create-update-delete",
+      "batch-get",
+      "commit-and-batched-writes",
+      "run-query-and-aggregation-query",
+      "listen-initial-and-incremental-delivery",
+      "webchannel-write"
+    ],
+    "queryRulesAreNotFilters": true,
+    "queryMustProveEveryPotentialResultAllowed": true,
+    "snapshotConsistencyRequired": true,
+    "getAfterUsesAtomicPendingWriteSet": true,
+    "denyCode": "PERMISSION_DENIED",
+    "adminControlAndClearRoutesBypassRules": true
+  },
+  "complexRuleset": {
+    "path": "conformance/fixtures/rules-v2/complex-firestore.rules",
+    "minimumNonBlankLines": 400,
+    "requiredAllowCases": 24,
+    "requiredDenyCases": 12,
+    "frozenNonBlankLines": 1193,
+    "frozenAllowCases": 27,
+    "frozenDenyCases": 18,
+    "rulesSha256": "60218bddbb680859f3379659e969379ff63dcf926b34bef0b99b85716ce3017c",
+    "casesSha256": "f490c214849ec4921b3e07c4fcd14347486e64e0e86dcb168fd5ab820e949f81",
+    "requiredFeatures": [
+      "auth-and-custom-claims",
+      "create-update-delete-resource-differences",
+      "field-change-validation",
+      "nested-and-recursive-matches",
+      "query-limit-validation",
+      "cross-document-access",
+      "getAfter-batch-invariant",
+      "timestamps-durations-and-helper-functions"
+    ]
+  },
+  "oracleClassifications": [
+    {
+      "id": "production-projects-test-debug-unavailable",
+      "behavior": "debug(request.auth.uid) returns a Function not found runtime error in production projects.test",
+      "policy": "preserve as a projects.test oracle limitation; test emulator debug behavior separately and record any production-runtime or Java divergence without normalizing the fixture",
+      "fixture": "conformance/fixtures/rules-v2/production-language-contract.json"
+    },
+    {
+      "id": "projects-test-large-source-envelope",
+      "behavior": "projects.test accepts 256001 source bytes but returns HTTP 400 INVALID_ARGUMENT for the probed 262143-byte request",
+      "policy": "enforce the official documented 262144-byte deployed-rules maximum and preserve the projects.test HTTP-envelope boundary separately",
+      "fixture": "conformance/fixtures/rules-v2/production-parse-errors.json"
+    }
+  ],
+  "gates": {
+    "productionDifferential": {
+      "minimumCases": 1024,
+      "allowedUnexplainedVerdictDivergences": 0,
+      "allowedUnexplainedExpressionValueDivergences": 0,
+      "allowedUnexplainedParseIssueDivergences": 0
+    },
+    "javaDifferential": {
+      "accessAccountingRequired": true,
+      "getAfterRequired": true,
+      "runtimeErrorRequired": true,
+      "javaOnlyDeviationsMustBeReported": true
+    },
+    "startupAndHotReload": {
+      "modes": ["memory", "disk-wal"],
+      "startupAllowAndDenyRequired": true,
+      "validHotReloadRequired": true,
+      "invalidHotReloadRollbackRequired": true
+    },
+    "transportEnforcement": {
+      "modes": ["memory", "disk-wal"],
+      "restRequired": true,
+      "browserWebchannelRequired": true,
+      "longPollingRequired": true,
+      "streamingRequired": true,
+      "bufferingProxyAutoDetectionRequired": true,
+      "reconnectMustRemainHealthy": true,
+      "ownerBypassRequired": true,
+      "unsignedJwtClaimsRequired": true
+    },
+    "complexRuleset": {
+      "minimumNonBlankLines": 400,
+      "minimumAllowCases": 24,
+      "minimumDenyCases": 12,
+      "unexpectedFailuresAllowed": 0
+    },
+    "regression": {
+      "phase2FullGateRequired": true,
+      "firebaseJsSdkMatrixCells": 4,
+      "existingConformanceRequired": true,
+      "rustFmtRequired": true,
+      "clippyWarningsAllowed": 0,
+      "rustTestsRequired": true,
+      "typescriptCheckRequired": true,
+      "typescriptTestsRequired": true
+    },
+    "benchmark": {
+      "rulesEvaluationSamples": 1000,
+      "requiredPercentiles": [50, 95, 99],
+      "maximumP99Milliseconds": 5,
+      "listenerDeliveryP99RegressionPercentAllowed": 20,
+      "memoryAndDiskWalRequired": true
+    }
+  },
+  "evidence": {
+    "report": "reports/phase-3-gate.md",
+    "root": "reports/phase-3-metrics",
+    "sha256SumsRequired": true,
+    "rawOracleResponsesRequired": true,
+    "rawCommandLogsRequired": true,
+    "runnerMetadataRequired": true,
+    "deviationsLedgerRequired": true,
+    "tagRequiresSeparateReviewAfterCompletePass": true,
+    "nextPhaseMustNotStartBeforeReview": true
+  }
+}

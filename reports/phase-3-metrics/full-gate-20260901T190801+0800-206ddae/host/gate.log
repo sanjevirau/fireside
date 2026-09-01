@@ -1,0 +1,13 @@
+npm notice run fireside-conformance@0.0.1 test:rules:phase3-gate
+npm notice run node --import tsx src/rules/run-phase3-gate.ts --sdk-dir /home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae-support/firebase-js-sdk --output-dir /home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae/conformance/reports/phase-3-metrics/full-gate-20260901T190801+0800-206ddae --report /home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae/conformance/reports/phase-3-gate.md
+/home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae/conformance/src/rules/run-phase3-gate.ts:653
+  if (failed !== undefined) throw new Error(`gate command failed: ${failed.command}`);
+                                  ^
+
+Error: gate command failed: /home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node --import tsx /home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae/conformance/src/webchannel/run-phase2-gate.ts --sdk-dir /home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae-support/firebase-js-sdk --output-dir /home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae/conformance/reports/phase-3-metrics/full-gate-20260901T190801+0800-206ddae/phase2-regression/evidence --report /home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae/conformance/reports/phase-3-metrics/full-gate-20260901T190801+0800-206ddae/phase2-regression/report.md
+    at assertCommandsPassed (/home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae/conformance/src/rules/run-phase3-gate.ts:653:35)
+    at main (/home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae/conformance/src/rules/run-phase3-gate.ts:193:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async <anonymous> (/home/sanjevi/fireside-phase3-full-gate-20260901T190801+0800-206ddae/conformance/src/rules/run-phase3-gate.ts:816:1)
+
+Node.js v24.20.0

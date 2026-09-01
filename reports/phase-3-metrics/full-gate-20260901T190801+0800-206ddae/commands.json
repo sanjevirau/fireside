@@ -1,0 +1,54 @@
+{
+  "commands": [
+    {
+      "command": "cargo build --release --locked -p fireside",
+      "durationMilliseconds": 56238,
+      "exitCode": 0,
+      "log": "logs/release-build.log",
+      "passed": true,
+      "signal": null
+    },
+    {
+      "command": "cargo fmt --all -- --check",
+      "durationMilliseconds": 476,
+      "exitCode": 0,
+      "log": "logs/rust-fmt.log",
+      "passed": true,
+      "signal": null
+    },
+    {
+      "command": "cargo clippy --workspace --all-targets -- -D warnings",
+      "durationMilliseconds": 28427,
+      "exitCode": 0,
+      "log": "logs/rust-clippy.log",
+      "passed": true,
+      "signal": null
+    },
+    {
+      "command": "cargo test --workspace --locked",
+      "durationMilliseconds": 43114,
+      "exitCode": 0,
+      "log": "logs/rust-tests.log",
+      "passed": true,
+      "signal": null
+    },
+    {
+      "command": "npm run check",
+      "durationMilliseconds": 1285,
+      "exitCode": 0,
+      "log": "logs/typescript-check.log",
+      "passed": true,
+      "signal": null
+    },
+    {
+      "command": "npm test",
+      "durationMilliseconds": 2512,
+      "exitCode": 0,
+      "log": "logs/typescript-tests.log",
+      "passed": true,
+      "signal": null
+    }
+  ],
+  "passed": true,
+  "schemaVersion": 1
+}
