@@ -15,8 +15,13 @@ import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  assertFrozenGateToolchain,
   existingConformanceCommands,
   existingConformanceCommandSpecifications,
+} from "./phase2-gate-plan.ts";
+import type {
+  FrozenGateToolchain,
+  ObservedGateToolchain,
 } from "./phase2-gate-plan.ts";
 
 interface Arguments {
@@ -72,6 +77,22 @@ interface FirebaseSdkBrowserProcessPlan {
   readonly unscopedSuitePolicy: string;
 }
 
+interface EnvironmentEvidence extends ObservedGateToolchain {
+  readonly candidateRevision: string;
+  readonly capturedAt: string;
+  readonly cpuCount: number;
+  readonly cpuModel: string;
+  readonly hostname: string;
+  readonly manifestSha256: string;
+  readonly os: {
+    readonly arch: string;
+    readonly platform: NodeJS.Platform;
+    readonly release: string;
+  };
+  readonly schemaVersion: number;
+  readonly totalMemoryBytes: number;
+}
+
 interface Phase2Manifest {
   readonly evidence: {
     readonly requiredFiles: readonly string[];
@@ -109,6 +130,7 @@ interface Phase2Manifest {
   };
   readonly name: string;
   readonly schemaVersion: number;
+  readonly toolchain: FrozenGateToolchain;
 }
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -178,6 +200,7 @@ async function main(): Promise<void> {
   await writeJson(join(outputDirectory, "environment.json"), environment);
 
   try {
+    assertFrozenGateToolchain(manifest.toolchain, environment);
     await runFixtureReplay(outputDirectory);
     await runFirebaseSdkGate(outputDirectory, sdkDirectory, manifest);
     const browserEvidence = await runBrowserGate(outputDirectory, manifest);
@@ -765,7 +788,7 @@ function assertCommandsPassed(commands: readonly CommandRecord[]): void {
 async function collectEnvironment(
   candidateRevision: string,
   manifestSha256: string,
-): Promise<unknown> {
+): Promise<EnvironmentEvidence> {
   return {
     candidateRevision,
     capturedAt: new Date().toISOString(),

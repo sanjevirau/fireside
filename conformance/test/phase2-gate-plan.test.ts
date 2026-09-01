@@ -5,6 +5,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import {
+  assertFrozenGateToolchain,
   existingConformanceCommands,
   existingConformanceCommandSpecifications,
 } from "../src/webchannel/phase2-gate-plan.ts";
@@ -39,4 +40,58 @@ test("Phase 2 conformance commands execute directly without a shell", () => {
       specification.displayCommand,
     );
   }
+});
+
+test("Phase 2 gate accepts the exact frozen toolchain", () => {
+  assert.doesNotThrow(() =>
+    assertFrozenGateToolchain(
+      { java: "26", node: "24.20.0", npm: "12.0.2", rust: "1.98.0" },
+      {
+        java:
+          "openjdk 26.0.2.1 2026-08-18\nOpenJDK Runtime Environment (build 26.0.2.1)",
+        node: "v24.20.0",
+        npm: "12.0.2",
+        rust: "rustc 1.98.0 (88d9e12ae 2026-08-18)",
+      },
+    ),
+  );
+});
+
+test("Phase 2 gate rejects a login-shell Java downgrade", () => {
+  assert.throws(
+    () =>
+      assertFrozenGateToolchain(
+        { java: "26", node: "24.20.0", npm: "12.0.2", rust: "1.98.0" },
+        {
+          java: "openjdk 21.0.2 2024-01-16",
+          node: "v24.20.0",
+          npm: "12.0.2",
+          rust: "rustc 1.98.0 (88d9e12ae 2026-08-18)",
+        },
+      ),
+    /frozen toolchain mismatch: java expected major 26, observed openjdk 21\.0\.2/u,
+  );
+});
+
+test("Phase 2 gate reports every frozen toolchain mismatch", () => {
+  assert.throws(
+    () =>
+      assertFrozenGateToolchain(
+        { java: "26", node: "24.20.0", npm: "12.0.2", rust: "1.98.0" },
+        {
+          java: "not-java",
+          node: "v24.19.0",
+          npm: "11.0.0",
+          rust: "rustc 1.97.0 (unknown)",
+        },
+      ),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /java expected major 26/u);
+      assert.match(error.message, /node expected 24\.20\.0/u);
+      assert.match(error.message, /npm expected 12\.0\.2/u);
+      assert.match(error.message, /rust expected 1\.98\.0/u);
+      return true;
+    },
+  );
 });

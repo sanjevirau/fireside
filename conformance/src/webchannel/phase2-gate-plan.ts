@@ -4,6 +4,69 @@ export interface GateCommandSpecification {
   readonly executable: string;
 }
 
+export interface FrozenGateToolchain {
+  readonly java: string;
+  readonly node: string;
+  readonly npm: string;
+  readonly rust: string;
+}
+
+export interface ObservedGateToolchain {
+  readonly java: string;
+  readonly node: string;
+  readonly npm: string;
+  readonly rust: string;
+}
+
+export function assertFrozenGateToolchain(
+  expected: FrozenGateToolchain,
+  observed: ObservedGateToolchain,
+): void {
+  const mismatches: string[] = [];
+  const observedJavaMajor = javaMajor(observed.java);
+  const expectedJavaMajor = requiredMajor(expected.java, "Java");
+  if (observedJavaMajor !== expectedJavaMajor) {
+    mismatches.push(
+      `java expected major ${expectedJavaMajor}, observed ${firstLine(observed.java)}`,
+    );
+  }
+
+  const observedNode = observed.node.replace(/^v/u, "");
+  if (observedNode !== expected.node) {
+    mismatches.push(`node expected ${expected.node}, observed ${observed.node}`);
+  }
+  if (observed.npm !== expected.npm) {
+    mismatches.push(`npm expected ${expected.npm}, observed ${observed.npm}`);
+  }
+
+  const observedRust = /^rustc\s+(\S+)/u.exec(observed.rust)?.[1];
+  if (observedRust !== expected.rust) {
+    mismatches.push(`rust expected ${expected.rust}, observed ${observed.rust}`);
+  }
+
+  if (mismatches.length > 0) {
+    throw new Error(`frozen toolchain mismatch: ${mismatches.join("; ")}`);
+  }
+}
+
+function firstLine(value: string): string {
+  return value.split(/\r?\n/u, 1)[0] ?? value;
+}
+
+function javaMajor(value: string): number | undefined {
+  const match = /^(?:openjdk|java)(?: version)?\s+"?(\d+)/u.exec(
+    firstLine(value),
+  );
+  return match === null ? undefined : Number(match[1]);
+}
+
+function requiredMajor(value: string, name: string): number {
+  if (!/^\d+$/u.test(value)) {
+    throw new Error(`invalid frozen ${name} major: ${value}`);
+  }
+  return Number(value);
+}
+
 export const existingConformanceCommandSpecifications = [
   {
     arguments: ["fmt", "--all", "--", "--check"],
