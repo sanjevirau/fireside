@@ -167,7 +167,10 @@ impl AuthRuntime {
         let data = lock(&self.state.inner);
         let project = data.projects.get(&self.state.project);
         let users = project.map_or_else(Vec::new, |value| value.users.values().cloned().collect());
-        write_atomic(path, &json!({ "users": users }))
+        write_atomic(
+            path,
+            &json!({ "kind": "identitytoolkit#DownloadAccountResponse", "users": users }),
+        )
     }
 
     /// Imports Firebase Auth JSON without emitting lifecycle triggers.
@@ -191,6 +194,38 @@ impl AuthRuntime {
             imported += 1;
         }
         self.state.persist(&data)?;
+        Ok(imported)
+    }
+
+    /// Writes `accounts.json` and `config.json` using the suite export layout.
+    pub fn export_directory(&self, root: &FilePath) -> Result<(), AuthError> {
+        std::fs::create_dir_all(root)
+            .map_err(|error| AuthError(format!("failed to create Auth export: {error}")))?;
+        self.export_users(&root.join("accounts.json"))?;
+        let data = lock(&self.state.inner);
+        let config = data
+            .projects
+            .get(&self.state.project)
+            .map_or_else(default_config, |project| project.config.clone());
+        write_atomic(&root.join("config.json"), &config)
+    }
+
+    /// Imports a suite Auth directory without emitting lifecycle triggers.
+    pub fn import_directory(&self, root: &FilePath) -> Result<usize, AuthError> {
+        let imported = self.import_users(&root.join("accounts.json"))?;
+        let config_path = root.join("config.json");
+        if config_path.is_file() {
+            let config = std::fs::read(&config_path)
+                .map_err(|error| AuthError(format!("failed to read Auth config: {error}")))?;
+            let config = serde_json::from_slice::<JsonValue>(&config)
+                .map_err(|error| AuthError(format!("invalid Auth config JSON: {error}")))?;
+            let mut data = lock(&self.state.inner);
+            data.projects
+                .entry(self.state.project.clone())
+                .or_default()
+                .config = config;
+            self.state.persist(&data)?;
+        }
         Ok(imported)
     }
 }
@@ -1759,6 +1794,37 @@ mod tests {
             .expect("restarted runtime");
         assert_eq!(restarted.user_count(), 1);
         std::fs::remove_file(file).expect("remove test state");
+    }
+
+    #[tokio::test]
+    async fn suite_directory_round_trip_preserves_users_and_config() {
+        let root = std::env::temp_dir().join(format!(
+            "fireside-auth-export-test-{}-{}",
+            std::process::id(),
+            now_millis()
+        ));
+        let registry = TriggerRegistry::default();
+        let (observer, _dispatches) = TriggerObserver::channel(registry.clone());
+        let runtime = router(PROJECT, observer.queue(), registry.clone());
+        let (_, _) = call_json(
+            &runtime,
+            Method::POST,
+            &format!("/identitytoolkit.googleapis.com/v1/projects/{PROJECT}/accounts"),
+            json!({ "localId": "export-user", "email": "export@example.com" }),
+        )
+        .await;
+        runtime.export_directory(&root).expect("export");
+        let accounts: JsonValue =
+            serde_json::from_slice(&std::fs::read(root.join("accounts.json")).expect("accounts"))
+                .expect("accounts JSON");
+        assert_eq!(accounts["kind"], "identitytoolkit#DownloadAccountResponse");
+        assert!(root.join("config.json").is_file());
+
+        let (observer, _dispatches) = TriggerObserver::channel(registry.clone());
+        let imported = router(PROJECT, observer.queue(), registry);
+        assert_eq!(imported.import_directory(&root).expect("import"), 1);
+        assert_eq!(imported.user_count(), 1);
+        std::fs::remove_dir_all(root).expect("remove export");
     }
 
     #[test]
