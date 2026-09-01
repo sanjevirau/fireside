@@ -1307,10 +1307,13 @@ Limits are enforced as observed behavior:
 - repeated cached access is free;
 - exceeding the limit returns permission denied;
 - no recursion;
-- bounded function depth (documentation conflicts between 10 and 20, so the
-  value must be resolved empirically);
-- approximately 1,000 evaluated expressions per request, pinned exactly by the
-  oracle before implementation;
+- a maximum function call depth of 20. The production oracle accepted the
+  generated 21-function chain and rejected the next chain with `Maximum
+  allowed call depth of 20 is reached` because the terminal function does not
+  add another call edge;
+- exactly 1,000 evaluated expressions per request. The balanced production
+  probe allows the 100-term control and denies every probe from 125 terms with
+  `maximum of 1000 expressions to evaluate has been reached`;
 - 256 KiB rules source.
 
 The primary oracle is `rules.googleapis.com projects.test`, using inline rules,
@@ -1320,6 +1323,23 @@ with source positions. A differential fuzzer compares all of these against
 fireside. Because mocked calls cannot establish all access-accounting and
 `getAfter` merge behavior, the official emulator is the secondary oracle for
 those cases.
+
+The frozen Phase 3 oracle corpus is under
+`conformance/fixtures/rules-v2/`. It contains 1,024 generated production cases,
+44 targeted language cases, exact parse/source-envelope probes, exact limit
+probes, Java access/`getAfter`/runtime-error captures, and a
+1,193-nonblank-line ruleset with 27 allow plus 18 deny observations. The Java
+fixtures prove that 10 distinct single-request access calls pass while 11
+deny, repeated access is cached, 20 distinct batched calls pass while 21 deny,
+and `getAfter` observes the atomic pending write set. `SHA256SUMS` locks the
+entire corpus before rules-engine product code begins.
+
+Two oracle boundaries remain explicitly classified rather than silently
+normalized. Production `projects.test` reports `debug()` as an unknown
+function, so emulator `debug` behavior is tested separately. Its large inline
+source request envelope also rejects the 262,143-byte probe even though it
+accepts 256,001 bytes; that transport boundary does not replace the official
+documented 262,144-byte deployed-rules maximum.
 
 ## 10. Differential harness and fixtures
 
@@ -1514,7 +1534,6 @@ crash, but the README states measured outcomes only.
 
 The following are deliberately unresolved until their stated oracle or phase:
 
-- rules function-depth and exact expression-count limits (Phase 3 oracle);
 - exact export metadata protobufs, CRC, and EOF behavior (Phase 1 artifacts);
 - UI `websocket_port` protocol (Phase 4 capture);
 - cloud-project ID and billing/TTL configuration (maintainer input at Phase 1);
