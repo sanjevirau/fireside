@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "target": "official-java-emulator",
+  "targetVersion": "1.22.0",
+  "targetProject": "demo-fireside-phase4-trigger-oracle",
+  "capturedAt": "2026-09-01T13:38:54.200Z",
+  "hypothesis": "v1 and v2 Firestore create triggers use distinct registration bodies and dispatch exact legacy-event and CloudEvent envelopes to the Functions emulator",
+  "credentialsStored": false,
+  "authorizationHeadersStored": false,
+  "javaJarSha256": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c",
+  "registrations": [
+    {
+      "id": "v1-document-create",
+      "method": "PUT",
+      "path": "/emulator/v1/projects/demo-fireside-phase4-trigger-oracle/triggers/us-central1-v1Created",
+      "request": {
+        "eventTrigger": {
+          "eventType": "providers/cloud.firestore/eventTypes/document.create",
+          "resource": "projects/demo-fireside-phase4-trigger-oracle/databases/(default)/documents/phase4Triggers/{documentId}",
+          "service": "firestore.googleapis.com"
+        }
+      },
+      "status": 200,
+      "response": {}
+    },
+    {
+      "id": "v2-document-created",
+      "method": "POST",
+      "path": "/emulator/v1/projects/demo-fireside-phase4-trigger-oracle/eventarcTrigger?eventarcTriggerId=us-central1-v2Created",
+      "request": {
+        "eventType": "google.cloud.firestore.document.v1.created",
+        "database": "(default)",
+        "namespace": "(default)",
+        "document": {
+          "value": "phase4Triggers/{documentId}",
+          "matchType": "PATH_PATTERN"
+        }
+      },
+      "status": 200,
+      "response": {
+        "eventType": "google.cloud.firestore.document.v1.created",
+        "database": "(default)",
+        "namespace": "(default)",
+        "document": {
+          "value": "phase4Triggers/{documentId}",
+          "matchType": "PATH_PATTERN"
+        }
+      }
+    }
+  ],
+  "write": {
+    "method": "PATCH",
+    "path": "/v1/projects/demo-fireside-phase4-trigger-oracle/databases/(default)/documents/phase4Triggers/oracle?currentDocument.exists=false",
+    "status": 200,
+    "responseShape": {
+      "name": "projects/demo-fireside-phase4-trigger-oracle/databases/(default)/documents/phase4Triggers/oracle",
+      "fields": {
+        "ascii": {
+          "stringValue": "oracle"
+        },
+        "unicode": {
+          "stringValue": "火🔥"
+        },
+        "ordinal": {
+          "integerValue": "1"
+        }
+      },
+      "createTime": "<timestamp>",
+      "updateTime": "<timestamp>"
+    }
+  },
+  "dispatches": [
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-trigger-oracle/triggers/us-central1-v1Created",
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": {
+        "data": {
+          "value": {
+            "name": "projects/demo-fireside-phase4-trigger-oracle/databases/(default)/documents/phase4Triggers/oracle",
+            "fields": {
+              "ascii": {
+                "stringValue": "oracle"
+              },
+              "unicode": {
+                "stringValue": "火🔥"
+              },
+              "ordinal": {
+                "integerValue": "1"
+              }
+            },
+            "createTime": "<timestamp>",
+            "updateTime": "<timestamp>"
+          },
+          "updateMask": {}
+        },
+        "context": {
+          "eventId": "<event-id>",
+          "timestamp": "<timestamp>",
+          "eventType": "providers/cloud.firestore/eventTypes/document.create",
+          "resource": {
+            "name": "projects/demo-fireside-phase4-trigger-oracle/databases/(default)/documents/phase4Triggers/oracle",
+            "service": "firestore.googleapis.com"
+          }
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-trigger-oracle/triggers/us-central1-v2Created",
+      "headers": {
+        "ce-specversion": "1.0",
+        "ce-type": "google.cloud.firestore.document.v1.created",
+        "ce-source": "//firestore.googleapis.com/projects/projects/demo-fireside-phase4-trigger-oracle/databases/(default)",
+        "ce-id": "a1ea608d-8e4e-45e9-a8bf-c99b84ce8ca4",
+        "ce-subject": "documents/phase4Triggers/oracle",
+        "ce-time": "2026-09-01T13:38:54Z",
+        "ce-datacontenttype": "application/protobuf",
+        "content-type": "application/protobuf"
+      },
+      "body": "CrYBCmBwcm9qZWN0cy9kZW1vLWZpcmVzaWRlLXBoYXNlNC10cmlnZ2VyLW9yYWNsZS9kYXRhYmFzZXMvKGRlZmF1bHQpL2RvY3VtZW50cy9waGFzZTRUcmlnZ2Vycy9vcmFjbGUSEgoFYXNjaWkSCYoBBm9yYWNsZRIVCgd1bmljb2RlEgqKAQfngavwn5SlEg0KB29yZGluYWwSAhABGgsI7qrb1AYQiNWEPyILCO6q29QGEIjVhD8aAA=="
+    }
+  ],
+  "relevantLogLines": []
+}
