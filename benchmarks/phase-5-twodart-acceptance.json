@@ -18,8 +18,14 @@
   "twodartSource": {
     "repository": "git@github.com:sanjevirau/twodart.git",
     "branch": "feature/san/fireside-emulator",
-    "revision": "90881bf9611c9de09bcfc326943494bc28fcd1bd",
+    "baselineRevision": "90881bf9611c9de09bcfc326943494bc28fcd1bd",
     "originDevBase": "724367b6149e09d4366bdb2568e7617c949509e9",
+    "measuredRevisionPolicy": "Both stacks and the fresh-colleague clone must use one exact final revision descended from baselineRevision; record it in the evidence before launch.",
+    "allowedPhase5ChangeScope": [
+      "safe local external-provider disablement",
+      "Linux and fresh-colleague setup documentation",
+      "isolated Phase 5 acceptance hooks that do not alter production behavior"
+    ],
     "pullRequestBody": ".github/pull_request_fireside_emulator.md",
     "pullRequestMustRemainUnopened": true,
     "configurationChecksums": {

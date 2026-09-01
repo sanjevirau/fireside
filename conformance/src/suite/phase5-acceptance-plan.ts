@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 export const PHASE5_MANIFEST_SHA256 =
-  "32db654c0e095b36d5f74c46e2fe817e2b2d2ec7a4367601b9a82a4ff9cc9423";
+  "7838a8c5cd97791b506c3ce93749620360da4849a99352fb01fef1f26ce098b3";
 
 export const PHASE5_TWODART_REVISION =
   "90881bf9611c9de09bcfc326943494bc28fcd1bd";
@@ -126,9 +126,9 @@ export interface Phase5Manifest {
     readonly simultaneous: boolean;
   };
   readonly twodartSource: {
+    readonly baselineRevision: string;
     readonly branch: string;
     readonly pullRequestMustRemainUnopened: boolean;
-    readonly revision: string;
   };
 }
 
@@ -150,7 +150,7 @@ export function assertPhase5Manifest(
   }
   if (
     manifest.phase4Baseline.tag !== "phase-4" ||
-    manifest.twodartSource.revision !== PHASE5_TWODART_REVISION ||
+    manifest.twodartSource.baselineRevision !== PHASE5_TWODART_REVISION ||
     manifest.dataset.treeSha256 !== PHASE5_DATASET_TREE_SHA256
   ) {
     throw new Error("Phase 5 immutable source baseline diverged");

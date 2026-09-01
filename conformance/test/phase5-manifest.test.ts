@@ -21,7 +21,7 @@ test("the immutable Phase 5 manifest freezes the full Twodart differential gate"
 
   assert.doesNotThrow(() => assertPhase5Manifest(manifest, bytes));
   assert.equal(manifest.phase4Baseline.tag, "phase-4");
-  assert.equal(manifest.twodartSource.revision, PHASE5_TWODART_REVISION);
+  assert.equal(manifest.twodartSource.baselineRevision, PHASE5_TWODART_REVISION);
   assert.equal(manifest.dataset.treeSha256, PHASE5_DATASET_TREE_SHA256);
   assert.equal(manifest.dataset.fileCount, 66_758);
   assert.equal(manifest.dataset.fileBytes, 8_180_616_677);
