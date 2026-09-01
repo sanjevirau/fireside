@@ -1121,10 +1121,7 @@ async fn export_suite(
             .map(|(key, document)| ExportedDocument::new(key, document.fields().clone()));
         let written = write_export(staging.join("firestore_export"), documents)
             .map_err(|error| failure(format!("Firestore export failed: {error}")))?;
-        let metadata_file = written
-            .overall_metadata_path()
-            .strip_prefix(&staging)
-            .map_err(|error| failure(format!("invalid Firestore export path: {error}")))?;
+        let metadata_file = relative_export_path(&staging, written.overall_metadata_path())?;
         metadata.insert(
             "firestore".to_owned(),
             json!({
@@ -1185,6 +1182,17 @@ fn absolute_destination(path: &Path) -> Result<PathBuf, SuiteRuntimeError> {
     }
 }
 
+fn relative_export_path(staging: &Path, path: &Path) -> Result<PathBuf, SuiteRuntimeError> {
+    let canonical_staging = std::fs::canonicalize(staging)
+        .map_err(|error| failure(format!("failed to resolve export staging: {error}")))?;
+    let canonical_path = std::fs::canonicalize(path)
+        .map_err(|error| failure(format!("failed to resolve exported metadata: {error}")))?;
+    canonical_path
+        .strip_prefix(&canonical_staging)
+        .map(Path::to_owned)
+        .map_err(|error| failure(format!("invalid Firestore export path: {error}")))
+}
+
 fn write_json(path: &Path, value: &impl Serialize) -> Result<(), SuiteRuntimeError> {
     let bytes = serde_json::to_vec_pretty(value)
         .map_err(|error| failure(format!("failed to encode export metadata: {error}")))?;
@@ -1194,4 +1202,38 @@ fn write_json(path: &Path, value: &impl Serialize) -> Result<(), SuiteRuntimeErr
 
 fn failure(message: impl Into<String>) -> SuiteRuntimeError {
     SuiteRuntimeError(message.into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn export_metadata_paths_tolerate_a_symlinked_staging_parent() {
+        use std::os::unix::fs::symlink;
+
+        let unique = format!(
+            "fireside-suite-export-path-{}-{}",
+            std::process::id(),
+            OffsetDateTime::now_utc().unix_timestamp_nanos()
+        );
+        let root = std::env::temp_dir().join(unique);
+        let actual = root.join("actual");
+        let alias = root.join("alias");
+        let export = actual.join("firestore_export");
+        std::fs::create_dir_all(&export).expect("actual staging should exist");
+        symlink(&actual, &alias).expect("staging alias should exist");
+        let metadata = export.join("firestore_export.overall_export_metadata");
+        std::fs::write(&metadata, []).expect("metadata should exist");
+
+        let relative = relative_export_path(&alias, &metadata)
+            .expect("canonical staging should accept the physical export path");
+        assert_eq!(
+            relative,
+            PathBuf::from("firestore_export/firestore_export.overall_export_metadata")
+        );
+
+        std::fs::remove_dir_all(&root).expect("test directory should clean up");
+    }
 }
