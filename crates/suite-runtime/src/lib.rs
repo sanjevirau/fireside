@@ -529,9 +529,18 @@ fn query_policy(config: &SuiteConfig) -> Result<QueryPolicy, SuiteRuntimeError> 
     };
     let source = std::fs::read_to_string(path)
         .map_err(|error| failure(format!("failed to read Firestore indexes: {error}")))?;
-    let indexes = IndexCatalog::from_json(&source)
-        .map_err(|error| failure(format!("invalid Firestore indexes: {error}")))?;
-    Ok(QueryPolicy::strict(DatabaseEdition::Standard, indexes))
+    suite_query_policy(Some(&source))
+}
+
+fn suite_query_policy(indexes: Option<&str>) -> Result<QueryPolicy, SuiteRuntimeError> {
+    if let Some(source) = indexes {
+        IndexCatalog::from_json(source)
+            .map_err(|error| failure(format!("invalid Firestore indexes: {error}")))?;
+    }
+    // The official local emulator loads the configured index file but does not
+    // enforce production index availability. Strict enforcement remains an
+    // explicit standalone `--strict-indexes` mode.
+    Ok(QueryPolicy::new(DatabaseEdition::Standard))
 }
 
 fn firestore_rules(config: &SuiteConfig) -> Result<RulesRuntime, SuiteRuntimeError> {
@@ -1275,7 +1284,34 @@ fn failure(message: impl Into<String>) -> SuiteRuntimeError {
 
 #[cfg(test)]
 mod tests {
+    use fireside_query_engine::{FieldFilter, FieldOperator, FieldPath, Filter, Query, QueryScope};
+
     use super::*;
+
+    #[test]
+    fn suite_indexes_are_validated_but_queries_remain_emulator_permissive() {
+        let policy = suite_query_policy(Some(r#"{"indexes":[],"fieldOverrides":[]}"#))
+            .expect("valid index configuration");
+        let query = Query::new(QueryScope::collection("licenses").expect("collection")).filter(
+            Filter::And(vec![
+                Filter::Field(FieldFilter {
+                    path: FieldPath::parse_wire("subscriptionQuota.active").expect("field"),
+                    operator: FieldOperator::Equal,
+                    value: fireside_core_store::Value::Boolean(true),
+                }),
+                Filter::Field(FieldFilter {
+                    path: FieldPath::parse_wire("subscriptionQuota.periodEndDate").expect("field"),
+                    operator: FieldOperator::LessThanOrEqual,
+                    value: fireside_core_store::Value::Null,
+                }),
+            ]),
+        );
+
+        policy
+            .validate(&query)
+            .expect("the official suite does not enforce production indexes");
+        assert!(suite_query_policy(Some("not-json")).is_err());
+    }
 
     #[cfg(unix)]
     #[test]

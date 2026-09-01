@@ -1794,6 +1794,10 @@ The oracle captures pin the following suite contracts before implementation:
   documents and both schedule topics are then admitted through the public
   Firestore/Auth/Pub/Sub surfaces so discovery and transport remain covered in
   addition to the deterministic delivery-chaos tests.
+  Suite startup parses Twodart's configured `firestore.indexes.json` so an
+  invalid corpus still fails fast, but it retains the official emulator's
+  permissive default query policy. Production-style index enforcement remains
+  available only through the standalone explicit `--strict-indexes` mode.
 
 ### Phase 5 — Hardening and release
 
