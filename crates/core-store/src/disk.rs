@@ -305,6 +305,18 @@ impl DiskSnapshot {
         decode(value.value()).ok().map(Arc::new)
     }
 
+    pub(crate) fn iter_documents(&self, database: &DatabaseName) -> Option<DiskDocumentIterator> {
+        if !self.overlay.is_empty() {
+            return None;
+        }
+        let table = self.transaction.open_table(DOCUMENTS).ok()?;
+        let range = table.range::<&[u8]>(..).ok()?;
+        Some(DiskDocumentIterator {
+            database: database.clone(),
+            range,
+        })
+    }
+
     pub(crate) fn documents(&self, database: &DatabaseName) -> Vec<(DocumentKey, Arc<Document>)> {
         let mut documents = BTreeMap::new();
         if let Ok(table) = self.transaction.open_table(DOCUMENTS)
@@ -338,6 +350,32 @@ impl DiskSnapshot {
             }
         }
         documents.into_iter().collect()
+    }
+}
+
+pub(crate) struct DiskDocumentIterator {
+    database: DatabaseName,
+    range: redb::Range<'static, &'static [u8], &'static [u8]>,
+}
+
+impl Iterator for DiskDocumentIterator {
+    type Item = (DocumentKey, Arc<Document>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        for entry in self.range.by_ref().flatten() {
+            let (key, document) = entry;
+            let Ok(key) = decode::<DocumentKey>(key.value()) else {
+                continue;
+            };
+            if key.database() != &self.database {
+                continue;
+            }
+            let Ok(document) = decode::<Document>(document.value()) else {
+                continue;
+            };
+            return Some((key, Arc::new(document)));
+        }
+        None
     }
 }
 
@@ -1108,6 +1146,35 @@ mod tests {
     #[test]
     fn disk_mode_defaults_to_the_deliberate_bounded_cache_budget() {
         assert_eq!(DiskOptions::default().cache_size_bytes, 64 * 1024 * 1024,);
+    }
+
+    #[test]
+    fn disk_snapshot_iteration_streams_a_stable_read_transaction() {
+        let directory = TestDirectory::new();
+        let store = DiskStore::open(directory.path(), DiskOptions::default())
+            .expect("disk store should open");
+        for index in 0..128 {
+            store
+                .commit(&[Write::Create {
+                    key: key(&format!("items/{index:03}")),
+                    fields: fields(Value::Integer(index)),
+                }])
+                .expect("document should commit");
+        }
+        let snapshot = store.snapshot();
+        store
+            .commit(&[Write::Create {
+                key: key("items/later"),
+                fields: fields(Value::Integer(999)),
+            }])
+            .expect("later document should commit");
+
+        let paths = snapshot
+            .iter_documents(&database())
+            .map(|(key, _)| key.path().to_owned())
+            .collect::<Vec<_>>();
+        assert_eq!(paths.len(), 128);
+        assert!(!paths.iter().any(|path| path == "items/later"));
     }
 
     #[test]

@@ -8,7 +8,7 @@
 #![forbid(unsafe_code)]
 
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::error::Error;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::path::Path;
@@ -1100,7 +1100,15 @@ impl Snapshot {
         &self,
         database: &DatabaseName,
     ) -> impl Iterator<Item = (DocumentKey, Arc<Document>)> {
-        self.documents(database).into_iter()
+        match &self.documents {
+            SnapshotDocuments::Memory(_) => {
+                SnapshotDocumentIterator::Buffered(self.documents(database).into_iter())
+            }
+            SnapshotDocuments::Disk(documents) => documents.iter_documents(database).map_or_else(
+                || SnapshotDocumentIterator::Buffered(self.documents(database).into_iter()),
+                |documents| SnapshotDocumentIterator::Disk(Box::new(documents)),
+            ),
+        }
     }
 
     /// Copies the documents belonging to one named database in key order.
@@ -1124,14 +1132,14 @@ impl Snapshot {
         writes: &[Write],
         request_time: Timestamp,
     ) -> Result<WritePreview, CommitError> {
-        let databases = writes
+        let keys = writes
             .iter()
             .map(write_key)
-            .map(|key| key.database().clone())
-            .collect::<std::collections::BTreeSet<_>>();
+            .cloned()
+            .collect::<BTreeSet<_>>();
         let mut documents = OrdMap::new();
-        for database in databases {
-            for (key, document) in self.documents(&database) {
+        for key in keys {
+            if let Some(document) = self.get(&key) {
                 documents.insert(key, document);
             }
         }
@@ -1152,6 +1160,22 @@ impl Snapshot {
             snapshot: self.clone(),
             pending,
         })
+    }
+}
+
+enum SnapshotDocumentIterator {
+    Buffered(std::vec::IntoIter<(DocumentKey, Arc<Document>)>),
+    Disk(Box<disk::DiskDocumentIterator>),
+}
+
+impl Iterator for SnapshotDocumentIterator {
+    type Item = (DocumentKey, Arc<Document>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Buffered(documents) => documents.next(),
+            Self::Disk(documents) => documents.next(),
+        }
     }
 }
 

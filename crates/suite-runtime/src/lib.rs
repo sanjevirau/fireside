@@ -104,7 +104,7 @@ pub struct SuiteConfig {
 pub struct SuiteOutcome {
     pub functions: usize,
     pub schedules: usize,
-    pub firestore_documents: usize,
+    pub firestore_documents: u64,
     pub auth_users: usize,
     pub storage_objects: usize,
     pub storage_bytes: u64,
@@ -393,9 +393,7 @@ async fn finish_suite(
     suite.exporter.abort();
     let _ = suite.exporter.await;
     let auth_users = suite.auth.user_count();
-    let database = DatabaseName::new(suite.config.project_id.as_str(), "(default)")
-        .map_err(|error| failure(error.to_string()))?;
-    let firestore_documents = suite.store.snapshot().iter_documents(&database).count();
+    let firestore_documents = suite.store.snapshot().logical_memory_usage().entries;
     let storage_objects = suite.storage.object_count();
     let storage_bytes = suite.storage.object_bytes();
     let delivery = suite.delivery.shutdown().await.into();

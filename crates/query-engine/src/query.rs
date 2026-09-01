@@ -442,8 +442,7 @@ pub fn execute(
     validate_cursor(query.end.as_ref(), &orders)?;
 
     let mut documents = snapshot
-        .documents(database)
-        .into_iter()
+        .iter_documents(database)
         .filter(|(key, _)| scope_matches(&query.scope, query.ancestor.as_deref(), key))
         .filter(|(key, document)| {
             query
@@ -506,8 +505,7 @@ fn execute_nearest(
         return Err(QueryError::UnsupportedVectorShape);
     }
     let mut candidates = snapshot
-        .documents(database)
-        .into_iter()
+        .iter_documents(database)
         .filter(|(key, _)| scope_matches(&query.scope, query.ancestor.as_deref(), key))
         .filter(|(key, document)| {
             query

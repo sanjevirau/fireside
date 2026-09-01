@@ -626,17 +626,20 @@ async fn clear_database(
     Path(path): Path<DatabasePath>,
 ) -> Result<Json<JsonValue>, RestError> {
     let database = database_name(path)?;
-    let writes = state
-        .store
-        .snapshot()
-        .documents(&database)
-        .into_iter()
-        .map(|(key, _)| Write::Delete {
-            key,
-            precondition: Precondition::None,
-        })
-        .collect::<Vec<_>>();
-    if !writes.is_empty() {
+    loop {
+        let writes = state
+            .store
+            .snapshot()
+            .iter_documents(&database)
+            .take(500)
+            .map(|(key, _)| Write::Delete {
+                key,
+                precondition: Precondition::None,
+            })
+            .collect::<Vec<_>>();
+        if writes.is_empty() {
+            break;
+        }
         state
             .store
             .commit(&writes)

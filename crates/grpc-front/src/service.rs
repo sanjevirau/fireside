@@ -406,21 +406,21 @@ impl FirestoreService {
         request: &ListDocumentsRequest,
         orders: &[ListOrder],
     ) -> Result<(Vec<ListedDocument>, String), Status> {
-        let snapshot_documents = snapshot.documents(database);
-        let mut listed = BTreeMap::new();
-        for (key, document) in &snapshot_documents {
-            if direct_child_matches(key.path(), parent, &request.collection_id) {
-                listed.insert(key.clone(), Some(Arc::clone(document)));
-            }
+        if !request.show_missing {
+            return Ok(
+                self.collect_present_list_documents(snapshot, database, parent, request, orders)
+            );
         }
-        if request.show_missing {
-            for (key, _) in &snapshot_documents {
-                if let Some(path) = missing_direct_child(key.path(), parent, &request.collection_id)
-                {
-                    let candidate = DocumentKey::new(database.clone(), path)
-                        .map_err(|error| Status::internal(error.to_string()))?;
-                    listed.entry(candidate).or_insert(None);
-                }
+
+        let mut listed = BTreeMap::new();
+        for (key, document) in snapshot.iter_documents(database) {
+            if direct_child_matches(key.path(), parent, &request.collection_id) {
+                listed.insert(key.clone(), Some(document));
+            }
+            if let Some(path) = missing_direct_child(key.path(), parent, &request.collection_id) {
+                let candidate = DocumentKey::new(database.clone(), path)
+                    .map_err(|error| Status::internal(error.to_string()))?;
+                listed.entry(candidate).or_insert(None);
             }
         }
         let mut documents = listed
@@ -461,6 +461,86 @@ impl FirestoreService {
             String::new()
         };
         Ok((documents, next_page_token))
+    }
+
+    fn collect_present_list_documents(
+        &self,
+        snapshot: &Snapshot,
+        database: &DatabaseName,
+        parent: Option<&str>,
+        request: &ListDocumentsRequest,
+        orders: &[ListOrder],
+    ) -> (Vec<ListedDocument>, String) {
+        let page_size = normalize_page_size(request.page_size);
+        let token = (!request.page_token.is_empty())
+            .then(|| decode_document_name(&request.page_token).ok())
+            .flatten()
+            .and_then(|key| {
+                snapshot.get(&key).map(|document| ListedDocument {
+                    key,
+                    document: Some(document),
+                })
+            });
+        if !request.page_token.is_empty() && token.is_none() {
+            return (Vec::new(), String::new());
+        }
+
+        let mut documents: Vec<ListedDocument> = Vec::with_capacity(page_size.saturating_add(1));
+        for (key, document) in snapshot.iter_documents(database) {
+            if !direct_child_matches(key.path(), parent, &request.collection_id) {
+                continue;
+            }
+            let candidate = ListedDocument {
+                key,
+                document: Some(document),
+            };
+            if !orders
+                .iter()
+                .all(|order| list_order_exists(order, candidate.document.as_deref()))
+            {
+                continue;
+            }
+            if token.as_ref().is_some_and(|token| {
+                compare_list_documents(
+                    &candidate.key,
+                    candidate.document.as_deref(),
+                    &token.key,
+                    token.document.as_deref(),
+                    orders,
+                    self.query_policy.edition(),
+                ) != std::cmp::Ordering::Greater
+            }) {
+                continue;
+            }
+            let insertion = documents
+                .binary_search_by(|listed| {
+                    compare_list_documents(
+                        &listed.key,
+                        listed.document.as_deref(),
+                        &candidate.key,
+                        candidate.document.as_deref(),
+                        orders,
+                        self.query_policy.edition(),
+                    )
+                })
+                .unwrap_or_else(std::convert::identity);
+            documents.insert(insertion, candidate);
+            if documents.len() > page_size.saturating_add(1) {
+                documents.pop();
+            }
+        }
+
+        let has_more = documents.len() > page_size;
+        documents.truncate(page_size);
+        let next_page_token = if has_more {
+            documents
+                .last()
+                .map(|document| document.key.to_string())
+                .unwrap_or_default()
+        } else {
+            String::new()
+        };
+        (documents, next_page_token)
     }
 }
 
@@ -1311,8 +1391,7 @@ impl Firestore for FirestoreService {
             .as_deref()
             .map_or_else(Vec::new, |path| path.split('/').collect::<Vec<_>>());
         let mut collection_ids = snapshot
-            .documents(&database)
-            .into_iter()
+            .iter_documents(&database)
             .filter_map(|(key, _)| {
                 let segments = key.path().split('/').collect::<Vec<_>>();
                 (segments.len() >= parent_segments.len() + 2
@@ -1980,6 +2059,48 @@ mod tests {
             ]
         );
         assert!(parse_list_order("rank,,__name__").is_err());
+    }
+
+    #[test]
+    fn present_document_pages_remain_ordered_and_consecutive() {
+        let database = DatabaseName::new("page-test", "(default)").expect("database");
+        let service = FirestoreService::default();
+        let writes = (0..250)
+            .map(|index| Write::Create {
+                key: DocumentKey::new(database.clone(), format!("items/{index:03}"))
+                    .expect("document key"),
+                fields: fireside_core_store::Fields::new(),
+            })
+            .collect::<Vec<_>>();
+        service.store().commit(&writes).expect("seed documents");
+        let orders = parse_list_order("").expect("default order");
+        let snapshot = service.store().snapshot();
+        let mut request = ListDocumentsRequest {
+            parent: database.to_string(),
+            collection_id: "items".to_owned(),
+            page_size: 17,
+            ..ListDocumentsRequest::default()
+        };
+        let mut paths = Vec::new();
+
+        loop {
+            let (page, token) = service
+                .collect_list_documents(&snapshot, &database, None, &request, &orders)
+                .expect("page should collect");
+            paths.extend(
+                page.into_iter()
+                    .map(|document| document.key.path().to_owned()),
+            );
+            if token.is_empty() {
+                break;
+            }
+            request.page_token = token;
+        }
+
+        assert_eq!(paths.len(), 250);
+        assert!(paths.windows(2).all(|pair| pair[0] < pair[1]));
+        assert_eq!(paths.first().map(String::as_str), Some("items/000"));
+        assert_eq!(paths.last().map(String::as_str), Some("items/249"));
     }
 
     #[test]
