@@ -179,9 +179,12 @@ retains its exact root; a commit derives a new root with structural sharing.
 Intermediate roots that are not referenced by an active snapshot are reclaimed
 by reference counting, including during repeated writes to one hot document.
 This avoids retaining one global version node per write merely because an old
-snapshot exists. The listener replay log remains separately and explicitly
-bounded; a resume point older than its floor receives `RESET` rather than
-causing unbounded retention.
+snapshot exists. The listener replay log is separately bounded by both 4,096
+changes and 64 MiB of logical retained document versions; the first limit
+reached advances the replay floor. A resume point older than that floor receives
+`RESET` rather than causing unbounded retention. The byte limit matters for
+imports and workloads whose last changes contain unusually large documents:
+replay capacity is never inferred from entry count alone.
 
 A second bounded index maps externally visible commit timestamps to retained
 logical revisions. It advances with the same replay floor and reconstructs the
@@ -191,9 +194,13 @@ Disk restart begins a new historical window at the recovered durable revision.
 Disk-backed current snapshots hold a redb read transaction and decode requested
 documents on demand instead of rebuilding an in-memory shadow of the entire
 database. Recent historical snapshots add a bounded overlay reconstructed from
-the change window. Full query scans may materialize their result candidates,
-but startup, point reads, writes, and import-serving reads remain proportional
-to touched documents rather than total persisted bytes.
+the change window. Current disk snapshots expose a stable streaming iterator;
+exports, query input scans, collection-ID discovery, ordinary document pages,
+and administrative clears consume that iterator without first cloning the full
+database. Queries may still materialize matching result candidates for sort
+semantics, but startup, point reads, writes, and import-serving reads remain
+proportional to touched or matching documents rather than total persisted
+bytes.
 
 Transactions include read-only and read-write modes. Read-write transactions
 track the read set, validate it atomically at commit, return the production

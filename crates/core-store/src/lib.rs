@@ -505,6 +505,8 @@ pub enum Write {
 pub struct StoreOptions {
     /// Maximum individual document changes retained for listener replay.
     pub max_change_log_entries: usize,
+    /// Maximum logical document-version bytes retained for listener replay.
+    pub max_change_log_logical_bytes: u64,
 }
 
 /// A deterministic logical-size measurement for one retained subsystem.
@@ -825,6 +827,7 @@ impl Default for StoreOptions {
     fn default() -> Self {
         Self {
             max_change_log_entries: 4_096,
+            max_change_log_logical_bytes: 64 * 1024 * 1024,
         }
     }
 }
@@ -1380,6 +1383,7 @@ struct State {
     history_floor: CommitPoint,
     current_documents: LogicalMemoryUsage,
     replay_versions: BTreeMap<DocumentVersion, RetainedVersion>,
+    replay_versions_logical_bytes: u64,
     change_log_logical_bytes: u64,
 }
 
@@ -1404,6 +1408,7 @@ struct RetainedVersion {
 impl State {
     fn new(mut options: StoreOptions) -> Self {
         options.max_change_log_entries = options.max_change_log_entries.max(1);
+        options.max_change_log_logical_bytes = options.max_change_log_logical_bytes.max(1);
         Self {
             options,
             revision: Revision::ZERO,
@@ -1424,6 +1429,7 @@ impl State {
             },
             current_documents: LogicalMemoryUsage::default(),
             replay_versions: BTreeMap::new(),
+            replay_versions_logical_bytes: 0,
             change_log_logical_bytes: 0,
         }
     }
@@ -1436,6 +1442,7 @@ impl State {
         current_documents: LogicalMemoryUsage,
     ) -> Self {
         options.max_change_log_entries = options.max_change_log_entries.max(1);
+        options.max_change_log_logical_bytes = options.max_change_log_logical_bytes.max(1);
         Self {
             options,
             revision,
@@ -1450,6 +1457,7 @@ impl State {
             },
             current_documents,
             replay_versions: BTreeMap::new(),
+            replay_versions_logical_bytes: 0,
             change_log_logical_bytes: 0,
         }
     }
@@ -1604,7 +1612,9 @@ impl State {
         self.add_replay_version(&change.key, change.before.as_deref());
         self.add_replay_version(&change.key, change.after.as_deref());
         self.change_log.push_back(change);
-        while self.change_log.len() > self.options.max_change_log_entries {
+        while self.change_log.len() > self.options.max_change_log_entries
+            || self.replay_versions_logical_bytes > self.options.max_change_log_logical_bytes
+        {
             if let Some(removed) = self.change_log.pop_front() {
                 self.change_log_logical_bytes = self
                     .change_log_logical_bytes
@@ -1643,15 +1653,20 @@ impl State {
             update_time: document.update_time(),
         };
         let logical_bytes = document_entry_logical_bytes(key, document);
-        self.replay_versions
-            .entry(version)
-            .and_modify(|retained| {
-                retained.references = retained.references.saturating_add(1);
-            })
-            .or_insert(RetainedVersion {
-                references: 1,
-                logical_bytes,
-            });
+        match self.replay_versions.entry(version) {
+            std::collections::btree_map::Entry::Occupied(mut entry) => {
+                entry.get_mut().references = entry.get().references.saturating_add(1);
+            }
+            std::collections::btree_map::Entry::Vacant(entry) => {
+                entry.insert(RetainedVersion {
+                    references: 1,
+                    logical_bytes,
+                });
+                self.replay_versions_logical_bytes = self
+                    .replay_versions_logical_bytes
+                    .saturating_add(logical_bytes);
+            }
+        }
     }
 
     fn remove_replay_version(&mut self, key: &DocumentKey, document: Option<&Document>) {
@@ -1669,8 +1684,10 @@ impl State {
                 retained.references = retained.references.saturating_sub(1);
                 retained.references == 0
             });
-        if remove {
-            self.replay_versions.remove(&version);
+        if remove && let Some(removed) = self.replay_versions.remove(&version) {
+            self.replay_versions_logical_bytes = self
+                .replay_versions_logical_bytes
+                .saturating_sub(removed.logical_bytes);
         }
     }
 
@@ -1706,9 +1723,7 @@ impl State {
             current_documents: self.current_documents,
             replay_document_versions: LogicalMemoryUsage {
                 entries: usize_to_u64(self.replay_versions.len()),
-                logical_bytes: self.replay_versions.values().fold(0_u64, |total, version| {
-                    total.saturating_add(version.logical_bytes)
-                }),
+                logical_bytes: self.replay_versions_logical_bytes,
             },
             change_log: LogicalMemoryUsage {
                 entries: usize_to_u64(self.change_log.len()),
@@ -2562,6 +2577,7 @@ mod tests {
     fn timestamp_index_expires_with_the_bounded_change_window() {
         let store = Store::new(StoreOptions {
             max_change_log_entries: 2,
+            ..StoreOptions::default()
         });
         let key = key(&database("(default)"), "items/history-floor");
         let mut commit_times = Vec::new();
@@ -2737,6 +2753,7 @@ mod tests {
     fn change_log_is_bounded_and_requests_reset_after_eviction() {
         let store = Store::new(StoreOptions {
             max_change_log_entries: 2,
+            ..StoreOptions::default()
         });
         let database = database("(default)");
 
@@ -2769,9 +2786,37 @@ mod tests {
     }
 
     #[test]
+    fn change_log_is_also_bounded_by_replay_document_bytes() {
+        const REPLAY_BYTES: u64 = 2 * 1_024;
+        let store = Store::new(StoreOptions {
+            max_change_log_entries: 100,
+            max_change_log_logical_bytes: REPLAY_BYTES,
+        });
+        let database = database("(default)");
+
+        for index in 0..10 {
+            store
+                .commit(&[Write::Create {
+                    key: key(&database, &format!("items/{index}")),
+                    fields: fields(Value::Bytes(Arc::from(vec![0x42; 1_024]))),
+                }])
+                .expect("write should commit");
+        }
+
+        let usage = store.memory_usage();
+        assert!(usage.replay_document_versions.logical_bytes <= REPLAY_BYTES);
+        assert!(store.retained_change_count() < 10);
+        assert!(matches!(
+            store.changes_since(Revision::ZERO),
+            Err(ResetRequired { .. })
+        ));
+    }
+
+    #[test]
     fn intermediate_versions_are_reclaimed_with_an_old_snapshot_alive() {
         let store = Store::new(StoreOptions {
             max_change_log_entries: 1,
+            ..StoreOptions::default()
         });
         let key = key(&database("(default)"), "items/hot");
         let mut weak_values: Vec<Weak<str>> = Vec::new();
@@ -2819,6 +2864,7 @@ mod tests {
         const MAXIMUM_PAYLOAD_BYTES: u64 = 900 * 1_024;
         let store = Store::new(StoreOptions {
             max_change_log_entries: CHANGE_LIMIT,
+            ..StoreOptions::default()
         });
         let key = key(&database("(default)"), "items/large-hot");
         let sizes = [100, 300, 500, 700, 900];
