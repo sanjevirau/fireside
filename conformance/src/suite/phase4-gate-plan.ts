@@ -29,6 +29,7 @@ export interface Phase4Manifest {
     readonly twodartNodeRuntime: number;
   };
   readonly twodartContract: {
+    readonly configurationChecksums: Readonly<Record<string, string>>;
     readonly customFunctions: {
       readonly callable: number;
       readonly firestoreBackground: number;
@@ -65,6 +66,7 @@ export interface Phase4Manifest {
       };
     };
     readonly twodartFullData: {
+      readonly components: readonly string[];
       readonly datasetEnvironmentVariable: string;
       readonly minimumStorageBytes: number;
       readonly minimumStorageObjects: number;
