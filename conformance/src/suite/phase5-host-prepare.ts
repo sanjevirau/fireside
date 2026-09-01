@@ -1,5 +1,13 @@
 import { spawn } from "node:child_process";
-import { readFile, stat, writeFile } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  readFile,
+  readlink,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -54,6 +62,16 @@ export const PHASE5_STACK_PORTS: Readonly<
     mprocsControl: 23_111,
   },
 };
+
+export function phase5DatasetPaths(
+  gateRoot: string,
+  stack: Phase5StackName,
+): { readonly exportPath: string; readonly importPath: string } {
+  return {
+    importPath: path.resolve(gateRoot, "inputs/full-data"),
+    exportPath: path.resolve(gateRoot, "exports", stack, "full-data"),
+  };
+}
 
 export function renderSafeTwodartEnvironment(): string {
   const values: Readonly<Record<string, string>> = {
@@ -149,6 +167,7 @@ async function main(): Promise<void> {
   const stackRoot = path.join(args.gateRoot, `stack-${args.stack}`);
   const inputRoot = path.join(args.gateRoot, "inputs");
   const ports = PHASE5_STACK_PORTS[args.stack];
+  const datasetPaths = phase5DatasetPaths(args.gateRoot, args.stack);
 
   await assertDirectory(stackRoot);
   await assertDirectory(path.join(inputRoot, "full-data"));
@@ -162,7 +181,7 @@ async function main(): Promise<void> {
     mode: 0o600,
   });
   await stageTree(
-    path.join(inputRoot, "full-data"),
+    datasetPaths.importPath,
     path.join(
       stackRoot,
       "apps/templates-firebase/loadData/datasets/full-data",
@@ -195,6 +214,7 @@ async function main(): Promise<void> {
     configPath,
     applyPhase5Ports(await readFile(configPath, "utf8"), ports),
   );
+  await mkdir(datasetPaths.exportPath, { recursive: true });
 
   const portsPath = path.join(stackRoot, ".env.ports");
   const portEnvironment = await readFile(portsPath, "utf8");
@@ -209,7 +229,13 @@ async function main(): Promise<void> {
     throw new Error(`Setup modified tracked files:\n${trackedChanges.join("\n")}`);
   }
   process.stdout.write(
-    `${JSON.stringify({ candidateRevision: revision, stack: args.stack, status: "prepared" })}\n`,
+    `${JSON.stringify({
+      candidateRevision: revision,
+      exportPath: datasetPaths.exportPath,
+      importPath: datasetPaths.importPath,
+      stack: args.stack,
+      status: "prepared",
+    })}\n`,
   );
 }
 
@@ -248,8 +274,21 @@ async function assertDirectory(directory: string): Promise<void> {
 }
 
 async function stageTree(source: string, destination: string): Promise<void> {
-  await run("mkdir", ["-p", destination], process.cwd(), process.env);
-  await run("rsync", ["-a", "--checksum", "--partial", `${source}/`, `${destination}/`], process.cwd(), process.env);
+  await assertDirectory(source);
+  await mkdir(path.dirname(destination), { recursive: true });
+  try {
+    const existing = await lstat(destination);
+    if (!existing.isSymbolicLink()) {
+      throw new Error(`Refusing to replace non-symlink staging path: ${destination}`);
+    }
+    const target = await readlink(destination);
+    if (path.resolve(path.dirname(destination), target) !== path.resolve(source)) {
+      throw new Error(`Staging symlink points at the wrong input: ${destination}`);
+    }
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    await symlink(source, destination, "dir");
+  }
 }
 
 async function capture(command: string, args: readonly string[]): Promise<string> {

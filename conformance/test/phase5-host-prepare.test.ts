@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   applyPhase5Ports,
+  phase5DatasetPaths,
   PHASE5_STACK_PORTS,
   renderSafeTwodartEnvironment,
 } from "../src/suite/phase5-host-prepare.ts";
@@ -43,4 +44,13 @@ test("Phase 5 host preparation freezes every official and Fireside port", () => 
     Object.values(ports)
   );
   assert.equal(new Set(allPorts).size, allPorts.length);
+});
+
+test("Phase 5 input staging is immutable and uses distinct lifecycle exports", () => {
+  const official = phase5DatasetPaths("/gate", "official");
+  const fireside = phase5DatasetPaths("/gate", "fireside");
+  assert.equal(official.importPath, fireside.importPath);
+  assert.notEqual(official.exportPath, fireside.exportPath);
+  assert.notEqual(official.importPath, official.exportPath);
+  assert.notEqual(fireside.importPath, fireside.exportPath);
 });
