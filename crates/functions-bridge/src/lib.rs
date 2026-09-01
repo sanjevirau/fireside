@@ -1580,4 +1580,262 @@ mod tests {
         assert_eq!(health.failed, 0);
         assert_eq!(calls.load(Ordering::SeqCst), 1);
     }
+
+    #[tokio::test]
+    async fn phase4_fifty_response_losses_have_zero_duplicate_effects() {
+        let calls = Arc::new(AtomicUsize::new(0));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("listener");
+        let address = listener.local_addr().expect("address");
+        let server = tokio::spawn(
+            axum::serve(
+                listener,
+                Router::new()
+                    .route("/{*path}", post(slow_handler))
+                    .with_state(calls.clone()),
+            )
+            .into_future(),
+        );
+        let runtime = DeliveryRuntime::start(
+            TriggerRegistry::default(),
+            &format!("http://{address}/"),
+            DeliveryPolicy {
+                max_concurrent: 64,
+                request_timeout: Duration::from_millis(20),
+                initial_retry_delay: Duration::from_millis(1),
+                maximum_retry_delay: Duration::from_millis(2),
+                ..DeliveryPolicy::default()
+            },
+        )
+        .expect("runtime");
+        for index in 0..50 {
+            runtime
+                .queue()
+                .enqueue(chaos_dispatch(
+                    &format!("phase4-dropped-response-{index}"),
+                    "auth-create",
+                ))
+                .expect("enqueue");
+        }
+        let health = runtime.shutdown().await;
+        tokio::time::sleep(Duration::from_millis(120)).await;
+        server.abort();
+
+        assert_eq!(health.admitted, 50);
+        assert_eq!(health.assumed_delivered_after_response_loss, 50);
+        assert_eq!(health.delivered, 0);
+        assert_eq!(health.retries, 0);
+        assert_eq!(health.failed, 0);
+        assert_eq!(calls.load(Ordering::SeqCst), 50);
+    }
+
+    #[derive(Clone, Default)]
+    struct Phase4RetryState {
+        attempts: Arc<Mutex<BTreeMap<String, usize>>>,
+        effects: Arc<AtomicUsize>,
+    }
+
+    async fn phase4_retry_handler(
+        State(state): State<Phase4RetryState>,
+        headers: HeaderMap,
+    ) -> StatusCode {
+        let event_id = headers
+            .get("ce-id")
+            .expect("ce-id")
+            .to_str()
+            .expect("ce-id text")
+            .to_owned();
+        let attempt = {
+            let mut attempts = state.attempts.lock().expect("attempts");
+            let attempt = attempts.entry(event_id).or_default();
+            *attempt += 1;
+            *attempt
+        };
+        if attempt == 1 {
+            StatusCode::SERVICE_UNAVAILABLE
+        } else {
+            state.effects.fetch_add(1, Ordering::SeqCst);
+            StatusCode::OK
+        }
+    }
+
+    #[tokio::test]
+    async fn phase4_fifty_duplicate_auth_retries_are_exactly_once() {
+        let state = Phase4RetryState::default();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("listener");
+        let address = listener.local_addr().expect("address");
+        let server = tokio::spawn(
+            axum::serve(
+                listener,
+                Router::new()
+                    .route("/{*path}", post(phase4_retry_handler))
+                    .with_state(state.clone()),
+            )
+            .into_future(),
+        );
+        let runtime = DeliveryRuntime::start(
+            TriggerRegistry::default(),
+            &format!("http://{address}/"),
+            DeliveryPolicy {
+                max_concurrent: 64,
+                initial_retry_delay: Duration::from_millis(1),
+                maximum_retry_delay: Duration::from_millis(2),
+                ..DeliveryPolicy::default()
+            },
+        )
+        .expect("runtime");
+        for index in 0..50 {
+            let request = chaos_dispatch(&format!("phase4-auth-retry-{index}"), "auth-create");
+            runtime.queue().enqueue(request.clone()).expect("enqueue");
+            runtime.queue().enqueue(request).expect("duplicate enqueue");
+        }
+        let health = runtime.shutdown().await;
+        server.abort();
+
+        assert_eq!(health.admitted, 50);
+        assert_eq!(health.deduplicated, 50);
+        assert_eq!(health.delivered, 50);
+        assert_eq!(health.retries, 50);
+        assert_eq!(health.failed, 0);
+        assert_eq!(state.effects.load(Ordering::SeqCst), 50);
+        assert!(
+            state
+                .attempts
+                .lock()
+                .expect("attempts")
+                .values()
+                .all(|attempts| *attempts == 2)
+        );
+    }
+
+    async fn phase4_count_handler(State(calls): State<Arc<AtomicUsize>>) -> StatusCode {
+        calls.fetch_add(1, Ordering::SeqCst);
+        StatusCode::OK
+    }
+
+    #[tokio::test]
+    async fn phase4_six_trigger_patterns_deliver_one_hundred_concurrent_writes_each() {
+        let calls = Arc::new(AtomicUsize::new(0));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("listener");
+        let address = listener.local_addr().expect("address");
+        let server = tokio::spawn(
+            axum::serve(
+                listener,
+                Router::new()
+                    .route("/{*path}", post(phase4_count_handler))
+                    .with_state(calls.clone()),
+            )
+            .into_future(),
+        );
+        let project = "demo-fireside-phase4-chaos";
+        let database = DatabaseName::new(project, "(default)").expect("database");
+        let registry = TriggerRegistry::default();
+        let patterns = [
+            "users/{userId}",
+            "licenses/{licenseId}",
+            "licenses/{parentId}/invitedUsers/{invitedLicenseId}",
+            "licenses/{licenseId}/checkout_sessions/{checkoutSessionId}",
+            "licenses/{licenseId}/subscriptions/{subscriptionId}",
+            "userFonts/{fontId}",
+        ];
+        {
+            let mut state = lock(&registry.inner);
+            for (index, pattern) in patterns.iter().enumerate() {
+                let event_type = if *pattern == "userFonts/{fontId}" {
+                    V2_DELETED
+                } else {
+                    V2_WRITTEN
+                };
+                let key = format!("us-central1-phase4-pattern-{index}");
+                state.v2.insert(
+                    (project.to_owned(), key.clone()),
+                    Trigger {
+                        project: project.to_owned(),
+                        key,
+                        generation: TriggerGeneration::V2,
+                        event_type: event_type.to_owned(),
+                        database: "(default)".to_owned(),
+                        document_pattern: (*pattern).to_owned(),
+                    },
+                );
+            }
+        }
+        let store = Store::default();
+        for index in 0..100 {
+            store
+                .commit(&[Write::Create {
+                    key: DocumentKey::new(database.clone(), format!("userFonts/{index}"))
+                        .expect("seed key"),
+                    fields: Fields::new(),
+                }])
+                .expect("seed deleted documents");
+        }
+        let runtime = DeliveryRuntime::start(
+            registry,
+            &format!("http://{address}/"),
+            DeliveryPolicy {
+                max_concurrent: 64,
+                ..DeliveryPolicy::default()
+            },
+        )
+        .expect("runtime");
+        store.add_commit_observer(runtime.observer());
+
+        let mut writes = tokio::task::JoinSet::new();
+        for index in 0..100 {
+            for path in [
+                format!("users/{index}"),
+                format!("licenses/license-{index}"),
+                format!("licenses/license-{index}/invitedUsers/invite-{index}"),
+                format!("licenses/license-{index}/checkout_sessions/checkout-{index}"),
+                format!("licenses/license-{index}/subscriptions/subscription-{index}"),
+            ] {
+                let store = store.clone();
+                let database = database.clone();
+                writes.spawn_blocking(move || {
+                    store.commit(&[Write::Create {
+                        key: DocumentKey::new(database, path).expect("document key"),
+                        fields: Fields::new(),
+                    }])
+                });
+            }
+            let store = store.clone();
+            let database = database.clone();
+            writes.spawn_blocking(move || {
+                store.commit(&[Write::Delete {
+                    key: DocumentKey::new(database, format!("userFonts/{index}"))
+                        .expect("delete key"),
+                    precondition: Precondition::None,
+                }])
+            });
+        }
+        while let Some(write) = writes.join_next().await {
+            write.expect("write task").expect("write commit");
+        }
+        let health = runtime.shutdown().await;
+        server.abort();
+
+        assert_eq!(health.admitted, 600);
+        assert_eq!(health.delivered, 600);
+        assert_eq!(health.deduplicated, 0);
+        assert_eq!(health.failed, 0);
+        assert_eq!(calls.load(Ordering::SeqCst), 600);
+    }
+
+    fn chaos_dispatch(event_id: &str, trigger: &str) -> DispatchRequest {
+        DispatchRequest {
+            path: format!("/functions/projects/demo-fireside-phase4-chaos/triggers/{trigger}"),
+            headers: BTreeMap::from([
+                ("ce-id".to_owned(), event_id.to_owned()),
+                ("content-type".to_owned(), "application/json".to_owned()),
+            ]),
+            body: b"{}".to_vec(),
+            event_id: event_id.to_owned(),
+        }
+    }
 }

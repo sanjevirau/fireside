@@ -2571,6 +2571,92 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn phase4_fifty_resumable_uploads_survive_an_interruption() {
+        let (runtime, _dispatches, root) = runtime("phase4-resumable-chaos", None).await;
+        let mut locations = Vec::new();
+        for index in 0..50 {
+            let start = runtime
+                .application()
+                .oneshot(
+                    Request::builder()
+                        .method(Method::POST)
+                        .uri(format!(
+                            "/upload/storage/v1/b/{DEFAULT_BUCKET}/o?uploadType=resumable&name=phase4-chaos%2F{index}.txt"
+                        ))
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from("{}"))
+                        .expect("start request"),
+                )
+                .await
+                .expect("start response");
+            assert_eq!(start.status(), StatusCode::OK);
+            let location = start
+                .headers()
+                .get(header::LOCATION)
+                .expect("location")
+                .to_str()
+                .expect("location text")
+                .replace("http://127.0.0.1:21002", "");
+            let partial = runtime
+                .application()
+                .oneshot(
+                    Request::builder()
+                        .method(Method::PUT)
+                        .uri(&location)
+                        .header(header::CONTENT_RANGE, "bytes 0-5/12")
+                        .body(Body::from("first-"))
+                        .expect("partial request"),
+                )
+                .await
+                .expect("partial response");
+            assert_eq!(partial.status(), StatusCode::PERMANENT_REDIRECT);
+            assert_eq!(
+                partial
+                    .headers()
+                    .get(header::RANGE)
+                    .and_then(|value| value.to_str().ok()),
+                Some("bytes=0-5")
+            );
+            locations.push(location);
+        }
+        runtime.shutdown().await.expect("shutdown at interruption");
+
+        let registry = TriggerRegistry::default();
+        let (observer, _dispatches) = TriggerObserver::channel(registry.clone());
+        let runtime = StorageRuntime::start(
+            StorageConfig {
+                project: PROJECT.to_owned(),
+                origin: "http://127.0.0.1:21002".to_owned(),
+                data_dir: root.clone(),
+                rules: None,
+            },
+            observer.queue(),
+            registry,
+        )
+        .await
+        .expect("restart Storage runtime");
+        for location in &locations {
+            let completed = runtime
+                .application()
+                .oneshot(
+                    Request::builder()
+                        .method(Method::PUT)
+                        .uri(location)
+                        .header(header::CONTENT_RANGE, "bytes 6-11/12")
+                        .body(Body::from("second"))
+                        .expect("completion request"),
+                )
+                .await
+                .expect("completion response");
+            assert_eq!(completed.status(), StatusCode::OK);
+        }
+        assert_eq!(runtime.object_count(), 50);
+        assert_eq!(runtime.object_bytes(), 600);
+        runtime.shutdown().await.expect("final shutdown");
+        std::fs::remove_dir_all(root).expect("remove test storage");
+    }
+
+    #[tokio::test]
     async fn gcs_client_multipart_reads_the_object_name_from_metadata() {
         let (runtime, _dispatches, root) = runtime("gcs-multipart", None).await;
         let boundary = "phase4-python-boundary";
