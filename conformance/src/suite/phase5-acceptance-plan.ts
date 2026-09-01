@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 export const PHASE5_MANIFEST_SHA256 =
-  "7838a8c5cd97791b506c3ce93749620360da4849a99352fb01fef1f26ce098b3";
+  "a0e58c98e1b6962c6de04de0809b625948b126968903f4ca1c41de6ffcb433b0";
 
 export const PHASE5_TWODART_REVISION =
   "90881bf9611c9de09bcfc326943494bc28fcd1bd";
@@ -130,6 +130,15 @@ export interface Phase5Manifest {
     readonly branch: string;
     readonly pullRequestMustRemainUnopened: boolean;
   };
+  readonly twodartRuntimeAssets: {
+    readonly filesMayAppearInEvidence: boolean;
+    readonly trees: readonly {
+      readonly fileBytes: number;
+      readonly fileCount: number;
+      readonly path: string;
+      readonly treeSha256: string;
+    }[];
+  };
 }
 
 export function assertPhase5Manifest(
@@ -159,6 +168,7 @@ export function assertPhase5Manifest(
   assertJourneyContract(manifest);
   assertStackContract(manifest);
   assertSoakContract(manifest);
+  assertRuntimeAssets(manifest);
   assertSafetyContract(manifest);
 }
 
@@ -245,8 +255,41 @@ function assertSafetyContract(manifest: Phase5Manifest): void {
     safety.evalLabRunsAllowed ||
     manifest.twodartSource.pullRequestMustRemainUnopened === false ||
     manifest.dataset.realDataMayAppearInEvidence ||
-    manifest.dataset.piiMayAppearInEvidence
+    manifest.dataset.piiMayAppearInEvidence ||
+    manifest.twodartRuntimeAssets.filesMayAppearInEvidence
   ) {
     throw new Error("Phase 5 safety boundary diverged");
+  }
+}
+
+function assertRuntimeAssets(manifest: Phase5Manifest): void {
+  const expected = [
+    [
+      "engines/twodartnet/TwodartNet/Assets/globalFonts",
+      46,
+      14_315_300,
+      "415edbf85ef3d09789b3a64bf14eb65550e8876915d892c0018b7ec96b8a40cf",
+    ],
+    [
+      "engines/twodartnet/TwodartNet/Assets/masterSlidesBase",
+      3,
+      93_371,
+      "27dd0b395aee2f557a90c7b8cb58fbdd2b1dd4fd2b0861cc76911d34ba7685a8",
+    ],
+    [
+      "engines/twodartnet/TwodartNet/Assets/slides",
+      10_918,
+      522_696_779,
+      "b1ecdef81da630d286fabcc5f6973b5544c09e3f381f9c29ffef1b93e543fd63",
+    ],
+  ] as const;
+  const observed = manifest.twodartRuntimeAssets.trees.map((tree) => [
+    tree.path,
+    tree.fileCount,
+    tree.fileBytes,
+    tree.treeSha256,
+  ]);
+  if (JSON.stringify(observed) !== JSON.stringify(expected)) {
+    throw new Error("Phase 5 Twodart runtime asset identity diverged");
   }
 }

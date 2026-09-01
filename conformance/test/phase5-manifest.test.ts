@@ -35,6 +35,14 @@ test("the immutable Phase 5 manifest freezes the full Twodart differential gate"
   assert.equal(manifest.host.minimumAvailableDiskBytes, 80_000_000_000);
   assert.equal(manifest.lifecycle.allowedCountMismatch, 0);
   assert.equal(manifest.lifecycle.acknowledgedWriteLossAllowed, 0);
+  assert.equal(manifest.twodartRuntimeAssets.trees.length, 3);
+  assert.equal(
+    manifest.twodartRuntimeAssets.trees.reduce(
+      (total, tree) => total + tree.fileCount,
+      0,
+    ),
+    10_967,
+  );
 });
 
 test("the Phase 5 manifest rejects byte drift before any measurement", async () => {
