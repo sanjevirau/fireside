@@ -424,6 +424,7 @@ dependencies = [
  "fireside-capture-proxy",
  "fireside-core-store",
  "fireside-export-format",
+ "fireside-functions-bridge",
  "fireside-grpc-front",
  "fireside-query-engine",
  "fireside-rest-front",
@@ -472,6 +473,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "fireside-functions-bridge"
+version = "0.0.1"
+dependencies = [
+ "axum",
+ "base64 0.23.1",
+ "fireside-core-store",
+ "fireside-grpc-front",
+ "prost",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "time",
+ "tokio",
+]
+
+[[package]]
 name = "fireside-grpc-front"
 version = "0.0.1"
 dependencies = [
@@ -511,6 +529,7 @@ dependencies = [
  "base64 0.23.1",
  "fireside-core-store",
  "fireside-export-format",
+ "fireside-functions-bridge",
  "fireside-query-engine",
  "fireside-rules-runtime",
  "serde",

@@ -4,7 +4,7 @@
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::extract::{OriginalUri, Path, Query, State};
@@ -25,6 +25,7 @@ use fireside_core_store::{
     Precondition, Store, Timestamp, TransformOperation, Value, Write, validate_resource_id,
 };
 use fireside_export_format::{ExportedDocument, write_export};
+use fireside_functions_bridge::TriggerRegistry;
 use fireside_query_engine::{
     Aggregation, DatabaseEdition, Direction, DistanceMeasure, FieldFilter, FieldOperator,
     FieldPath as QueryFieldPath, Filter, Limit, Query as StructuredQuery, QueryPolicy, QueryScope,
@@ -89,6 +90,23 @@ pub fn router_with_query_policy_memory_and_rules(
     allocator_memory_reporter: Option<Arc<dyn AllocatorMemoryReporter>>,
     rules: RulesRuntime,
 ) -> Router {
+    router_with_query_policy_memory_rules_and_triggers(
+        store,
+        query_policy,
+        allocator_memory_reporter,
+        rules,
+        TriggerRegistry::default(),
+    )
+}
+
+/// Creates the shared HTTP router with externally owned trigger inventory.
+pub fn router_with_query_policy_memory_rules_and_triggers(
+    store: Store,
+    query_policy: QueryPolicy,
+    allocator_memory_reporter: Option<Arc<dyn AllocatorMemoryReporter>>,
+    rules: RulesRuntime,
+    triggers: TriggerRegistry,
+) -> Router {
     Router::new()
         .route(
             DOCUMENT_ROUTE,
@@ -116,7 +134,7 @@ pub fn router_with_query_policy_memory_and_rules(
             store,
             query_policy,
             rules,
-            control: Arc::new(Mutex::new(ControlState::default())),
+            triggers,
             allocator_memory_reporter,
         })
         .layer(middleware::from_fn(browser_cors))
@@ -237,14 +255,8 @@ struct RestState {
     store: Store,
     query_policy: QueryPolicy,
     rules: RulesRuntime,
-    control: Arc<Mutex<ControlState>>,
+    triggers: TriggerRegistry,
     allocator_memory_reporter: Option<Arc<dyn AllocatorMemoryReporter>>,
-}
-
-#[derive(Default)]
-struct ControlState {
-    triggers: BTreeMap<(String, String), JsonValue>,
-    eventarc_triggers: BTreeMap<(String, String), JsonValue>,
 }
 
 #[derive(Deserialize)]
@@ -497,20 +509,19 @@ async fn put_trigger(
     State(state): State<RestState>,
     Path(path): Path<TriggerPath>,
     Json(body): Json<JsonValue>,
-) -> Json<JsonValue> {
-    control_state(&state)
+) -> Result<Json<JsonValue>, RestError> {
+    state
         .triggers
-        .insert((path.project, path.key), body);
-    Json(json!({}))
+        .register_v1(&path.project, &path.key, &body)
+        .map_err(|error| RestError::invalid(error.to_string()))?;
+    Ok(Json(json!({})))
 }
 
 async fn delete_trigger(
     State(state): State<RestState>,
     Path(path): Path<TriggerPath>,
 ) -> Json<JsonValue> {
-    control_state(&state)
-        .triggers
-        .remove(&(path.project, path.key));
+    state.triggers.remove_v1(&path.project, &path.key);
     Json(json!({}))
 }
 
@@ -523,10 +534,11 @@ async fn post_eventarc_trigger(
     if parameters.trigger_id.is_empty() {
         return Err(RestError::invalid("eventarcTriggerId is required"));
     }
-    control_state(&state)
-        .eventarc_triggers
-        .insert((path.project, parameters.trigger_id), body);
-    Ok(Json(json!({})))
+    state
+        .triggers
+        .register_v2(&path.project, &parameters.trigger_id, &body)
+        .map_err(|error| RestError::invalid(error.to_string()))?;
+    Ok(Json(body))
 }
 
 async fn project_operation(
@@ -631,13 +643,6 @@ async fn clear_database(
             .map_err(|error| RestError::commit(&error))?;
     }
     Ok(Json(json!({})))
-}
-
-fn control_state(state: &RestState) -> MutexGuard<'_, ControlState> {
-    state
-        .control
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 async fn commit(
@@ -2005,10 +2010,79 @@ mod tests {
     const JAVA_TRANSACTION_NOOP_CONTRACT: &str = include_str!(
         "../../../conformance/fixtures/rest-v1/java-v1.22.0/transaction-noop-write/decoded-contract.json"
     );
+    const FIRESTORE_TRIGGER_ORACLE: &str = include_str!(
+        "../../../conformance/fixtures/firebase-suite-v1/firestore-trigger-registration-and-v1-v2-dispatch/fixture.json"
+    );
 
     #[test]
     fn control_and_document_routes_can_share_one_router() {
         let _router = router(Store::default());
+    }
+
+    #[tokio::test]
+    async fn trigger_control_routes_replay_the_frozen_official_contract() {
+        let oracle: JsonValue =
+            serde_json::from_str(FIRESTORE_TRIGGER_ORACLE).expect("trigger oracle");
+        let registrations = oracle["registrations"].as_array().expect("registrations");
+        let triggers = TriggerRegistry::default();
+        let application = router_with_query_policy_memory_rules_and_triggers(
+            Store::default(),
+            QueryPolicy::default(),
+            None,
+            RulesRuntime::default(),
+            triggers.clone(),
+        );
+
+        for registration in registrations {
+            let response = application
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method(
+                            registration["method"]
+                                .as_str()
+                                .expect("registration method"),
+                        )
+                        .uri(registration["path"].as_str().expect("registration path"))
+                        .header(CONTENT_TYPE, "application/json")
+                        .body(Body::from(registration["request"].to_string()))
+                        .expect("registration request"),
+                )
+                .await
+                .expect("registration response");
+            assert_eq!(
+                response.status().as_u16(),
+                u16::try_from(
+                    registration["status"]
+                        .as_u64()
+                        .expect("registration status"),
+                )
+                .expect("status fits u16")
+            );
+            if registration["id"] == "v2-document-created" {
+                let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+                    .await
+                    .expect("response body");
+                assert_eq!(
+                    serde_json::from_slice::<JsonValue>(&body).expect("response JSON"),
+                    registration["request"]
+                );
+            }
+        }
+        assert_eq!(triggers.all().len(), 2);
+
+        let response = application
+            .oneshot(
+                Request::delete(
+                    "/emulator/v1/projects/demo-fireside-phase4-trigger-oracle/triggers/us-central1-v1Created",
+                )
+                .body(Body::empty())
+                .expect("delete request"),
+            )
+            .await
+            .expect("delete response");
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(triggers.all().len(), 1);
     }
 
     #[tokio::test]
@@ -2662,7 +2736,7 @@ mod tests {
             store: Store::default(),
             query_policy: QueryPolicy::default(),
             rules: RulesRuntime::default(),
-            control: Arc::new(Mutex::new(ControlState::default())),
+            triggers: TriggerRegistry::default(),
             allocator_memory_reporter: None,
         };
         let Json(usage) = debug_memory(State(state)).await;

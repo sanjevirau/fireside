@@ -14,6 +14,17 @@ mod write_stream;
 
 pub use service::{FirestoreService, ResponseStream};
 
+/// Encodes an immutable core document as the canonical Firestore v1 message.
+///
+/// Suite components use this at protocol boundaries so background-event and
+/// request transports cannot drift from the gRPC representation.
+pub fn encode_document(
+    key: &fireside_core_store::DocumentKey,
+    document: &fireside_core_store::Document,
+) -> Result<google::firestore::v1::Document, tonic::Status> {
+    codec::encode_document_masked(key, document, None)
+}
+
 /// Generated Google API protocol types and Firestore client/server contracts.
 pub mod google {
     /// Generated protobuf enum types whose canonical JSON differs from the

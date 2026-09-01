@@ -908,12 +908,10 @@ impl Store {
                 Ok((result, changes))
             }
             StoreBackend::Disk(store) => {
-                store
-                    .commit_observed(writes)
-                    .map_err(|error| match error {
-                        DiskError::Commit(error) => error,
-                        error => CommitError::PersistenceUnavailable(error.to_string()),
-                    })
+                store.commit_observed(writes).map_err(|error| match error {
+                    DiskError::Commit(error) => error,
+                    error => CommitError::PersistenceUnavailable(error.to_string()),
+                })
             }
         }?;
 

@@ -1,0 +1,28 @@
+[package]
+name = "fireside-functions-bridge"
+description = "Firestore trigger and scheduler bridge for the fireside emulator suite"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[dependencies]
+fireside-core-store = { path = "../core-store" }
+fireside-grpc-front = { path = "../grpc-front" }
+prost.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+time.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+axum.workspace = true
+base64.workspace = true
+
+[lints]
+workspace = true

@@ -1610,6 +1610,24 @@ The oracle captures pin the following suite contracts before implementation:
   `HttpsError("invalid-argument", ...)` and invalid callable methods use a 400
   `error` envelope, and an unknown function is a 404 with the valid trigger
   identifiers in the response body.
+- Fireside installs trigger observation below every Firestore transport, at the
+  atomic store-commit boundary. Memory and disk/WAL commits publish the same
+  post-commit transition records only after persistence and visibility; failed,
+  verify-only, and effective no-op commits publish nothing. v1 registration is
+  parsed from the legacy resource name, v2 registration from the Eventarc path
+  pattern, and both share exact create/update/delete/write and wildcard
+  matching. Dispatch uses captured legacy JSON for v1 and binary-mode
+  `CloudEvents` plus `DocumentEventData` protobuf for v2. Stable event IDs are
+  retained across retries, and a bounded coordinator suppresses a repeated ID
+  before a second Node handler invocation.
+- Local HTTP delivery retries definite connection failures and retryable HTTP
+  responses with bounded exponential delay. Once a connection has accepted the
+  request, a timeout or lost response is an ambiguous acknowledgement: Fireside
+  records it as assumed delivered and does not retry, because retrying could run
+  a Twodart handler's non-transactional side effect twice. The Phase 4 dropped-
+  response chaos gate pins that decision and requires zero duplicate observable
+  effects; definite failures remain visible in delivery health instead of being
+  silently acknowledged.
 - A v2 Pub/Sub trigger is delivered as a structured CloudEvent to
   `/functions/projects/{project}/triggers/{trigger-key}`. Hub background
   controls suppress delivery while disabled and resume exactly one delivery

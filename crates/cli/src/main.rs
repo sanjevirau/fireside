@@ -17,11 +17,12 @@ use fireside_core_store::{
     StoreOptions, Write,
 };
 use fireside_export_format::ExportReader;
+use fireside_functions_bridge::{DeliveryPolicy, DeliveryRuntime, TriggerRegistry};
 use fireside_grpc_front::FirestoreService;
 use fireside_query_engine::{DatabaseEdition as QueryDatabaseEdition, IndexCatalog, QueryPolicy};
 use fireside_rest_front::{
     AllocatorMemoryReporter, AllocatorMemoryUsage,
-    router_with_query_policy_memory_and_rules as rest_router,
+    router_with_query_policy_memory_rules_and_triggers as rest_router,
 };
 use fireside_rules_runtime::RulesRuntime;
 use fireside_webchannel_front::{FirestoreBackend, router as webchannel_router};
@@ -424,6 +425,14 @@ async fn run_firestore(
             return ExitCode::FAILURE;
         }
     };
+    let triggers = TriggerRegistry::default();
+    let delivery = match start_functions_delivery(arguments, &store, &triggers) {
+        Ok(delivery) => delivery,
+        Err(error) => {
+            eprintln!("Functions background delivery failed to start: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
     let service = FirestoreService::new_with_query_policy_and_rules(
         store.clone(),
         query_policy.clone(),
@@ -438,8 +447,32 @@ async fn run_firestore(
         })),
         service.clone(),
         rules,
+        triggers,
     );
     let routes = tonic::service::Routes::from(http_routes).add_service(service.into_server());
+    report_firestore_configuration(arguments, address, allocator_config);
+    let result = tonic::transport::Server::builder()
+        .accept_http1(true)
+        .add_routes(routes)
+        .serve(address)
+        .await;
+
+    stop_functions_delivery(delivery).await;
+
+    match result {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("Firestore server failed: {error}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn report_firestore_configuration(
+    arguments: &FirestoreArgs,
+    address: SocketAddr,
+    allocator_config: MimallocRuntimeConfig,
+) {
     if let Some(data_dir) = &arguments.data_dir {
         let journal = if arguments.no_wal {
             "write-ahead journal disabled"
@@ -460,18 +493,18 @@ async fn run_firestore(
         allocator_config.purge_delay_milliseconds,
         allocator_config.purge_decommits,
     );
-    let result = tonic::transport::Server::builder()
-        .accept_http1(true)
-        .add_routes(routes)
-        .serve(address)
-        .await;
+}
 
-    match result {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(error) => {
-            eprintln!("Firestore server failed: {error}");
-            ExitCode::FAILURE
-        }
+async fn stop_functions_delivery(delivery: Option<DeliveryRuntime>) {
+    if let Some(delivery) = delivery {
+        let health = delivery.shutdown().await;
+        eprintln!(
+            "fireside Functions delivery stopped: {} delivered, {} response-loss assumed delivered, {} duplicates suppressed, {} failed",
+            health.delivered,
+            health.assumed_delivered_after_response_loss,
+            health.deduplicated,
+            health.failed,
+        );
     }
 }
 
@@ -481,9 +514,40 @@ fn firestore_http_router(
     allocator_memory_reporter: Option<Arc<dyn AllocatorMemoryReporter>>,
     service: FirestoreService,
     rules: RulesRuntime,
+    triggers: TriggerRegistry,
 ) -> axum::Router {
-    rest_router(store, query_policy, allocator_memory_reporter, rules)
-        .merge(webchannel_router(FirestoreBackend::new(service)))
+    rest_router(
+        store,
+        query_policy,
+        allocator_memory_reporter,
+        rules,
+        triggers,
+    )
+    .merge(webchannel_router(FirestoreBackend::new(service)))
+}
+
+fn normalize_functions_endpoint(endpoint: &str) -> String {
+    if endpoint.starts_with("http://") || endpoint.starts_with("https://") {
+        endpoint.trim_end_matches('/').to_owned() + "/"
+    } else {
+        format!("http://{}/", endpoint.trim_end_matches('/'))
+    }
+}
+
+fn start_functions_delivery(
+    arguments: &FirestoreArgs,
+    store: &Store,
+    triggers: &TriggerRegistry,
+) -> Result<Option<DeliveryRuntime>, String> {
+    let Some(endpoint) = arguments.functions_emulator.as_deref() else {
+        return Ok(None);
+    };
+    let endpoint = normalize_functions_endpoint(endpoint);
+    let runtime = DeliveryRuntime::start(triggers.clone(), &endpoint, DeliveryPolicy::default())
+        .map_err(|error| error.to_string())?;
+    store.add_commit_observer(runtime.observer());
+    eprintln!("fireside Functions background delivery: {endpoint}");
+    Ok(Some(runtime))
 }
 
 fn open_store(arguments: &FirestoreArgs) -> Result<Store, String> {
@@ -628,7 +692,14 @@ mod tests {
             query_policy.clone(),
             rules.clone(),
         );
-        let application = firestore_http_router(store, query_policy, None, service, rules);
+        let application = firestore_http_router(
+            store,
+            query_policy,
+            None,
+            service,
+            rules,
+            TriggerRegistry::default(),
+        );
 
         let rest = application
             .clone()
@@ -692,6 +763,18 @@ mod tests {
             panic!("expected Firestore command");
         };
         assert_eq!(arguments.port, 9090);
+    }
+
+    #[test]
+    fn functions_endpoint_accepts_firebase_tools_host_port_and_http_origins() {
+        assert_eq!(
+            normalize_functions_endpoint("127.0.0.1:21003"),
+            "http://127.0.0.1:21003/"
+        );
+        assert_eq!(
+            normalize_functions_endpoint("http://localhost:21003/"),
+            "http://localhost:21003/"
+        );
     }
 
     #[test]
