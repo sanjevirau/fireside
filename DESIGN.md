@@ -1642,7 +1642,10 @@ The oracle captures pin the following suite contracts before implementation:
   `onSchedule` function, and serves the official topic list/create/delete and
   publish shapes. Topic events and schedule ticks enter the same stable-ID
   dedupe queue as Firestore events and reach the captured `*-0` background
-  route as structured `CloudEvents`. Unlike firebase-tools 15.22.0, publishing
+  route as structured `CloudEvents`. Mixed discovery has two observed shapes:
+  custom gcfv2 Functions carry `id` and singular `region`, while pinned gcfv1
+  Extensions omit `id` and carry `regions[]`; Fireside derives the latter's
+  route id as `{region}-{name}`. Unlike firebase-tools 15.22.0, publishing
   a schedule topic deliberately executes the schedule; deterministic gates use
   this path instead of waiting for wall clock. Production-like timers support
   `every N minutes`, `every N hours`, and Twodart's UTC `every day HH:MM`

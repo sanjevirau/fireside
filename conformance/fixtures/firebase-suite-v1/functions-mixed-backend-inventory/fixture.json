@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "target": "isolated-firebase-tools-functions-and-extensions-host",
+  "targetVersion": "15.22.0",
+  "targetProject": "demo-twodart-local",
+  "capturedAt": "2026-09-02T00:13:00+08:00",
+  "credentialsStored": false,
+  "accessTokensStored": false,
+  "extensionEnvironmentStored": false,
+  "realUserDataStored": false,
+  "observation": {
+    "method": "GET",
+    "path": "/backends",
+    "status": 200,
+    "representativeBackends": [
+      {
+        "kind": "custom-gcfv2",
+        "functionTrigger": {
+          "entryPoint": "onDeleteUserFontDoc",
+          "platform": "gcfv2",
+          "region": "us-central1",
+          "name": "onDeleteUserFontDoc",
+          "id": "us-central1-onDeleteUserFontDoc",
+          "codebase": "templates-firebase-function",
+          "eventTrigger": {
+            "eventType": "google.cloud.firestore.document.v1.deleted",
+            "eventFilters": {
+              "database": "(default)",
+              "namespace": "(default)"
+            },
+            "eventFilterPathPatterns": {
+              "document": "userFonts/{fontId}"
+            }
+          }
+        }
+      },
+      {
+        "kind": "extension-gcfv1",
+        "extensionInstanceId": "firestore-stripe-payments",
+        "functionTrigger": {
+          "name": "ext-firestore-stripe-payments-createCheckoutSession",
+          "entryPoint": "createCheckoutSession",
+          "platform": "gcfv1",
+          "regions": [
+            "us-central1"
+          ],
+          "eventTrigger": {
+            "eventType": "providers/cloud.firestore/eventTypes/document.create",
+            "resource": "projects/demo-twodart-local/databases/(default)/documents/licenses/{uid}/checkout_sessions/{id}",
+            "service": "firestore.googleapis.com"
+          }
+        }
+      }
+    ]
+  }
+}
