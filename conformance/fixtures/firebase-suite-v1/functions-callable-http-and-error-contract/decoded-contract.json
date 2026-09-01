@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "fixtureSet": "functions-callable-http-and-error-contract",
+  "target": "official-firebase-tools-functions-emulator",
+  "targetVersion": "15.22.0",
+  "operationCount": 7,
+  "operations": [
+    {
+      "id": "functions-backends",
+      "method": "GET",
+      "path": "/backends",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "http-function-get",
+      "method": "GET",
+      "path": "/demo-fireside-phase4-suite-oracle/us-central1/httpEcho?mode=get",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "http-function-post",
+      "method": "POST",
+      "path": "/demo-fireside-phase4-suite-oracle/us-central1/httpEcho",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "callable-success",
+      "method": "POST",
+      "path": "/demo-fireside-phase4-suite-oracle/us-central1/callableEcho",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "callable-typed-error",
+      "method": "POST",
+      "path": "/demo-fireside-phase4-suite-oracle/us-central1/callableEcho",
+      "status": 400,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "callable-invalid-get",
+      "method": "GET",
+      "path": "/demo-fireside-phase4-suite-oracle/us-central1/callableEcho",
+      "status": 400,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "unknown-function",
+      "method": "POST",
+      "path": "/demo-fireside-phase4-suite-oracle/us-central1/missingFunction",
+      "status": 404,
+      "responseContentType": "text/html; charset=utf-8"
+    }
+  ],
+  "invariants": {
+    "discoveredFunctionCount": 1,
+    "functionIds": [
+      "us-central1-callableEcho",
+      "us-central1-httpEcho",
+      "us-central1-scheduledTick",
+      "us-central1-topicEcho"
+    ],
+    "validCallableUsesResultEnvelope": true,
+    "typedCallableErrorUsesErrorEnvelope": true,
+    "unknownFunctionStatus": 404
+  }
+}

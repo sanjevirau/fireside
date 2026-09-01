@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "fixtureSet": "suite-startup-readiness-shutdown-and-restart",
+  "target": "official-firebase-tools-emulator-suite",
+  "targetVersion": "15.22.0",
+  "operationCount": 0,
+  "operations": [],
+  "invariants": {
+    "exactFirebaseToolsVersion": "15.22.0",
+    "services": [
+      "auth",
+      "eventarc",
+      "functions",
+      "hub",
+      "logging",
+      "pubsub",
+      "tasks",
+      "ui"
+    ],
+    "firstStartReady": true,
+    "originGuardedRunExitedCleanly": false,
+    "originGuardFallthroughObservedInOfficialSuite": true,
+    "locatorDeletedAfterFirstStop": true,
+    "firstStopPortsClosed": true,
+    "samePortRestartReady": true,
+    "cleanControlRestartStop": true,
+    "locatorDeletedAfterSecondStop": true,
+    "secondStopPortsClosed": true
+  }
+}

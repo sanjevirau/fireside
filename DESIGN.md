@@ -1602,6 +1602,51 @@ full-data stage must exercise the existing multi-component Twodart corpus,
 including at least 33,353 Storage objects and 6.23 GB of object bytes, without
 committing any real Twodart data to this repository.
 
+The oracle captures pin the following suite contracts before implementation:
+
+- Functions discovery returns one backend per codebase with its functions in
+  `functionTriggers`. HTTP and callable routes are
+  `/{project}/{region}/{name}`; successful callables use a `result` envelope,
+  `HttpsError("invalid-argument", ...)` and invalid callable methods use a 400
+  `error` envelope, and an unknown function is a 404 with the valid trigger
+  identifiers in the response body.
+- A v2 Pub/Sub trigger is delivered as a structured CloudEvent to
+  `/functions/projects/{project}/triggers/{trigger-key}`. Hub background
+  controls suppress delivery while disabled and resume exactly one delivery
+  after re-enable. In firebase-tools 15.22.0, publishing the automatically
+  created `firebase-schedule-*` topic does not execute a v2 scheduled function:
+  the Pub/Sub adapter records `Unsupported trigger signature: http`. Direct
+  CloudEvent invocation executes it. This is an official-emulator divergence,
+  not the desired Fireside scheduler contract; the Phase 4 gate still requires
+  both Twodart schedules to dispatch.
+- Auth implements the browser Identity Toolkit and Secure Token surfaces, fake
+  provider helper pages, Admin account management, custom claims, unsigned
+  emulator token issue/refresh, and its JSON import/export format. Batch import
+  is lifecycle-quiet. Admin create and delete each send one legacy
+  `providers/firebase.auth/eventTypes/user.*` multicast event.
+- Storage implements Firebase `/v0` and GCS JSON media/resumable paths,
+  download-token bypass, metadata mutation, per-bucket rules, byte-exact
+  import/export, and paired legacy/v2 lifecycle dispatch. The official emulator
+  returns 501 for the canonical GCS `storage/v1/.../copyTo` route but accepts
+  its emulator-only `/b/.../copyTo` alias; Fireside records this as a deviation
+  rather than treating the alias as the production contract.
+- Hub exposes `/`, `/emulators`, `/_admin/export`, and background-trigger
+  controls and writes `hub-{project}.json` beneath `TMPDIR`. Export requests
+  carrying `Origin` receive 403. The pinned official route omits a return after
+  that response, continues into export, and later exits 2; it nevertheless
+  removes its locator and closes every port. A control restart on the same
+  ports exits 0. Fireside must retain the 403 without the fall-through failure.
+- UI discovery comes from `/api/config`; the official UI archive is served at
+  `/`, and the Logging emulator is a raw WebSocket endpoint that replays its
+  buffered JSON log entries on connection. Eventarc and Tasks endpoints are
+  exposed as Functions dependencies even though general delivery for those
+  services is outside this phase's first-replacement boundary.
+- Twodart's pinned extension inventory contains one Stripe instance with Auth,
+  Firestore, HTTP/callable, and delete triggers, and two Algolia instances that
+  share the same Firestore write and task-queue definition. Fixture generation
+  reads only `firebase.json` and the pinned extension manifests; it never opens
+  Twodart secret or environment files.
+
 ### Phase 5 — Hardening and release
 
 Add property-based query differential fuzzing, multi-day soaks, complete docs,

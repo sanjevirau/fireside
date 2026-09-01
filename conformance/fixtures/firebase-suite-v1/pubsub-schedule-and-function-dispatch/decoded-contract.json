@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "fixtureSet": "pubsub-schedule-and-function-dispatch",
+  "target": "official-pubsub-and-functions-emulators",
+  "targetVersion": "pubsub-0.8.33/functions-15.22.0",
+  "operationCount": 8,
+  "operations": [
+    {
+      "id": "list-function-topics",
+      "method": "GET",
+      "path": "/v1/projects/demo-fireside-phase4-suite-oracle/topics",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "publish-custom-topic",
+      "method": "POST",
+      "path": "/v1/projects/demo-fireside-phase4-suite-oracle/topics/phase4-topic:publish",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "publish-schedule-topic",
+      "method": "POST",
+      "path": "/v1/projects/demo-fireside-phase4-suite-oracle/topics/firebase-schedule-scheduledTick:publish",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "invoke-schedule-cloudevent-directly",
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-suite-oracle/triggers/us-central1-scheduledTick-0",
+      "status": 200
+    },
+    {
+      "id": "disable-background-triggers",
+      "method": "PUT",
+      "path": "/functions/disableBackgroundTriggers",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "publish-while-disabled",
+      "method": "POST",
+      "path": "/v1/projects/demo-fireside-phase4-suite-oracle/topics/phase4-topic:publish",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "enable-background-triggers",
+      "method": "PUT",
+      "path": "/functions/enableBackgroundTriggers",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "publish-after-reenable",
+      "method": "POST",
+      "path": "/v1/projects/demo-fireside-phase4-suite-oracle/topics/phase4-topic:publish",
+      "status": 200,
+      "responseContentType": "application/json"
+    }
+  ],
+  "invariants": {
+    "discoveredTopics": [
+      "projects/demo-fireside-phase4-suite-oracle/topics/firebase-schedule-scheduledTick",
+      "projects/demo-fireside-phase4-suite-oracle/topics/phase4-topic"
+    ],
+    "customTopic": "projects/demo-fireside-phase4-suite-oracle/topics/phase4-topic",
+    "scheduleTopic": "projects/demo-fireside-phase4-suite-oracle/topics/firebase-schedule-scheduledTick",
+    "pubsubPublishedEventKinds": [
+      "topic"
+    ],
+    "schedulePubsubDeliverySupported": false,
+    "scheduleDirectInvocationStatus": 200,
+    "initialDeliveredEventKinds": [
+      "schedule",
+      "topic"
+    ],
+    "disabledPublishAddedEvents": 0,
+    "reenabledPublishAddedEvents": 1,
+    "expectedNoDisabledDelivery": true
+  }
+}
