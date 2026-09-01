@@ -1637,6 +1637,19 @@ The oracle captures pin the following suite contracts before implementation:
   CloudEvent invocation executes it. This is an official-emulator divergence,
   not the desired Fireside scheduler contract; the Phase 4 gate still requires
   both Twodart schedules to dispatch.
+- Fireside reads the pinned Functions host's `/backends` inventory, creates the
+  discovered Pub/Sub topics plus one `firebase-schedule-*` topic per
+  `onSchedule` function, and serves the official topic list/create/delete and
+  publish shapes. Topic events and schedule ticks enter the same stable-ID
+  dedupe queue as Firestore events and reach the captured `*-0` background
+  route as structured `CloudEvents`. Unlike firebase-tools 15.22.0, publishing
+  a schedule topic deliberately executes the schedule; deterministic gates use
+  this path instead of waiting for wall clock. Production-like timers support
+  `every N minutes`, `every N hours`, and Twodart's UTC `every day HH:MM`
+  schedules. Non-UTC daily schedules fail startup until their time-zone oracle
+  is captured rather than silently firing at the wrong instant. Subscription
+  control and empty pull/ack surfaces exist for Functions startup, while general
+  Pub/Sub delivery remains explicitly outside this replacement boundary.
 - Auth implements the browser Identity Toolkit and Secure Token surfaces, fake
   provider helper pages, Admin account management, custom claims, unsigned
   emulator token issue/refresh, and its JSON import/export format. Batch import

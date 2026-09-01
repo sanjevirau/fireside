@@ -77,6 +77,117 @@ pub enum TriggerGeneration {
     V2,
 }
 
+/// One backend returned by the pinned Functions emulator `/backends` API.
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FunctionBackend {
+    /// Functions codebase identifier when supplied by discovery.
+    #[serde(default)]
+    pub codebase: Option<String>,
+    /// Functions discovered from this source directory.
+    #[serde(default)]
+    pub function_triggers: Vec<FunctionDefinition>,
+}
+
+/// Function definition used by suite routing and scheduler discovery.
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FunctionDefinition {
+    /// Region-qualified Functions emulator id.
+    pub id: String,
+    /// Exported function name.
+    pub name: String,
+    /// Deployment region.
+    pub region: String,
+    /// v1 or v2 platform label.
+    pub platform: String,
+    /// Background event metadata.
+    #[serde(default)]
+    pub event_trigger: Option<FunctionEventTrigger>,
+    /// Schedule metadata for `onSchedule` handlers.
+    #[serde(default)]
+    pub schedule: Option<FunctionSchedule>,
+    /// Presence identifies HTTP and callable handlers.
+    #[serde(default)]
+    pub https_trigger: Option<JsonValue>,
+}
+
+/// Discovered background event filter.
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FunctionEventTrigger {
+    /// Event type, including the Functions emulator's `pubsub` schedule marker.
+    pub event_type: String,
+    /// Fully qualified topic or provider resource.
+    #[serde(default)]
+    pub resource: String,
+    /// Eventarc equality filters.
+    #[serde(default)]
+    pub event_filters: BTreeMap<String, String>,
+}
+
+/// Discovered Cloud Scheduler expression.
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FunctionSchedule {
+    /// Firebase schedule expression.
+    pub schedule: String,
+    /// Optional IANA time zone.
+    #[serde(default)]
+    pub time_zone: Option<String>,
+}
+
+/// Complete Functions discovery response.
+#[derive(Debug, Clone)]
+pub struct FunctionsInventory {
+    /// Discovered codebase backends.
+    pub backends: Vec<FunctionBackend>,
+}
+
+impl FunctionsInventory {
+    /// Fetches the pinned workload host's `/backends` inventory.
+    pub async fn discover(endpoint: &str) -> Result<Self, BridgeError> {
+        #[derive(serde::Deserialize)]
+        struct Response {
+            #[serde(default)]
+            backends: Vec<FunctionBackend>,
+        }
+
+        let endpoint = reqwest::Url::parse(endpoint)
+            .map_err(|error| BridgeError(format!("invalid Functions endpoint: {error}")))?;
+        let url = endpoint
+            .join("backends")
+            .map_err(|error| BridgeError(format!("invalid Functions discovery URL: {error}")))?;
+        let response = reqwest::Client::new()
+            .get(url)
+            .send()
+            .await
+            .map_err(|error| BridgeError(format!("Functions discovery failed: {error}")))?;
+        if !response.status().is_success() {
+            return Err(BridgeError(format!(
+                "Functions discovery returned {}",
+                response.status()
+            )));
+        }
+        let body = response
+            .bytes()
+            .await
+            .map_err(|error| BridgeError(format!("Functions discovery body failed: {error}")))?;
+        let response = serde_json::from_slice::<Response>(&body)
+            .map_err(|error| BridgeError(format!("invalid Functions discovery body: {error}")))?;
+        Ok(Self {
+            backends: response.backends,
+        })
+    }
+
+    /// All discovered function definitions in stable backend order.
+    pub fn functions(&self) -> impl Iterator<Item = &FunctionDefinition> {
+        self.backends
+            .iter()
+            .flat_map(|backend| backend.function_triggers.iter())
+    }
+}
+
 /// Invalid Functions trigger registration.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RegistrationError(String);
@@ -556,6 +667,21 @@ pub struct TriggerObserver {
     sender: tokio::sync::mpsc::UnboundedSender<DispatchRequest>,
 }
 
+/// Cloneable producer for non-Firestore background events.
+#[derive(Clone)]
+pub struct DispatchQueue {
+    sender: tokio::sync::mpsc::UnboundedSender<DispatchRequest>,
+}
+
+impl DispatchQueue {
+    /// Enqueues one event before the Firestore/Pub/Sub shared dedupe boundary.
+    pub fn enqueue(&self, request: DispatchRequest) -> Result<(), BridgeError> {
+        self.sender
+            .send(request)
+            .map_err(|_| BridgeError("Functions delivery runtime is stopped".to_owned()))
+    }
+}
+
 impl TriggerObserver {
     /// Creates an observer and its lossless in-process delivery receiver.
     #[must_use]
@@ -567,6 +693,14 @@ impl TriggerObserver {
     ) {
         let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
         (Arc::new(Self { registry, sender }), receiver)
+    }
+
+    /// Queue producer sharing this observer's dedupe and delivery worker.
+    #[must_use]
+    pub fn queue(&self) -> DispatchQueue {
+        DispatchQueue {
+            sender: self.sender.clone(),
+        }
     }
 }
 
@@ -699,6 +833,12 @@ impl DeliveryRuntime {
     #[must_use]
     pub fn observer(&self) -> Arc<dyn CommitObserver> {
         self.observer.clone()
+    }
+
+    /// Queue producer for Auth, Pub/Sub, Storage, and scheduler events.
+    #[must_use]
+    pub fn queue(&self) -> DispatchQueue {
+        self.observer.queue()
     }
 
     /// Captures delivery counters without blocking the worker.
@@ -946,6 +1086,9 @@ mod tests {
     const ORACLE: &str = include_str!(
         "../../../conformance/fixtures/firebase-suite-v1/firestore-trigger-registration-and-v1-v2-dispatch/fixture.json"
     );
+    const FUNCTIONS_ORACLE: &str = include_str!(
+        "../../../conformance/fixtures/firebase-suite-v1/functions-callable-http-and-error-contract/fixture.json"
+    );
 
     fn registration_bodies() -> (JsonValue, JsonValue) {
         let oracle: JsonValue = serde_json::from_str(ORACLE).expect("oracle fixture");
@@ -1012,6 +1155,38 @@ mod tests {
         assert_eq!(
             registry.all()[1].document_pattern,
             "phase4Triggers/{documentId}"
+        );
+    }
+
+    #[test]
+    fn functions_inventory_parses_the_frozen_backends_contract() {
+        #[derive(serde::Deserialize)]
+        struct Response {
+            backends: Vec<FunctionBackend>,
+        }
+        let oracle: JsonValue = serde_json::from_str(FUNCTIONS_ORACLE).expect("functions oracle");
+        let response =
+            serde_json::from_value::<Response>(oracle["observations"][0]["response"].clone())
+                .expect("backends response");
+        let inventory = FunctionsInventory {
+            backends: response.backends,
+        };
+        let functions = inventory.functions().collect::<Vec<_>>();
+
+        assert_eq!(functions.len(), 4);
+        assert_eq!(functions[0].id, "us-central1-httpEcho");
+        assert!(functions[0].https_trigger.is_some());
+        assert_eq!(
+            functions[2].schedule.as_ref().expect("schedule").schedule,
+            "every 5 minutes"
+        );
+        assert_eq!(
+            functions[3]
+                .event_trigger
+                .as_ref()
+                .expect("topic trigger")
+                .event_filters["topic"],
+            "projects/demo-fireside-phase4-suite-oracle/topics/phase4-topic"
         );
     }
 
