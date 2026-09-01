@@ -834,6 +834,7 @@ impl Default for StoreOptions {
 pub struct Store {
     backend: StoreBackend,
     memory_accounting: RuntimeMemoryAccounting,
+    commit_observers: Arc<Mutex<Vec<Arc<dyn CommitObserver>>>>,
 }
 
 #[derive(Clone)]
@@ -849,6 +850,7 @@ impl Store {
         Self {
             backend: StoreBackend::Memory(Arc::new(Mutex::new(State::new(options)))),
             memory_accounting: RuntimeMemoryAccounting::default(),
+            commit_observers: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -857,6 +859,7 @@ impl Store {
         DiskStore::open(directory, options).map(|store| Self {
             backend: StoreBackend::Disk(store),
             memory_accounting: RuntimeMemoryAccounting::default(),
+            commit_observers: Arc::new(Mutex::new(Vec::new())),
         })
     }
 
@@ -895,19 +898,42 @@ impl Store {
 
     /// Atomically validates and applies a sequence of writes.
     pub fn commit(&self, writes: &[Write]) -> Result<CommitResult, CommitError> {
-        match &self.backend {
+        let (result, changes) = match &self.backend {
             StoreBackend::Memory(inner) => {
                 let mut state = lock(inner);
                 let plan = state.plan(writes)?;
                 let result = plan.result;
+                let changes = plan.changes.clone();
                 state.install(plan);
-                Ok(result)
+                Ok((result, changes))
             }
-            StoreBackend::Disk(store) => store.commit(writes).map_err(|error| match error {
-                DiskError::Commit(error) => error,
-                error => CommitError::PersistenceUnavailable(error.to_string()),
-            }),
+            StoreBackend::Disk(store) => {
+                store
+                    .commit_observed(writes)
+                    .map_err(|error| match error {
+                        DiskError::Commit(error) => error,
+                        error => CommitError::PersistenceUnavailable(error.to_string()),
+                    })
+            }
+        }?;
+
+        if !changes.is_empty() {
+            let observation = CommitObservation { result, changes };
+            for observer in lock(&self.commit_observers).clone() {
+                observer.committed(&observation);
+            }
         }
+
+        Ok(result)
+    }
+
+    /// Registers a process-local observer invoked after each successful commit.
+    ///
+    /// Observers are shared by every clone of this store and run only after the
+    /// backend commit lock has been released. Failed commits and commits with no
+    /// effective document transitions are never reported.
+    pub fn add_commit_observer(&self, observer: Arc<dyn CommitObserver>) {
+        lock(&self.commit_observers).push(observer);
     }
 
     /// Returns changes strictly newer than `after` or requests a reset when
@@ -1156,6 +1182,22 @@ pub struct CommitResult {
     pub revision: Revision,
     /// Externally visible commit timestamp.
     pub commit_time: Timestamp,
+}
+
+/// One successfully installed atomic commit delivered to process-local observers.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CommitObservation {
+    /// Revision and timestamp acknowledged to the committing client.
+    pub result: CommitResult,
+    /// Effective document transitions in write order.
+    pub changes: Vec<Change>,
+}
+
+/// Receives successful document transitions after they become visible.
+pub trait CommitObserver: Send + Sync {
+    /// Handles one atomic commit. Implementations should enqueue bounded work
+    /// and return promptly so request acknowledgement is not delayed.
+    fn committed(&self, observation: &CommitObservation);
 }
 
 /// A retained document transition.
@@ -2210,6 +2252,61 @@ mod tests {
 
     fn path(segments: &[&str]) -> FieldPath {
         FieldPath::new(segments.iter().copied()).expect("field path should be valid")
+    }
+
+    #[derive(Default)]
+    struct RecordingObserver {
+        observations: Mutex<Vec<CommitObservation>>,
+    }
+
+    impl CommitObserver for RecordingObserver {
+        fn committed(&self, observation: &CommitObservation) {
+            lock(&self.observations).push(observation.clone());
+        }
+    }
+
+    #[test]
+    fn commit_observers_receive_only_successful_effective_changes_across_clones() {
+        let store = Store::default();
+        let observer = Arc::new(RecordingObserver::default());
+        store.add_commit_observer(observer.clone());
+        let cloned = store.clone();
+        let document_key = key(&database("(default)"), "items/observed");
+
+        let created = cloned
+            .commit(&[Write::Create {
+                key: document_key.clone(),
+                fields: fields(Value::Integer(1)),
+            }])
+            .expect("create should commit");
+        cloned
+            .commit(&[Write::Set {
+                key: document_key.clone(),
+                fields: fields(Value::Integer(1)),
+                transforms: Vec::new(),
+                precondition: Precondition::None,
+            }])
+            .expect("no-op should commit");
+        let failed = cloned.commit(&[Write::Create {
+            key: document_key.clone(),
+            fields: fields(Value::Integer(2)),
+        }]);
+        assert!(failed.is_err());
+
+        let observations = lock(&observer.observations);
+        assert_eq!(observations.len(), 1);
+        assert_eq!(observations[0].result, created);
+        assert_eq!(observations[0].changes.len(), 1);
+        assert_eq!(observations[0].changes[0].key, document_key);
+        assert!(observations[0].changes[0].before.is_none());
+        assert_eq!(
+            observations[0].changes[0]
+                .after
+                .as_ref()
+                .expect("created document")
+                .fields(),
+            &fields(Value::Integer(1))
+        );
     }
 
     #[test]

@@ -169,6 +169,13 @@ impl DiskStore {
     /// commit. Any ambiguous journal or redb write error fences later commits
     /// until the store is reopened and recovered.
     pub fn commit(&self, writes: &[Write]) -> Result<CommitResult, DiskError> {
+        self.commit_observed(writes).map(|(result, _)| result)
+    }
+
+    pub(crate) fn commit_observed(
+        &self,
+        writes: &[Write],
+    ) -> Result<(CommitResult, Vec<Change>), DiskError> {
         let mut state = self.state();
         if state.requires_restart {
             return Err(DiskError::RequiresRestart);
@@ -191,6 +198,7 @@ impl DiskStore {
         }
 
         let result = plan.result;
+        let changes = plan.changes.clone();
         state.memory.install_disk(plan);
 
         // A checkpoint failure cannot make the acknowledged commit unsafe:
@@ -199,7 +207,7 @@ impl DiskStore {
             let _ = journal.checkpoint();
         }
 
-        Ok(result)
+        Ok((result, changes))
     }
 
     /// Returns changes strictly newer than `after`, or a reset request when
