@@ -289,7 +289,9 @@ async fn cors(request: axum::extract::Request, next: Next) -> Response {
     );
     headers.insert(
         "access-control-allow-headers",
-        HeaderValue::from_static("Authorization,Content-Type,Content-Range,X-Goog-Upload-Command,X-Goog-Upload-Offset,X-Goog-Upload-Protocol"),
+        HeaderValue::from_static(
+            "Authorization,Content-Type,Content-Range,X-Firebase-GMPID,X-Firebase-Storage-Version,X-Goog-Upload-Command,X-Goog-Upload-Offset,X-Goog-Upload-Protocol",
+        ),
     );
     response
 }
@@ -346,19 +348,18 @@ async fn v0_upload(
         .filter(|value| !value.is_empty())
         .ok_or_else(|| bad_request("Missing object name"))?
         .clone();
-    let content_type = content_type(&headers);
-    let uploaded = stream_to_staging(&state, body).await?;
+    let upload = firebase_upload(&state, &headers, body).await?;
     let object = commit_staging(
         &state,
         CommitSpec {
             bucket: &bucket,
             name: &name,
-            content_type,
-            metadata: BTreeMap::new(),
+            content_type: &upload.content_type,
+            metadata: upload.metadata,
             headers: &headers,
             firebase: true,
         },
-        uploaded,
+        upload.uploaded,
     )
     .await?;
     Ok(Json(firebase_metadata(&object)))
@@ -389,9 +390,9 @@ async fn v0_list(
     RawQuery(query): RawQuery,
     headers: HeaderMap,
 ) -> Result<Json<JsonValue>, StorageApiError> {
-    authorize_list(&state, &bucket, &headers).await?;
     let query = query_fields(query.as_deref());
     let prefix = query.get("prefix").map_or("", String::as_str);
+    authorize_list(&state, &bucket, prefix, &headers).await?;
     let delimiter = query.get("delimiter").map(String::as_str);
     let maximum = query
         .get("maxResults")
@@ -869,6 +870,121 @@ struct Uploaded {
     crc32c: u32,
 }
 
+struct FirebaseUpload {
+    uploaded: Uploaded,
+    content_type: String,
+    metadata: BTreeMap<String, String>,
+}
+
+async fn firebase_upload(
+    state: &StorageState,
+    headers: &HeaderMap,
+    body: Body,
+) -> Result<FirebaseUpload, StorageApiError> {
+    let request_content_type = content_type(headers);
+    let Some(boundary) = multipart_boundary(request_content_type) else {
+        return Ok(FirebaseUpload {
+            uploaded: stream_to_staging(state, body).await?,
+            content_type: request_content_type.to_owned(),
+            metadata: BTreeMap::new(),
+        });
+    };
+    let bytes = collect_limited(body, 64 * 1024 * 1024).await?;
+    let multipart = parse_related_multipart(&bytes, &boundary)?;
+    let path = staging_path(state, "upload");
+    let mut file = tokio::fs::File::create(&path).await.map_err(io_error)?;
+    file.write_all(multipart.data).await.map_err(io_error)?;
+    file.sync_all().await.map_err(io_error)?;
+    let content_type = multipart
+        .metadata
+        .get("contentType")
+        .and_then(JsonValue::as_str)
+        .or(multipart.data_content_type)
+        .unwrap_or("application/octet-stream")
+        .to_owned();
+    Ok(FirebaseUpload {
+        uploaded: summarize_file(path).await?,
+        content_type,
+        metadata: string_metadata(multipart.metadata.get("metadata")),
+    })
+}
+
+struct RelatedMultipart<'a> {
+    metadata: JsonValue,
+    data: &'a [u8],
+    data_content_type: Option<&'a str>,
+}
+
+fn multipart_boundary(content_type: &str) -> Option<String> {
+    if !content_type
+        .split(';')
+        .next()
+        .is_some_and(|value| value.trim().eq_ignore_ascii_case("multipart/related"))
+    {
+        return None;
+    }
+    content_type.split(';').skip(1).find_map(|field| {
+        let (name, value) = field.trim().split_once('=')?;
+        name.trim()
+            .eq_ignore_ascii_case("boundary")
+            .then(|| value.trim().trim_matches('"').to_owned())
+    })
+}
+
+fn parse_related_multipart<'a>(
+    bytes: &'a [u8],
+    boundary: &str,
+) -> Result<RelatedMultipart<'a>, StorageApiError> {
+    if boundary.is_empty()
+        || boundary
+            .bytes()
+            .any(|value| value == b'\r' || value == b'\n')
+    {
+        return Err(bad_request("Invalid multipart boundary"));
+    }
+    let delimiter = format!("\r\n--{boundary}\r\n").into_bytes();
+    let closing = format!("\r\n--{boundary}--").into_bytes();
+    let first_headers_end = find_bytes(bytes, b"\r\n\r\n")
+        .ok_or_else(|| bad_request("Invalid multipart metadata headers"))?;
+    let metadata_start = first_headers_end + 4;
+    let metadata_end = find_bytes(&bytes[metadata_start..], &delimiter)
+        .map(|index| metadata_start + index)
+        .ok_or_else(|| bad_request("Invalid multipart metadata boundary"))?;
+    let metadata = serde_json::from_slice::<JsonValue>(&bytes[metadata_start..metadata_end])
+        .map_err(|_| bad_request("Invalid multipart metadata JSON"))?;
+    let data_headers_start = metadata_end + delimiter.len();
+    let data_headers_end = find_bytes(&bytes[data_headers_start..], b"\r\n\r\n")
+        .map(|index| data_headers_start + index)
+        .ok_or_else(|| bad_request("Invalid multipart data headers"))?;
+    let data_start = data_headers_end + 4;
+    let data_end = find_bytes(&bytes[data_start..], &closing)
+        .map(|index| data_start + index)
+        .ok_or_else(|| bad_request("Invalid multipart closing boundary"))?;
+    let data_headers = std::str::from_utf8(&bytes[data_headers_start..data_headers_end])
+        .map_err(|_| bad_request("Invalid multipart data header encoding"))?;
+    let data_content_type = data_headers.lines().find_map(|line| {
+        let (name, value) = line.split_once(':')?;
+        name.trim()
+            .eq_ignore_ascii_case("content-type")
+            .then(|| value.trim())
+    });
+    Ok(RelatedMultipart {
+        metadata,
+        data: &bytes[data_start..data_end],
+        data_content_type,
+    })
+}
+
+fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    (!needle.is_empty())
+        .then(|| {
+            haystack
+                .windows(needle.len())
+                .position(|window| window == needle)
+        })
+        .flatten()
+}
+
 async fn stream_to_staging(state: &StorageState, body: Body) -> Result<Uploaded, StorageApiError> {
     let path = staging_path(state, "upload");
     let mut file = tokio::fs::File::create(&path).await.map_err(io_error)?;
@@ -1095,6 +1211,7 @@ async fn authorize_read(
 async fn authorize_list(
     state: &StorageState,
     bucket: &str,
+    prefix: &str,
     headers: &HeaderMap,
 ) -> Result<(), StorageApiError> {
     if is_owner(headers) || state.rules.is_none() {
@@ -1103,9 +1220,15 @@ async fn authorize_list(
     let Some(rules) = &state.rules else {
         return Ok(());
     };
-    let token = bearer(headers);
+    let token = authorization_token(headers);
+    let prefix = prefix.trim_matches('/');
+    let path = if prefix.is_empty() {
+        format!("/b/{bucket}/o")
+    } else {
+        format!("/b/{bucket}/o/{prefix}")
+    };
     let permitted = rules
-        .verify(bucket, &format!("/b/{bucket}/o"), "list", None, None, token)
+        .verify(bucket, &path, "list", None, None, token)
         .await
         .map_err(storage_error)?;
     if permitted {
@@ -1138,7 +1261,7 @@ async fn authorize(
             method,
             before,
             after,
-            bearer(headers),
+            authorization_token(headers),
         )
         .await
         .map_err(storage_error)?;
@@ -1159,11 +1282,15 @@ fn is_owner(headers: &HeaderMap) -> bool {
         .is_some_and(|value| value == "Bearer owner" || value == "Firebase owner")
 }
 
-fn bearer(headers: &HeaderMap) -> Option<&str> {
+fn authorization_token(headers: &HeaderMap) -> Option<&str> {
     headers
         .get(header::AUTHORIZATION)
         .and_then(|value| value.to_str().ok())
-        .and_then(|value| value.strip_prefix("Bearer "))
+        .and_then(|value| {
+            value
+                .strip_prefix("Bearer ")
+                .or_else(|| value.strip_prefix("Firebase "))
+        })
 }
 
 fn permission_denied(operation: &str) -> StorageApiError {
@@ -2007,6 +2134,22 @@ mod tests {
         ))
     }
 
+    #[test]
+    fn browser_sdk_multipart_related_extracts_metadata_and_exact_object_bytes() {
+        let boundary = "phase4-browser-boundary";
+        let body = format!(
+            "--{boundary}\r\nContent-Type: application/json; charset=utf-8\r\n\r\n{{\"contentType\":\"text/plain; charset=utf-8\",\"metadata\":{{\"unicode\":\"火🔥\"}}}}\r\n--{boundary}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nFirebase browser 火🔥\r\n--{boundary}--"
+        );
+        let parsed = parse_related_multipart(body.as_bytes(), boundary).expect("multipart");
+        assert_eq!(parsed.data, "Firebase browser 火🔥".as_bytes());
+        assert_eq!(parsed.metadata["metadata"]["unicode"], "火🔥");
+        assert_eq!(parsed.data_content_type, Some("text/plain; charset=utf-8"));
+        assert_eq!(
+            multipart_boundary(&format!("multipart/related; boundary=\"{boundary}\"")),
+            Some(boundary.to_owned())
+        );
+    }
+
     async fn runtime(
         label: &str,
         rules: Option<RulesRuntimeConfig>,
@@ -2092,6 +2235,39 @@ mod tests {
         assert_eq!(finalize.status(), StatusCode::OK);
         assert_eq!(json(finalize).await["metadata"]["oracle"], "火🔥");
         location
+    }
+
+    #[tokio::test]
+    async fn browser_sdk_preflight_accepts_the_storage_version_header() {
+        let (runtime, _dispatches, root) = runtime("browser-preflight", None).await;
+        let response = runtime
+            .application()
+            .oneshot(
+                Request::builder()
+                    .method(Method::OPTIONS)
+                    .uri(format!(
+                        "/v0/b/{DEFAULT_BUCKET}/o?name=users%2Falice%2Ffile.txt"
+                    ))
+                    .header(header::ORIGIN, "http://127.0.0.1:5000")
+                    .header(
+                        header::ACCESS_CONTROL_REQUEST_HEADERS,
+                        "content-type,x-firebase-storage-version",
+                    )
+                    .body(Body::empty())
+                    .expect("preflight"),
+            )
+            .await
+            .expect("Storage preflight");
+        assert_eq!(response.status(), StatusCode::NO_CONTENT);
+        assert!(
+            response
+                .headers()
+                .get(header::ACCESS_CONTROL_ALLOW_HEADERS)
+                .and_then(|value| value.to_str().ok())
+                .is_some_and(|value| value.contains("X-Firebase-Storage-Version"))
+        );
+        runtime.shutdown().await.expect("shutdown");
+        std::fs::remove_dir_all(root).expect("remove test storage");
     }
 
     async fn assert_copy_contract(runtime: &StorageRuntime) {
@@ -2330,9 +2506,23 @@ mod tests {
         };
         let response = runtime
             .application()
-            .oneshot(upload(format!("Bearer {owner}")))
+            .oneshot(upload(format!("Firebase {owner}")))
             .await
             .expect("owner upload");
+        assert_eq!(response.status(), StatusCode::OK);
+        let response = runtime
+            .application()
+            .oneshot(
+                Request::builder()
+                    .uri(format!(
+                        "/v0/b/{DEFAULT_BUCKET}/o?prefix=users%2Falice%2F&delimiter=%2F"
+                    ))
+                    .header(header::AUTHORIZATION, format!("Firebase {owner}"))
+                    .body(Body::empty())
+                    .expect("list"),
+            )
+            .await
+            .expect("owner list");
         assert_eq!(response.status(), StatusCode::OK);
         let response = runtime
             .application()

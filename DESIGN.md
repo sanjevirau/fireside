@@ -1674,6 +1674,11 @@ The oracle captures pin the following suite contracts before implementation:
   bounded Functions dispatch queue used by Firestore and Pub/Sub, obey Hub
   background enablement, and preserve Unicode user fields. Bulk import and
   bulk clear deliberately remain trigger-quiet, matching the captured suite.
+- The installed Twodart browser SDK adds `X-Firebase-Client` to Identity
+  Toolkit preflights. Auth CORS explicitly admits that header. The same SDK's
+  Storage transport adds `X-Firebase-Storage-Version` and authenticates with
+  `Authorization: Firebase <JWT>` (not `Bearer`); the Firebase `/v0` boundary
+  accepts that scheme while the GCS Admin boundary remains unchanged.
 - Storage implements Firebase `/v0` and GCS JSON media/resumable paths,
   download-token bypass, metadata mutation, per-bucket rules, byte-exact
   import/export, and paired legacy/v2 lifecycle dispatch. The official emulator
@@ -1686,6 +1691,14 @@ The oracle captures pin the following suite contracts before implementation:
   completed objects and resumable offsets without retaining object bodies in
   the Rust heap. Export writes the official `blobs/`, `metadata/`, and
   `buckets.json` layout, and import is deliberately lifecycle-quiet.
+- Non-resumable browser uploads use `multipart/related`: one JSON metadata part
+  followed by the exact object-byte part. Fireside separates the parts before
+  policy evaluation or persistence, preserves the metadata content type and
+  custom metadata, and caps this non-resumable envelope at 64 MiB. Raw and
+  resumable uploads retain their streaming paths. A Firebase list request is
+  evaluated at its decoded prefix path so a rule such as
+  `/users/{uid}/{allPaths=**}` governs `listAll(ref("users/{uid}"))` as well as
+  object reads and writes.
 - The pinned `cloud-storage-rules-runtime` jar remains a policy evaluator only:
   Fireside owns the listener, routing, auth decoding, object state, persistence,
   and trigger queue, and sends newline-delimited rule evaluation requests to the

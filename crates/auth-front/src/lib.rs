@@ -426,7 +426,9 @@ async fn cors(request: axum::extract::Request, next: Next) -> Response {
     );
     headers.insert(
         "access-control-allow-headers",
-        HeaderValue::from_static("Authorization,Content-Type,X-Client-Version,X-Firebase-GMPID"),
+        HeaderValue::from_static(
+            "Authorization,Content-Type,X-Client-Version,X-Firebase-Client,X-Firebase-GMPID",
+        ),
     );
     response
 }
@@ -1535,6 +1537,35 @@ mod tests {
             .expect("Auth request");
         let status = response.status();
         (status, response_json(response).await)
+    }
+
+    #[tokio::test]
+    async fn browser_sdk_preflight_accepts_the_firebase_client_header() {
+        let (runtime, _dispatches) = test_runtime();
+        let response = runtime
+            .application()
+            .oneshot(
+                Request::builder()
+                    .method(Method::OPTIONS)
+                    .uri("/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake")
+                    .header(header::ORIGIN, "http://127.0.0.1:5000")
+                    .header(
+                        header::ACCESS_CONTROL_REQUEST_HEADERS,
+                        "content-type,x-firebase-client",
+                    )
+                    .body(Body::empty())
+                    .expect("preflight"),
+            )
+            .await
+            .expect("Auth preflight");
+        assert_eq!(response.status(), StatusCode::NO_CONTENT);
+        assert!(
+            response
+                .headers()
+                .get(header::ACCESS_CONTROL_ALLOW_HEADERS)
+                .and_then(|value| value.to_str().ok())
+                .is_some_and(|value| value.contains("X-Firebase-Client"))
+        );
     }
 
     #[tokio::test]
