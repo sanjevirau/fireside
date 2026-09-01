@@ -69,3 +69,12 @@ Firestore using tiny synthetic data. A fixture locks the exact observed wire
 value; the manifest locks which facts and gates must exist. Cloud wins when an
 observed Java behavior differs, and the difference is recorded rather than
 silently normalized.
+
+[`phase-2-java-webchannel-comparison.json`](phase-2-java-webchannel-comparison.json)
+freezes the post-pass, non-gating WebChannel performance comparison requested
+before the Phase 2 tag. It runs the same vanilla Firebase JS SDK workload
+against the Phase 2 Fireside revision and official Java v1.22.0 on the same
+Linux host. The ABBA target order, warm-up and measured repetitions, raw sample
+counts, process-RSS sampling, evidence files, and honest-interpretation limits
+are fixed before measurement. It does not change the Phase 2 verdict or any
+gate threshold.

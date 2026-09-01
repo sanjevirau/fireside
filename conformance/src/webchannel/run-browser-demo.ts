@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { createHash } from "node:crypto";
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { createServer as createNetServer } from "node:net";
@@ -11,6 +12,8 @@ import { chromium, type Browser, type Page } from "playwright";
 
 const HOST = "127.0.0.1";
 const PROJECT_ID = "demo-fireside-phase2-browser";
+const JAVA_JAR_SHA256 =
+  "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c";
 const VARIANTS = [
   "long-polling",
   "streaming",
@@ -18,6 +21,13 @@ const VARIANTS = [
 ] as const;
 const diskMode = process.argv.includes("--disk");
 const outputPath = argumentValue("--output");
+const releaseMode = process.argv.includes("--release");
+const skipBuild = process.argv.includes("--skip-build");
+const target = demoTarget(argumentValue("--target") ?? "fireside");
+const repetitions = positiveIntegerArgument("--repetitions", 1);
+const warmupRepetitions = positiveIntegerArgument("--warmup-repetitions", 0, true);
+
+type DemoTarget = "fireside" | "java";
 
 interface NetworkObservations {
   droppedBackchannels: number;
@@ -36,6 +46,13 @@ interface BrowserDemoResult {
   readonly variant: (typeof VARIANTS)[number];
 }
 
+interface ResourceObservation {
+  readonly peakRssBytes?: number;
+  readonly peakVmHwmBytes?: number;
+  readonly sampleCount: number;
+  readonly supported: boolean;
+}
+
 const LISTENER_DELIVERY_SAMPLES = 100;
 const MAXIMUM_RECONNECT_MILLISECONDS = 5_000;
 const MAXIMUM_P99_MILLISECONDS: Record<(typeof VARIANTS)[number], number> = {
@@ -51,10 +68,20 @@ async function main(): Promise<void> {
   const dataDirectory = diskMode ? join(temporaryDirectory, "data") : undefined;
   let browser: Browser | undefined;
   let staticServer: Server | undefined;
-  let fireside: ChildProcess | undefined;
+  let targetProcess: ChildProcess | undefined;
+  let resourceMonitor: ResourceMonitor | undefined;
 
   try {
-    await runCommand("cargo", ["build", "--locked", "-p", "fireside"], repositoryRoot);
+    if (diskMode && target !== "fireside") {
+      throw new Error("--disk is only valid for the Fireside target");
+    }
+    if (!skipBuild && target === "fireside") {
+      await runCommand(
+        "cargo",
+        ["build", "--locked", "-p", "fireside", ...(releaseMode ? ["--release"] : [])],
+        repositoryRoot,
+      );
+    }
     const bundlePath = join(temporaryDirectory, "browser-demo.js");
     await build({
       bundle: true,
@@ -68,38 +95,88 @@ async function main(): Promise<void> {
     const staticRuntime = await startStaticServer(await readFile(bundlePath));
     staticServer = staticRuntime.server;
     const port = await reserveAvailablePort();
-    const serverArguments = [
-      "--host",
-      HOST,
-      "--port",
-      String(port),
-      "--project_id",
-      PROJECT_ID,
-      "--single_project_mode",
-      "true",
-    ];
-    if (dataDirectory !== undefined) {
-      serverArguments.push("--data-dir", dataDirectory);
+    if (target === "fireside") {
+      const serverArguments = [
+        "--host",
+        HOST,
+        "--port",
+        String(port),
+        "--project_id",
+        PROJECT_ID,
+        "--single_project_mode",
+        "true",
+      ];
+      if (dataDirectory !== undefined) {
+        serverArguments.push("--data-dir", dataDirectory);
+      }
+      targetProcess = startProcess(
+        join(
+          repositoryRoot,
+          "target",
+          releaseMode ? "release" : "debug",
+          process.platform === "win32" ? "fireside.exe" : "fireside",
+        ),
+        serverArguments,
+        repositoryRoot,
+      );
+      resourceMonitor = startResourceMonitor(targetProcess);
+      await waitForHttp(
+        `http://${HOST}:${String(port)}/emulator/v1/debug/memory`,
+        30_000,
+      );
+    } else {
+      const javaJar = process.env.FIRESTORE_EMULATOR_JAR ??
+        join(
+          process.env.HOME ?? "",
+          ".cache/firebase/emulators/cloud-firestore-emulator-v1.22.0.jar",
+        );
+      const jarHash = createHash("sha256").update(await readFile(javaJar)).digest("hex");
+      if (jarHash !== JAVA_JAR_SHA256) {
+        throw new Error(
+          `official Java emulator hash mismatch: expected ${JAVA_JAR_SHA256}, found ${jarHash}`,
+        );
+      }
+      targetProcess = startProcess(
+        process.env.JAVA ?? "java",
+        [
+          "-jar",
+          javaJar,
+          "--host",
+          HOST,
+          "--port",
+          String(port),
+          "--project_id",
+          PROJECT_ID,
+          "--single_project_mode",
+          "true",
+        ],
+        repositoryRoot,
+      );
+      resourceMonitor = startResourceMonitor(targetProcess);
+      await waitForHttp(`http://${HOST}:${String(port)}`, 30_000);
     }
-    fireside = startProcess(
-      join(repositoryRoot, "target", "debug", process.platform === "win32" ? "fireside.exe" : "fireside"),
-      serverArguments,
-      repositoryRoot,
-    );
-    await waitForHttp(`http://${HOST}:${String(port)}/emulator/v1/debug/memory`, 30_000);
     browser = await chromium.launch({
       executablePath: await resolveChromiumExecutable(),
       headless: true,
     });
 
     const results: unknown[] = [];
-    for (const variant of VARIANTS) {
-      const page = await browser.newPage();
-      try {
-        const observations = await observeWebChannel(page, variant);
-        await page.goto(staticRuntime.origin, { waitUntil: "domcontentloaded" });
-        const runId = `${variant}-${diskMode ? "disk" : "memory"}-${Date.now().toString(36)}`;
-        const result = await page.evaluate(
+    const totalRepetitions = warmupRepetitions + repetitions;
+    for (let repetition = 0; repetition < totalRepetitions; repetition += 1) {
+      const measured = repetition >= warmupRepetitions;
+      for (const variant of VARIANTS) {
+        const page = await browser.newPage();
+        try {
+          const observations = await observeWebChannel(page, variant);
+          await page.goto(staticRuntime.origin, { waitUntil: "domcontentloaded" });
+          const runId = [
+            variant,
+            target,
+            diskMode ? "disk" : "memory",
+            measured ? `measured-${String(repetition - warmupRepetitions + 1)}` : `warmup-${String(repetition + 1)}`,
+            Date.now().toString(36),
+          ].join("-");
+          const result = await page.evaluate(
           async ({ host, projectId, runId, variant }) => {
             const demoWindow = window as Window & {
               firesideRunWebChannelDemo(configuration: {
@@ -126,17 +203,24 @@ async function main(): Promise<void> {
             variant,
           },
         );
-        assertNetworkContract(variant, observations);
-        const benchmark = assertListenerDeliveryContract(variant, result);
-        results.push({
-          benchmark,
-          network: serializeObservations(observations),
-          result,
-        });
-      } finally {
-        await page.close();
+          assertNetworkContract(variant, observations);
+          const benchmark = assertListenerDeliveryContract(variant, result);
+          if (measured) {
+            results.push({
+              benchmark,
+              network: serializeObservations(observations),
+              repetition: repetition - warmupRepetitions + 1,
+              result,
+            });
+          }
+        } finally {
+          await page.close();
+        }
       }
     }
+
+    const resources = await resourceMonitor.stop();
+    resourceMonitor = undefined;
 
     const summary = {
       browserVersion: await browser.version(),
@@ -144,8 +228,13 @@ async function main(): Promise<void> {
       mode: diskMode ? "disk-wal" : "memory",
       passed: true,
       projectId: PROJECT_ID,
+      repetitions,
+      resources,
       results,
       schemaVersion: 1,
+      target,
+      targetVersion: target === "java" ? "1.22.0" : "repository-revision",
+      warmupRepetitions,
     };
     const summaryText = `${JSON.stringify(summary, null, 2)}\n`;
     if (outputPath !== undefined) {
@@ -159,8 +248,11 @@ async function main(): Promise<void> {
     if (staticServer !== undefined) {
       await closeServer(staticServer);
     }
-    if (fireside !== undefined) {
-      await stopProcess(fireside);
+    if (resourceMonitor !== undefined) {
+      await resourceMonitor.stop();
+    }
+    if (targetProcess !== undefined) {
+      await stopProcess(targetProcess);
     }
     await rm(temporaryDirectory, { recursive: true, force: true });
   }
@@ -176,6 +268,29 @@ function argumentValue(name: string): string | undefined {
     throw new Error(`${name} requires a value`);
   }
   return value;
+}
+
+function demoTarget(value: string): DemoTarget {
+  if (value !== "fireside" && value !== "java") {
+    throw new Error(`--target must be fireside or java, found ${value}`);
+  }
+  return value;
+}
+
+function positiveIntegerArgument(
+  name: string,
+  fallback: number,
+  allowZero = false,
+): number {
+  const value = argumentValue(name);
+  if (value === undefined) {
+    return fallback;
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < (allowZero ? 0 : 1)) {
+    throw new Error(`${name} must be ${allowZero ? "a non-negative" : "a positive"} integer`);
+  }
+  return parsed;
 }
 
 async function observeWebChannel(
@@ -379,6 +494,64 @@ function percentile(values: readonly number[], fraction: number): number {
 
 async function delay(milliseconds: number): Promise<void> {
   await new Promise<void>((resolve_) => setTimeout(resolve_, milliseconds));
+}
+
+interface ResourceMonitor {
+  stop(): Promise<ResourceObservation>;
+}
+
+function startResourceMonitor(child: ChildProcess): ResourceMonitor {
+  const pid = child.pid;
+  if (process.platform !== "linux" || pid === undefined) {
+    return {
+      async stop(): Promise<ResourceObservation> {
+        return { sampleCount: 0, supported: false };
+      },
+    };
+  }
+
+  let stopped = false;
+  let peakRssBytes = 0;
+  let peakVmHwmBytes = 0;
+  let sampleCount = 0;
+  const finished = (async () => {
+    while (!stopped) {
+      try {
+        const status = await readFile(`/proc/${String(pid)}/status`, "utf8");
+        const rssBytes = procStatusKilobytes(status, "VmRSS") * 1024;
+        const hwmBytes = procStatusKilobytes(status, "VmHWM") * 1024;
+        peakRssBytes = Math.max(peakRssBytes, rssBytes);
+        peakVmHwmBytes = Math.max(peakVmHwmBytes, hwmBytes);
+        sampleCount += 1;
+      } catch {
+        if (child.exitCode !== null || child.signalCode !== null) {
+          break;
+        }
+      }
+      await delay(100);
+    }
+  })();
+
+  return {
+    async stop(): Promise<ResourceObservation> {
+      stopped = true;
+      await finished;
+      return {
+        peakRssBytes,
+        peakVmHwmBytes,
+        sampleCount,
+        supported: true,
+      };
+    },
+  };
+}
+
+function procStatusKilobytes(status: string, name: string): number {
+  const match = new RegExp(`^${name}:\\s+(\\d+)\\s+kB$`, "m").exec(status);
+  if (match?.[1] === undefined) {
+    return 0;
+  }
+  return Number(match[1]);
 }
 
 async function startStaticServer(bundle: Buffer): Promise<{
