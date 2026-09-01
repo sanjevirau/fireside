@@ -1690,11 +1690,21 @@ The oracle captures pin the following suite contracts before implementation:
   that response, continues into export, and later exits 2; it nevertheless
   removes its locator and closes every port. A control restart on the same
   ports exits 0. Fireside must retain the 403 without the fall-through failure.
+- The Rust Hub is the sole suite coordinator. Its locator is atomically
+  replaced and removed only when the file still contains this process's value,
+  combined exports run through a bounded command channel, and the external
+  `Origin` rejection returns before export work is admitted. Hub and UI share
+  one validated service directory, preventing their advertised ports from
+  drifting apart.
 - UI discovery comes from `/api/config`; the official UI archive is served at
   `/`, and the Logging emulator is a raw WebSocket endpoint that replays its
   buffered JSON log entries on connection. Eventarc and Tasks endpoints are
   exposed as Functions dependencies even though general delivery for those
   services is outside this phase's first-replacement boundary.
+- Fireside verifies the pinned UI archive SHA-256 before serving its extracted
+  client assets. Logging retains at most 1,024 structured records, replays the
+  captured forty-record startup contract in order, broadcasts subsequent
+  records live, and preserves non-ASCII message data as JSON text frames.
 - Twodart's pinned extension inventory contains one Stripe instance with Auth,
   Firestore, HTTP/callable, and delete triggers, and two Algolia instances that
   share the same Firestore write and task-queue definition. Fixture generation
