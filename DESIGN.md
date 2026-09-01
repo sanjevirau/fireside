@@ -1341,6 +1341,16 @@ source request envelope also rejects the 262,143-byte probe even though it
 accepts 256,001 bytes; that transport boundary does not replace the official
 documented 262,144-byte deployed-rules maximum.
 
+The product compiler is original Rust: a handwritten UTF-8 lexer, a Pratt
+expression parser, and a structural validator produce an immutable compiled
+ruleset. Compilation rejects malformed structure, duplicate bindings,
+recursive functions, over-depth function graphs, multiple recursive wildcards
+in one match declaration, and sources above 262,144 bytes. Installation and
+hot reload consume only a successfully compiled value, so a diagnostic can
+never partially replace the active ruleset. The compiler regression suite
+replays the frozen production parse boundary and compiles the full complex
+ruleset before evaluator or transport integration is allowed to rely on it.
+
 ## 10. Differential harness and fixtures
 
 Identical TypeScript cases use real Google SDKs against:
