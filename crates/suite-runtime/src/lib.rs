@@ -126,10 +126,27 @@ pub struct DeliveryOutcome {
     pub assumed_delivered_after_response_loss: u64,
     pub retries: u64,
     pub failed: u64,
+    pub latency: DeliveryLatencyOutcome,
+}
+
+/// Bounded successful Functions-delivery latency summary.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeliveryLatencyOutcome {
+    pub samples: usize,
+    pub p50_micros: u64,
+    pub p95_micros: u64,
+    pub p99_micros: u64,
 }
 
 impl From<DeliveryHealth> for DeliveryOutcome {
     fn from(value: DeliveryHealth) -> Self {
+        let mut latencies = value
+            .delivery_latencies_micros
+            .iter()
+            .copied()
+            .collect::<Vec<_>>();
+        latencies.sort_unstable();
         Self {
             admitted: value.admitted,
             deduplicated: value.deduplicated,
@@ -137,8 +154,27 @@ impl From<DeliveryHealth> for DeliveryOutcome {
             assumed_delivered_after_response_loss: value.assumed_delivered_after_response_loss,
             retries: value.retries,
             failed: value.failed,
+            latency: DeliveryLatencyOutcome {
+                samples: latencies.len(),
+                p50_micros: percentile(&latencies, 50),
+                p95_micros: percentile(&latencies, 95),
+                p99_micros: percentile(&latencies, 99),
+            },
         }
     }
+}
+
+fn percentile(sorted: &[u64], percentile: usize) -> u64 {
+    if sorted.is_empty() {
+        return 0;
+    }
+    let rank = sorted
+        .len()
+        .saturating_mul(percentile)
+        .div_ceil(100)
+        .saturating_sub(1)
+        .min(sorted.len().saturating_sub(1));
+    sorted[rank]
 }
 
 /// Suite startup, runtime, or shutdown failure.

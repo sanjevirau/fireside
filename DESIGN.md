@@ -1635,6 +1635,11 @@ The oracle captures pin the following suite contracts before implementation:
   response chaos gate pins that decision and requires zero duplicate observable
   effects; definite failures remain visible in delivery health instead of being
   silently acknowledged.
+- Successful Functions deliveries retain a bounded 4,096-sample window of
+  end-to-end microsecond timings. Clean suite shutdown reports p50, p95, and
+  p99 from that window alongside retry/deduplication counters, so Phase 4 and
+  later gates measure actual Firestore/Auth/Storage/Pub/Sub-to-handler
+  acknowledgements without an unbounded telemetry allocation.
 - A v2 Pub/Sub trigger is delivered as a structured CloudEvent to
   `/functions/projects/{project}/triggers/{trigger-key}`. Hub background
   controls suppress delivery while disabled and resume exactly one delivery

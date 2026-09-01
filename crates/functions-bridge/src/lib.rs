@@ -9,7 +9,7 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::{self, Display, Formatter};
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use fireside_core_store::{Change, CommitObservation, CommitObserver, Document, DocumentKey};
 use fireside_grpc_front::google::firestore::v1 as firestore_proto;
@@ -793,6 +793,10 @@ pub struct DeliveryHealth {
     pub failed: u64,
     /// Most recent permanent failure.
     pub last_error: Option<String>,
+    /// Most recent successful end-to-end delivery latencies in microseconds.
+    /// The runtime retains a bounded window so a long-lived emulator cannot
+    /// grow telemetry memory without limit.
+    pub delivery_latencies_micros: VecDeque<u64>,
 }
 
 /// Failure to configure the Functions delivery runtime.
@@ -986,7 +990,7 @@ fn admit_delivery(
 
 #[derive(Debug)]
 enum DeliveryOutcome {
-    Delivered { retries: u64 },
+    Delivered { retries: u64, latency_micros: u64 },
     AssumedDelivered { retries: u64, reason: String },
     Failed { retries: u64, error: String },
 }
@@ -997,6 +1001,7 @@ async fn deliver(
     request: &DispatchRequest,
     policy: DeliveryPolicy,
 ) -> DeliveryOutcome {
+    let started = Instant::now();
     let url = match endpoint.join(request.path.trim_start_matches('/')) {
         Ok(url) => url,
         Err(error) => {
@@ -1016,6 +1021,7 @@ async fn deliver(
             Ok(response) if response.status().is_success() => {
                 return DeliveryOutcome::Delivered {
                     retries: usize_to_u64(attempt.saturating_sub(1)),
+                    latency_micros: duration_micros(started.elapsed()),
                 };
             }
             Ok(response)
@@ -1065,9 +1071,16 @@ fn record_outcome(
 ) {
     let mut health = lock(health);
     match outcome {
-        Ok(DeliveryOutcome::Delivered { retries }) => {
+        Ok(DeliveryOutcome::Delivered {
+            retries,
+            latency_micros,
+        }) => {
             health.delivered = health.delivered.saturating_add(1);
             health.retries = health.retries.saturating_add(retries);
+            if health.delivery_latencies_micros.len() >= 4_096 {
+                health.delivery_latencies_micros.pop_front();
+            }
+            health.delivery_latencies_micros.push_back(latency_micros);
         }
         Ok(DeliveryOutcome::AssumedDelivered { retries, reason }) => {
             health.assumed_delivered_after_response_loss = health
@@ -1090,6 +1103,10 @@ fn record_outcome(
 
 fn usize_to_u64(value: usize) -> u64 {
     u64::try_from(value).unwrap_or(u64::MAX)
+}
+
+fn duration_micros(value: Duration) -> u64 {
+    u64::try_from(value.as_micros()).unwrap_or(u64::MAX)
 }
 
 #[cfg(test)]
