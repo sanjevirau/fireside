@@ -3,7 +3,7 @@
   "target": "official-java-emulator",
   "targetVersion": "1.22.0",
   "targetProject": "demo-fireside-phase4-trigger-oracle",
-  "capturedAt": "2026-09-01T13:38:54.200Z",
+  "capturedAt": "2026-09-01T18:13:52.045Z",
   "hypothesis": "v1 and v2 Firestore create triggers use distinct registration bodies and dispatch exact legacy-event and CloudEvent envelopes to the Functions emulator",
   "credentialsStored": false,
   "authorizationHeadersStored": false,
@@ -114,13 +114,19 @@
         "ce-specversion": "1.0",
         "ce-type": "google.cloud.firestore.document.v1.created",
         "ce-source": "//firestore.googleapis.com/projects/projects/demo-fireside-phase4-trigger-oracle/databases/(default)",
-        "ce-id": "a1ea608d-8e4e-45e9-a8bf-c99b84ce8ca4",
+        "ce-id": "e9c263db-5b01-4e87-9d34-28f5c6833f59",
         "ce-subject": "documents/phase4Triggers/oracle",
-        "ce-time": "2026-09-01T13:38:54Z",
+        "ce-time": "2026-09-01T18:13:52Z",
         "ce-datacontenttype": "application/protobuf",
+        "ce-dataschema": "https://github.com/googleapis/google-cloudevents/blob/main/proto/google/events/cloud/firestore/v1/data.proto",
+        "ce-location": "us-central1",
+        "ce-project": "demo-fireside-phase4-trigger-oracle",
+        "ce-database": "(default)",
+        "ce-namespace": "(default)",
+        "ce-document": "phase4Triggers/oracle",
         "content-type": "application/protobuf"
       },
-      "body": "CrYBCmBwcm9qZWN0cy9kZW1vLWZpcmVzaWRlLXBoYXNlNC10cmlnZ2VyLW9yYWNsZS9kYXRhYmFzZXMvKGRlZmF1bHQpL2RvY3VtZW50cy9waGFzZTRUcmlnZ2Vycy9vcmFjbGUSEgoFYXNjaWkSCYoBBm9yYWNsZRIVCgd1bmljb2RlEgqKAQfngavwn5SlEg0KB29yZGluYWwSAhABGgsI7qrb1AYQiNWEPyILCO6q29QGEIjVhD8aAA=="
+      "body": "CrgBCmBwcm9qZWN0cy9kZW1vLWZpcmVzaWRlLXBoYXNlNC10cmlnZ2VyLW9yYWNsZS9kYXRhYmFzZXMvKGRlZmF1bHQpL2RvY3VtZW50cy9waGFzZTRUcmlnZ2Vycy9vcmFjbGUSEgoFYXNjaWkSCYoBBm9yYWNsZRIVCgd1bmljb2RlEgqKAQfngavwn5SlEg0KB29yZGluYWwSAhABGgwI36vc1AYQyMaL2AMiDAjfq9zUBhDIxovYAxoA"
     }
   ],
   "relevantLogLines": []

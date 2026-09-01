@@ -1623,10 +1623,14 @@ The oracle captures pin the following suite contracts before implementation:
   verify-only, and effective no-op commits publish nothing. v1 registration is
   parsed from the legacy resource name, v2 registration from the Eventarc path
   pattern, and both share exact create/update/delete/write and wildcard
-  matching. Dispatch uses captured legacy JSON for v1 and binary-mode
-  `CloudEvents` plus `DocumentEventData` protobuf for v2. Stable event IDs are
-  retained across retries, and a bounded coordinator suppresses a repeated ID
-  before a second Node handler invocation.
+  matching. Dispatch uses captured legacy JSON for v1. The official Java
+  emulator's v2 request is a binary-mode `CloudEvent`, but its HTTP body is the
+  Base64 text representation of `DocumentEventData` even though both content
+  type headers say `application/protobuf`; firebase-tools decodes that exact
+  quirk. The request also carries the captured Firestore extension headers
+  (`ce-dataschema`, location, project, database, namespace, and document).
+  Stable event IDs are retained across retries, and a bounded coordinator
+  suppresses a repeated ID before a second Node handler invocation.
 - Local HTTP delivery retries definite connection failures and retryable HTTP
   responses with bounded exponential delay. Once a connection has accepted the
   request, a timeout or lost response is an ambiguous acknowledgement: Fireside

@@ -92,6 +92,15 @@ test("the official Java fixture pins v1 JSON and v2 protobuf Firestore dispatch"
     v2?.headers["ce-source"],
     "//firestore.googleapis.com/projects/projects/demo-fireside-phase4-trigger-oracle/databases/(default)",
   );
+  assert.equal(
+    v2?.headers["ce-dataschema"],
+    "https://github.com/googleapis/google-cloudevents/blob/main/proto/google/events/cloud/firestore/v1/data.proto",
+  );
+  assert.equal(v2?.headers["ce-location"], "us-central1");
+  assert.equal(v2?.headers["ce-project"], fixture.targetProject);
+  assert.equal(v2?.headers["ce-database"], "(default)");
+  assert.equal(v2?.headers["ce-namespace"], "(default)");
+  assert.equal(v2?.headers["ce-document"], "phase4Triggers/oracle");
   assert.equal(typeof v2?.body, "string");
   const protobuf = Buffer.from(v2?.body as string, "base64");
   assert.ok(protobuf.length > 100);

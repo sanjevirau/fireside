@@ -69,13 +69,15 @@
       "path": "/functions/projects/demo-fireside-phase4-trigger-oracle/triggers/us-central1-v2Created",
       "contentType": "application/protobuf",
       "cloudEventType": "google.cloud.firestore.document.v1.created",
-      "body": "CrYBCmBwcm9qZWN0cy9kZW1vLWZpcmVzaWRlLXBoYXNlNC10cmlnZ2VyLW9yYWNsZS9kYXRhYmFzZXMvKGRlZmF1bHQpL2RvY3VtZW50cy9waGFzZTRUcmlnZ2Vycy9vcmFjbGUSEgoFYXNjaWkSCYoBBm9yYWNsZRIVCgd1bmljb2RlEgqKAQfngavwn5SlEg0KB29yZGluYWwSAhABGgsI7qrb1AYQiNWEPyILCO6q29QGEIjVhD8aAA=="
+      "body": "CrgBCmBwcm9qZWN0cy9kZW1vLWZpcmVzaWRlLXBoYXNlNC10cmlnZ2VyLW9yYWNsZS9kYXRhYmFzZXMvKGRlZmF1bHQpL2RvY3VtZW50cy9waGFzZTRUcmlnZ2Vycy9vcmFjbGUSEgoFYXNjaWkSCYoBBm9yYWNsZRIVCgd1bmljb2RlEgqKAQfngavwn5SlEg0KB29yZGluYWwSAhABGgwI36vc1AYQyMaL2AMiDAjfq9zUBhDIxovYAxoA"
     }
   ],
   "invariants": {
     "functionsPathTemplate": "/functions/projects/{project}/triggers/{trigger-key}",
     "v1UsesLegacyEventEnvelope": true,
     "v2UsesCloudEventEnvelope": true,
+    "v2ProtobufBodyIsBase64Text": true,
+    "v2IncludesFirestoreCloudEventExtensions": true,
     "functionsHostAcknowledgementStatus": 200,
     "unicodeDocumentFieldsPreserved": true
   }
