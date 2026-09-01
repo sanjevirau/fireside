@@ -1,4 +1,6 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { readFile, rename, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 
 interface GeneratedMetadataFile {
   readonly path: string;
@@ -16,7 +18,7 @@ export async function pinGeneratedMetadata(
     await Promise.all(
       files.map(
         async ({ path, pinnedContents }) =>
-          await writeFile(path, pinnedContents, "utf8"),
+          await writeFileAtomically(path, pinnedContents),
       ),
     );
   } catch (error) {
@@ -41,7 +43,27 @@ async function restore(
   await Promise.all(
     files.map(
       async ({ path }, index) =>
-        await writeFile(path, originalContents[index]!, "utf8"),
+        await writeFileAtomically(path, originalContents[index]!),
     ),
   );
+}
+
+async function writeFileAtomically(
+  path: string,
+  contents: string,
+): Promise<void> {
+  const temporaryPath = join(
+    dirname(path),
+    `.${basename(path)}.${String(process.pid)}.${randomUUID()}.tmp`,
+  );
+
+  try {
+    await writeFile(temporaryPath, contents, {
+      encoding: "utf8",
+      flag: "wx",
+    });
+    await rename(temporaryPath, path);
+  } finally {
+    await rm(temporaryPath, { force: true });
+  }
 }
