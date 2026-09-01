@@ -7,6 +7,7 @@ import {
   mkdtemp,
   readFile,
   readdir,
+  rm,
   stat,
   writeFile,
 } from "node:fs/promises";
@@ -593,8 +594,13 @@ async function runOfficialComparison(
   _manifest: Phase4Manifest,
 ): Promise<Record<string, unknown>> {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "fireside-phase4-official-"));
+  const projectDirectory = join(
+    arguments_.twodartDirectory,
+    "apps",
+    "templates-firebase",
+  );
   const original = JSON.parse(
-    await readFile(join(arguments_.twodartDirectory, "apps", "templates-firebase", "firebase.json"), "utf8"),
+    await readFile(join(projectDirectory, "firebase.json"), "utf8"),
   ) as Record<string, any>;
   const ports = await reservePortBlock();
   original.emulators = {
@@ -607,8 +613,15 @@ async function runOfficialComparison(
     storage: { ...(original.emulators?.storage ?? {}), host: "127.0.0.1", port: ports.storage },
     ui: { ...(original.emulators?.ui ?? {}), host: "127.0.0.1", port: ports.ui },
   };
-  const configPath = join(temporaryDirectory, "firebase.json");
-  await writeFile(configPath, `${JSON.stringify(original, null, 2)}\n`);
+  // firebase-tools resolves Functions sources and rule files from the config
+  // directory, even when it receives an absolute path. Keep the ephemeral
+  // config beside Twodart's real firebase.json so its frozen relative paths
+  // retain their exact meaning, then remove it during coordinated cleanup.
+  const configPath = join(
+    projectDirectory,
+    `.fireside-phase4-official-${process.pid}-${Date.now()}.json`,
+  );
+  await writeFile(configPath, `${JSON.stringify(original, null, 2)}\n`, { flag: "wx" });
   const log = join(arguments_.outputDirectory, "logs", "official-java-comparison.log");
   const stream = createWriteStream(log, { flags: "wx" });
   let output = "";
@@ -622,7 +635,7 @@ async function runOfficialComparison(
   };
   const child = spawn(
     join(arguments_.twodartDirectory, "scripts", "dev", "start-firebase-emulator.sh"),
-    ["--config", configPath],
+    ["--config", configPath, "--only", "firestore,auth,storage,functions,pubsub"],
     { cwd: arguments_.twodartDirectory, env, stdio: ["ignore", "pipe", "pipe"] },
   );
   child.stdout?.on("data", (chunk: Buffer) => { output += chunk.toString(); stream.write(chunk); });
@@ -635,6 +648,9 @@ async function runOfficialComparison(
       child,
       20 * 60_000,
     );
+    if (/Failed to load function definition|could not deploy functions/iu.test(output)) {
+      throw new Error(`official comparison reported a Functions discovery failure; see ${log}`);
+    }
     const readyMilliseconds = performance.now() - started;
     child.kill("SIGINT");
     const stoppedAt = performance.now();
@@ -665,6 +681,8 @@ async function runOfficialComparison(
   } finally {
     await rss.stop();
     await closeWriteStream(stream);
+    await rm(configPath, { force: true });
+    await rm(temporaryDirectory, { force: true, recursive: true });
   }
 }
 
