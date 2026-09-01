@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "oracle": "readable-twodart-source",
+  "repository": "git@github.com:sanjevirau/twodart.git",
+  "revision": "efbecc6efc41b5ad053c23368973f447bbd34d47",
+  "branch": "feature/san/fireside-emulator",
+  "credentialsStored": false,
+  "accessTokensStored": false,
+  "realUserDataStored": false,
+  "sourceFiles": [
+    {
+      "path": "apps/templates/_declare/routes.ts",
+      "sha256": "7bab0fdadce8747f497a792c3ac5ba876856335e3381ec8f5052f0a045a52a3d"
+    },
+    {
+      "path": "apps/templates/components/Products/stores/adminNavigationStore.ts",
+      "sha256": "c0c9ed8b2f694460f8ffa479ec8774c78312047f9834fb580ffe1e3593870063"
+    },
+    {
+      "path": "apps/templates/components/Login/components/MainPage/MainPage.tsx",
+      "sha256": "93470af0c69a473c5e645383bf58a494566f57875c8ea128c3ead0262cea0cd5"
+    },
+    {
+      "path": "apps/templates/components/Login/components/VerificationStep/VerificationStep.tsx",
+      "sha256": "dd2cb107e749ccfe42bef4c7f4f4d0accb82acd5c08c67650b7aa5801b6b45d6"
+    },
+    {
+      "path": "apps/templates/components/Login/stores/api/verificationCodeApi.ts",
+      "sha256": "5df6b70c44e5ed088cb14d30d065fc3fb5f63b6377fe222c97100e09f11763c6"
+    },
+    {
+      "path": "apps/templates/pages/api/login/verificationCode.ts",
+      "sha256": "0d18ff8403929ee5c544a8d4699d2a05f740c606bef1cdd61b5686f8d8f3f697"
+    },
+    {
+      "path": "apps/templates/pages/admin/index.tsx",
+      "sha256": "40d816b869dbab0511e9c9342fca6db19bda6376b611a7278306da186a050b12"
+    }
+  ],
+  "browserContract": {
+    "loginRoute": "/login",
+    "emailInputId": "workEmail",
+    "emailSubmitText": "Continue",
+    "verificationInputId": "verificationCode",
+    "verificationSubmitText": "Start using Choladeck",
+    "verificationEndpoint": "/api/login/verificationCode",
+    "verificationMethod": "POST",
+    "verificationDigits": 6,
+    "authenticatedLandingRoute": "/home/recent",
+    "deckRoutePrefix": "/presentation/",
+    "premadeTemplatesRoute": "/premade-templates",
+    "slideLibraryRoute": "/slide-library",
+    "adminRoute": "/admin"
+  },
+  "adminNavigationPageIds": [
+    "templates-master-slides",
+    "templates-theme-upload",
+    "templates-categories-core",
+    "templates-slides-core",
+    "templates-colors",
+    "templates-headers",
+    "templates-background-images",
+    "templates-fonts",
+    "global-branding",
+    "premade-templates",
+    "tag",
+    "icons-library",
+    "icons-list",
+    "wp-actions",
+    "app-announcements",
+    "beta-users",
+    "templates-categories-legacy",
+    "templates-slides-legacy"
+  ],
+  "journeyIds": [
+    "otp-auth-login",
+    "dashboard-and-deck-list",
+    "existing-deck-and-listener-edit",
+    "catalog-slide-add",
+    "deck-image-upload",
+    "duplicate-and-delete-deck",
+    "dotnet-deck-export",
+    "dev-admin-pages",
+    "sign-out-and-sign-in"
+  ],
+  "invariants": {
+    "otpIsObtainedOnlyThroughLocalAdminState": true,
+    "otpMayAppearInEvidence": false,
+    "datasetIdentityMayAppearInEvidence": false,
+    "browserMustCompleteCustomTokenSignIn": true,
+    "allJourneysUseRenderedApplicationUi": true,
+    "allJourneysAssertNetworkAndBackendState": true,
+    "syntheticMutationsAreRestoredOrDeleted": true,
+    "externalProviderMutationsAllowed": false,
+    "liveMacMprocsMayBeTouched": false
+  }
+}
