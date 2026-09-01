@@ -515,8 +515,7 @@ async function runChaosAndQuality(outputDirectory: string, smoke: boolean): Prom
   if (!smoke) {
     records.push(await runCommand("rust-clippy", "cargo", ["clippy", "--workspace", "--all-targets", "--all-features", "--", "-D", "warnings"], outputDirectory, repositoryRoot, 60 * 60_000));
     records.push(await runCommand("rust-tests", "cargo", ["test", "--workspace", "--locked"], outputDirectory, repositoryRoot, 2 * 60 * 60_000));
-    records.push(await runCommand("firestore-conformance", "npm", ["--prefix", "conformance", "run", "test:firestore"], outputDirectory, repositoryRoot, 60 * 60_000));
-    records.push(await runCommand("control-conformance", "npm", ["--prefix", "conformance", "run", "test:control"], outputDirectory, repositoryRoot, 30 * 60_000));
+    records.push(await runCommand("fireside-conformance", "npm", ["--prefix", "conformance", "run", "test:fireside"], outputDirectory, repositoryRoot, 60 * 60_000));
   }
   return records;
 }
