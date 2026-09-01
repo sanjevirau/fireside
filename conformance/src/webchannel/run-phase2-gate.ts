@@ -14,6 +14,11 @@ import { arch, cpus, hostname, platform, release, totalmem } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  existingConformanceCommands,
+  existingConformanceCommandSpecifications,
+} from "./phase2-gate-plan.ts";
+
 interface Arguments {
   readonly outputDirectory: string;
   readonly reportPath: string;
@@ -124,25 +129,6 @@ const requiredEvidenceFiles = [
   "listener-delivery.csv",
   "existing-conformance.json",
   "deviations.json",
-] as const;
-
-const existingConformanceCommands = [
-  "cargo fmt --all -- --check",
-  "cargo clippy --workspace --all-targets --all-features -- -D warnings",
-  "cargo test --workspace --all-targets --all-features",
-  "npm run check --prefix conformance",
-  "npm test --prefix conformance",
-  "npm run test:fireside --prefix conformance",
-  "npm run test:fireside:disk --prefix conformance",
-  "npm run test:fireside:strict --prefix conformance",
-  "npm run test:fireside:enterprise --prefix conformance",
-  "npm run test:fireside:enterprise:disk --prefix conformance",
-  "npm run test:fireside-disk-recovery --prefix conformance",
-  "npm run test:fireside-import --prefix conformance",
-  "npm run test:official --prefix conformance",
-  "npm run test:official:enterprise --prefix conformance",
-  "npm run test:official-export-import --prefix conformance",
-  "npm run test:fireside-export-java-import --prefix conformance",
 ] as const;
 
 const firebaseSdkBrowserProcessPlan = {
@@ -540,24 +526,31 @@ async function runSessionChaos(
 
 async function runExistingConformance(outputDirectory: string): Promise<void> {
   const commands: CommandRecord[] = [];
-  for (let index = 0; index < existingConformanceCommands.length; index += 1) {
-    const commandText = existingConformanceCommands[index] as string;
+  for (
+    let index = 0;
+    index < existingConformanceCommandSpecifications.length;
+    index += 1
+  ) {
+    const specification = existingConformanceCommandSpecifications[index];
+    if (specification === undefined) {
+      throw new Error(`missing existing-conformance command ${String(index)}`);
+    }
     const command = await runCommand(
       `existing-${String(index + 1).padStart(2, "0")}`,
-      "/bin/zsh",
-      ["-lc", commandText],
+      specification.executable,
+      specification.arguments,
       repositoryRoot,
       outputDirectory,
-      commandText,
+      specification.displayCommand,
     );
     commands.push(command);
     await writeJson(join(outputDirectory, "existing-conformance.json"), {
       commands,
       completedCommands: commands.length,
       passed:
-        commands.length === existingConformanceCommands.length &&
+        commands.length === existingConformanceCommandSpecifications.length &&
         commands.every((value) => value.passed),
-      requiredCommands: existingConformanceCommands.length,
+      requiredCommands: existingConformanceCommandSpecifications.length,
       schemaVersion: 1,
     });
     assertCommandsPassed([command]);
