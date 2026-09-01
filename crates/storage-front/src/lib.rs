@@ -492,12 +492,41 @@ async fn gcs_upload_start(
 ) -> Result<Response, StorageApiError> {
     let query = query_fields(query.as_deref());
     let upload_type = query.get("uploadType").map_or("media", String::as_str);
-    let name = query
-        .get("name")
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| bad_request("Missing object name"))?
-        .clone();
-    if upload_type == "resumable" {
+    if upload_type == "multipart" {
+        let boundary = multipart_boundary(content_type(&headers))
+            .ok_or_else(|| bad_request("Multipart upload requires a boundary"))?;
+        let bytes = collect_limited(body, 64 * 1024 * 1024).await?;
+        let multipart = parse_related_multipart(&bytes, &boundary)?;
+        let name = query
+            .get("name")
+            .filter(|value| !value.is_empty())
+            .map(String::as_str)
+            .or_else(|| multipart.metadata.get("name").and_then(JsonValue::as_str))
+            .ok_or_else(|| bad_request("Missing object name"))?;
+        let path = staging_path(&state, "upload");
+        let mut file = tokio::fs::File::create(&path).await.map_err(io_error)?;
+        file.write_all(multipart.data).await.map_err(io_error)?;
+        file.sync_all().await.map_err(io_error)?;
+        let object = commit_staging(
+            &state,
+            CommitSpec {
+                bucket: &bucket,
+                name,
+                content_type: multipart
+                    .metadata
+                    .get("contentType")
+                    .and_then(JsonValue::as_str)
+                    .or(multipart.data_content_type)
+                    .unwrap_or("application/octet-stream"),
+                metadata: string_metadata(multipart.metadata.get("metadata")),
+                headers: &headers,
+                firebase: false,
+            },
+            summarize_file(path).await?,
+        )
+        .await?;
+        Ok(Json(gcs_metadata(&state, &object)).into_response())
+    } else if upload_type == "resumable" {
         let bytes = collect_limited(body, 1_048_576).await?;
         let request = if bytes.is_empty() {
             json!({})
@@ -505,6 +534,13 @@ async fn gcs_upload_start(
             serde_json::from_slice::<JsonValue>(&bytes)
                 .map_err(|_| bad_request("Invalid resumable metadata"))?
         };
+        let name = query
+            .get("name")
+            .filter(|value| !value.is_empty())
+            .map(String::as_str)
+            .or_else(|| request.get("name").and_then(JsonValue::as_str))
+            .ok_or_else(|| bad_request("Missing object name"))?
+            .to_owned();
         let metadata = string_metadata(request.get("metadata"));
         let content_type = request
             .get("contentType")
@@ -549,12 +585,16 @@ async fn gcs_upload_start(
         );
         Ok(([(header::LOCATION, location)], "OK").into_response())
     } else if upload_type == "media" {
+        let name = query
+            .get("name")
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| bad_request("Missing object name"))?;
         let uploaded = stream_to_staging(&state, body).await?;
         let object = commit_staging(
             &state,
             CommitSpec {
                 bucket: &bucket,
-                name: &name,
+                name,
                 content_type: content_type(&headers),
                 metadata: BTreeMap::new(),
                 headers: &headers,
@@ -2462,6 +2502,56 @@ mod tests {
         runtime.shutdown().await.expect("shutdown");
         std::fs::remove_dir_all(root).expect("remove test storage");
         std::fs::remove_dir_all(export).expect("remove test export");
+    }
+
+    #[tokio::test]
+    async fn gcs_client_multipart_reads_the_object_name_from_metadata() {
+        let (runtime, _dispatches, root) = runtime("gcs-multipart", None).await;
+        let boundary = "phase4-python-boundary";
+        let payload = "Python Admin 火🔥";
+        let body = format!(
+            "--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n{{\"name\":\"admin/python-火🔥.txt\",\"contentType\":\"text/plain; charset=utf-8\",\"metadata\":{{\"unicode\":\"火🔥\"}}}}\r\n--{boundary}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n{payload}\r\n--{boundary}--"
+        );
+        let response = runtime
+            .application()
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri(format!(
+                        "/upload/storage/v1/b/{ASSETS_BUCKET}/o?uploadType=multipart"
+                    ))
+                    .header(
+                        header::CONTENT_TYPE,
+                        format!("multipart/related; boundary={boundary}"),
+                    )
+                    .body(Body::from(body))
+                    .expect("multipart upload"),
+            )
+            .await
+            .expect("multipart response");
+        assert_eq!(response.status(), StatusCode::OK);
+        let metadata = json(response).await;
+        assert_eq!(metadata["name"], "admin/python-火🔥.txt");
+        assert_eq!(metadata["metadata"]["unicode"], "火🔥");
+        let response = runtime
+            .application()
+            .oneshot(request(
+                Method::GET,
+                &format!(
+                    "/download/storage/v1/b/{ASSETS_BUCKET}/o/admin%2Fpython-%E7%81%AB%F0%9F%94%A5.txt?alt=media"
+                ),
+                Body::empty(),
+            ))
+            .await
+            .expect("download");
+        assert_eq!(
+            to_bytes(response.into_body(), usize::MAX)
+                .await
+                .expect("download body"),
+            payload
+        );
+        runtime.shutdown().await.expect("shutdown");
+        std::fs::remove_dir_all(root).expect("remove test storage");
     }
 
     #[tokio::test]

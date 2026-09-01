@@ -1699,6 +1699,11 @@ The oracle captures pin the following suite contracts before implementation:
   evaluated at its decoded prefix path so a rule such as
   `/users/{uid}/{allPaths=**}` governs `listAll(ref("users/{uid}"))` as well as
   object reads and writes.
+- Google Cloud Storage clients use the same two-part wire envelope at
+  `upload/storage/v1/...?...uploadType=multipart`, but place the object name in
+  the metadata JSON instead of the query string. Resumable starts may likewise
+  carry `name` in metadata. Both forms feed the same exact-byte staging and
+  checksum path as raw GCS uploads.
 - The pinned `cloud-storage-rules-runtime` jar remains a policy evaluator only:
   Fireside owns the listener, routing, auth decoding, object state, persistence,
   and trigger queue, and sends newline-delimited rule evaluation requests to the
