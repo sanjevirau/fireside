@@ -1,10 +1,44 @@
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { pinGeneratedMetadata } from "../src/webchannel/firebase-js-sdk-metadata.ts";
+
+const testDirectory = dirname(fileURLToPath(import.meta.url));
+
+test("generated metadata write-race fixture freezes the observed CI contract", async () => {
+  const fixture = JSON.parse(
+    await readFile(
+      join(
+        testDirectory,
+        "../fixtures/webchannel-v8/firebase-js-sdk-generated-metadata-write-race.json",
+      ),
+      "utf8",
+    ),
+  ) as {
+    contract: { pin: string; reader: string; restore: string };
+    observation: { error: string; path: string; reader: string };
+    schemaVersion: number;
+    source: { ciRun: number; jobs: number[] };
+  };
+
+  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.source.ciRun, 33565984398);
+  assert.deepEqual(fixture.source.jobs, [100049320824, 100049320907]);
+  assert.deepEqual(fixture.observation, {
+    error: "Unexpected end of JSON input",
+    path: "packages/firestore/package.json",
+    reader: "Yarn 1.22.22 workspace discovery",
+  });
+  assert.deepEqual(fixture.contract, {
+    pin: "replace generated metadata atomically",
+    reader: "every observable file version is complete JSON",
+    restore: "replace original metadata atomically",
+  });
+});
 
 test("SDK generated metadata is pinned for a gate cell and restored exactly", async () => {
   const directory = await mkdtemp(join(tmpdir(), "fireside-sdk-metadata-"));
