@@ -1771,6 +1771,22 @@ The oracle captures pin the following suite contracts before implementation:
   and the Functions listener are complete. Suite shutdown sends that owned
   child `SIGTERM`; the resulting signal status is a clean coordinator outcome,
   while an unsolicited pre-readiness or runtime exit remains a suite failure.
+- The Twodart runtime gate queries the workload host's real `/backends`
+  response and requires exactly 21 definitions: eleven functions in the
+  `templates-firebase-function` codebase and ten definitions across Stripe and
+  the two Algolia extension instances. It separately pins six custom
+  Firestore patterns, two schedule topics, two callable labels, one plain HTTP
+  function, both ignored Algolia full-index definitions, and the Hub/UI service
+  maps. Inventory success is never inferred solely from a readiness log line.
+- The same running suite is exercised by Twodart's installed browser and Node
+  SDKs, its Python virtual environment, and the pinned .NET Firebase/Google
+  clients. The gate runs the actual cache watcher with isolated emulator ports,
+  waits for its smart-watcher readiness contract, and requires graceful
+  termination. Auth and small-object Storage p99 thresholds are evaluated from
+  durable per-client JSON rather than console text. Synthetic custom trigger
+  documents and both schedule topics are then admitted through the public
+  Firestore/Auth/Pub/Sub surfaces so discovery and transport remain covered in
+  addition to the deterministic delivery-chaos tests.
 
 ### Phase 5 — Hardening and release
 
