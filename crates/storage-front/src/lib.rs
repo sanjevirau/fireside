@@ -1670,6 +1670,7 @@ async fn export_directory(state: &StorageState, root: &FilePath) -> Result<usize
             .as_object_mut()
             .expect("object metadata")
             .remove("dataFile");
+        metadata["crc32c"] = json!(object.crc32c.to_string());
         write_json_atomic(&root.join("metadata").join(format!("{id}.json")), &metadata)?;
         if !buckets.contains(&object.bucket) {
             buckets.push(object.bucket.clone());
@@ -1756,6 +1757,11 @@ fn normalize_import_metadata(value: &mut JsonValue) {
         {
             *value = json!(parsed);
         }
+    }
+    if let Some(value) = value.get_mut("crc32c")
+        && let Some(parsed) = value.as_str().and_then(|value| value.parse::<u32>().ok())
+    {
+        *value = json!(parsed);
     }
 }
 
@@ -2221,6 +2227,22 @@ mod tests {
 
         let export = test_root("export");
         assert_eq!(runtime.export(&export).await.expect("export"), 2);
+        let metadata_path = std::fs::read_dir(export.join("metadata"))
+            .expect("export metadata directory")
+            .map(|entry| entry.expect("metadata entry").path())
+            .find(|path| path.extension().and_then(|value| value.to_str()) == Some("json"))
+            .expect("exported object metadata");
+        let mut metadata: JsonValue = serde_json::from_slice(
+            &std::fs::read(&metadata_path).expect("exported metadata should be readable"),
+        )
+        .expect("exported metadata should be JSON");
+        assert!(metadata["crc32c"].is_string());
+        metadata["crc32c"] = json!("4242565856");
+        std::fs::write(
+            &metadata_path,
+            serde_json::to_vec_pretty(&metadata).expect("metadata JSON"),
+        )
+        .expect("large official CRC should be written");
         let reset = runtime
             .application()
             .oneshot(request(Method::POST, "/internal/reset", Body::empty()))
