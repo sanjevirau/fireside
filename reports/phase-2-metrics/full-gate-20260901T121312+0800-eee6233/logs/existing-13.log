@@ -1,0 +1,105 @@
+npm notice run fireside-conformance@0.0.1 test:official
+npm notice run node --import tsx src/run-official.ts
+i  firestore: downloading cloud-firestore-emulator-v1.22.0.jar...
+
+i  emulators: Starting emulators: firestore
+i  emulators: Detected demo project ID "demo-fireside-phase0", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+⚠  firestore: The edition configured in your firebase.json#firestore and firebase.json#emulators.firestore do not match. The latter will be used to start up the Firestore emulator.
+⚠  firestore: Cloud Firestore Emulator does not support multiple databases yet.
+⚠  firestore: Did not find a Cloud Firestore rules file specified in a firebase.json config file.
+⚠  firestore: The emulator will default to allowing all reads and writes. Learn more about this option: https://firebase.google.com/docs/emulator-suite/install_and_configure#security_rules_configuration.
+i  firestore: Firestore Emulator logging to firestore-debug.log
+✔  firestore: Firestore Emulator was started in standard edition.
+✔  firestore: Firestore Emulator UI websocket is running on 9150.
+i  Running script: npm run test:firestore && npm run test:control
+npm notice run fireside-conformance@0.0.1 test:firestore
+npm notice run node --import tsx --test test/ancestor-collection-group.test.ts test/backend-rpcs.test.ts test/error-code-parity.test.ts test/firestore-smoke.test.ts test/historical-reads.test.ts test/listen.test.ts test/named-database.test.ts test/partition-query.test.ts test/pipeline-edition.test.ts test/query-explain.test.ts test/query-features.test.ts test/query-ordering.test.ts test/rest.test.ts test/streaming-write.test.ts test/vector-query.test.ts test/write-transforms.test.ts
+(node:373032) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ collection-group queries honor an ancestor document (4438.396558ms)
+(node:373033) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ CreateDocument assigns an ID, preserves masked fields, and rejects conflicts (4287.112833ms)
+✔ BulkWriter commits independent writes and surfaces per-write errors (196.953777ms)
+✔ BulkWriter accepts a near-5-MiB batch of individually valid documents (293.111083ms)
+✔ list RPCs paginate direct children and preserve masks (98.968269ms)
+✔ ListDocuments orders fields and requires a collection selector (84.321266ms)
+✔ ListDocuments showMissing returns name-only ancestor placeholders (79.774091ms)
+✔ BatchWrite reports per-write conflicts and commits independent writes (59.969524ms)
+(node:373034) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ write conflicts return the production gRPC status codes (6150.579954ms)
+✔ Admin SDK retries an aborted read-write transaction (3459.309121ms)
+(node:373040) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ target accepts an SDK write/read/delete round trip (4064.528673ms)
+(node:373041) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ read_time reconstructs committed versions after a later delete (4527.724008ms)
+(node:373042) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ raw Listen removes a malformed-token target without closing the stream (4168.465357ms)
+✔ query listeners deliver an initial snapshot and ordered changes (380.689741ms)
+✔ raw Listen resumes after a CURRENT checkpoint without replaying prior documents (147.901293ms)
+✔ raw Listen read_time delivers only changes after the historical snapshot (79.626691ms)
+✔ raw Listen falls back to the full target when read_time has expired (60.097194ms)
+(node:373053) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ named databases preserve isolation in the v1 resource path (3996.549572ms)
+(node:373064) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ partitionQuery returns ordered document-name split cursors (3319.059775ms)
+(node:373070) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ ExecutePipeline preserves the production database-edition gate (10280.651315ms)
+(node:373082) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ RunQuery explain separates planning from analyzed execution (4156.494165ms)
+✔ RunAggregationQuery explain reports the aggregate result count (243.199507ms)
+(node:373088) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ queries match the production operator and shaping contract (4570.348456ms)
+(node:373201) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ orderBy follows the production mixed-value order (3394.769233ms)
+✔ integer and double ordering does not lose int64 precision (44.22491ms)
+✔ REST v1 patches, reads, deletes, and reports missing documents (113.171581ms)
+✔ REST v1 commit, batchGet, and runQuery share document semantics (65.368368ms)
+✔ REST v1 commit applies update and document transforms (58.809863ms)
+✔ REST v1 preserves the production missing-index status (29.374057ms)
+(node:373218) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ streaming Write performs a tokened handshake and atomic write (3260.647633ms)
+(node:373228) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ nearest-vector queries match production distance semantics (3330.657936ms)
+(node:373236) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ field transforms use the production commit semantics (3275.227006ms)
+✔ array transforms use production numeric equality (52.561757ms)
+✔ minimum and maximum transforms preserve production numeric types (46.592442ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11675.917866
+npm notice run fireside-conformance@0.0.1 test:control
+npm notice run node --import tsx --test test/control-api.test.ts
+✔ emulator control APIs register triggers and clear data (138.183573ms)
+✔ emulator export writes the named official-format directory (94.170404ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 830.494454
+✔  Script exited successfully (code 0)
+i  emulators: Shutting down emulators.
+i  firestore: Stopping Firestore Emulator
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator
