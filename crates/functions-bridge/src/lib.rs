@@ -1294,6 +1294,104 @@ mod tests {
     }
 
     #[test]
+    fn phase4_extension_trigger_fanout_is_local_and_exact() {
+        #[derive(Default)]
+        struct Recorder(Mutex<Vec<CommitObservation>>);
+
+        impl CommitObserver for Recorder {
+            fn committed(&self, observation: &CommitObservation) {
+                lock(&self.0).push(observation.clone());
+            }
+        }
+
+        let project = "demo-twodart-local";
+        let registry = TriggerRegistry::default();
+        registry
+            .register_v2(
+                project,
+                "us-central1-onWriteInitiateCheckoutSession",
+                &json!({
+                    "eventType": V2_WRITTEN,
+                    "database": "(default)",
+                    "document": {
+                        "matchType": "PATH_PATTERN",
+                        "value": "licenses/{licenseId}/checkout_sessions/{checkoutSessionId}"
+                    }
+                }),
+            )
+            .expect("Twodart checkout trigger");
+        for (key, event_type, pattern) in [
+            (
+                "us-central1-ext-firestore-stripe-payments-createCheckoutSession",
+                V1_CREATE,
+                "licenses/{uid}/checkout_sessions/{id}",
+            ),
+            (
+                "us-central1-ext-firestore-algolia-search-executeIndexOperation",
+                V1_WRITE,
+                "presentations/{presentationId}/algolia/{documentID}",
+            ),
+            (
+                "us-central1-ext-firestore-algolia-userimages-executeIndexOperation",
+                V1_WRITE,
+                "userImages/{documentID}",
+            ),
+        ] {
+            registry
+                .register_v1(
+                    project,
+                    key,
+                    &json!({
+                        "eventTrigger": {
+                            "eventType": event_type,
+                            "resource": format!(
+                                "projects/{project}/databases/(default)/documents/{pattern}"
+                            ),
+                            "service": FIRESTORE_SERVICE
+                        }
+                    }),
+                )
+                .expect("extension trigger");
+        }
+
+        let store = Store::default();
+        let recorder = Arc::new(Recorder::default());
+        store.add_commit_observer(recorder.clone());
+        let database = DatabaseName::new(project, "(default)").expect("database");
+        for path in [
+            "licenses/license/checkout_sessions/session",
+            "presentations/presentation/algolia/document",
+            "userImages/image",
+        ] {
+            store
+                .commit(&[Write::Create {
+                    key: DocumentKey::new(database.clone(), path).expect("document key"),
+                    fields: Fields::new(),
+                }])
+                .expect("synthetic write");
+        }
+        let observations = lock(&recorder.0).clone();
+        let checkout = registry.matching(&observations[0].changes[0]);
+        let presentation = registry.matching(&observations[1].changes[0]);
+        let user_image = registry.matching(&observations[2].changes[0]);
+
+        assert_eq!(checkout.len(), 2);
+        assert!(
+            checkout
+                .iter()
+                .any(|trigger| trigger.generation == TriggerGeneration::V1)
+        );
+        assert!(
+            checkout
+                .iter()
+                .any(|trigger| trigger.generation == TriggerGeneration::V2)
+        );
+        assert_eq!(presentation.len(), 1);
+        assert_eq!(user_image.len(), 1);
+        assert_ne!(presentation[0].key, user_image[0].key);
+    }
+
+    #[test]
     fn v1_dispatch_replays_the_frozen_json_contract() {
         let (v1, _) = registration_bodies();
         let registry = TriggerRegistry::default();

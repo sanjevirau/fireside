@@ -32,11 +32,16 @@ interface FunctionTrigger {
     readonly service?: string;
   };
   readonly httpsTrigger?: unknown;
+  readonly id?: string;
   readonly labels?: Readonly<Record<string, string>>;
+  readonly name?: string;
   readonly platform?: string;
+  readonly region?: string;
 }
 
 interface Backend {
+  readonly env?: Readonly<Record<string, string>>;
+  readonly extensionInstanceId?: string;
   readonly functionTriggers?: readonly FunctionTrigger[];
 }
 
@@ -60,6 +65,7 @@ const extensions = triggers.filter(
   (trigger) => trigger.codebase !== "templates-firebase-function",
 );
 assertFunctionInventory(triggers, custom, extensions);
+assertSafeStripeExtensionConfiguration(functions.backends ?? []);
 
 const hub = await requestJson<Record<string, unknown>>(
   `http://${arguments_.host}:${String(arguments_.hubPort)}/emulators`,
@@ -188,6 +194,16 @@ const triggerRunId = `phase4-runtime-${Date.now()}`;
 await authCreate(arguments_, triggerRunId);
 await setBackgroundDelivery(arguments_, true);
 await exerciseCustomTriggers(arguments_, triggerRunId);
+const customCheckoutDispatch = await exerciseCustomCheckoutDispatch(
+  arguments_,
+  custom,
+  triggerRunId,
+);
+const stripeExtension = await exerciseSafeStripeExtension(
+  arguments_,
+  extensions,
+  triggerRunId,
+);
 const schedules = [];
 for (const topic of expectedTopics) {
   const name = topic.slice(topic.lastIndexOf("/") + 1);
@@ -222,7 +238,9 @@ const evidence = {
   commands,
   functions: {
     custom: custom.map(summary),
+    customCheckoutDispatch,
     extensions: extensions.map(summary),
+    stripeExtension,
     total: triggers.length,
   },
   hubServices: Object.keys(hub).sort(),
@@ -291,6 +309,21 @@ function assertFunctionInventory(
   }
 }
 
+function assertSafeStripeExtensionConfiguration(backends: readonly Backend[]): void {
+  const stripe = backends.find(
+    (backend) => backend.extensionInstanceId === "firestore-stripe-payments",
+  );
+  if (stripe === undefined) throw new Error("Stripe extension backend is missing");
+  if (
+    stripe.env?.SYNC_USERS_ON_CREATE !== "Do not sync" ||
+    stripe.env?.DELETE_STRIPE_CUSTOMERS !== "Do not delete"
+  ) {
+    throw new Error(
+      "Phase 4 safe Stripe probes require sync-on-create and auto-delete to remain disabled",
+    );
+  }
+}
+
 async function runCacheWatcher(arguments_: Arguments): Promise<Record<string, unknown>> {
   const log = join(arguments_.outputDirectory, "logs", "cache-watcher.log");
   const stream = createWriteStream(log, { flags: "wx" });
@@ -356,6 +389,153 @@ async function exerciseCustomTriggers(arguments_: Arguments, id: string): Promis
   if (!deletion.ok) throw new Error(`font trigger deletion returned ${String(deletion.status)}`);
 }
 
+async function exerciseCustomCheckoutDispatch(
+  arguments_: Arguments,
+  custom: readonly FunctionTrigger[],
+  id: string,
+): Promise<Record<string, unknown>> {
+  const trigger = requiredTrigger(custom, "onWriteInitiateCheckoutSession");
+  const document = `licenses/${id}/checkout_sessions/direct`;
+  const body = await frozenV2DispatchBody();
+  const response = await fetch(
+    `http://${arguments_.host}:${String(arguments_.functionsPort)}/functions/projects/${arguments_.projectId}/triggers/${requiredTriggerId(trigger)}`,
+    {
+      body,
+      headers: {
+        "ce-database": "(default)",
+        "ce-datacontenttype": "application/protobuf",
+        "ce-dataschema": "https://github.com/googleapis/google-cloudevents/blob/main/proto/google/events/cloud/firestore/v1/data.proto",
+        "ce-document": document,
+        "ce-id": `phase4-direct-${id}`,
+        "ce-location": trigger.region ?? "us-central1",
+        "ce-namespace": "(default)",
+        "ce-project": arguments_.projectId,
+        "ce-source": `//firestore.googleapis.com/projects/projects/${arguments_.projectId}/databases/(default)`,
+        "ce-specversion": "1.0",
+        "ce-subject": `documents/${document}`,
+        "ce-time": new Date(Math.floor(Date.now() / 1_000) * 1_000).toISOString(),
+        "ce-type": "google.cloud.firestore.document.v1.written",
+        "content-type": "application/protobuf",
+      },
+      method: "POST",
+    },
+  );
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`custom checkout dispatch returned ${String(response.status)}: ${text}`);
+  }
+  return {
+    bodyEncoding: "frozen oracle Base64 google.events.cloud.firestore.v1.DocumentEventData",
+    entryPoint: trigger.entryPoint,
+    status: response.status,
+  };
+}
+
+async function frozenV2DispatchBody(): Promise<string> {
+  const fixture = JSON.parse(
+    await readFile(
+      join(
+        conformanceDirectory,
+        "fixtures",
+        "firebase-suite-v1",
+        "firestore-trigger-registration-and-v1-v2-dispatch",
+        "fixture.json",
+      ),
+      "utf8",
+    ),
+  ) as {
+    readonly dispatches?: readonly {
+      readonly body?: string;
+      readonly headers?: Readonly<Record<string, string>>;
+    }[];
+  };
+  const dispatch = fixture.dispatches?.find(
+    (candidate) => candidate.headers?.["ce-type"]?.startsWith("google.cloud.firestore") === true,
+  );
+  if (dispatch?.body === undefined || dispatch.body.length === 0) {
+    throw new Error("frozen v2 dispatch fixture omitted its Base64 protobuf body");
+  }
+  return dispatch.body;
+}
+
+async function exerciseSafeStripeExtension(
+  arguments_: Arguments,
+  extensions: readonly FunctionTrigger[],
+  id: string,
+): Promise<Record<string, unknown>> {
+  const lifecycleUid = `${id}-stripe-lifecycle`;
+  await authCreate(arguments_, lifecycleUid);
+  await authDelete(arguments_, lifecycleUid);
+
+  const webhook = requiredTrigger(extensions, "handleWebhookEvents");
+  const webhookResponse = await fetch(httpsFunctionUrl(arguments_, webhook), {
+    body: "{}",
+    headers: {
+      "content-type": "application/json",
+      "stripe-signature": "phase4-invalid-signature",
+    },
+    method: "POST",
+  });
+  const webhookBody = await webhookResponse.text();
+  if (webhookResponse.status !== 401 || !webhookBody.includes("Invalid Secret")) {
+    throw new Error(
+      `Stripe extension webhook did not reject the synthetic signature: ${String(webhookResponse.status)} ${webhookBody}`,
+    );
+  }
+
+  const portal = requiredTrigger(extensions, "createPortalLink");
+  const portalResponse = await fetch(httpsFunctionUrl(arguments_, portal), {
+    body: JSON.stringify({ data: { returnUrl: "https://example.test/phase4" } }),
+    headers: { "content-type": "application/json", Origin: "http://localhost" },
+    method: "POST",
+  });
+  const portalBody = (await portalResponse.json()) as {
+    readonly error?: { readonly status?: string };
+  };
+  if (
+    portalResponse.status !== 401 ||
+    portalBody.error?.status?.toUpperCase() !== "UNAUTHENTICATED"
+  ) {
+    throw new Error(
+      `Stripe extension callable did not reject the unauthenticated probe: ${String(portalResponse.status)} ${JSON.stringify(portalBody)}`,
+    );
+  }
+
+  return {
+    authLifecycle: {
+      createCustomer: "delivered with sync-on-create disabled",
+      onUserDeleted: "delivered with auto-delete disabled",
+    },
+    callable: { entryPoint: portal.entryPoint, status: portalBody.error?.status },
+    externalProviderRequests: 0,
+    webhook: { entryPoint: webhook.entryPoint, status: webhookResponse.status },
+  };
+}
+
+function httpsFunctionUrl(arguments_: Arguments, trigger: FunctionTrigger): string {
+  return `http://${arguments_.host}:${String(arguments_.functionsPort)}/${arguments_.projectId}/${trigger.region ?? "us-central1"}/${trigger.name ?? trigger.entryPoint ?? ""}`;
+}
+
+function requiredTrigger(
+  triggers: readonly FunctionTrigger[],
+  entryPoint: string,
+): FunctionTrigger {
+  const matches = triggers.filter((trigger) => trigger.entryPoint === entryPoint);
+  if (matches.length !== 1) {
+    throw new Error(`expected one ${entryPoint} trigger, observed ${String(matches.length)}`);
+  }
+  return matches[0]!;
+}
+
+function requiredTriggerId(trigger: FunctionTrigger): string {
+  if (trigger.id === undefined || trigger.id.length === 0) {
+    throw new Error(`trigger ${String(trigger.entryPoint)} omitted its region-qualified id`);
+  }
+  // firebase-tools exposes the endpoint id through /backends, but registers
+  // each background handler under a zero-based trigger key.
+  return `${trigger.id}-0`;
+}
+
 async function runSteadyStateTriggerWindow(
   arguments_: Arguments,
   id: string,
@@ -417,6 +597,18 @@ async function authCreate(arguments_: Arguments, uid: string): Promise<void> {
     },
   );
   if (!response.ok) throw new Error(`trigger Auth seed returned ${String(response.status)}`);
+}
+
+async function authDelete(arguments_: Arguments, uid: string): Promise<void> {
+  const response = await fetch(
+    `http://${arguments_.host}:${String(arguments_.authPort)}/identitytoolkit.googleapis.com/v1/projects/${arguments_.projectId}/accounts:delete`,
+    {
+      body: JSON.stringify({ localId: uid }),
+      headers: { Authorization: "Bearer owner", "content-type": "application/json" },
+      method: "POST",
+    },
+  );
+  if (!response.ok) throw new Error(`trigger Auth delete returned ${String(response.status)}`);
 }
 
 function encodeFields(fields: Readonly<Record<string, unknown>>): Record<string, unknown> {
@@ -511,6 +703,8 @@ function summary(trigger: FunctionTrigger): Record<string, unknown> {
     codebase: trigger.codebase ?? null,
     entryPoint: trigger.entryPoint ?? null,
     eventType: trigger.eventTrigger?.eventType ?? null,
+    id: trigger.id ?? null,
+    name: trigger.name ?? null,
     path: trigger.eventTrigger?.eventFilterPathPatterns?.document ?? trigger.eventTrigger?.resource ?? null,
     platform: trigger.platform ?? null,
   };
