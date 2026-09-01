@@ -15,6 +15,7 @@ members = [
   "crates/rules-runtime",
   "crates/storage-front",
   "crates/suite-front",
+  "crates/suite-runtime",
   "crates/watch-broker",
   "crates/webchannel-front",
 ]
@@ -59,6 +60,7 @@ tokio-util = { version = "0.7.17", features = ["io"] }
 time = { version = "0.3.55", features = ["formatting", "parsing"] }
 tower-http = { version = "0.6.11", features = ["fs"] }
 url = "2.5.8"
+zip = { version = "=8.6.0", default-features = false, features = ["deflate"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

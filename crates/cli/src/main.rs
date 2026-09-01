@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::path::PathBuf;
@@ -25,7 +26,9 @@ use fireside_rest_front::{
     router_with_query_policy_memory_rules_and_triggers as rest_router,
 };
 use fireside_rules_runtime::RulesRuntime;
+use fireside_suite_runtime::{StorageBucketConfig, SuiteConfig, SuitePorts, run as run_suite};
 use fireside_webchannel_front::{FirestoreBackend, router as webchannel_router};
+use serde::Deserialize;
 
 // Snapshot and protobuf churn repeatedly frees similarly sized allocations.
 // Mimalloc returns empty pages instead of leaving them resident in glibc arenas.
@@ -102,6 +105,8 @@ enum Command {
     Firestore(FirestoreArgs),
     /// Capture redacted browser-SDK traffic through a streaming reverse proxy.
     CaptureProxy(CaptureProxyArgs),
+    /// Start the complete Firebase-compatible emulator suite.
+    Suite(Box<SuiteArgs>),
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ValueEnum)]
@@ -197,6 +202,71 @@ struct CaptureProxyArgs {
     transport: CaptureTransport,
 }
 
+#[derive(Debug, Args, PartialEq, Eq)]
+struct SuiteArgs {
+    #[arg(long, default_value = "127.0.0.1")]
+    host: String,
+    /// Firebase project root used as the Functions host working directory.
+    #[arg(long = "project-dir", default_value = ".")]
+    project_dir: PathBuf,
+    /// Firebase configuration, relative to --project-dir unless absolute.
+    #[arg(long, default_value = "firebase.json")]
+    config: PathBuf,
+    /// Firebase aliases/targets file, relative to --project-dir unless absolute.
+    #[arg(long = "firebase-rc", default_value = ".firebaserc")]
+    firebase_rc: PathBuf,
+    /// Explicit target=bucket mapping; repeat for multi-bucket local projects.
+    #[arg(long = "storage-bucket")]
+    storage_buckets: Vec<String>,
+    #[arg(long = "project-id")]
+    project_id: String,
+    /// Exact installed firebase-tools package root retained for Functions only.
+    #[arg(long = "firebase-tools-root")]
+    firebase_tools_root: PathBuf,
+    #[arg(long)]
+    node: PathBuf,
+    #[arg(long)]
+    java: PathBuf,
+    #[arg(long = "storage-rules-jar")]
+    storage_rules_jar: PathBuf,
+    #[arg(long = "ui-archive")]
+    ui_archive: PathBuf,
+    #[arg(long = "state-dir")]
+    state_dir: PathBuf,
+    #[arg(long)]
+    import: Option<PathBuf>,
+    #[arg(long = "export-on-exit")]
+    export_on_exit: Option<PathBuf>,
+    #[arg(long = "minimum-functions", default_value_t = 1)]
+    minimum_functions: usize,
+    #[arg(long = "firestore-memory")]
+    firestore_memory: bool,
+    #[arg(long = "worker-threads", default_value_t = default_worker_threads())]
+    worker_threads: usize,
+    #[arg(long = "firestore-port")]
+    firestore_port: Option<u16>,
+    #[arg(long = "auth-port")]
+    auth_port: Option<u16>,
+    #[arg(long = "storage-port")]
+    storage_port: Option<u16>,
+    #[arg(long = "functions-port")]
+    functions_port: Option<u16>,
+    #[arg(long = "pubsub-port")]
+    pubsub_port: Option<u16>,
+    #[arg(long = "hub-port")]
+    hub_port: Option<u16>,
+    #[arg(long = "ui-port")]
+    ui_port: Option<u16>,
+    #[arg(long = "firestore-websocket-port", default_value_t = 9150)]
+    firestore_websocket_port: u16,
+    #[arg(long = "logging-port", default_value_t = 21007)]
+    logging_port: u16,
+    #[arg(long = "eventarc-port", default_value_t = 21008)]
+    eventarc_port: u16,
+    #[arg(long = "tasks-port", default_value_t = 21009)]
+    tasks_port: u16,
+}
+
 fn main() -> ExitCode {
     let allocator_config = match ensure_allocator_environment() {
         Ok(config) => config,
@@ -209,6 +279,243 @@ fn main() -> ExitCode {
     match cli.command {
         Command::Firestore(arguments) => run_firestore_runtime(&arguments, allocator_config),
         Command::CaptureProxy(arguments) => run_capture_proxy_runtime(&arguments),
+        Command::Suite(arguments) => run_suite_runtime(&arguments),
+    }
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct FirebaseProjectConfig {
+    #[serde(default)]
+    emulators: FirebaseEmulators,
+    firestore: Option<FirebaseFirestoreConfig>,
+    #[serde(default)]
+    storage: Vec<FirebaseStorageConfig>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct FirebaseEmulators {
+    firestore: Option<FirebaseEmulatorEndpoint>,
+    auth: Option<FirebaseEmulatorEndpoint>,
+    storage: Option<FirebaseEmulatorEndpoint>,
+    functions: Option<FirebaseEmulatorEndpoint>,
+    pubsub: Option<FirebaseEmulatorEndpoint>,
+    hub: Option<FirebaseEmulatorEndpoint>,
+    ui: Option<FirebaseEmulatorEndpoint>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FirebaseEmulatorEndpoint {
+    port: Option<u16>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FirebaseFirestoreConfig {
+    rules: Option<PathBuf>,
+    indexes: Option<PathBuf>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FirebaseStorageConfig {
+    target: String,
+    rules: PathBuf,
+}
+
+#[derive(Debug, Deserialize)]
+struct FirebaseRc {
+    targets: BTreeMap<String, FirebaseProjectTargets>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FirebaseProjectTargets {
+    storage: BTreeMap<String, Vec<String>>,
+}
+
+fn run_suite_runtime(arguments: &SuiteArgs) -> ExitCode {
+    if arguments.worker_threads == 0 {
+        eprintln!("--worker-threads must be at least 1");
+        return ExitCode::FAILURE;
+    }
+    let config = match resolve_suite_config(arguments) {
+        Ok(config) => config,
+        Err(error) => {
+            eprintln!("suite configuration is invalid: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let runtime = match tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(arguments.worker_threads)
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime,
+        Err(error) => {
+            eprintln!("suite runtime failed to start: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
+    match runtime.block_on(run_suite(config)) {
+        Ok(outcome) => match serde_json::to_string(&outcome) {
+            Ok(outcome) => {
+                eprintln!("fireside suite stopped cleanly: {outcome}");
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("suite outcome failed to encode: {error}");
+                ExitCode::FAILURE
+            }
+        },
+        Err(error) => {
+            eprintln!("suite failed: {error}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn resolve_suite_config(arguments: &SuiteArgs) -> Result<SuiteConfig, String> {
+    let project_dir = absolute_path(&arguments.project_dir)?;
+    let firebase_json = project_path(&project_dir, &arguments.config);
+    let firebase_rc = project_path(&project_dir, &arguments.firebase_rc);
+    let raw_config = read_json::<FirebaseProjectConfig>(&firebase_json)?;
+    let targets = read_json::<FirebaseRc>(&firebase_rc)?;
+    let storage_overrides = parse_storage_overrides(&arguments.storage_buckets)?;
+    let config_dir = firebase_json
+        .parent()
+        .ok_or_else(|| "firebase.json has no parent directory".to_owned())?
+        .to_owned();
+    let (storage_buckets, default_bucket) = resolve_storage_buckets(
+        &config_dir,
+        &raw_config.storage,
+        &targets,
+        &arguments.project_id,
+        &storage_overrides,
+    )?;
+    let firestore = raw_config.firestore.as_ref();
+    let ports = resolve_suite_ports(arguments, &raw_config.emulators);
+    Ok(SuiteConfig {
+        host: arguments.host.clone(),
+        project_id: arguments.project_id.clone(),
+        project_dir,
+        firebase_json,
+        firebase_tools_root: absolute_path(&arguments.firebase_tools_root)?,
+        node: absolute_path(&arguments.node)?,
+        java: absolute_path(&arguments.java)?,
+        storage_rules_jar: absolute_path(&arguments.storage_rules_jar)?,
+        ui_archive: absolute_path(&arguments.ui_archive)?,
+        state_dir: absolute_path(&arguments.state_dir)?,
+        firestore_in_memory: arguments.firestore_memory,
+        firestore_rules: firestore
+            .and_then(|config| config.rules.as_ref())
+            .map(|path| project_path(&config_dir, path)),
+        firestore_indexes: firestore
+            .and_then(|config| config.indexes.as_ref())
+            .map(|path| project_path(&config_dir, path)),
+        storage_buckets,
+        default_bucket,
+        import: arguments.import.as_deref().map(absolute_path).transpose()?,
+        export_on_exit: arguments
+            .export_on_exit
+            .as_deref()
+            .map(absolute_path)
+            .transpose()?,
+        ports,
+        minimum_functions: arguments.minimum_functions,
+    })
+}
+
+fn resolve_storage_buckets(
+    config_dir: &std::path::Path,
+    storage: &[FirebaseStorageConfig],
+    firebase_rc: &FirebaseRc,
+    project: &str,
+    overrides: &BTreeMap<String, String>,
+) -> Result<(Vec<StorageBucketConfig>, String), String> {
+    let project_targets = firebase_rc.targets.get(project);
+    let mut buckets = Vec::with_capacity(storage.len());
+    for entry in storage {
+        let bucket = overrides.get(&entry.target).or_else(|| {
+            project_targets
+                .and_then(|targets| targets.storage.get(&entry.target))
+                .and_then(|buckets| buckets.first())
+        });
+        let bucket = bucket.ok_or_else(|| {
+            format!(
+                "storage target {} has no bucket for {project}; pass --storage-bucket {}=<bucket>",
+                entry.target, entry.target
+            )
+        })?;
+        buckets.push(StorageBucketConfig {
+            bucket: bucket.clone(),
+            rules: project_path(config_dir, &entry.rules),
+        });
+    }
+    let default_bucket = storage
+        .iter()
+        .position(|entry| entry.target == "default")
+        .and_then(|index| buckets.get(index))
+        .or_else(|| buckets.first())
+        .map(|bucket| bucket.bucket.clone())
+        .ok_or_else(|| "firebase.json configures no Storage buckets".to_owned())?;
+    Ok((buckets, default_bucket))
+}
+
+fn parse_storage_overrides(values: &[String]) -> Result<BTreeMap<String, String>, String> {
+    let mut overrides = BTreeMap::new();
+    for value in values {
+        let (target, bucket) = value
+            .split_once('=')
+            .filter(|(target, bucket)| !target.is_empty() && !bucket.is_empty())
+            .ok_or_else(|| format!("invalid --storage-bucket {value}; expected target=bucket"))?;
+        if overrides
+            .insert(target.to_owned(), bucket.to_owned())
+            .is_some()
+        {
+            return Err(format!("duplicate --storage-bucket target {target}"));
+        }
+    }
+    Ok(overrides)
+}
+
+fn resolve_suite_ports(arguments: &SuiteArgs, config: &FirebaseEmulators) -> SuitePorts {
+    let port = |argument: Option<u16>, configured: &Option<FirebaseEmulatorEndpoint>, fallback| {
+        argument
+            .or_else(|| configured.as_ref().and_then(|endpoint| endpoint.port))
+            .unwrap_or(fallback)
+    };
+    SuitePorts {
+        firestore: port(arguments.firestore_port, &config.firestore, 8080),
+        auth: port(arguments.auth_port, &config.auth, 9099),
+        storage: port(arguments.storage_port, &config.storage, 9199),
+        functions: port(arguments.functions_port, &config.functions, 5001),
+        pubsub: port(arguments.pubsub_port, &config.pubsub, 8085),
+        hub: port(arguments.hub_port, &config.hub, 4400),
+        ui: port(arguments.ui_port, &config.ui, 4000),
+        firestore_websocket: arguments.firestore_websocket_port,
+        logging: arguments.logging_port,
+        eventarc: arguments.eventarc_port,
+        tasks: arguments.tasks_port,
+    }
+}
+
+fn read_json<T: for<'de> Deserialize<'de>>(path: &std::path::Path) -> Result<T, String> {
+    let bytes =
+        std::fs::read(path).map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+    serde_json::from_slice(&bytes).map_err(|error| format!("invalid {}: {error}", path.display()))
+}
+
+fn absolute_path(path: &std::path::Path) -> Result<PathBuf, String> {
+    if path.is_absolute() {
+        return Ok(path.to_owned());
+    }
+    std::env::current_dir()
+        .map(|directory| directory.join(path))
+        .map_err(|error| format!("cannot resolve {}: {error}", path.display()))
+}
+
+fn project_path(root: &std::path::Path, path: &std::path::Path) -> PathBuf {
+    if path.is_absolute() {
+        path.to_owned()
+    } else {
+        root.join(path)
     }
 }
 
@@ -656,9 +963,12 @@ fn normalize_arguments(arguments: impl IntoIterator<Item = OsString>) -> Vec<OsS
         .next()
         .unwrap_or_else(|| OsString::from("fireside"));
     let remaining = arguments.collect::<Vec<_>>();
-    let has_explicit_subcommand = remaining
-        .first()
-        .is_some_and(|argument| matches!(argument.to_str(), Some("firestore" | "capture-proxy")));
+    let has_explicit_subcommand = remaining.first().is_some_and(|argument| {
+        matches!(
+            argument.to_str(),
+            Some("firestore" | "capture-proxy" | "suite")
+        )
+    });
 
     let mut normalized = Vec::with_capacity(remaining.len() + 2);
     normalized.push(executable);
@@ -802,6 +1112,47 @@ mod tests {
         assert_eq!(arguments.port, 9091);
         assert_eq!(arguments.target, "java");
         assert_eq!(arguments.transport, CaptureTransport::WebChannel);
+    }
+
+    #[test]
+    fn parses_complete_suite_command_and_storage_targets() {
+        let cli = Cli::try_parse_from([
+            "fireside",
+            "suite",
+            "--project-id",
+            "demo-twodart-local",
+            "--firebase-tools-root",
+            "node_modules/firebase-tools",
+            "--node",
+            "node",
+            "--java",
+            "java",
+            "--storage-rules-jar",
+            "storage-rules.jar",
+            "--ui-archive",
+            "ui.zip",
+            "--state-dir",
+            "state",
+            "--storage-bucket",
+            "default=demo-twodart-local.appspot.com",
+            "--storage-bucket",
+            "assets=assets-local.twodart.com",
+        ])
+        .expect("suite command should parse");
+        let Command::Suite(arguments) = cli.command else {
+            panic!("expected suite command");
+        };
+        assert_eq!(arguments.project_id, "demo-twodart-local");
+        assert_eq!(
+            parse_storage_overrides(&arguments.storage_buckets).expect("targets")["assets"],
+            "assets-local.twodart.com"
+        );
+    }
+
+    #[test]
+    fn duplicate_suite_storage_targets_are_rejected() {
+        let values = vec!["default=a".to_owned(), "default=b".to_owned()];
+        assert!(parse_storage_overrides(&values).is_err());
     }
 
     #[test]
