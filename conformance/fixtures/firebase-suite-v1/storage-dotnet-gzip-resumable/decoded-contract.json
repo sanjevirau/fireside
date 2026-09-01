@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "contract": "gcs-dotnet-gzip-resumable",
+  "request": {
+    "method": "POST",
+    "route": "/upload/storage/v1/b/{bucket}/o?uploadType=resumable",
+    "contentEncoding": "gzip",
+    "decodedContentType": "application/json; charset=utf-8",
+    "decodedBody": {
+      "bucket": "{bucket}",
+      "contentType": "{object-content-type}",
+      "name": "{object-name}"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": "OK",
+    "requiredHeaders": [
+      "location"
+    ]
+  },
+  "source": {
+    "client": "Google.Cloud.Storage.V1 4.13.0",
+    "oracle": "firebase-tools Storage emulator 15.22.0"
+  }
+}

@@ -7,6 +7,7 @@ interface Observation {
   readonly id: string;
   readonly status: number;
   readonly path: string;
+  readonly request?: unknown;
   readonly response: unknown;
   readonly responseHeaders: Readonly<Record<string, string>>;
 }
@@ -40,6 +41,7 @@ interface Fixture {
 const names = [
   "storage-firebase-v0-and-download-tokens",
   "storage-gcs-json-and-resumable-upload",
+  "storage-dotnet-gzip-resumable",
   "storage-multi-bucket-rules-and-import-export",
 ] as const;
 
@@ -104,6 +106,31 @@ test("the GCS fixture freezes resumable semantics and the Java emulator's copy-p
   assert.equal(fixture.invariants.duplicateFinalizeStatus, 400);
   assert.equal(fixture.invariants.canonicalCopyPathStatus, 501);
   assert.equal(fixture.invariants.emulatorCopyAliasStatus, 200);
+});
+
+test("the Twodart .NET fixture freezes gzip-encoded resumable metadata", async () => {
+  const fixture = await load("storage-dotnet-gzip-resumable");
+  assertMetadata(fixture);
+  assert.deepEqual(
+    fixture.observations.map(({ id, status }) => ({ id, status })),
+    [
+      { id: "dotnet-gzip-resumable-start", status: 200 },
+      { id: "dotnet-gzip-resumable-finalize", status: 200 },
+      { id: "dotnet-sdk-two-bucket-round-trip", status: 200 },
+    ],
+  );
+  assert.equal(fixture.invariants.contentEncoding, "gzip");
+  assert.equal(fixture.invariants.decodedMetadataIsJson, true);
+  assert.equal(fixture.invariants.nameComesFromDecodedMetadata, true);
+  assert.equal(fixture.invariants.officialStartStatus, 200);
+  assert.equal(fixture.invariants.officialFinalizeStatus, 200);
+  assert.equal(fixture.invariants.twoBucketRoundTripPassed, true);
+  const start = observation(fixture, "dotnet-gzip-resumable-start");
+  assert.equal(nestedString(start, ["request", "headers", "content-encoding"]), "gzip");
+  assert.equal(
+    nestedString(start, ["request", "decoded", "name"]),
+    "_firesidePhase4/<run-id>/0-火🔥.txt",
+  );
 });
 
 test("the two Twodart Storage rules remain distinct and export/re-import is byte exact", async () => {

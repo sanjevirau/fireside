@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "target": "official-firebase-tools-storage-emulator",
+  "targetVersion": "15.22.0",
+  "targetProject": "demo-twodart-local",
+  "capturedAt": "2026-09-02T01:39:00+08:00",
+  "hypothesis": "Twodart's pinned Google.Cloud.Storage.V1 client gzip-compresses resumable-upload metadata and the official emulator accepts it",
+  "credentialsStored": false,
+  "accessTokensStored": false,
+  "realUserDataStored": false,
+  "rulesRuntimeSha256": "0cd52db6f6271d62078f805220706377c849220b73bd68aa27078d977df9c900",
+  "client": {
+    "runtime": ".NET 10.0.0",
+    "firebaseAdmin": "3.4.0",
+    "googleCloudFirestore": "4.0.0",
+    "googleCloudStorage": "4.13.0",
+    "googleApiDotnetClient": "1.72.0.0"
+  },
+  "observations": [
+    {
+      "id": "dotnet-gzip-resumable-start",
+      "method": "POST",
+      "path": "/upload/storage/v1/b/demo-twodart-local.appspot.com/o?uploadType=resumable&userProject=demo-twodart-local",
+      "request": {
+        "headers": {
+          "content-encoding": "gzip",
+          "content-type": "application/json; charset=utf-8",
+          "x-upload-content-length": "<payload-byte-length>",
+          "x-upload-content-type": "text/plain; charset=utf-8"
+        },
+        "decoded": {
+          "bucket": "demo-twodart-local.appspot.com",
+          "contentType": "text/plain; charset=utf-8",
+          "name": "_firesidePhase4/<run-id>/0-火🔥.txt"
+        },
+        "compressed": true
+      },
+      "status": 200,
+      "responseHeaders": {
+        "location": "<storage-origin>/upload/storage/v1/b/demo-twodart-local.appspot.com/o?name=<encoded-object-name>&uploadType=resumable&upload_id=<upload-id>"
+      },
+      "response": "OK"
+    },
+    {
+      "id": "dotnet-gzip-resumable-finalize",
+      "method": "PUT",
+      "path": "<resumable-location>",
+      "request": {
+        "utf8": ".NET Admin demo-twodart-local.appspot.com 0 火🔥\n"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8"
+      },
+      "response": {
+        "bucket": "demo-twodart-local.appspot.com",
+        "name": "_firesidePhase4/<run-id>/0-火🔥.txt",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    {
+      "id": "dotnet-sdk-two-bucket-round-trip",
+      "method": "SDK",
+      "path": "Google.Cloud.Storage.V1.StorageClient",
+      "request": {
+        "buckets": [
+          "demo-twodart-local.appspot.com",
+          "assets-local.twodart.com"
+        ],
+        "operationsPerBucket": 5
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "response": {
+        "passed": true,
+        "upload": true,
+        "download": true,
+        "metadata": true,
+        "list": true,
+        "delete": true
+      }
+    }
+  ],
+  "invariants": {
+    "contentEncoding": "gzip",
+    "decodedMetadataIsJson": true,
+    "nameComesFromDecodedMetadata": true,
+    "officialStartStatus": 200,
+    "officialFinalizeStatus": 200,
+    "twoBucketRoundTripPassed": true
+  }
+}
