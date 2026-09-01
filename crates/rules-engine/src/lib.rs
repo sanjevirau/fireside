@@ -6,8 +6,16 @@
 #![forbid(unsafe_code)]
 
 mod ast;
+mod evaluator;
 mod lexer;
+mod model;
 mod parser;
+
+pub use model::{
+    AtomicEvaluationResult, Auth, DocumentAccess, DocumentAccessError, EmptyDocumentAccess,
+    EvaluationRequest, EvaluationResult, LatLng, Query, RequestOperation, Resource, RulesDuration,
+    RuntimeError, Timestamp, TimestampParseError, Value,
+};
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
@@ -80,6 +88,27 @@ impl Ruleset {
             expressions: self.program.expression_count(),
         }
     }
+
+    /// Evaluates one request against this immutable ruleset and snapshot.
+    #[must_use]
+    pub fn evaluate<A: DocumentAccess + ?Sized>(
+        &self,
+        request: &EvaluationRequest,
+        access: &A,
+    ) -> EvaluationResult {
+        evaluator::evaluate(&self.program, request, access)
+    }
+
+    /// Evaluates a transaction or batched write with one shared 20-access
+    /// budget while retaining the frozen 10-access per-operation limit.
+    #[must_use]
+    pub fn evaluate_atomic<A: DocumentAccess + ?Sized>(
+        &self,
+        requests: &[EvaluationRequest],
+        access: &A,
+    ) -> AtomicEvaluationResult {
+        evaluator::evaluate_atomic(&self.program, requests, access)
+    }
 }
 
 /// Compiles Firestore Security Rules v2 source without consulting runtime data.
@@ -103,6 +132,7 @@ pub fn compile(source: &str) -> Result<Ruleset, Vec<Diagnostic>> {
     let program = parser::parse(source)
         .map_err(|error| vec![diagnostic(source, error.offset, error.message)])?;
     let mut validation = Vec::new();
+    validate_function_map(source, &program.functions, &mut validation);
     for block in &program.matches {
         validate_functions(source, block, &mut validation);
     }
@@ -116,9 +146,19 @@ pub fn compile(source: &str) -> Result<Ruleset, Vec<Diagnostic>> {
 }
 
 fn validate_functions(source: &str, block: &MatchBlock, diagnostics: &mut Vec<Diagnostic>) {
-    let function_names = block.functions.keys().cloned().collect::<BTreeSet<_>>();
-    let graph = block
-        .functions
+    validate_function_map(source, &block.functions, diagnostics);
+    for child in &block.children {
+        validate_functions(source, child, diagnostics);
+    }
+}
+
+fn validate_function_map(
+    source: &str,
+    functions: &BTreeMap<String, ast::Function>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let function_names = functions.keys().cloned().collect::<BTreeSet<_>>();
+    let graph = functions
         .iter()
         .map(|(name, function)| {
             let mut calls = BTreeSet::new();
@@ -146,9 +186,6 @@ fn validate_functions(source: &str, block: &MatchBlock, diagnostics: &mut Vec<Di
                 format!("recursive function call is not allowed: {cycle}"),
             )),
         }
-    }
-    for child in &block.children {
-        validate_functions(source, child, diagnostics);
     }
 }
 

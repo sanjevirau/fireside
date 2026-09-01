@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 #[derive(Clone, Debug)]
 pub(crate) struct Program {
+    pub(crate) functions: BTreeMap<String, Function>,
     pub(crate) matches: Vec<MatchBlock>,
 }
 
@@ -15,7 +16,12 @@ impl Program {
     }
 
     pub(crate) fn function_count(&self) -> usize {
-        self.matches.iter().map(MatchBlock::function_count).sum()
+        self.functions.len()
+            + self
+                .matches
+                .iter()
+                .map(MatchBlock::function_count)
+                .sum::<usize>()
     }
 
     pub(crate) fn pattern_segment_count(&self) -> usize {
@@ -30,11 +36,34 @@ impl Program {
     }
 
     pub(crate) fn parameter_count(&self) -> usize {
-        self.matches.iter().map(MatchBlock::parameter_count).sum()
+        self.functions
+            .values()
+            .map(|function| function.parameters.len())
+            .sum::<usize>()
+            + self
+                .matches
+                .iter()
+                .map(MatchBlock::parameter_count)
+                .sum::<usize>()
     }
 
     pub(crate) fn expression_count(&self) -> usize {
-        self.matches.iter().map(MatchBlock::expression_count).sum()
+        self.functions
+            .values()
+            .map(|function| {
+                function
+                    .lets
+                    .iter()
+                    .map(|(_, expression)| expression.node_count())
+                    .sum::<usize>()
+                    + function.result.node_count()
+            })
+            .sum::<usize>()
+            + self
+                .matches
+                .iter()
+                .map(MatchBlock::expression_count)
+                .sum::<usize>()
     }
 }
 

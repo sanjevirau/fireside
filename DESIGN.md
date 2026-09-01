@@ -1351,6 +1351,29 @@ never partially replace the active ruleset. The compiler regression suite
 replays the frozen production parse boundary and compiles the full complex
 ruleset before evaluator or transport integration is allowed to rely on it.
 
+The compiled evaluator walks every matching declaration and OR-composes all
+applicable allows, including overlapping and nested relative matches. A v2
+recursive wildcard backtracks across zero or more path segments and binds a
+path value, while a single wildcard binds one string segment. Service-scoped
+functions are visible throughout the service; match-scoped functions are
+inherited by their nested matches. Function frames preserve wildcard, request,
+and resource bindings while adding parameters and ordered `let` bindings.
+Runtime type, missing-field, bounds, missing-document, and arithmetic failures
+become deny verdicts rather than process failures.
+
+Rules numeric semantics retain integer arithmetic when both operands are
+integers, including truncating integer division; mixed numeric operations use
+doubles. `Map.diff()` is oriented from its receiver to its argument, and
+`affectedKeys().hasOnly(allowed)` means the affected-key set is a subset of the
+allowed set. `exists()` and `get()` share one current-snapshot cache;
+`getAfter()` has a separate cache backed by the atomic pending-write snapshot.
+Atomic evaluation enforces both 10 accesses per individual operation and 20
+distinct accesses across the transaction or batch. Evaluator regression tests
+replay all 1,024 generated production verdicts, all 44 targeted language cases,
+the frozen Java access/`getAfter`/runtime-error observations, the exact
+call-depth and evaluated-expression boundaries, and all 45 complex-rules
+allow/deny cases.
+
 ## 10. Differential harness and fixtures
 
 Identical TypeScript cases use real Google SDKs against:

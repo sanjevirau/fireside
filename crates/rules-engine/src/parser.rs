@@ -44,12 +44,20 @@ impl Parser {
         self.expect(&TokenKind::Dot, "'.' in cloud.firestore")?;
         self.expect_identifier("firestore")?;
         self.expect(&TokenKind::LeftBrace, "'{' after service cloud.firestore")?;
+        let mut functions = BTreeMap::new();
         let mut matches = Vec::new();
         while !self.check(&TokenKind::RightBrace) {
-            if self.check_identifier("match") {
+            if self.check_identifier("function") {
+                let (name, function) = self.function()?;
+                if functions.insert(name.clone(), function).is_some() {
+                    return Err(self.error_at_previous(format!(
+                        "function {name:?} is declared more than once"
+                    )));
+                }
+            } else if self.check_identifier("match") {
                 matches.push(self.match_block()?);
             } else {
-                return Err(self.error("expected a match declaration in service block"));
+                return Err(self.error("expected a function or match declaration in service block"));
             }
         }
         self.advance();
@@ -57,7 +65,7 @@ impl Parser {
         if matches.is_empty() {
             return Err(self.error_at_previous("service must contain at least one match"));
         }
-        Ok(Program { matches })
+        Ok(Program { functions, matches })
     }
 
     fn match_block(&mut self) -> Result<MatchBlock, ParseError> {
