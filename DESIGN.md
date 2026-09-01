@@ -1583,6 +1583,25 @@ First verify trigger CloudEvent dispatch through a jar-swap test using a real
 Gate: `firebase emulators:start` runs the sample project against fireside,
 official SDK suites are green, and Auth/Storage trigger fan-out works.
 
+The immutable Phase 4 gate is frozen in
+`benchmarks/phase-4-twodart-suite.json`. Phase 4 is also the first complete
+Twodart replacement boundary: the normal `bun dev:mprocs` workflow must use
+Fireside for Firestore, Auth, Storage, Pub/Sub-backed scheduling, Hub, rules,
+and persistence. `firebase-tools` may remain only as the pinned Node 24
+Functions and Extensions workload host; none of its official Firestore, Auth,
+Storage, or Pub/Sub services may serve the final gate.
+
+Before product implementation, all thirteen fixture sets named in the frozen
+manifest must be captured from the authorized production project, the official
+suite, or pinned readable source according to the manifest's precedence. The
+gate includes browser, Node, Python, and .NET clients, Twodart's eleven custom
+Functions, Stripe and Algolia Extensions, the cache watcher, two Storage
+buckets and rulesets, combined import/export, lifecycle chaos, same-host Java
+comparison measurements, and the complete transitive Phase 3 gate. The local
+full-data stage must exercise the existing multi-component Twodart corpus,
+including at least 33,353 Storage objects and 6.23 GB of object bytes, without
+committing any real Twodart data to this repository.
+
 ### Phase 5 — Hardening and release
 
 Add property-based query differential fuzzing, multi-day soaks, complete docs,
