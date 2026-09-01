@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "hypothesis": "Official Firestore exports encode every output filename as a repeated field inside one namespace shard message.",
+  "target": "official Firebase Emulator Suite Firestore export",
+  "targetVersion": "cloud-firestore-emulator-v1.21.0 via firebase-tools 15.22.0",
+  "recordedAt": "2026-09-02T01:28:00+08:00",
+  "source": "Twodart local emulator export metadata only; no document values or identifiers are stored",
+  "kindMetadataHex": "0a240a106669726573746f72655f6578706f727410a7c0e2f58ba09603188edddaf68ba09603122a0a0012086f75747075742d3012086f75747075742d3112086f75747075742d3212086f75747075742d33",
+  "expected": {
+    "exportPrefix": "firestore_export",
+    "namespace": "",
+    "files": [
+      "output-0",
+      "output-1",
+      "output-2",
+      "output-3"
+    ],
+    "declaredEntityBytes": 615977676,
+    "physicalShardBytes": 615977676
+  },
+  "redaction": {
+    "documentDataStored": false,
+    "credentialsStored": false,
+    "personalDataStored": false
+  }
+}
