@@ -7,6 +7,7 @@ import { join, resolve } from "node:path";
 
 import { GoogleAuth } from "google-auth-library";
 
+import { emulatorJwtWindow } from "./emulator-jwt.ts";
 import { PHASE3_RULES_PROJECT_ID } from "./phase3-oracle-plan.ts";
 
 const HOST = "127.0.0.1";
@@ -809,11 +810,11 @@ function documentUrl(originValue: string, path: string): string {
 }
 
 function token(uid: string, role: string, tenantId: string): string {
-  const issuedAt = 1_788_200_000;
+  const { authTime, expiresAt, issuedAt } = emulatorJwtWindow();
   return `${base64Url({ alg: "none", typ: "JWT" })}.${base64Url({
     aud: PROJECT_ID,
-    auth_time: issuedAt,
-    exp: issuedAt + 86_400,
+    auth_time: authTime,
+    exp: expiresAt,
     firebase: { sign_in_provider: "custom" },
     iat: issuedAt,
     iss: `https://securetoken.google.com/${PROJECT_ID}`,

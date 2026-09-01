@@ -5,6 +5,8 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+import { emulatorJwtWindow } from "./emulator-jwt.ts";
+
 const HOST = "127.0.0.1";
 const PROJECT_ID = "demo-fireside-phase3-rules";
 const JAVA_VERSION = "1.22.0";
@@ -328,12 +330,12 @@ function documentUrl(originValue: string, path: string): string {
 }
 
 function userToken(): string {
-  const issuedAt = 1_788_200_000;
+  const { authTime, expiresAt, issuedAt } = emulatorJwtWindow();
   const header = base64Url({ alg: "none", typ: "JWT" });
   const payload = base64Url({
     aud: PROJECT_ID,
-    auth_time: issuedAt,
-    exp: issuedAt + 86_400,
+    auth_time: authTime,
+    exp: expiresAt,
     firebase: { sign_in_provider: "custom" },
     iat: issuedAt,
     iss: `https://securetoken.google.com/${PROJECT_ID}`,

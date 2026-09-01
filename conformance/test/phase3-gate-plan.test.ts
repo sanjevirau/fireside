@@ -8,8 +8,20 @@ import {
   assertPhase3TransitiveToolchain,
   type Phase3GateManifest,
 } from "../src/rules/phase3-gate-plan.ts";
+import { emulatorJwtWindow } from "../src/rules/emulator-jwt.ts";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
+
+test("Phase 3 emulator JWT windows remain valid when a gate runs later", () => {
+  const nowMilliseconds = 1_788_292_595_000;
+  const nowSeconds = Math.floor(nowMilliseconds / 1_000);
+  const window = emulatorJwtWindow(nowMilliseconds);
+  assert.equal(window.authTime, nowSeconds - 30);
+  assert.equal(window.issuedAt, nowSeconds - 30);
+  assert.equal(window.expiresAt, nowSeconds - 30 + 86_400);
+  assert.ok(window.issuedAt <= nowSeconds);
+  assert.ok(window.expiresAt > nowSeconds);
+});
 
 async function frozenManifests(): Promise<{
   readonly phase2ManifestText: string;
