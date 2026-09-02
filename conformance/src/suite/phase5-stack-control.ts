@@ -1,0 +1,509 @@
+import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
+import {
+  access,
+  mkdir,
+  readFile,
+  readdir,
+  readlink,
+} from "node:fs/promises";
+import net from "node:net";
+import path from "node:path";
+
+import type { Phase5Manifest } from "./phase5-acceptance-plan.ts";
+
+export type Phase5StackName = "official" | "fireside";
+
+export interface Phase5StackPorts {
+  readonly auth: number;
+  readonly cacheWebsocket: number;
+  readonly firestore: number;
+  readonly functions: number;
+  readonly hub: number;
+  readonly storage: number;
+  readonly ui: number;
+}
+
+export interface StackLaunchInput {
+  readonly datasetName: string;
+  readonly directory: string;
+  readonly evidenceDirectory: string;
+  readonly exportPath: string;
+  readonly firesideBinary: string;
+  readonly javaHome: string;
+  readonly label: string;
+  readonly nodeBinary: string;
+  readonly ports: Phase5StackPorts;
+  readonly runtimeDirectory: string;
+  readonly stack: Phase5StackName;
+  readonly tmuxSession: string;
+}
+
+export interface CacheBuildMetrics {
+  readonly errors: number;
+  readonly inputDocumentCount: number;
+  readonly outputCounts: Readonly<Record<string, number | boolean>>;
+  readonly peakPssBytes: number | null;
+  readonly peakRssBytes: number;
+  readonly readyMilliseconds: number;
+}
+
+export interface RunningPhase5Stack {
+  readonly baseUrl: string;
+  readonly cacheBuild: CacheBuildMetrics;
+  readonly exitMarker: string;
+  readonly exportPath: string;
+  readonly label: string;
+  readonly launchLog: string;
+  readonly ports: Phase5StackPorts;
+  readonly stack: Phase5StackName;
+  readonly tmuxSession: string;
+  readonly twodartNetUrl: string;
+}
+
+export interface StoppedPhase5Stack {
+  readonly exportMetadataPresent: boolean;
+  readonly exitCode: number;
+  readonly shutdownMilliseconds: number;
+}
+
+export function phase5StackPorts(
+  manifest: Phase5Manifest,
+  stack: Phase5StackName,
+): Phase5StackPorts {
+  const block = manifest.stacks[stack].portBlock;
+  const required = (key: string): number => {
+    const value = block[key];
+    if (value === undefined) throw new Error(`${stack} port block omitted ${key}`);
+    return value;
+  };
+  return {
+    auth: required("auth"),
+    cacheWebsocket: required("cacheWebsocket"),
+    firestore: required("firestore"),
+    functions: required("functions"),
+    hub: required("hub"),
+    storage: required("storage"),
+    ui: required("ui"),
+  };
+}
+
+export function renderPhase5StackCommand(input: StackLaunchInput): string {
+  const exactPath = [
+    path.join(input.javaHome, "bin"),
+    "/home/sanjevi/.local/share/mise/shims",
+    "/home/sanjevi/.local/bin",
+    "/usr/local/bin",
+    "/usr/bin",
+    "/bin",
+  ].join(":");
+  const environment: Readonly<Record<string, string>> = {
+    FIREBASE_EMULATOR_TMPDIR: input.runtimeDirectory,
+    FIREBASE_SKIP_PREBUILD: "1",
+    JAVA_HOME: input.javaHome,
+    PATH: exactPath,
+    TWODART_DISABLE_EXTERNALS: "1",
+    TWODART_EMULATOR_EXPORT_OVERRIDE: input.exportPath,
+    TWODART_EMULATOR_JAVA_BIN: path.join(input.javaHome, "bin", "java"),
+    TWODART_FIREBASE_BACKEND: input.stack,
+    TWODART_FIREBASE_NODE_BIN: input.nodeBinary,
+    TWODART_FIRESIDE_BIN: input.firesideBinary,
+    TWODART_PHASE5_STACK: `${input.stack}-${input.label}`,
+  };
+  const exitMarker = path.join(input.evidenceDirectory, `${input.stack}-${input.label}.exit`);
+  const exports = Object.entries(environment)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => `${key}=${shellQuote(value)}`)
+    .join(" ");
+  return [
+    "set +e",
+    `env ${exports} bun dev:mprocs --data ${shellQuote(input.datasetName)}`,
+    "phase5_status=$?",
+    `printf '%s\\n' \"$phase5_status\" > ${shellQuote(exitMarker)}`,
+  ].join("; ");
+}
+
+export async function startPhase5Stack(
+  input: StackLaunchInput,
+  maximumReadySeconds: number,
+  inputDocumentCount: number,
+): Promise<RunningPhase5Stack> {
+  await assertAbsent(input.runtimeDirectory);
+  await mkdir(input.runtimeDirectory, { recursive: true });
+  await mkdir(input.evidenceDirectory, { recursive: true });
+  const launchLog = path.join(
+    input.evidenceDirectory,
+    `${input.stack}-${input.label}-tmux.log`,
+  );
+  const exitMarker = path.join(input.evidenceDirectory, `${input.stack}-${input.label}.exit`);
+  await assertAbsent(launchLog);
+  await assertAbsent(exitMarker);
+  if ((await run("tmux", ["has-session", "-t", input.tmuxSession])).exitCode === 0) {
+    throw new Error(`tmux session already exists: ${input.tmuxSession}`);
+  }
+
+  await requireCommand(
+    "tmux",
+    ["new-session", "-d", "-s", input.tmuxSession, "-c", input.directory],
+    "create Phase 5 tmux session",
+  );
+  await requireCommand(
+    "tmux",
+    ["pipe-pane", "-o", "-t", input.tmuxSession, `cat >> ${shellQuote(launchLog)}`],
+    "attach Phase 5 tmux evidence pipe",
+  );
+  const command = renderPhase5StackCommand(input);
+  await requireCommand(
+    "tmux",
+    ["send-keys", "-t", input.tmuxSession, "-l", command],
+    "send Phase 5 launch command",
+  );
+  await requireCommand(
+    "tmux",
+    ["send-keys", "-t", input.tmuxSession, "Enter"],
+    "execute Phase 5 launch command",
+  );
+
+  const env = await readPortEnvironment(input.directory);
+  const baseUrl = requiredEnvironment(env, "FE_URL");
+  const twodartNetUrl = requiredEnvironment(env, "TWODARTNET_API_URL");
+  const started = performance.now();
+  let peakRssBytes = 0;
+  let peakPssBytes: number | null = 0;
+  const deadline = Date.now() + maximumReadySeconds * 1_000;
+  while (true) {
+    const watcher = await processMetricsContaining(
+      input.directory,
+      "watch-firestore-cache.ts",
+    );
+    peakRssBytes = Math.max(peakRssBytes, watcher.rssBytes);
+    if (watcher.pssBytes === null) peakPssBytes = null;
+    else if (peakPssBytes !== null) peakPssBytes = Math.max(peakPssBytes, watcher.pssBytes);
+
+    const ready = await stackReady(input, baseUrl, twodartNetUrl);
+    if (ready) break;
+    if (await exists(exitMarker)) {
+      const status = (await readFile(exitMarker, "utf8")).trim();
+      throw new Error(`${input.stack} exited before readiness with status ${status}`);
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(`${input.stack} exceeded ${String(maximumReadySeconds)} seconds to ready`);
+    }
+    await delay(1_000);
+  }
+  const cacheLog = await readFile(
+    path.join(input.directory, ".logs", "firebase-cache-watch.log"),
+    "utf8",
+  );
+  const cacheBuild: CacheBuildMetrics = {
+    errors: cacheErrorCount(cacheLog),
+    inputDocumentCount,
+    outputCounts: parseCacheOutputCounts(cacheLog),
+    peakPssBytes,
+    peakRssBytes,
+    readyMilliseconds: performance.now() - started,
+  };
+  if (cacheBuild.errors !== 0) {
+    throw new Error(`${input.stack} cache watcher reported ${String(cacheBuild.errors)} errors`);
+  }
+  return {
+    baseUrl,
+    cacheBuild,
+    exitMarker,
+    exportPath: input.exportPath,
+    label: input.label,
+    launchLog,
+    ports: input.ports,
+    stack: input.stack,
+    tmuxSession: input.tmuxSession,
+    twodartNetUrl,
+  };
+}
+
+export async function stopPhase5Stack(
+  running: RunningPhase5Stack,
+  maximumShutdownSeconds: number,
+): Promise<StoppedPhase5Stack> {
+  const started = performance.now();
+  await requireCommand(
+    "tmux",
+    ["send-keys", "-t", running.tmuxSession, "q"],
+    "request graceful mprocs shutdown",
+  );
+  const deadline = Date.now() + maximumShutdownSeconds * 1_000;
+  while (!(await exists(running.exitMarker))) {
+    if (Date.now() >= deadline) {
+      throw new Error(`${running.stack} did not stop within the lifecycle boundary`);
+    }
+    await delay(1_000);
+  }
+  const exitCode = Number((await readFile(running.exitMarker, "utf8")).trim());
+  if (!Number.isInteger(exitCode) || exitCode !== 0) {
+    throw new Error(`${running.stack} mprocs exited with ${String(exitCode)}`);
+  }
+  const ports = Object.values(running.ports);
+  const listenerDeadline = Date.now() + 60_000;
+  while ((await Promise.all(ports.map(async (port) => portOpen(port)))).some(Boolean)) {
+    if (Date.now() >= listenerDeadline) {
+      throw new Error(`${running.stack} left a listener after graceful shutdown`);
+    }
+    await delay(500);
+  }
+  const exportMetadata = path.join(running.exportPath, "firebase-export-metadata.json");
+  const exportMetadataPresent = await exists(exportMetadata);
+  if (!exportMetadataPresent) {
+    throw new Error(`${running.stack} export-on-exit metadata is missing`);
+  }
+  await requireCommand(
+    "tmux",
+    ["kill-session", "-t", running.tmuxSession],
+    "close completed Phase 5 tmux session",
+  );
+  return {
+    exitCode,
+    exportMetadataPresent,
+    shutdownMilliseconds: performance.now() - started,
+  };
+}
+
+export function parseCacheOutputCounts(log: string): Readonly<Record<string, number | boolean>> {
+  const numeric = (label: string): number => {
+    const match = new RegExp(`^\\s*- ${label}: (\\d+)\\s*$`, "mu").exec(log);
+    return Number(match?.[1] ?? 0);
+  };
+  const presence = (label: string): boolean =>
+    new RegExp(`^\\s*- ${label}: Yes(?: \\([^)]*\\))?\\s*$`, "mu").test(log);
+  return {
+    backgroundImagesMetadata: presence("Background Images Metadata"),
+    colors: numeric("Colors"),
+    coreFreeSlideIds: numeric("Core Free Slide IDs"),
+    editorStyles: numeric("Editor Styles"),
+    fontPairs: numeric("Font Pairs"),
+    fonts: numeric("Fonts"),
+    iconLibraries: numeric("Icon Libraries"),
+    legacyTemplatesMetadata: presence("Legacy Templates Metadata"),
+    tags: numeric("Tags"),
+    themeMetadata: presence("Theme Metadata"),
+    unsplashTopics: numeric("Unsplash Topics"),
+  };
+}
+
+export function cacheOutputDigest(counts: Readonly<Record<string, number | boolean>>): string {
+  return createHash("sha256").update(JSON.stringify(counts)).digest("hex");
+}
+
+async function stackReady(
+  input: StackLaunchInput,
+  baseUrl: string,
+  twodartNetUrl: string,
+): Promise<boolean> {
+  const logs = await Promise.all(
+    [
+      ["firebase-emulator.log", "All emulators ready"],
+      ["firebase-cache-watch.log", "Smart watcher started successfully"],
+      ["templates.log", "Ready in"],
+      ["dotnet.log", "Now listening on:"],
+    ].map(async ([name, pattern]) => {
+      if (name === undefined || pattern === undefined) return false;
+      try {
+        return (await readFile(path.join(input.directory, ".logs", name), "utf8")).includes(pattern);
+      } catch {
+        return false;
+      }
+    }),
+  );
+  if (!logs.every(Boolean)) return false;
+  const portsReady = await Promise.all(
+    Object.values(input.ports).map(async (port) => portOpen(port)),
+  );
+  if (!portsReady.every(Boolean)) return false;
+  const [functions, hub, frontend, dotnet] = await Promise.all([
+    fetchOk(`http://127.0.0.1:${String(input.ports.functions)}/backends`),
+    fetchOk(`http://127.0.0.1:${String(input.ports.hub)}/emulators`),
+    curlOk(baseUrl),
+    curlOk(twodartNetUrl),
+  ]);
+  return functions && hub && frontend && dotnet;
+}
+
+async function curlOk(url: string): Promise<boolean> {
+  const result = await run("curl", [
+    "--connect-timeout",
+    "3",
+    "--max-time",
+    "8",
+    "-k",
+    "-sS",
+    "-o",
+    "/dev/null",
+    "-w",
+    "%{http_code}",
+    url,
+  ]);
+  if (result.exitCode !== 0) return false;
+  const status = Number(result.stdout.trim());
+  return status >= 200 && status < 500;
+}
+
+async function fetchOk(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(5_000) });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function readPortEnvironment(directory: string): Promise<Readonly<Record<string, string>>> {
+  const contents = await readFile(path.join(directory, ".env.ports"), "utf8");
+  return Object.fromEntries(
+    contents
+      .split("\n")
+      .map((line) => /^(?:export\s+)?([A-Z0-9_]+)=(.*)$/u.exec(line.trim()))
+      .filter((match): match is RegExpExecArray => match !== null)
+      .map((match) => {
+        const key = match[1] ?? "";
+        const raw = match[2] ?? "";
+        const value =
+          (raw.startsWith('"') && raw.endsWith('"')) ||
+          (raw.startsWith("'") && raw.endsWith("'"))
+            ? raw.slice(1, -1)
+            : raw;
+        return [key, value];
+      }),
+  );
+}
+
+function requiredEnvironment(
+  environment: Readonly<Record<string, string>>,
+  key: string,
+): string {
+  const value = environment[key];
+  if (value === undefined || value.length === 0) {
+    throw new Error(`Phase 5 stack environment omitted ${key}`);
+  }
+  return value;
+}
+
+async function processMetricsContaining(
+  directory: string,
+  needle: string,
+): Promise<{ readonly pssBytes: number | null; readonly rssBytes: number }> {
+  const entries = await readdir("/proc", { withFileTypes: true });
+  let rssBytes = 0;
+  let pssBytes: number | null = 0;
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !/^\d+$/u.test(entry.name)) continue;
+    try {
+      const [commandBytes, cwd] = await Promise.all([
+        readFile(`/proc/${entry.name}/cmdline`),
+        readlink(`/proc/${entry.name}/cwd`),
+      ]);
+      const command = commandBytes.toString("utf8");
+      const resolvedDirectory = path.resolve(directory);
+      const resolvedCwd = path.resolve(cwd);
+      if (
+        !command.includes(needle) ||
+        (resolvedCwd !== resolvedDirectory &&
+          !resolvedCwd.startsWith(`${resolvedDirectory}${path.sep}`))
+      ) {
+        continue;
+      }
+      const [status, smaps] = await Promise.all([
+        readFile(`/proc/${entry.name}/status`, "utf8"),
+        readFile(`/proc/${entry.name}/smaps_rollup`, "utf8").catch(() => ""),
+      ]);
+      rssBytes += statusKilobytes(status, "VmRSS") * 1_024;
+      if (smaps.length === 0) pssBytes = null;
+      else if (pssBytes !== null) pssBytes += statusKilobytes(smaps, "Pss") * 1_024;
+    } catch {
+      // A watched process can exit between /proc reads.
+    }
+  }
+  return { pssBytes, rssBytes };
+}
+
+function statusKilobytes(contents: string, label: string): number {
+  const match = new RegExp(`^${label}:\\s+(\\d+)\\s+kB$`, "mu").exec(contents);
+  return Number(match?.[1] ?? 0);
+}
+
+function cacheErrorCount(log: string): number {
+  return [
+    /Initial cache build failed/gu,
+    /Failed to rebuild cache/gu,
+    /Error watching /gu,
+    /Failed to start WebSocket server/gu,
+  ].reduce((total, pattern) => total + [...log.matchAll(pattern)].length, 0);
+}
+
+async function portOpen(port: number): Promise<boolean> {
+  return await new Promise<boolean>((resolvePromise) => {
+    const socket = net.createConnection({ host: "127.0.0.1", port });
+    const timer = setTimeout(() => {
+      socket.destroy();
+      resolvePromise(false);
+    }, 500);
+    socket.once("connect", () => {
+      clearTimeout(timer);
+      socket.destroy();
+      resolvePromise(true);
+    });
+    socket.once("error", () => {
+      clearTimeout(timer);
+      resolvePromise(false);
+    });
+  });
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", `'"'"'`)}'`;
+}
+
+async function requireCommand(
+  command: string,
+  arguments_: readonly string[],
+  label: string,
+): Promise<void> {
+  const result = await run(command, arguments_);
+  if (result.exitCode !== 0) {
+    throw new Error(`${label} failed: ${result.stderr.trim()}`);
+  }
+}
+
+async function run(
+  command: string,
+  arguments_: readonly string[],
+): Promise<{ readonly exitCode: number | null; readonly stderr: string; readonly stdout: string }> {
+  return await new Promise((resolvePromise, reject) => {
+    const child = spawn(command, arguments_, { stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk: Buffer) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+    child.once("error", reject);
+    child.once("exit", (exitCode) => resolvePromise({ exitCode, stderr, stdout }));
+  });
+}
+
+async function assertAbsent(candidate: string): Promise<void> {
+  if (await exists(candidate)) throw new Error(`Refusing to overwrite ${candidate}`);
+}
+
+async function exists(candidate: string): Promise<boolean> {
+  try {
+    await access(candidate);
+    return true;
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+async function delay(milliseconds: number): Promise<void> {
+  await new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds));
+}
