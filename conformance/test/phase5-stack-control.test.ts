@@ -148,5 +148,6 @@ test("mprocs control readiness never opens a protocol-less TCP connection", asyn
     /ports\.map\(async \(port\) => listenerOpen\(port\)\)/u,
   );
   assert.match(source, /cleanupFailedStart\(input, exitMarker\)/u);
+  assert.match(source, /child\.once\("close", \(exitCode\) =>/u);
   assert.doesNotMatch(source, /send-keys[\s\S]{0,100}["']q["']/u);
 });

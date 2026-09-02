@@ -41,6 +41,7 @@ test("Phase 5 child-process output drain boundary is frozen", async () => {
 
 test("Phase 5 gate runs the frozen lifecycle in order", async () => {
   const source = await readFile(runnerUrl, "utf8");
+  assert.equal([...source.matchAll(/child\.once\("close"/gu)].length, 2);
   assert.ok(
     source.lastIndexOf("await main();") > source.indexOf("const stackNames"),
     "top-level execution must begin after runtime constants are initialized",

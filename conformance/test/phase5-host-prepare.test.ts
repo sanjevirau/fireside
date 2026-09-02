@@ -1,5 +1,14 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readlink, rm, stat, symlink, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  readlink,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -13,6 +22,13 @@ import {
   renderSafeTwodartEnvironment,
   stageHardlinkedDirectoryTree,
 } from "../src/suite/phase5-host-prepare.ts";
+
+const hostPrepareUrl = new URL("../src/suite/phase5-host-prepare.ts", import.meta.url);
+
+test("Phase 5 host preparation drains captured child output", async () => {
+  const source = await readFile(hostPrepareUrl, "utf8");
+  assert.match(source, /child\.once\("close", \(code, signal\) =>/u);
+});
 
 function applicationUrls(prefix: string): Readonly<Record<string, string>> {
   return Object.fromEntries(

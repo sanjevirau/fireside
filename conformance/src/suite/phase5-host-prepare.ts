@@ -432,7 +432,7 @@ async function capture(command: string, args: readonly string[]): Promise<string
       output += chunk;
     });
     child.once("error", reject);
-    child.once("exit", (code, signal) => {
+    child.once("close", (code, signal) => {
       if (code === 0) resolve();
       else reject(new Error(`${command} exited with ${String(code)} (${String(signal)})`));
     });

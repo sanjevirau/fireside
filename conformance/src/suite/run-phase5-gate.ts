@@ -1130,7 +1130,7 @@ async function runCommand(
       child.kill("SIGTERM");
     }, timeoutMilliseconds);
     child.once("error", reject);
-    child.once("exit", (exitCode, signal) => {
+    child.once("close", (exitCode, signal) => {
       clearTimeout(timer);
       void writeFile(log, Buffer.concat(chunks), { flag: "wx" }).then(
         () => resolvePromise({ exitCode, signal }),
@@ -1168,7 +1168,7 @@ async function capture(command: string, args: readonly string[], cwd: string): P
     child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
     child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
     child.once("error", reject);
-    child.once("exit", (exitCode) => {
+    child.once("close", (exitCode) => {
       if (exitCode === 0) resolvePromise(stdout.trim());
       else reject(new Error(`${command} failed: ${stderr.trim()}`));
     });

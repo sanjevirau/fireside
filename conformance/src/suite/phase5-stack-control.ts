@@ -691,7 +691,7 @@ async function run(
       stderr += chunk.toString();
     });
     child.once("error", reject);
-    child.once("exit", (exitCode) => resolvePromise({ exitCode, stderr, stdout }));
+    child.once("close", (exitCode) => resolvePromise({ exitCode, stderr, stdout }));
   });
 }
 

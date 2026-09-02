@@ -1050,7 +1050,7 @@ async function capture(command: string, arguments_: readonly string[]): Promise<
       stderr += chunk.toString();
     });
     child.once("error", reject);
-    child.once("exit", (exitCode) => {
+    child.once("close", (exitCode) => {
       resolvePromise({ exitCode, stdout: `${stdout}${stderr}` });
     });
   });

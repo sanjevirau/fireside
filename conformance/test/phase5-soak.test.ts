@@ -6,6 +6,7 @@ const runnerUrl = new URL("../src/suite/run-phase5-soak.ts", import.meta.url);
 
 test("the Phase 5 soak runner freezes the two-session app-shaped arithmetic", async () => {
   const source = await readFile(runnerUrl, "utf8");
+  assert.match(source, /child\.once\("close", \(exitCode\) =>/u);
   assert.match(source, /const sessionCount = 2;/u);
   assert.match(source, /const tokenSlots = 20;/u);
   for (const operation of [
