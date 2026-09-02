@@ -1829,6 +1829,13 @@ child process whose stdout or stderr is captured is evaluated on Node's
 `close` event, not `exit`, so revision, health, and command evidence cannot be
 read before the pipes are fully drained.
 
+The Phase 5 parent also resolves the `tsx` import specifier before spawning a
+TypeScript child. Those children intentionally use the repository root as
+their working directory for stable command and evidence paths, while the
+dependency is installed below `conformance/`; a bare `tsx` specifier would
+therefore make Node resolve from the wrong package boundary. Loader-resolution
+failures are gate failures and are preserved without a silent retry.
+
 Mprocs force-quit does not guarantee that application grandchildren have
 exited or released dynamically assigned Portless listeners. After the tmux
 controller closes, the gate therefore scans `/proc` for every process whose

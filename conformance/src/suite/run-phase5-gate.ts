@@ -102,6 +102,7 @@ interface LifecycleRecord {
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(scriptDirectory, "../../..");
 const conformanceDirectory = path.join(repositoryRoot, "conformance");
+const tsxImportSpecifier = import.meta.resolve("tsx");
 const manifestPath = path.join(
   repositoryRoot,
   "benchmarks",
@@ -236,7 +237,7 @@ async function main(): Promise<void> {
         process.execPath,
         [
           "--import",
-          "tsx",
+          tsxImportSpecifier,
           path.join(conformanceDirectory, "src/suite/run-phase5-soak.ts"),
           "--official-dir",
           args.officialDirectory,
@@ -285,7 +286,7 @@ async function main(): Promise<void> {
         process.execPath,
         [
           "--import",
-          "tsx",
+          tsxImportSpecifier,
           path.join(conformanceDirectory, "src/suite/run-phase5-soak.ts"),
           "--official-dir",
           args.officialDirectory,
@@ -497,7 +498,7 @@ async function exercisePair(
       process.execPath,
       [
         "--import",
-        "tsx",
+        tsxImportSpecifier,
         path.join(conformanceDirectory, "src/suite/run-phase5-browser-journeys.ts"),
         "--stack",
         stack,

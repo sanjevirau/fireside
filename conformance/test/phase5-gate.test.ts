@@ -135,6 +135,9 @@ test("Phase 5 child TypeScript loader resolution boundary is frozen", async () =
 test("Phase 5 gate runs the frozen lifecycle in order", async () => {
   const source = await readFile(runnerUrl, "utf8");
   assert.equal([...source.matchAll(/child\.once\("close"/gu)].length, 2);
+  assert.match(source, /const tsxImportSpecifier = import\.meta\.resolve\("tsx"\)/u);
+  assert.equal([...source.matchAll(/"--import",\s+tsxImportSpecifier/gu)].length, 3);
+  assert.doesNotMatch(source, /"--import",\s+"tsx"/u);
   assert.ok(
     source.lastIndexOf("await main();") > source.indexOf("const stackNames"),
     "top-level execution must begin after runtime constants are initialized",
