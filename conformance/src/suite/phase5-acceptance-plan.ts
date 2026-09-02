@@ -10,6 +10,10 @@ export const PHASE5_DATASET_TREE_SHA256 =
   "3505b5fd24dc4e8fb1f9925b5201c6e28dbb993c7a0a2bebb34cb70d13d91fc7";
 
 export interface Phase5Manifest {
+  readonly cacheWatcher: {
+    readonly maximumReadySeconds: number;
+    readonly officialAndFiresideOutputsMustMatch: boolean;
+  };
   readonly dataset: {
     readonly fileBytes: number;
     readonly fileCount: number;

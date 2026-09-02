@@ -25,6 +25,7 @@ export interface Phase5StackPorts {
 }
 
 export interface StackLaunchInput {
+  readonly backendOverride?: Phase5StackName | null;
   readonly datasetName: string;
   readonly directory: string;
   readonly evidenceDirectory: string;
@@ -105,7 +106,9 @@ export function renderPhase5StackCommand(input: StackLaunchInput): string {
     TWODART_DISABLE_EXTERNALS: "1",
     TWODART_EMULATOR_EXPORT_OVERRIDE: input.exportPath,
     TWODART_EMULATOR_JAVA_BIN: path.join(input.javaHome, "bin", "java"),
-    TWODART_FIREBASE_BACKEND: input.stack,
+    ...(input.backendOverride === null
+      ? {}
+      : { TWODART_FIREBASE_BACKEND: input.backendOverride ?? input.stack }),
     TWODART_FIREBASE_NODE_BIN: input.nodeBinary,
     TWODART_FIRESIDE_BIN: input.firesideBinary,
     TWODART_PHASE5_STACK: `${input.stack}-${input.label}`,
