@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -7,6 +8,8 @@ import {
   renderPhase5StackCommand,
   type StackLaunchInput,
 } from "../src/suite/phase5-stack-control.ts";
+
+const controlUrl = new URL("../src/suite/phase5-stack-control.ts", import.meta.url);
 
 const launch: StackLaunchInput = {
   datasetName: "full-data",
@@ -20,10 +23,16 @@ const launch: StackLaunchInput = {
   ports: {
     auth: 23001,
     cacheWebsocket: 23012,
+    eventarc: 23009,
     firestore: 23000,
+    firestoreWebsocket: 23007,
     functions: 23003,
     hub: 23005,
+    logging: 23008,
+    mprocsControl: 23011,
+    pubsub: 23004,
     storage: 23002,
+    tasks: 23010,
     ui: 23006,
   },
   runtimeDirectory: "/gate/runtime/official-initial",
@@ -80,4 +89,16 @@ test("cache summary parsing is content-free and deterministic", () => {
     unsplashTopics: 6,
   });
   assert.equal(cacheOutputDigest(counts), cacheOutputDigest({ ...counts }));
+});
+
+test("mprocs control readiness never opens a protocol-less TCP connection", async () => {
+  const source = await readFile(controlUrl, "utf8");
+  assert.match(
+    source,
+    /name === "mprocsControl" \? listenerOpen\(port\) : portOpen\(port\)/u,
+  );
+  assert.match(
+    source,
+    /ports\.map\(async \(port\) => listenerOpen\(port\)\)/u,
+  );
 });

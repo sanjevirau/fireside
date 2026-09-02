@@ -10,19 +10,9 @@ import {
 import net from "node:net";
 import path from "node:path";
 
-import type { Phase5Manifest } from "./phase5-acceptance-plan.ts";
+import type { Phase5StackPorts } from "./phase5-host-prepare.ts";
 
 export type Phase5StackName = "official" | "fireside";
-
-export interface Phase5StackPorts {
-  readonly auth: number;
-  readonly cacheWebsocket: number;
-  readonly firestore: number;
-  readonly functions: number;
-  readonly hub: number;
-  readonly storage: number;
-  readonly ui: number;
-}
 
 export interface StackLaunchInput {
   readonly backendOverride?: Phase5StackName | null;
@@ -66,27 +56,6 @@ export interface StoppedPhase5Stack {
   readonly exportMetadataPresent: boolean;
   readonly exitCode: number;
   readonly shutdownMilliseconds: number;
-}
-
-export function phase5StackPorts(
-  manifest: Phase5Manifest,
-  stack: Phase5StackName,
-): Phase5StackPorts {
-  const block = manifest.stacks[stack].portBlock;
-  const required = (key: string): number => {
-    const value = block[key];
-    if (value === undefined) throw new Error(`${stack} port block omitted ${key}`);
-    return value;
-  };
-  return {
-    auth: required("auth"),
-    cacheWebsocket: required("cacheWebsocket"),
-    firestore: required("firestore"),
-    functions: required("functions"),
-    hub: required("hub"),
-    storage: required("storage"),
-    ui: required("ui"),
-  };
 }
 
 export function renderPhase5StackCommand(input: StackLaunchInput): string {
@@ -246,7 +215,7 @@ export async function stopPhase5Stack(
   }
   const ports = Object.values(running.ports);
   const listenerDeadline = Date.now() + 60_000;
-  while ((await Promise.all(ports.map(async (port) => portOpen(port)))).some(Boolean)) {
+  while ((await Promise.all(ports.map(async (port) => listenerOpen(port)))).some(Boolean)) {
     if (Date.now() >= listenerDeadline) {
       throw new Error(`${running.stack} left a listener after graceful shutdown`);
     }
@@ -317,7 +286,9 @@ async function stackReady(
   );
   if (!logs.every(Boolean)) return false;
   const portsReady = await Promise.all(
-    Object.values(input.ports).map(async (port) => portOpen(port)),
+    Object.entries(input.ports).map(async ([name, port]) =>
+      name === "mprocsControl" ? listenerOpen(port) : portOpen(port),
+    ),
   );
   if (!portsReady.every(Boolean)) return false;
   const [functions, hub, frontend, dotnet] = await Promise.all([
@@ -456,6 +427,15 @@ async function portOpen(port: number): Promise<boolean> {
       clearTimeout(timer);
       resolvePromise(false);
     });
+  });
+}
+
+async function listenerOpen(port: number): Promise<boolean> {
+  const result = await run("ss", ["-ltnH"]);
+  if (result.exitCode !== 0) return false;
+  return result.stdout.split("\n").some((line) => {
+    const localAddress = line.trim().split(/\s+/u)[3];
+    return localAddress?.endsWith(`:${String(port)}`) === true;
   });
 }
 
