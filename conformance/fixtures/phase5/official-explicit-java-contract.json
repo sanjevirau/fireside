@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "observation": {
+    "capturedAt": "2026-09-02T06:44:22.768Z",
+    "firesideCandidateRevision": "11dadd4442ef81b209191859db2ed9e1fdd1fafb",
+    "twodartRevision": "f424c373b0947ed57db90f7d7f51455fadca547c",
+    "diagnostic": "full-gate-smoke-20260902T144044+0800-11dadd4",
+    "stack": "official",
+    "requestedJavaBinary": "/home/sanjevi/.local/share/mise/installs/java/26.0.2.1/bin/java",
+    "reportedJavaBinary": "/home/sanjevi/.local/share/mise/installs/java/21/bin/java",
+    "failure": "java.lang.OutOfMemoryError: Java heap space",
+    "failureOperation": "seedData while registering the first Firestore Eventarc trigger",
+    "firesideStackStarted": false
+  },
+  "contract": {
+    "environmentVariable": "TWODART_EMULATOR_JAVA_BIN",
+    "selection": "The official fallback must validate and execute the explicitly supplied Java binary instead of allowing an mprocs login shell to select another mise Java version.",
+    "heapPolicy": "The explicit Java selection does not add JAVA_TOOL_OPTIONS or a repository-defined heap cap.",
+    "startupFailurePolicy": "A failed official emulator process must make the Phase 5 stack fail rather than being treated as ready."
+  }
+}
