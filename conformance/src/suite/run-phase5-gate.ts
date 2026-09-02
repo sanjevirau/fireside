@@ -32,6 +32,7 @@ import {
 import {
   cacheOutputDigest,
   PHASE5_EXPORT_SHUTDOWN_SECONDS,
+  PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS,
   readPhase5PortEnvironment,
   startPhase5Stack,
   stopPhase5Stack,
@@ -339,6 +340,12 @@ async function main(): Promise<void> {
       cleanupFailureHashes,
       completedAt: new Date().toISOString(),
       manifestSha256: PHASE5_MANIFEST_SHA256,
+      officialJavaComparison: {
+        defaultHeapFixture:
+          "conformance/fixtures/phase5/official-java-default-heap-import.json",
+        fullDatasetRetryJavaToolOptions: PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS,
+        retryReportedSeparately: true,
+      },
       passed: true,
       schemaVersion: 1,
       smoke: args.smoke,
@@ -445,6 +452,9 @@ async function startPair(
         exportPath,
         firesideBinary: args.firesideBinary,
         javaHome: args.javaHome,
+        ...(stack === "official"
+          ? { javaToolOptions: PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS }
+          : {}),
         label,
         nodeBinary: args.nodeBinary,
         ports: PHASE5_STACK_PORTS[stack],
@@ -698,6 +708,9 @@ async function runFreshColleague(
         exportPath,
         firesideBinary: args.firesideBinary,
         javaHome: args.javaHome,
+        ...(backend === "official"
+          ? { javaToolOptions: PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS }
+          : {}),
         label,
         nodeBinary: args.nodeBinary,
         ports: PHASE5_STACK_PORTS.fireside,
@@ -909,6 +922,12 @@ async function verifyEnvironment(
     manifestSha256: PHASE5_MANIFEST_SHA256,
     os: { arch: arch(), platform: platform(), release: release() },
     projectId: args.projectId,
+    officialJavaComparison: {
+      defaultHeapFixture:
+        "conformance/fixtures/phase5/official-java-default-heap-import.json",
+      fullDatasetRetryJavaToolOptions: PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS,
+      retryReportedSeparately: true,
+    },
     runtimeAssets,
     schemaVersion: 1,
     smoke: args.smoke,
@@ -1072,6 +1091,8 @@ async function writeReport(
     `- Phase 4 baseline: \`${manifest.phase4Baseline.tag}\` at \`${manifest.phase4Baseline.taggedRevision}\`\n` +
     `- Evidence directory: [${relativeEvidence}](${relativeEvidence})\n` +
     `- Host: \`${String(environment.host)}\`, ${String((environment.os as Record<string, unknown>).platform)} ${String((environment.os as Record<string, unknown>).release)} ${String((environment.os as Record<string, unknown>).arch)}\n\n` +
+    `## Official Java comparison boundary\n\n` +
+    `The exact Java 26 untuned-default attempt exhausted the official Firestore emulator heap while importing the 211,202-document corpus; that failed attempt is preserved by \`conformance/fixtures/phase5/official-java-default-heap-import.json\`. The completed official comparison used the existing explicit \`${PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS}\` HotSpot heap option. This retry is reported separately and did not change any functional, lifecycle, soak, or Fireside threshold.\n\n` +
     `## Results\n\n` +
     `- All nine real browser journeys passed against both backends before and after graceful export/restart.\n` +
     `- Firestore, Auth, Storage object, and Storage byte counts matched exactly across backends and lifecycle restart.\n` +

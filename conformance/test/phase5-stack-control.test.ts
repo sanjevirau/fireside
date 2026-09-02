@@ -6,6 +6,7 @@ import {
   cacheOutputDigest,
   PHASE5_DIRECTORY_REAP_SECONDS,
   PHASE5_EXPORT_SHUTDOWN_SECONDS,
+  PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS,
   parseCacheOutputCounts,
   phase5EmulatorProcessMatches,
   renderPhase5MprocsControlCommand,
@@ -22,6 +23,7 @@ const launch: StackLaunchInput = {
   exportPath: "/gate/exports/official/full-data",
   firesideBinary: "/gate/bin/fireside-phase4",
   javaHome: "/home/sanjevi/.local/share/mise/installs/java/26.0.2.1",
+  javaToolOptions: PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS,
   label: "initial",
   nodeBinary: "/home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node",
   ports: {
@@ -50,8 +52,10 @@ test("Phase 5 stack launch uses the exact isolated runtime contract", () => {
     "FIREBASE_EMULATOR_TMPDIR='/gate/runtime/official-initial'",
     "FIREBASE_SKIP_PREBUILD='1'",
     "JAVA_HOME='/home/sanjevi/.local/share/mise/installs/java/26.0.2.1'",
+    "JAVA_TOOL_OPTIONS=''",
     "TWODART_DISABLE_EXTERNALS='1'",
     "TWODART_EMULATOR_EXPORT_OVERRIDE='/gate/exports/official/full-data'",
+    "TWODART_EMULATOR_JAVA_TOOL_OPTIONS='-Xmx8g'",
     "TWODART_FIREBASE_BACKEND='official'",
     "TWODART_FIREBASE_NODE_BIN='/home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node'",
     "TWODART_FIRESIDE_BIN='/gate/bin/fireside-phase4'",
@@ -78,6 +82,7 @@ test("Phase 5 stack launch uses the exact isolated runtime contract", () => {
 test("Phase 5 stack shutdown uses the pinned mprocs control event", () => {
   assert.equal(PHASE5_EXPORT_SHUTDOWN_SECONDS, 600);
   assert.equal(PHASE5_DIRECTORY_REAP_SECONDS, 60);
+  assert.equal(PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS, "-Xmx8g");
   assert.deepEqual(
     renderPhase5MprocsControlCommand("/gate/stack-official", 23011),
     {

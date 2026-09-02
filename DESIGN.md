@@ -1850,6 +1850,17 @@ while ensuring it actually uses the frozen Java executable. Once an emulator
 launch process has been observed, its disappearance before stack readiness is
 an immediate startup failure rather than a 20-minute readiness wait.
 
+The exact Java 26 retry proved that executable selection was necessary but not
+sufficient for the 211,202-document corpus: HotSpot's untuned default heap also
+exhausted inside `seedData`, surfaced through firebase-tools as HTTP 500 while
+the first Eventarc trigger was registered, and left no kernel OOM or failed
+unit. Phase 5 preserves that default attempt as a Java comparison limitation,
+then applies Twodart's existing explicit
+`TWODART_EMULATOR_JAVA_TOOL_OPTIONS=-Xmx8g` escape hatch only to full-data
+official-comparison starts. Fireside starts remain untuned. The retry is labeled
+separately in the report and does not change any functional, lifecycle, soak,
+or Fireside threshold.
+
 ## 12. Benchmarks
 
 Starting in Phase 1, CI tracks fireside and the official Java emulator on the

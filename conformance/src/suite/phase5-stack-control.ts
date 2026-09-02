@@ -16,6 +16,7 @@ export type Phase5StackName = "official" | "fireside";
 
 export const PHASE5_EXPORT_SHUTDOWN_SECONDS = 600;
 export const PHASE5_DIRECTORY_REAP_SECONDS = 60;
+export const PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS = "-Xmx8g";
 
 export interface StackLaunchInput {
   readonly backendOverride?: Phase5StackName | null;
@@ -25,6 +26,7 @@ export interface StackLaunchInput {
   readonly exportPath: string;
   readonly firesideBinary: string;
   readonly javaHome: string;
+  readonly javaToolOptions?: string;
   readonly label: string;
   readonly nodeBinary: string;
   readonly ports: Phase5StackPorts;
@@ -110,10 +112,14 @@ export function renderPhase5StackCommand(input: StackLaunchInput): string {
     FIREBASE_EMULATOR_TMPDIR: input.runtimeDirectory,
     FIREBASE_SKIP_PREBUILD: "1",
     JAVA_HOME: input.javaHome,
+    JAVA_TOOL_OPTIONS: "",
     PATH: exactPath,
     TWODART_DISABLE_EXTERNALS: "1",
     TWODART_EMULATOR_EXPORT_OVERRIDE: input.exportPath,
     TWODART_EMULATOR_JAVA_BIN: path.join(input.javaHome, "bin", "java"),
+    ...(input.javaToolOptions === undefined
+      ? {}
+      : { TWODART_EMULATOR_JAVA_TOOL_OPTIONS: input.javaToolOptions }),
     ...(input.backendOverride === null
       ? {}
       : { TWODART_FIREBASE_BACKEND: input.backendOverride ?? input.stack }),
@@ -219,6 +225,17 @@ export async function startPhase5Stack(
       path.join(input.directory, ".logs", "firebase-cache-watch.log"),
       "utf8",
     );
+    if (input.javaToolOptions !== undefined) {
+      const emulatorLog = await readFile(
+        path.join(input.directory, ".logs", "firebase-emulator.log"),
+        "utf8",
+      );
+      if (!emulatorLog.includes(`flags: ${input.javaToolOptions}`)) {
+        throw new Error(
+          `${input.stack} did not report the required Java comparison flags`,
+        );
+      }
+    }
     const cacheBuild: CacheBuildMetrics = {
       errors: cacheErrorCount(cacheLog),
       inputDocumentCount,

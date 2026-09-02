@@ -143,6 +143,7 @@ test("Phase 5 gate includes smoke, fresh colleague, regression, and checksum pat
   for (const boundary of [
     '"--smoke"',
     'backendOverride: backend',
+    'javaToolOptions: PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS',
     '"TWODART_FIREBASE_BACKEND=official"',
     '"rust-clippy"',
     '"twodart-functions-build"',
