@@ -7,10 +7,8 @@ import {
   mkdir,
   readFile,
   readdir,
-  readlink,
   stat,
   statfs,
-  symlink,
   writeFile,
 } from "node:fs/promises";
 import { arch, cpus, hostname, platform, release, totalmem } from "node:os";
@@ -26,6 +24,7 @@ import {
 } from "./phase5-acceptance-plan.ts";
 import {
   PHASE5_STACK_PORTS,
+  stageHardlinkedDirectoryTree,
   type Phase5StackName,
 } from "./phase5-host-prepare.ts";
 import {
@@ -598,7 +597,7 @@ async function stageLifecycleExports(args: Arguments): Promise<string> {
       "apps/templates-firebase/loadData/datasets",
       name,
     );
-    await ensureDirectorySymlink(source, destination);
+    await stageHardlinkedDirectoryTree(source, destination);
   }
   return name;
 }
@@ -608,7 +607,7 @@ async function runFreshColleague(
   manifest: Phase5Manifest,
   active: Map<Phase5StackName, RunningPhase5Stack>,
 ): Promise<void> {
-  await ensureDirectorySymlink(
+  await stageHardlinkedDirectoryTree(
     args.fullData,
     path.join(
       args.freshDirectory,
@@ -749,6 +748,30 @@ async function verifyEnvironment(
   ) {
     throw new Error("Phase 5 dataset identity diverged from the frozen manifest");
   }
+  const stagedDatasets: Record<string, unknown> = {};
+  for (const [name, directory] of [
+    ["official", args.officialDirectory],
+    ["fireside", args.firesideDirectory],
+  ] as const) {
+    const importRoot = path.join(
+      directory,
+      "apps/templates-firebase/loadData/datasets/full-data",
+    );
+    if (!(await lstat(importRoot)).isDirectory()) {
+      throw new Error(
+        `Phase 5 ${name} import root must be a real directory for firebase-tools lstat parity: ${importRoot}`,
+      );
+    }
+    const identity = await treeIdentity(importRoot);
+    if (
+      identity.fileCount !== dataset.fileCount ||
+      identity.fileBytes !== dataset.fileBytes ||
+      identity.treeSha256 !== dataset.treeSha256
+    ) {
+      throw new Error(`Phase 5 ${name} staged dataset diverged from the frozen input`);
+    }
+    stagedDatasets[name] = { importRoot, ...identity };
+  }
   const runtimeAssets: Record<string, unknown>[] = [];
   for (const expected of manifest.twodartRuntimeAssets.trees) {
     const identity = await treeIdentity(
@@ -816,6 +839,7 @@ async function verifyEnvironment(
     runtimeAssets,
     schemaVersion: 1,
     smoke: args.smoke,
+    stagedDatasets,
     totalMemoryBytes: totalmem(),
     toolchain,
     hostHealth,
@@ -1003,24 +1027,6 @@ async function writeChecksums(directory: string): Promise<void> {
   await writeFile(path.join(directory, "checksums.sha256"), `${lines.join("\n")}\n`, {
     flag: "wx",
   });
-}
-
-async function ensureDirectorySymlink(source: string, destination: string): Promise<void> {
-  if (!(await stat(source)).isDirectory()) throw new Error(`Expected directory: ${source}`);
-  await mkdir(path.dirname(destination), { recursive: true });
-  try {
-    const metadata = await lstat(destination);
-    if (!metadata.isSymbolicLink()) {
-      throw new Error(`Refusing to replace non-symlink: ${destination}`);
-    }
-    const target = await readlink(destination);
-    if (path.resolve(path.dirname(destination), target) !== path.resolve(source)) {
-      throw new Error(`Existing symlink targets the wrong directory: ${destination}`);
-    }
-  } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-    await symlink(source, destination, "dir");
-  }
 }
 
 async function runCommand(

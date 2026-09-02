@@ -9,7 +9,7 @@ import {
   phase5DatasetPaths,
   PHASE5_STACK_PORTS,
   renderSafeTwodartEnvironment,
-  stageHardlinkedDependencyTree,
+  stageHardlinkedDirectoryTree,
 } from "../src/suite/phase5-host-prepare.ts";
 
 test("Phase 5 host preparation uses only synthetic local provider values", () => {
@@ -75,7 +75,7 @@ test("Phase 5 input staging is immutable and uses distinct lifecycle exports", (
   assert.notEqual(fireside.importPath, fireside.exportPath);
 });
 
-test("Phase 5 dependency reuse keeps a real tree with hardlinked files", async () => {
+test("Phase 5 directory staging keeps a real tree with hardlinked files", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "phase5-dependencies-"));
   try {
     const source = path.join(root, "source");
@@ -84,7 +84,7 @@ test("Phase 5 dependency reuse keeps a real tree with hardlinked files", async (
     await writeFile(path.join(source, "package/index.js"), "export const ok = true;\n");
     await symlink("package/index.js", path.join(source, "entry.js"));
 
-    await stageHardlinkedDependencyTree(source, destination);
+    await stageHardlinkedDirectoryTree(source, destination);
 
     assert.equal((await stat(destination)).isDirectory(), true);
     const sourceFile = await stat(path.join(source, "package/index.js"));

@@ -205,7 +205,11 @@ async function main(): Promise<void> {
   await writeFile(path.join(stackRoot, ".env.local"), renderSafeTwodartEnvironment(), {
     mode: 0o600,
   });
-  await stageDirectoryLink(
+  // firebase-tools 15.22.0 probes the import root with lstat(), so a directory
+  // symlink is rejected before it looks for firebase-export-metadata.json.
+  // Hardlink the files into a real directory while keeping one immutable byte
+  // corpus on disk for the differential stacks.
+  await stageHardlinkedDirectoryTree(
     datasetPaths.importPath,
     path.join(
       stackRoot,
@@ -238,7 +242,7 @@ async function main(): Promise<void> {
     if (dependencyRevision !== revision) {
       throw new Error("Dependency source does not use the measured Twodart revision");
     }
-    await stageHardlinkedDependencyTree(
+    await stageHardlinkedDirectoryTree(
       path.join(dependencyRoot, "node_modules"),
       path.join(stackRoot, "node_modules"),
     );
@@ -363,7 +367,7 @@ async function stageDirectoryLink(
   }
 }
 
-export async function stageHardlinkedDependencyTree(
+export async function stageHardlinkedDirectoryTree(
   source: string,
   destination: string,
 ): Promise<void> {
@@ -371,7 +375,7 @@ export async function stageHardlinkedDependencyTree(
   await mkdir(path.dirname(destination), { recursive: true });
   try {
     await lstat(destination);
-    throw new Error(`Refusing to replace dependency staging path: ${destination}`);
+    throw new Error(`Refusing to replace hardlinked staging path: ${destination}`);
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
