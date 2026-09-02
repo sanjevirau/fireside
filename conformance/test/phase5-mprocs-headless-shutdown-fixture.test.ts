@@ -11,9 +11,10 @@ test("mprocs oracle defines deterministic headless lifecycle shutdown", async ()
   const fixture = JSON.parse(await readFile(fixtureUrl, "utf8")) as {
     readonly contract: {
       readonly cliFlag: string;
-      readonly controlEvent: string;
+      readonly controlEventAfterEmulatorExit: string;
       readonly directEmulatorProcessGroupSigintRequired: boolean;
       readonly emulatorGrandchildExitGuaranteed: boolean;
+      readonly forceQuitSafeOnlyAfterEmulatorProcessGroupExited: boolean;
       readonly headlessTransport: string;
       readonly quitRequestsConfiguredChildStop: boolean;
       readonly quitStopsServerAfterChildrenExit: boolean;
@@ -40,9 +41,10 @@ test("mprocs oracle defines deterministic headless lifecycle shutdown", async ()
     version: "0.9.6-twodart.2",
   });
   assert.equal(fixture.contract.cliFlag, "--ctl");
-  assert.equal(fixture.contract.controlEvent, "c: quit");
+  assert.equal(fixture.contract.controlEventAfterEmulatorExit, "c: force-quit");
   assert.equal(fixture.contract.directEmulatorProcessGroupSigintRequired, true);
   assert.equal(fixture.contract.emulatorGrandchildExitGuaranteed, false);
+  assert.equal(fixture.contract.forceQuitSafeOnlyAfterEmulatorProcessGroupExited, true);
   assert.equal(fixture.contract.headlessTransport, "configured TCP control server");
   assert.equal(fixture.contract.quitRequestsConfiguredChildStop, true);
   assert.equal(fixture.contract.terminalKeyDependsOnFocus, true);

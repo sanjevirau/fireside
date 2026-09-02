@@ -13,9 +13,10 @@
   },
   "contract": {
     "cliFlag": "--ctl",
-    "controlEvent": "c: quit",
+    "controlEventAfterEmulatorExit": "c: force-quit",
     "directEmulatorProcessGroupSigintRequired": true,
     "emulatorGrandchildExitGuaranteed": false,
+    "forceQuitSafeOnlyAfterEmulatorProcessGroupExited": true,
     "headlessTransport": "configured TCP control server",
     "quitRequestsConfiguredChildStop": true,
     "terminalKeyDependsOnFocus": true,
@@ -24,6 +25,6 @@
   "observation": {
     "phase5Diagnostic": "full-gate-smoke-20260902T125932+0800-6f0e811",
     "terminalKeyResult": "delivered to focused child terminal",
-    "controlEventResult": "accepted by both isolated mprocs servers; emulator launch groups remained live until direct SIGINT"
+    "controlEventResult": "c: quit left emulator launch groups and one non-emulator watcher live; direct emulator SIGINT completed export, then c: force-quit reaped the remaining controller tree"
   }
 }
