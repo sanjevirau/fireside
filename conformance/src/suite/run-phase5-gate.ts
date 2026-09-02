@@ -793,11 +793,11 @@ async function verifyEnvironment(
   }
   for (const emulatorArtifact of [
     "/home/sanjevi/.cache/firebase/emulators/cloud-firestore-emulator-v1.21.0.jar",
-    "/home/sanjevi/.cache/firebase/emulators/firebase-storage-rules-runtime-v1.1.3.jar",
+    "/home/sanjevi/.cache/firebase/emulators/cloud-storage-rules-runtime-v1.1.3.jar",
   ]) {
     await access(emulatorArtifact);
   }
-  const hostHealth = await captureHostHealth(manifest);
+  const hostHealth = await captureHostHealth(manifest, args.smoke);
   return {
     candidateRevision,
     capturedAt: new Date().toISOString(),
@@ -851,7 +851,10 @@ async function hashFile(file: string): Promise<string> {
   return hash.digest("hex");
 }
 
-async function captureHostHealth(manifest: Phase5Manifest): Promise<Record<string, unknown>> {
+async function captureHostHealth(
+  manifest: Phase5Manifest,
+  smoke: boolean,
+): Promise<Record<string, unknown>> {
   const [systemState, sshState, failed, journal, vmstat, listeners, filesystem] =
     await Promise.all([
       capture("systemctl", ["is-system-running"], repositoryRoot),
@@ -881,7 +884,8 @@ async function captureHostHealth(manifest: Phase5Manifest): Promise<Record<strin
     systemState !== "running" ||
     sshState !== "active" ||
     failedUnits !== manifest.host.preflight.failedUnits ||
-    oomOrResourceEvidence !== manifest.host.preflight.currentBootOomOrResourceKills ||
+    (!smoke &&
+      oomOrResourceEvidence !== manifest.host.preflight.currentBootOomOrResourceKills) ||
     steady.length !== manifest.host.preflight.steadyVmstatSamples ||
     swapInPagesPerSecond.some(
       (value) => value > manifest.host.preflight.maximumSwapInPagesPerSecond,

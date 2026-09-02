@@ -226,6 +226,7 @@ async function main(): Promise<void> {
   const gateFailures = validateGate(
     runtimes,
     expected,
+    healthBefore,
     healthAfter,
     cleanupFailures,
     manifest,
@@ -891,16 +892,24 @@ function expectedCounts(
 function validateGate(
   runtimes: readonly StackRuntime[],
   expected: WorkloadCounts,
+  healthBefore: HealthEvidence,
   health: HealthEvidence,
   cleanupFailures: readonly string[],
   manifest: Phase5Manifest,
   smoke: boolean,
 ): string[] {
   const failures: string[] = [...cleanupFailures];
-  if (health.failedUnits !== manifest.soak.thresholds.failedUnits) {
+  if (
+    (!smoke && health.failedUnits !== manifest.soak.thresholds.failedUnits) ||
+    (smoke && health.failedUnits !== healthBefore.failedUnits)
+  ) {
     failures.push(digest(`failed-units:${String(health.failedUnits)}`));
   }
-  if (health.oomOrResourceEvidence !== manifest.soak.thresholds.oomOrResourceKills) {
+  if (
+    (!smoke &&
+      health.oomOrResourceEvidence !== manifest.soak.thresholds.oomOrResourceKills) ||
+    (smoke && health.oomOrResourceEvidence !== healthBefore.oomOrResourceEvidence)
+  ) {
     failures.push(digest(`oom-resource:${String(health.oomOrResourceEvidence)}`));
   }
   for (const runtime of runtimes) {

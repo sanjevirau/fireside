@@ -64,4 +64,8 @@ test("Phase 5 gate includes smoke, fresh colleague, regression, and checksum pat
   ]) {
     assert.ok(source.includes(boundary), `${boundary} is missing`);
   }
+  assert.match(
+    source,
+    /\(!smoke &&\s+oomOrResourceEvidence !== manifest\.host\.preflight\.currentBootOomOrResourceKills\)/u,
+  );
 });

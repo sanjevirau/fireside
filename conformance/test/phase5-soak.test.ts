@@ -48,6 +48,10 @@ test("the Phase 5 soak measures full stack memory and host health", async () => 
   ]) {
     assert.ok(source.includes(boundary), `${boundary} is missing`);
   }
+  assert.match(source, /!smoke && health\.failedUnits !== manifest\.soak\.thresholds\.failedUnits/u);
+  assert.match(source, /smoke && health\.failedUnits !== healthBefore\.failedUnits/u);
+  assert.match(source, /!smoke &&\s+health\.oomOrResourceEvidence !== manifest\.soak\.thresholds\.oomOrResourceKills/u);
+  assert.match(source, /smoke && health\.oomOrResourceEvidence !== healthBefore\.oomOrResourceEvidence/u);
 });
 
 test("the Phase 5 soak verifies Storage bytes, safe functions, cleanup, and evidence privacy", async () => {
