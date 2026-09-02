@@ -14,6 +14,8 @@ import type { Phase5StackPorts } from "./phase5-host-prepare.ts";
 
 export type Phase5StackName = "official" | "fireside";
 
+export const PHASE5_EXPORT_SHUTDOWN_SECONDS = 600;
+
 export interface StackLaunchInput {
   readonly backendOverride?: Phase5StackName | null;
   readonly datasetName: string;
@@ -307,7 +309,7 @@ async function cleanupFailedStart(
     input.directory,
     input.stack,
     input.firesideBinary,
-    180,
+    PHASE5_EXPORT_SHUTDOWN_SECONDS,
   );
   if (await listenerOpen(input.ports.mprocsControl)) {
     await requestHeadlessMprocsShutdown(input.directory, input.ports.mprocsControl);
@@ -319,7 +321,7 @@ async function cleanupFailedStart(
     );
   }
 
-  const deadline = Date.now() + 180_000;
+  const deadline = Date.now() + PHASE5_EXPORT_SHUTDOWN_SECONDS * 1_000;
   const ports = Object.values(input.ports);
   while (true) {
     const listeners = await Promise.all(ports.map(async (port) => listenerOpen(port)));

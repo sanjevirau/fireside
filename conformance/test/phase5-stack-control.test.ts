@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   cacheOutputDigest,
+  PHASE5_EXPORT_SHUTDOWN_SECONDS,
   parseCacheOutputCounts,
   phase5EmulatorProcessMatches,
   renderPhase5MprocsControlCommand,
@@ -62,6 +63,7 @@ test("Phase 5 stack launch uses the exact isolated runtime contract", () => {
 });
 
 test("Phase 5 stack shutdown uses the pinned mprocs control event", () => {
+  assert.equal(PHASE5_EXPORT_SHUTDOWN_SECONDS, 600);
   assert.deepEqual(
     renderPhase5MprocsControlCommand("/gate/stack-official", 23011),
     {

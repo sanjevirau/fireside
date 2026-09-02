@@ -31,6 +31,7 @@ import {
 } from "./phase5-host-prepare.ts";
 import {
   cacheOutputDigest,
+  PHASE5_EXPORT_SHUTDOWN_SECONDS,
   readPhase5PortEnvironment,
   startPhase5Stack,
   stopPhase5Stack,
@@ -191,7 +192,10 @@ async function main(): Promise<void> {
     if (!args.smoke) {
       for (const stack of stackNames) {
         const running = requiredMap(initial, stack);
-        const stopped = await stopPhase5Stack(running, 180);
+        const stopped = await stopPhase5Stack(
+          running,
+          PHASE5_EXPORT_SHUTDOWN_SECONDS,
+        );
         active.delete(stack);
         lifecycle.set(stack, {
           initial: {
@@ -251,7 +255,10 @@ async function main(): Promise<void> {
 
       for (const stack of stackNames) {
         const running = requiredMap(restarted, stack);
-        const stopped = await stopPhase5Stack(running, 180);
+        const stopped = await stopPhase5Stack(
+          running,
+          PHASE5_EXPORT_SHUTDOWN_SECONDS,
+        );
         active.delete(stack);
         const record = lifecycle.get(stack);
         if (record?.initial === undefined || record.stops?.initial === undefined) {
@@ -297,7 +304,10 @@ async function main(): Promise<void> {
       await assertJsonPassed(path.join(args.outputDirectory, "soak-smoke.json"), "soak smoke");
       for (const stack of stackNames) {
         const running = requiredMap(initial, stack);
-        const stopped = await stopPhase5Stack(running, 180);
+        const stopped = await stopPhase5Stack(
+          running,
+          PHASE5_EXPORT_SHUTDOWN_SECONDS,
+        );
         active.delete(stack);
         lifecycle.set(stack, {
           initial: {
@@ -350,7 +360,7 @@ async function main(): Promise<void> {
     if (!completed) {
       for (const running of [...active.values()].reverse()) {
         try {
-          await stopPhase5Stack(running, 180);
+          await stopPhase5Stack(running, PHASE5_EXPORT_SHUTDOWN_SECONDS);
         } catch (error: unknown) {
           cleanupFailureHashes.push(digest(errorText(error)));
         }
@@ -710,7 +720,7 @@ async function runFreshColleague(
     if (backend === "official" && !log.includes("official Firebase Emulator Suite")) {
       throw new Error("Fresh documented official fallback did not select firebase-tools");
     }
-    await stopPhase5Stack(running, 180);
+    await stopPhase5Stack(running, PHASE5_EXPORT_SHUTDOWN_SECONDS);
     active.delete(running.stack);
   }
   await writeJson(path.join(args.outputDirectory, "fresh-colleague.json"), {
