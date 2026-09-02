@@ -3,6 +3,41 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const runnerUrl = new URL("../src/suite/run-phase5-gate.ts", import.meta.url);
+const outputDrainFixtureUrl = new URL(
+  "../fixtures/phase5/node-child-output-drain-contract.json",
+  import.meta.url,
+);
+
+test("Phase 5 child-process output drain boundary is frozen", async () => {
+  const fixture = JSON.parse(await readFile(outputDrainFixtureUrl, "utf8")) as {
+    readonly contract: { readonly completionEvent: string; readonly reason: string };
+    readonly observation: {
+      readonly candidateRevision: string;
+      readonly diagnostic: string;
+      readonly independentFreshHead: string;
+      readonly reportedRevisions: Readonly<Record<string, string>>;
+      readonly stackWorkloadStarted: boolean;
+    };
+    readonly schemaVersion: number;
+  };
+  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.contract.completionEvent, "close");
+  assert.match(fixture.contract.reason, /fully drained/u);
+  assert.equal(
+    fixture.observation.candidateRevision,
+    "5b51e4de4e97a74c963d6cbd4a176723342c2cad",
+  );
+  assert.equal(
+    fixture.observation.independentFreshHead,
+    "f424c373b0947ed57db90f7d7f51455fadca547c",
+  );
+  assert.deepEqual(fixture.observation.reportedRevisions, {
+    official: "f424c373b0947ed57db90f7d7f51455fadca547c",
+    fireside: "f424c373b0947ed57db90f7d7f51455fadca547c",
+    fresh: "",
+  });
+  assert.equal(fixture.observation.stackWorkloadStarted, false);
+});
 
 test("Phase 5 gate runs the frozen lifecycle in order", async () => {
   const source = await readFile(runnerUrl, "utf8");
