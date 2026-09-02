@@ -25,6 +25,14 @@ test("mprocs oracle defines deterministic headless lifecycle shutdown", async ()
       readonly sourceRevision: string;
       readonly version: string;
     };
+    readonly observation: {
+      readonly fullDatasetExport: {
+        readonly completionObservedAt: string;
+        readonly maximumObservedSeconds: number;
+        readonly minimumShutdownAllowanceSeconds: number;
+        readonly sigintSentAt: string;
+      };
+    };
     readonly schemaVersion: number;
   };
 
@@ -49,4 +57,10 @@ test("mprocs oracle defines deterministic headless lifecycle shutdown", async ()
   assert.equal(fixture.contract.quitRequestsConfiguredChildStop, true);
   assert.equal(fixture.contract.terminalKeyDependsOnFocus, true);
   assert.equal(fixture.contract.quitStopsServerAfterChildrenExit, true);
+  assert.deepEqual(fixture.observation.fullDatasetExport, {
+    completionObservedAt: "2026-09-02T13:38:53+08:00",
+    maximumObservedSeconds: 245,
+    minimumShutdownAllowanceSeconds: 600,
+    sigintSentAt: "2026-09-02T13:34:48+08:00",
+  });
 });
