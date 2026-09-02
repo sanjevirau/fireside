@@ -1829,6 +1829,15 @@ child process whose stdout or stderr is captured is evaluated on Node's
 `close` event, not `exit`, so revision, health, and command evidence cannot be
 read before the pipes are fully drained.
 
+The export boundary is the durable `firebase-export-metadata.json`, not merely
+the disappearance of the firebase-tools launcher command. A full-data smoke
+showed that the launcher match can disappear while firebase-tools is still
+exporting through emulator subprocesses; sending mprocs `c: force-quit` at that
+point delivers a second SIGINT and makes firebase-tools abandon those
+subprocesses. The gate therefore requires the export metadata before
+force-quit. Lifecycle errors still enter directory-scoped settling, so an
+export failure cannot leave an isolated Java emulator or watcher listening.
+
 The Phase 5 parent also resolves the `tsx` import specifier before spawning a
 TypeScript child. Those children intentionally use the repository root as
 their working directory for stable command and evidence paths, while the

@@ -92,6 +92,19 @@ test("Phase 5 stack shutdown uses the pinned mprocs control event", () => {
   );
 });
 
+test("Phase 5 stack shutdown waits for export before force-quit and always settles", async () => {
+  const source = await readFile(controlUrl, "utf8");
+  const stopStart = source.indexOf("export async function stopPhase5Stack");
+  const stopEnd = source.indexOf("async function waitForPhase5ExportMetadata", stopStart);
+  const stopSource = source.slice(stopStart, stopEnd);
+  const exportWait = stopSource.indexOf("await waitForPhase5ExportMetadata");
+  const forceQuit = stopSource.indexOf("await requestHeadlessMprocsShutdown");
+  assert.ok(exportWait >= 0, "shutdown must wait for export metadata");
+  assert.ok(forceQuit > exportWait, "mprocs force-quit must follow completed export");
+  assert.match(stopSource, /await settlePhase5StackCleanup\(running\)/u);
+  assert.match(stopSource, /lifecycle and isolated cleanup both failed/u);
+});
+
 test("Phase 5 stack shutdown identifies only exact emulator launch processes", () => {
   const binary = "/gate/bin/fireside-phase4";
   assert.equal(

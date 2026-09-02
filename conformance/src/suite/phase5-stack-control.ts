@@ -279,34 +279,80 @@ export async function stopPhase5Stack(
   maximumShutdownSeconds: number,
 ): Promise<StoppedPhase5Stack> {
   const started = performance.now();
-  await stopPhase5EmulatorProcessGroup(
-    running.directory,
-    running.stack,
-    running.firesideBinary,
-    maximumShutdownSeconds,
-  );
-  await requestHeadlessMprocsShutdown(running.directory, running.ports.mprocsControl);
   const deadline = Date.now() + maximumShutdownSeconds * 1_000;
-  while (!(await exists(running.exitMarker))) {
+  const exportMetadata = path.join(running.exportPath, "firebase-export-metadata.json");
+  let exitCode: number | null = null;
+  let lifecycleError: unknown;
+  try {
+    await stopPhase5EmulatorProcessGroup(
+      running.directory,
+      running.stack,
+      running.firesideBinary,
+      maximumShutdownSeconds,
+    );
+    await waitForPhase5ExportMetadata(running.stack, exportMetadata, deadline);
+    await requestHeadlessMprocsShutdown(running.directory, running.ports.mprocsControl);
+    while (!(await exists(running.exitMarker))) {
+      if (Date.now() >= deadline) {
+        throw new Error(`${running.stack} did not stop within the lifecycle boundary`);
+      }
+      await delay(1_000);
+    }
+    exitCode = Number((await readFile(running.exitMarker, "utf8")).trim());
+    if (!Number.isInteger(exitCode) || exitCode !== 0) {
+      throw new Error(`${running.stack} mprocs exited with ${String(exitCode)}`);
+    }
+  } catch (error: unknown) {
+    lifecycleError = error;
+  }
+
+  let cleanupError: unknown;
+  try {
+    await settlePhase5StackCleanup(running);
+  } catch (error: unknown) {
+    cleanupError = error;
+  }
+  const exportMetadataPresent = await exists(exportMetadata);
+  if (lifecycleError !== undefined && cleanupError !== undefined) {
+    throw new AggregateError(
+      [lifecycleError, cleanupError],
+      `${running.stack} lifecycle and isolated cleanup both failed`,
+    );
+  }
+  if (lifecycleError !== undefined) throw lifecycleError;
+  if (cleanupError !== undefined) throw cleanupError;
+  if (exitCode === null) throw new Error(`${running.stack} lifecycle omitted its exit code`);
+  return {
+    exitCode,
+    exportMetadataPresent,
+    shutdownMilliseconds: performance.now() - started,
+  };
+}
+
+async function waitForPhase5ExportMetadata(
+  stack: Phase5StackName,
+  exportMetadata: string,
+  deadline: number,
+): Promise<void> {
+  while (!(await exists(exportMetadata))) {
     if (Date.now() >= deadline) {
-      throw new Error(`${running.stack} did not stop within the lifecycle boundary`);
+      throw new Error(`${stack} export-on-exit metadata is missing`);
     }
     await delay(1_000);
   }
-  const exitCode = Number((await readFile(running.exitMarker, "utf8")).trim());
-  if (!Number.isInteger(exitCode) || exitCode !== 0) {
-    throw new Error(`${running.stack} mprocs exited with ${String(exitCode)}`);
+}
+
+async function settlePhase5StackCleanup(running: RunningPhase5Stack): Promise<void> {
+  if (await listenerOpen(running.ports.mprocsControl)) {
+    await requestHeadlessMprocsShutdown(running.directory, running.ports.mprocsControl);
   }
-  const exportMetadata = path.join(running.exportPath, "firebase-export-metadata.json");
-  const exportMetadataPresent = await exists(exportMetadata);
-  if (!exportMetadataPresent) {
-    throw new Error(`${running.stack} export-on-exit metadata is missing`);
+  if ((await run("tmux", ["has-session", "-t", running.tmuxSession])).exitCode === 0) {
+    await requireCommand(
+      "tmux",
+      ["kill-session", "-t", running.tmuxSession],
+      "close completed Phase 5 tmux session",
+    );
   }
-  await requireCommand(
-    "tmux",
-    ["kill-session", "-t", running.tmuxSession],
-    "close completed Phase 5 tmux session",
-  );
   await reapPhase5DirectoryProcessGroups(
     running.directory,
     PHASE5_DIRECTORY_REAP_SECONDS,
@@ -319,11 +365,6 @@ export async function stopPhase5Stack(
     }
     await delay(500);
   }
-  return {
-    exitCode,
-    exportMetadataPresent,
-    shutdownMilliseconds: performance.now() - started,
-  };
 }
 
 async function requestHeadlessMprocsShutdown(
