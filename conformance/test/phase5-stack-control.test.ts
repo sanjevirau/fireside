@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   cacheOutputDigest,
   parseCacheOutputCounts,
+  phase5EmulatorProcessMatches,
   renderPhase5MprocsControlCommand,
   renderPhase5StackCommand,
   type StackLaunchInput,
@@ -67,6 +68,38 @@ test("Phase 5 stack shutdown uses the pinned mprocs control event", () => {
       arguments: ["--server", "127.0.0.1:23011", "--ctl", "c: quit"],
       command: "/gate/stack-official/node_modules/.bin/mprocs",
     },
+  );
+});
+
+test("Phase 5 stack shutdown identifies only exact emulator launch processes", () => {
+  const binary = "/gate/bin/fireside-phase4";
+  assert.equal(
+    phase5EmulatorProcessMatches(
+      "official",
+      "/usr/bin/node\0/gate/stack-official/node_modules/.bin/firebase\0--project\0demo\0emulators:start\0",
+      binary,
+    ),
+    true,
+  );
+  assert.equal(
+    phase5EmulatorProcessMatches(
+      "fireside",
+      `${binary}\0suite\0--host\0${"127.0.0.1"}\0`,
+      binary,
+    ),
+    true,
+  );
+  assert.equal(
+    phase5EmulatorProcessMatches(
+      "official",
+      "/usr/bin/node\0/gate/stack-official/node_modules/.bin/firebase\0deploy\0",
+      binary,
+    ),
+    false,
+  );
+  assert.equal(
+    phase5EmulatorProcessMatches("fireside", `${binary}\0firestore\0`, binary),
+    false,
   );
 });
 

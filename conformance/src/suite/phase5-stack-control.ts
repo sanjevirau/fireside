@@ -45,6 +45,7 @@ export interface RunningPhase5Stack {
   readonly directory: string;
   readonly exitMarker: string;
   readonly exportPath: string;
+  readonly firesideBinary: string;
   readonly label: string;
   readonly launchLog: string;
   readonly ports: Phase5StackPorts;
@@ -72,6 +73,20 @@ export function renderPhase5MprocsControlCommand(
     arguments: ["--server", `127.0.0.1:${String(port)}`, "--ctl", "c: quit"],
     command: path.join(directory, "node_modules", ".bin", "mprocs"),
   };
+}
+
+export function phase5EmulatorProcessMatches(
+  stack: Phase5StackName,
+  command: string,
+  firesideBinary: string,
+): boolean {
+  if (stack === "official") {
+    return (
+      command.includes(`${path.sep}node_modules${path.sep}.bin${path.sep}firebase\0`) &&
+      command.includes("\0emulators:start\0")
+    );
+  }
+  return command.startsWith(`${firesideBinary}\0suite\0`);
 }
 
 export function renderPhase5StackCommand(input: StackLaunchInput): string {
@@ -203,6 +218,7 @@ export async function startPhase5Stack(
       directory: input.directory,
       exitMarker,
       exportPath: input.exportPath,
+      firesideBinary: input.firesideBinary,
       label: input.label,
       launchLog,
       ports: input.ports,
@@ -228,6 +244,12 @@ export async function stopPhase5Stack(
   maximumShutdownSeconds: number,
 ): Promise<StoppedPhase5Stack> {
   const started = performance.now();
+  await stopPhase5EmulatorProcessGroup(
+    running.directory,
+    running.stack,
+    running.firesideBinary,
+    maximumShutdownSeconds,
+  );
   await requestHeadlessMprocsShutdown(running.directory, running.ports.mprocsControl);
   const deadline = Date.now() + maximumShutdownSeconds * 1_000;
   while (!(await exists(running.exitMarker))) {
@@ -281,6 +303,12 @@ async function cleanupFailedStart(
   input: StackLaunchInput,
   exitMarker: string,
 ): Promise<void> {
+  await stopPhase5EmulatorProcessGroup(
+    input.directory,
+    input.stack,
+    input.firesideBinary,
+    180,
+  );
   if (await listenerOpen(input.ports.mprocsControl)) {
     await requestHeadlessMprocsShutdown(input.directory, input.ports.mprocsControl);
   } else if ((await run("tmux", ["has-session", "-t", input.tmuxSession])).exitCode === 0) {
@@ -318,6 +346,114 @@ async function cleanupFailedStart(
       "close cleaned Phase 5 startup session",
     );
   }
+}
+
+async function stopPhase5EmulatorProcessGroup(
+  directory: string,
+  stack: Phase5StackName,
+  firesideBinary: string,
+  maximumShutdownSeconds: number,
+): Promise<void> {
+  const groups = await phase5EmulatorProcessGroups(directory, stack, firesideBinary);
+  if (groups.length === 0) return;
+  if (groups.length !== 1) {
+    throw new Error(
+      `${stack} has ${String(groups.length)} emulator process groups instead of exactly one`,
+    );
+  }
+  const group = groups[0];
+  if (group === undefined || group <= 1) {
+    throw new Error(`${stack} resolved an unsafe emulator process group`);
+  }
+  await assertPhase5ProcessGroupScope(group, directory);
+  try {
+    process.kill(-group, "SIGINT");
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+    return;
+  }
+
+  const deadline = Date.now() + maximumShutdownSeconds * 1_000;
+  while (
+    (await phase5EmulatorProcessGroups(directory, stack, firesideBinary)).includes(group)
+  ) {
+    if (Date.now() >= deadline) {
+      throw new Error(`${stack} emulator process group did not stop cleanly`);
+    }
+    await delay(1_000);
+  }
+}
+
+async function phase5EmulatorProcessGroups(
+  directory: string,
+  stack: Phase5StackName,
+  firesideBinary: string,
+): Promise<readonly number[]> {
+  const groups = new Set<number>();
+  for (const entry of await readdir("/proc", { withFileTypes: true })) {
+    if (!entry.isDirectory() || !/^\d+$/u.test(entry.name)) continue;
+    try {
+      const command = (await readFile(`/proc/${entry.name}/cmdline`)).toString("utf8");
+      if (!phase5EmulatorProcessMatches(stack, command, firesideBinary)) continue;
+      const cwd = path.resolve(await readlink(`/proc/${entry.name}/cwd`));
+      const resolvedDirectory = path.resolve(directory);
+      if (
+        cwd !== resolvedDirectory &&
+        !cwd.startsWith(`${resolvedDirectory}${path.sep}`) &&
+        !command.includes(resolvedDirectory)
+      ) {
+        continue;
+      }
+      const group = processGroupFromStat(await readFile(`/proc/${entry.name}/stat`, "utf8"));
+      if (group > 1) groups.add(group);
+    } catch {
+      // The process can exit between /proc reads.
+    }
+  }
+  return [...groups].sort((left, right) => left - right);
+}
+
+async function assertPhase5ProcessGroupScope(
+  group: number,
+  directory: string,
+): Promise<void> {
+  const resolvedDirectory = path.resolve(directory);
+  let members = 0;
+  for (const entry of await readdir("/proc", { withFileTypes: true })) {
+    if (!entry.isDirectory() || !/^\d+$/u.test(entry.name)) continue;
+    try {
+      const stat = await readFile(`/proc/${entry.name}/stat`, "utf8");
+      if (processGroupFromStat(stat) !== group) continue;
+      members += 1;
+      const [commandBytes, cwdValue] = await Promise.all([
+        readFile(`/proc/${entry.name}/cmdline`),
+        readlink(`/proc/${entry.name}/cwd`),
+      ]);
+      const command = commandBytes.toString("utf8");
+      const cwd = path.resolve(cwdValue);
+      if (
+        cwd !== resolvedDirectory &&
+        !cwd.startsWith(`${resolvedDirectory}${path.sep}`) &&
+        !command.includes(resolvedDirectory)
+      ) {
+        throw new Error(
+          `refusing to signal process group ${String(group)} outside ${resolvedDirectory}`,
+        );
+      }
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+  }
+  if (members === 0) {
+    throw new Error(`emulator process group ${String(group)} disappeared before shutdown`);
+  }
+}
+
+function processGroupFromStat(stat: string): number {
+  const commandEnd = stat.lastIndexOf(")");
+  if (commandEnd < 0) return 0;
+  const fields = stat.slice(commandEnd + 2).trim().split(/\s+/u);
+  return Number(fields[2] ?? 0);
 }
 
 export function parseCacheOutputCounts(log: string): Readonly<Record<string, number | boolean>> {
