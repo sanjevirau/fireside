@@ -12,7 +12,7 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const TWODART_CANDIDATE = "d651466185bbc8203ae07059f09121daa718e5e6";
+const TWODART_CANDIDATE = "6703ee77bb678e6b6ef26237c447b5d13dc51c62";
 
 export type Phase5StackName = "official" | "fireside";
 
