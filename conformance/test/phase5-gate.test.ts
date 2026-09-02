@@ -223,4 +223,5 @@ test("Phase 5 gate includes smoke, fresh colleague, regression, and checksum pat
   assert.match(source, /validateSmokePrerequisite\(args, manifest\)/u);
   assert.match(source, /environment\.candidateRevision !== currentRevision/u);
   assert.match(source, /await verifyChecksumManifest\(smokeEvidence\)/u);
+  assert.match(source, /`phase5-smoke-\$\{digest\(args\.outputDirectory\)\.slice\(0, 16\)\}`/u);
 });

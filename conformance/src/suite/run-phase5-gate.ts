@@ -208,7 +208,7 @@ async function main(): Promise<void> {
         manifest,
         stack,
         "initial",
-        args.smoke ? "phase5-smoke" : "full-data",
+        gateDatasetName(args),
         active,
       );
       initialRunning.set(stack, running);
@@ -469,7 +469,7 @@ async function verifyFinalDatasetIdentity(
   args: Arguments,
   manifest: Phase5Manifest,
 ): Promise<Record<string, unknown>> {
-  const datasetName = args.smoke ? "phase5-smoke" : "full-data";
+  const datasetName = gateDatasetName(args);
   const source = args.smoke
     ? path.join(repositoryRoot, manifest.diagnosticSmoke.dataset.path)
     : args.fullData;
@@ -509,6 +509,12 @@ async function verifyFinalDatasetIdentity(
 }
 
 const stackNames = ["official", "fireside"] as const;
+
+function gateDatasetName(args: Arguments): string {
+  return args.smoke
+    ? `phase5-smoke-${digest(args.outputDirectory).slice(0, 16)}`
+    : "full-data";
+}
 
 async function startStack(
   args: Arguments,
@@ -947,7 +953,7 @@ async function verifyEnvironment(
   const datasetSource = args.smoke
     ? path.join(repositoryRoot, manifest.diagnosticSmoke.dataset.path)
     : args.fullData;
-  const datasetName = args.smoke ? "phase5-smoke" : "full-data";
+  const datasetName = gateDatasetName(args);
   for (const candidate of [
     datasetSource,
     args.runtimeAssetsRoot,
