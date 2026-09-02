@@ -32,7 +32,7 @@ test("the Twodart source oracle freezes the exact Phase 5 browser contract", asy
 
   assert.equal(fixture.schemaVersion, 3);
   assert.equal(fixture.oracle, "readable-twodart-source");
-  assert.equal(fixture.revision, "a4718646a5b5a8a1b54746d42906f8f58468ccb4");
+  assert.equal(fixture.revision, "b13c6bd0b4b6fdb5c211395ebfb35e5eebb50c08");
   assert.equal(fixture.credentialsStored, false);
   assert.equal(fixture.accessTokensStored, false);
   assert.equal(fixture.realUserDataStored, false);
