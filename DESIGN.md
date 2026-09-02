@@ -1844,11 +1844,12 @@ The controlled Linux stack command places every frozen Phase 5 tool directory
 Invoking Bun through a mise shim re-activated the host's Java 21 and .NET
 10.0.100 defaults inside mprocs despite the parent gate having verified Java 26
 and .NET 10.0.301. The official Firestore emulator then exhausted its Java 21
-heap while seeding the 211,202-document corpus. The corrected launcher keeps
-the official comparison untuned—no heap cap or `JAVA_TOOL_OPTIONS` is added—
-while ensuring it actually uses the frozen Java executable. Once an emulator
-launch process has been observed, its disappearance before stack readiness is
-an immediate startup failure rather than a 20-minute readiness wait.
+heap while seeding the 211,202-document corpus. The corrected
+executable-selection attempt kept the official comparison untuned—no heap cap
+or `JAVA_TOOL_OPTIONS` was added—while ensuring it actually used the frozen
+Java executable. Once an emulator launch process has been observed, its
+disappearance before stack readiness is an immediate startup failure rather
+than a 20-minute readiness wait.
 
 The exact Java 26 retry proved that executable selection was necessary but not
 sufficient for the 211,202-document corpus: HotSpot's untuned default heap also
@@ -1860,6 +1861,16 @@ then applies Twodart's existing explicit
 official-comparison starts. Fireside starts remain untuned. The retry is labeled
 separately in the report and does not change any functional, lifecycle, soak,
 or Fireside threshold.
+
+The full-data Twodart cache build also exposed a reusable-system-timestamp
+contract. A `RunQuery` response `read_time` can be supplied by the client as a
+later consistency selector. The identical Java cache build completed, while
+Fireside rejected its own nanosecond-precision response with
+`INVALID_ARGUMENT: read_time cannot have more than microseconds precision`.
+Fireside therefore truncates only system-generated `read_time` values on
+batch-get, structured-query, and aggregation-query responses to whole
+microseconds. User document timestamp fields retain nanosecond precision, and
+the existing strict validation of incoming consistency selectors is unchanged.
 
 ## 12. Benchmarks
 

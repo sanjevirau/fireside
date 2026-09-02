@@ -26,8 +26,8 @@ use tonic::{Request, Response, Status};
 
 use crate::codec::{
     DecodedWrite, decode_database_name, decode_document_name, decode_fields, decode_parent,
-    decode_read_time, decode_write, encode_document_masked, encode_fields, encode_timestamp,
-    encode_value, nested_value,
+    decode_read_time, decode_write, encode_document_masked, encode_fields, encode_system_read_time,
+    encode_timestamp, encode_value, nested_value,
 };
 use crate::google::firestore::v1::batch_get_documents_request;
 use crate::google::firestore::v1::batch_get_documents_response;
@@ -865,7 +865,7 @@ impl Firestore for FirestoreService {
         } else {
             self.snapshot_for_transaction(&database, &token)?
         };
-        let read_time = Some(encode_timestamp(now()));
+        let read_time = Some(encode_system_read_time(now()));
         let request_time = now();
         let mut seen = BTreeSet::new();
         let mut responses = Vec::new();
@@ -1077,7 +1077,7 @@ impl Firestore for FirestoreService {
         let documents = execute(&snapshot, &database, &query, self.query_policy.edition())
             .map_err(|error| query_status(&error))?;
         let execution_duration = started.elapsed();
-        let read_time = Some(encode_timestamp(now()));
+        let read_time = Some(encode_system_read_time(now()));
         let mut responses = Vec::with_capacity(
             documents.len() + usize::from(new_transaction) + usize::from(explain_options.is_some()),
         );
@@ -1252,7 +1252,7 @@ impl Firestore for FirestoreService {
         }
         responses.push(RunAggregationQueryResponse {
             result: Some(result),
-            read_time: Some(encode_timestamp(now())),
+            read_time: Some(encode_system_read_time(now())),
             ..RunAggregationQueryResponse::default()
         });
         if explain_options.is_some() {

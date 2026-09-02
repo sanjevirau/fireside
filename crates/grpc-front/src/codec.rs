@@ -373,6 +373,14 @@ pub(crate) fn encode_timestamp(value: Timestamp) -> ProtoTimestamp {
     }
 }
 
+pub(crate) fn encode_system_read_time(value: Timestamp) -> ProtoTimestamp {
+    let nanos = value.nanos() - (value.nanos() % 1_000);
+    ProtoTimestamp {
+        seconds: value.seconds(),
+        nanos: i32::try_from(nanos).expect("valid nanos fit in i32"),
+    }
+}
+
 pub(crate) fn decode_write(write: proto::Write) -> Result<DecodedWrite, Status> {
     let proto::Write {
         update_mask,
@@ -656,6 +664,23 @@ mod tests {
             classify_listen_read_time(bundle_read_time, current),
             Ok(ReadTimeClass::Retained(read_time))
                 if read_time == Timestamp::new(1_000, 9_999).expect("bundle timestamp is valid")
+        ));
+    }
+
+    #[test]
+    fn system_read_times_are_reusable_at_microsecond_precision() {
+        let timestamp = Timestamp::new(123, 456_789).expect("timestamp is valid");
+
+        assert_eq!(encode_timestamp(timestamp).nanos, 456_789);
+        let read_time = encode_system_read_time(timestamp);
+        assert_eq!(read_time.nanos, 456_000);
+        assert!(matches!(
+            classify_read_time(
+                read_time,
+                Timestamp::new(124, 0).expect("current timestamp is valid"),
+            ),
+            Ok(ReadTimeClass::Retained(value))
+                if value == Timestamp::new(123, 456_000).expect("read time is valid")
         ));
     }
 }
