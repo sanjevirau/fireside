@@ -1829,6 +1829,16 @@ child process whose stdout or stderr is captured is evaluated on Node's
 `close` event, not `exit`, so revision, health, and command evidence cannot be
 read before the pipes are fully drained.
 
+Mprocs force-quit does not guarantee that application grandchildren have
+exited or released dynamically assigned Portless listeners. After the tmux
+controller closes, the gate therefore scans `/proc` for every process whose
+working directory is the isolated stack tree, resolves their process groups,
+and verifies that every member of each group is scoped to that same tree before
+signalling it. Cleanup sends `SIGINT`, escalates to `SIGTERM` after a bounded
+grace interval, and requires zero directory-owned processes before accepting
+the shutdown. The same directory-scoped cleanup runs after a failed startup so
+a rejected comparison cannot contaminate the next namespace.
+
 The controlled Linux stack command places every frozen Phase 5 tool directory
 (Java, Node, Bun, .NET, Python, and Rust) ahead of the mutable mise shim layer.
 Invoking Bun through a mise shim re-activated the host's Java 21 and .NET
