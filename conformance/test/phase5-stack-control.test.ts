@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   cacheOutputDigest,
+  PHASE5_DIAGNOSTIC_DEFINITIVE_ERROR_SAMPLES,
   PHASE5_DIRECTORY_EMPTY_SCANS,
   PHASE5_DIRECTORY_REAP_SECONDS,
   PHASE5_EXPORT_SHUTDOWN_SECONDS,
@@ -90,6 +91,7 @@ test("Phase 5 stack shutdown uses the pinned mprocs control event", () => {
   assert.equal(PHASE5_EXPORT_SHUTDOWN_SECONDS, 600);
   assert.equal(PHASE5_DIRECTORY_REAP_SECONDS, 60);
   assert.equal(PHASE5_DIRECTORY_EMPTY_SCANS, 2);
+  assert.equal(PHASE5_DIAGNOSTIC_DEFINITIVE_ERROR_SAMPLES, 3);
   assert.equal(PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS, "-Xmx8g");
   assert.equal(PHASE5_LOGIN_ROUTE, "/login/overview");
   assert.equal(PHASE5_PORTLESS_STATE_DIRECTORY, "/home/sanjevi/.portless");
@@ -232,13 +234,14 @@ test("mprocs control readiness never opens a protocol-less TCP connection", asyn
   assert.match(source, /cleanupFailedStart\(input\)/u);
   assert.match(source, /emulatorProcessObserved/u);
   assert.match(source, /emulator process exited before readiness/u);
-  assert.match(source, /reapPhase5DirectoryProcessGroups/u);
-  assert.match(source, /phase5DirectoryProcessGroups/u);
+  assert.match(source, /reapPhase5DirectoryProcesses/u);
+  assert.match(source, /phase5DirectoryProcesses/u);
   assert.match(source, /phase5EmulatorProcesses/u);
   assert.match(source, /process\.kill\(identity\.pid, "SIGINT"\)/u);
   assert.match(source, /phase5ProcessIdentityAlive/u);
-  assert.match(source, /signalPhase5Groups\(newlyDiscoveredGroups, "SIGINT"\)/u);
-  assert.match(source, /signalPhase5Groups\(unterminatedGroups, "SIGTERM"\)/u);
+  assert.match(source, /signalPhase5DirectoryProcesses\([\s\S]*?"SIGINT"/u);
+  assert.match(source, /signalPhase5DirectoryProcesses\([\s\S]*?"SIGTERM"/u);
+  assert.doesNotMatch(source, /process\.kill\(-/u);
   assert.match(source, /cwd !== resolvedDirectory/u);
   assert.match(source, /child\.once\("close", \(exitCode\) =>/u);
   assert.doesNotMatch(source, /send-keys[\s\S]{0,100}["']q["']/u);
@@ -249,7 +252,7 @@ test("failed startup reaps its directory before asserting listener cleanup", asy
   const cleanupStart = source.indexOf("async function cleanupFailedStart");
   const cleanupEnd = source.indexOf("async function stopPhase5EmulatorProcess", cleanupStart);
   const cleanupSource = source.slice(cleanupStart, cleanupEnd);
-  const directoryReap = cleanupSource.indexOf("await reapPhase5DirectoryProcessGroups");
+  const directoryReap = cleanupSource.indexOf("await reapPhase5DirectoryProcesses");
   const controllerSessionClose = cleanupSource.indexOf(
     '"close failed Phase 5 startup session"',
   );
@@ -268,32 +271,43 @@ test("failed startup reaps its directory before asserting listener cleanup", asy
 
 test("directory cleanup converges across reparenting and revalidates every signal", async () => {
   const source = await readFile(controlUrl, "utf8");
-  const reapStart = source.indexOf("async function reapPhase5DirectoryProcessGroups");
-  const reapEnd = source.indexOf("async function phase5DirectoryProcessGroups", reapStart);
+  const reapStart = source.indexOf("async function reapPhase5DirectoryProcesses");
+  const reapEnd = source.indexOf("async function phase5DirectoryProcesses", reapStart);
   const reapSource = source.slice(reapStart, reapEnd);
   assert.match(reapSource, /consecutiveEmptyScans/u);
   assert.match(
     reapSource,
     /consecutiveEmptyScans >= PHASE5_DIRECTORY_EMPTY_SCANS/u,
   );
-  assert.match(reapSource, /newlyDiscoveredGroups/u);
-  assert.match(reapSource, /assertPhase5ProcessGroupScope\(group, directory\)/u);
-  assert.match(reapSource, /signalPhase5Groups\(newlyDiscoveredGroups, "SIGINT"\)/u);
-  assert.match(reapSource, /signalPhase5Groups\(unterminatedGroups, "SIGTERM"\)/u);
+  assert.match(reapSource, /newlyDiscoveredProcesses/u);
+  assert.match(reapSource, /phase5ProcessIdentityKey\(identity\)/u);
+  assert.match(reapSource, /signalPhase5DirectoryProcesses\([\s\S]*?"SIGINT"/u);
+  assert.match(reapSource, /signalPhase5DirectoryProcesses\([\s\S]*?"SIGTERM"/u);
 
-  const discoveryStart = source.indexOf("async function phase5DirectoryProcessGroups");
-  const discoveryEnd = source.indexOf("function signalPhase5Groups", discoveryStart);
+  const discoveryStart = source.indexOf("async function phase5DirectoryProcesses");
+  const discoveryEnd = source.indexOf("async function signalPhase5DirectoryProcesses", discoveryStart);
   const discoverySource = source.slice(discoveryStart, discoveryEnd);
   assert.match(discoverySource, /readFile\(`\/proc\/\$\{entry\.name\}\/cmdline`\)/u);
   assert.match(
     discoverySource,
     /!phase5CommandLaunchPathMatches\(command, resolvedDirectory\)/u,
   );
+  assert.match(discoverySource, /phase5ProcessIdentityFromStat/u);
+  const signalStart = source.indexOf("async function signalPhase5DirectoryProcesses");
+  const signalEnd = source.indexOf("async function assertPhase5DirectoryProcessScope", signalStart);
+  const signalSource = source.slice(signalStart, signalEnd);
+  assert.match(signalSource, /assertPhase5DirectoryProcessScope\(identity, directory\)/u);
+  assert.match(signalSource, /process\.kill\(identity\.pid, signal\)/u);
+  assert.doesNotMatch(signalSource, /process\.kill\(-/u);
 });
 
 test("diagnostic readiness fails fast only after healthy process and listener gates", async () => {
   const source = await readFile(controlUrl, "utf8");
   assert.match(source, /input\.diagnosticFailFast === true && readiness\.definitiveError !== null/u);
+  assert.match(source, /readiness\.definitiveError === previousDefinitiveError/u);
+  assert.match(source, /PHASE5_DIAGNOSTIC_DEFINITIVE_ERROR_SAMPLES/u);
+  assert.match(source, /previousDefinitiveError = null/u);
+  assert.match(source, /consecutiveDefinitiveErrors = 0/u);
   assert.match(source, /if \(!logs\.every\(Boolean\)\) return \{ definitiveError: null, ready: false \}/u);
   assert.match(source, /if \(!portsReady\.every\(Boolean\)\) return \{ definitiveError: null, ready: false \}/u);
   assert.match(source, /definitive readiness failure/u);

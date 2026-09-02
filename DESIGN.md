@@ -1926,9 +1926,20 @@ synthetic-only export: the official stack and then Fireside, all nine browser
 journeys, a 60-second app-shaped soak per stack, export-first shutdown,
 directory-scoped cleanup, and a zero-orphan assertion. Readiness must complete
 within 60 seconds. A diagnostic smoke may fail earlier when a concrete probe
-returns a definitive non-transient error while all required processes remain
-healthy; missing listeners and transient/unavailable responses continue to be
+returns the same concrete error for three consecutive samples while all
+required processes remain healthy; a successful or unavailable sample clears
+that streak. This prevents a first dynamic-route response during frontend
+startup from being mislabeled as non-transient while retaining the 60-second
+boundary. Missing listeners and transient/unavailable responses continue to be
 polled. The immutable gate retains its no-intervention rule.
+
+Diagnostic r6 also proved that .NET can place its shared compiler server in a
+process group with worktree-owned application processes. Directory cleanup
+therefore discovers and signals exact PID plus `/proc` start-time identities,
+revalidates worktree ownership immediately before each signal, and never
+signals an entire mixed process group. Out-of-directory shared services remain
+untouched, while two consecutive empty scans and zero isolated listeners remain
+mandatory.
 
 Each diagnostic smoke stages its tiny import under a dataset namespace derived
 from that attempt's evidence directory. A failed attempt and its staged files

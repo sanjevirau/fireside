@@ -17,6 +17,7 @@ export type Phase5StackName = "official" | "fireside";
 export const PHASE5_EXPORT_SHUTDOWN_SECONDS = 600;
 export const PHASE5_DIRECTORY_REAP_SECONDS = 60;
 export const PHASE5_DIRECTORY_EMPTY_SCANS = 2;
+export const PHASE5_DIAGNOSTIC_DEFINITIVE_ERROR_SAMPLES = 3;
 export const PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS = "-Xmx8g";
 export const PHASE5_LOGIN_ROUTE = "/login/overview";
 export const PHASE5_PORTLESS_STATE_DIRECTORY = "/home/sanjevi/.portless";
@@ -227,6 +228,8 @@ export async function startPhase5Stack(
     let peakRssBytes = 0;
     let peakPssBytes: number | null = 0;
     let emulatorProcessObserved = false;
+    let consecutiveDefinitiveErrors = 0;
+    let previousDefinitiveError: string | null = null;
     const deadline = Date.now() + maximumReadySeconds * 1_000;
     while (true) {
       const emulatorProcesses = await phase5EmulatorProcesses(
@@ -251,7 +254,23 @@ export async function startPhase5Stack(
       const readiness = await stackReadiness(input, baseUrl, twodartNetUrl);
       if (readiness.ready) break;
       if (input.diagnosticFailFast === true && readiness.definitiveError !== null) {
-        throw new Error(`${input.stack} definitive readiness failure: ${readiness.definitiveError}`);
+        if (readiness.definitiveError === previousDefinitiveError) {
+          consecutiveDefinitiveErrors += 1;
+        } else {
+          previousDefinitiveError = readiness.definitiveError;
+          consecutiveDefinitiveErrors = 1;
+        }
+        if (
+          consecutiveDefinitiveErrors >=
+          PHASE5_DIAGNOSTIC_DEFINITIVE_ERROR_SAMPLES
+        ) {
+          throw new Error(
+            `${input.stack} definitive readiness failure after ${String(consecutiveDefinitiveErrors)} identical samples: ${readiness.definitiveError}`,
+          );
+        }
+      } else {
+        previousDefinitiveError = null;
+        consecutiveDefinitiveErrors = 0;
       }
       if (await exists(exitMarker)) {
         const status = (await readFile(exitMarker, "utf8")).trim();
@@ -364,7 +383,7 @@ export async function stopPhase5Stack(
   if (cleanupError !== undefined) throw cleanupError;
   if (exitCode === null) throw new Error(`${running.stack} lifecycle omitted its exit code`);
   const remainingDirectoryProcessGroups = (
-    await phase5DirectoryProcessGroups(running.directory)
+    await phase5DirectoryProcesses(running.directory)
   ).length;
   const remainingListenerPorts = (
     await Promise.all(
@@ -411,7 +430,7 @@ async function settlePhase5StackCleanup(running: RunningPhase5Stack): Promise<vo
       "close completed Phase 5 tmux session",
     );
   }
-  await reapPhase5DirectoryProcessGroups(
+  await reapPhase5DirectoryProcesses(
     running.directory,
     PHASE5_DIRECTORY_REAP_SECONDS,
   );
@@ -456,7 +475,7 @@ async function cleanupFailedStart(
       "close failed Phase 5 startup session",
     );
   }
-  await reapPhase5DirectoryProcessGroups(
+  await reapPhase5DirectoryProcesses(
     input.directory,
     PHASE5_DIRECTORY_REAP_SECONDS,
   );
@@ -597,61 +616,70 @@ async function phase5ProcessIdentityAlive(identity: Phase5ProcessIdentity): Prom
   }
 }
 
-async function reapPhase5DirectoryProcessGroups(
+async function reapPhase5DirectoryProcesses(
   directory: string,
   maximumSeconds: number,
 ): Promise<void> {
   const started = Date.now();
   const termAt = started + Math.floor((maximumSeconds * 1_000) / 2);
   const deadline = started + maximumSeconds * 1_000;
-  const interruptedGroups = new Set<number>();
-  const terminatedGroups = new Set<number>();
+  const interruptedProcesses = new Set<string>();
+  const terminatedProcesses = new Set<string>();
   let consecutiveEmptyScans = 0;
   while (true) {
-    const groups = await phase5DirectoryProcessGroups(directory);
-    if (groups.length === 0) {
+    const processes = await phase5DirectoryProcesses(directory);
+    if (processes.length === 0) {
       consecutiveEmptyScans += 1;
       if (consecutiveEmptyScans >= PHASE5_DIRECTORY_EMPTY_SCANS) return;
     } else {
       consecutiveEmptyScans = 0;
-      const newlyDiscoveredGroups = groups.filter(
-        (group) => !interruptedGroups.has(group),
+      const newlyDiscoveredProcesses = processes.filter(
+        (identity) => !interruptedProcesses.has(phase5ProcessIdentityKey(identity)),
       );
-      for (const group of newlyDiscoveredGroups) {
-        await assertPhase5ProcessGroupScope(group, directory);
+      await signalPhase5DirectoryProcesses(
+        newlyDiscoveredProcesses,
+        directory,
+        "SIGINT",
+      );
+      for (const identity of newlyDiscoveredProcesses) {
+        interruptedProcesses.add(phase5ProcessIdentityKey(identity));
       }
-      signalPhase5Groups(newlyDiscoveredGroups, "SIGINT");
-      for (const group of newlyDiscoveredGroups) interruptedGroups.add(group);
 
       if (Date.now() >= termAt) {
-        const unterminatedGroups = groups.filter(
-          (group) => !terminatedGroups.has(group),
+        const unterminatedProcesses = processes.filter(
+          (identity) => !terminatedProcesses.has(phase5ProcessIdentityKey(identity)),
         );
-        for (const group of unterminatedGroups) {
-          await assertPhase5ProcessGroupScope(group, directory);
+        await signalPhase5DirectoryProcesses(
+          unterminatedProcesses,
+          directory,
+          "SIGTERM",
+        );
+        for (const identity of unterminatedProcesses) {
+          terminatedProcesses.add(phase5ProcessIdentityKey(identity));
         }
-        signalPhase5Groups(unterminatedGroups, "SIGTERM");
-        for (const group of unterminatedGroups) terminatedGroups.add(group);
       }
     }
     if (Date.now() >= deadline) {
       throw new Error(
-        `Phase 5 directory-owned process groups did not stop: ${groups.join(",")}`,
+        `Phase 5 directory-owned processes did not stop: ${processes.map(({ pid }) => pid).join(",")}`,
       );
     }
     await delay(500);
   }
 }
 
-async function phase5DirectoryProcessGroups(directory: string): Promise<readonly number[]> {
+async function phase5DirectoryProcesses(
+  directory: string,
+): Promise<readonly Phase5ProcessIdentity[]> {
   const resolvedDirectory = path.resolve(directory);
-  const groups = new Set<number>();
+  const processes: Phase5ProcessIdentity[] = [];
   for (const entry of await readdir("/proc", { withFileTypes: true })) {
     if (!entry.isDirectory() || !/^\d+$/u.test(entry.name)) continue;
     try {
-      const [commandBytes, cwdValue] = await Promise.all([
+      const [commandBytes, cwdValue, stat] = await Promise.all([
         readFile(`/proc/${entry.name}/cmdline`),
         readlink(`/proc/${entry.name}/cwd`),
+        readFile(`/proc/${entry.name}/stat`, "utf8"),
       ]);
       const command = commandBytes.toString("utf8");
       const cwd = path.resolve(cwdValue);
@@ -662,66 +690,65 @@ async function phase5DirectoryProcessGroups(directory: string): Promise<readonly
       ) {
         continue;
       }
-      const group = processGroupFromStat(await readFile(`/proc/${entry.name}/stat`, "utf8"));
-      if (group > 1) groups.add(group);
+      const identity = phase5ProcessIdentityFromStat(Number(entry.name), stat);
+      if (identity.pid > 1) processes.push(identity);
     } catch {
       // The process can exit between /proc reads.
     }
   }
-  return [...groups].sort((left, right) => left - right);
+  return processes.sort((left, right) => right.pid - left.pid);
 }
 
-function signalPhase5Groups(groups: readonly number[], signal: NodeJS.Signals): void {
-  for (const group of groups) {
+async function signalPhase5DirectoryProcesses(
+  identities: readonly Phase5ProcessIdentity[],
+  directory: string,
+  signal: NodeJS.Signals,
+): Promise<void> {
+  for (const identity of identities) {
+    if (!(await assertPhase5DirectoryProcessScope(identity, directory))) continue;
     try {
-      process.kill(-group, signal);
+      process.kill(identity.pid, signal);
     } catch (error: unknown) {
       if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
     }
   }
 }
 
-async function assertPhase5ProcessGroupScope(
-  group: number,
+async function assertPhase5DirectoryProcessScope(
+  identity: Phase5ProcessIdentity,
   directory: string,
-): Promise<void> {
+): Promise<boolean> {
   const resolvedDirectory = path.resolve(directory);
-  let members = 0;
-  for (const entry of await readdir("/proc", { withFileTypes: true })) {
-    if (!entry.isDirectory() || !/^\d+$/u.test(entry.name)) continue;
-    try {
-      const stat = await readFile(`/proc/${entry.name}/stat`, "utf8");
-      if (processGroupFromStat(stat) !== group) continue;
-      members += 1;
-      const [commandBytes, cwdValue] = await Promise.all([
-        readFile(`/proc/${entry.name}/cmdline`),
-        readlink(`/proc/${entry.name}/cwd`),
-      ]);
-      const command = commandBytes.toString("utf8");
-      const cwd = path.resolve(cwdValue);
-      if (
-        cwd !== resolvedDirectory &&
-        !cwd.startsWith(`${resolvedDirectory}${path.sep}`) &&
-        !phase5CommandLaunchPathMatches(command, resolvedDirectory)
-      ) {
-        throw new Error(
-          `refusing to signal process group ${String(group)} outside ${resolvedDirectory}`,
-        );
-      }
-    } catch (error: unknown) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  try {
+    const [commandBytes, cwdValue, stat] = await Promise.all([
+      readFile(`/proc/${String(identity.pid)}/cmdline`),
+      readlink(`/proc/${String(identity.pid)}/cwd`),
+      readFile(`/proc/${String(identity.pid)}/stat`, "utf8"),
+    ]);
+    const current = phase5ProcessIdentityFromStat(identity.pid, stat);
+    if (current.procStatStartTimeTicks !== identity.procStatStartTimeTicks) {
+      return false;
     }
-  }
-  if (members === 0) {
-    throw new Error(`emulator process group ${String(group)} disappeared before shutdown`);
+    const command = commandBytes.toString("utf8");
+    const cwd = path.resolve(cwdValue);
+    if (
+      cwd !== resolvedDirectory &&
+      !cwd.startsWith(`${resolvedDirectory}${path.sep}`) &&
+      !phase5CommandLaunchPathMatches(command, resolvedDirectory)
+    ) {
+      throw new Error(
+        `refusing to signal process ${String(identity.pid)} outside ${resolvedDirectory}`,
+      );
+    }
+    return true;
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
   }
 }
 
-function processGroupFromStat(stat: string): number {
-  const commandEnd = stat.lastIndexOf(")");
-  if (commandEnd < 0) return 0;
-  const fields = stat.slice(commandEnd + 2).trim().split(/\s+/u);
-  return Number(fields[2] ?? 0);
+function phase5ProcessIdentityKey(identity: Phase5ProcessIdentity): string {
+  return `${String(identity.pid)}:${identity.procStatStartTimeTicks}`;
 }
 
 export function phase5ProcessIdentityFromStat(
