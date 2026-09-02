@@ -516,6 +516,17 @@ function gateDatasetName(args: Arguments): string {
     : "full-data";
 }
 
+function gateRuntimeDirectory(
+  outputDirectory: string,
+  label: string,
+): string {
+  return path.join(
+    "/tmp",
+    `fireside-p5-${digest(outputDirectory).slice(0, 16)}`,
+    label,
+  );
+}
+
 async function startStack(
   args: Arguments,
   manifest: Phase5Manifest,
@@ -552,9 +563,8 @@ async function startStack(
       label,
       nodeBinary: args.nodeBinary,
       ports: PHASE5_STACK_PORTS[stack],
-      runtimeDirectory: path.join(
-        path.dirname(path.dirname(args.fullData)),
-        `runtime-${path.basename(args.outputDirectory)}`,
+      runtimeDirectory: gateRuntimeDirectory(
+        args.outputDirectory,
         `${stack}-${label}`,
       ),
       stack,
@@ -848,11 +858,7 @@ async function runFreshColleague(
         label,
         nodeBinary: args.nodeBinary,
         ports: PHASE5_STACK_PORTS.fireside,
-        runtimeDirectory: path.join(
-          path.dirname(path.dirname(args.fullData)),
-          `runtime-${path.basename(args.outputDirectory)}`,
-          label,
-        ),
+        runtimeDirectory: gateRuntimeDirectory(args.outputDirectory, label),
         stack: backend ?? "fireside",
         tmuxSession: `fireside-phase5-${label}-${process.pid.toString(36)}`,
       },
