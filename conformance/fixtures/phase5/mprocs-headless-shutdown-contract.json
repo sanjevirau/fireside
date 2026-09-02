@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "oracle": {
     "component": "mprocs",
     "packageRevision": "024743006f46effc5c72b91bca11eef3c6253460",
@@ -20,6 +20,7 @@
     "exportMetadataRequiredBeforeForceQuit": true,
     "forceQuitSafeOnlyAfterEmulatorProcessGroupExited": true,
     "headlessTransport": "configured TCP control server",
+    "failedStartControllerSessionCloseBeforeDirectoryReap": true,
     "failedStartDirectoryReapBeforeListenerAssertion": true,
     "postQuitDirectoryProcessAuditRequired": true,
     "quitRequestsConfiguredChildStop": true,
@@ -84,6 +85,22 @@
       "kernelOomEvidence": 0,
       "failedSystemdUnits": 0,
       "requiredOrdering": "after requesting controller shutdown or closing the controller session, immediately reap validated directory-owned process groups before asserting zero listeners"
+    },
+    "failedPortlessReadinessCleanup": {
+      "candidateCommit": "94365db1817f53a73f0c80241972cff24779bfff",
+      "phase5Diagnostic": "full-gate-smoke-20260902T193904+0800-94365db-r4",
+      "primaryFailure": "required Portless HTTPS routes returned HTTP 404 from a proxy using a different state store",
+      "officialFullDatasetStarted": true,
+      "officialExportCompleted": true,
+      "firesideStarted": false,
+      "controllerShutdownRequested": true,
+      "controllerSessionRemaining": "fireside-phase5-official-initial-244e",
+      "remainingPaneCommand": "-bash",
+      "orphanedDirectoryProcessGroups": 1,
+      "orphanedListeners": [],
+      "kernelOomEvidence": 0,
+      "failedSystemdUnits": 0,
+      "requiredOrdering": "after requesting headless controller shutdown, close the exact controller tmux session before reaping validated directory-owned process groups; only then assert zero listeners"
     }
   }
 }

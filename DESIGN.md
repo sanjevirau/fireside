@@ -1852,6 +1852,17 @@ evidence records the privacy-safe status of every explicitly asserted
 navigation, and login fails on an HTTP error before waiting for `#workEmail`;
 response bodies remain excluded.
 
+Portless route registration and the active HTTPS proxy must share one explicit
+state directory. Portless derives its default state directory from the current
+user's home: a root-owned proxy on port 443 therefore does not read routes
+registered under `/home/sanjevi/.portless`, even though `portless list` reports
+those user routes and the direct application listeners return HTTP 200. The
+controlled host starts the privileged proxy with the user state directory and
+the stack exports that same `PORTLESS_STATE_DIR`. A listed route is not a
+readiness result; the gate must traverse each required HTTPS URL through the
+active proxy and reject the HTTP 404 `X-Portless` response observed when the
+stores diverge.
+
 The export boundary is the durable `firebase-export-metadata.json`, not merely
 the disappearance of the firebase-tools launcher command. A full-data smoke
 showed that the launcher match can disappear while firebase-tools is still
@@ -1880,8 +1891,11 @@ a rejected comparison cannot contaminate the next namespace. A full-data
 readiness failure showed that waiting for zero listeners before this reap can
 spend the full cleanup boundary and throw while application grandchildren
 still own a cache listener. Failed-start cleanup therefore requests controller
-shutdown, reaps every validated directory-owned process group, closes the
-controller session, and only then asserts zero isolated listeners.
+shutdown, closes the exact controller tmux session, reaps every validated
+directory-owned process group, and only then asserts zero isolated listeners.
+The session close precedes the directory reap because mprocs can finish while
+leaving its interactive tmux pane at a `bash` prompt; that shell ignores the
+group `SIGINT`/`SIGTERM` cleanup sequence while the session remains alive.
 
 The controlled Linux stack command places every frozen Phase 5 tool directory
 (Java, Node, Bun, .NET, Python, and Rust) ahead of the mutable mise shim layer.

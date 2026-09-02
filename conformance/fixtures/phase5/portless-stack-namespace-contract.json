@@ -1,11 +1,14 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "oracle": {
     "component": "portless",
     "version": "0.11.1",
     "revision": "a9385b83250c78855fb51dc1742671c45fbf07ed",
     "sourceFiles": [
       "src/auto.ts",
+      "src/cli-utils.ts",
+      "src/cli.ts",
+      "src/proxy.ts",
       "src/routes.ts"
     ]
   },
@@ -13,11 +16,46 @@
     "rootClonePrefix": null,
     "linkedWorktreePrefix": "last sanitized non-default branch segment",
     "duplicateLiveHostnameRejected": true,
-    "forceWouldReplaceExistingRoute": true
+    "forceWouldReplaceExistingRoute": true,
+    "routeRegistrationStateMustMatchActiveProxyState": true,
+    "privilegedHttpsProxyRequiresExplicitSharedStateDirectory": true,
+    "listedRouteIsInsufficientWithoutHttpsTraversal": true,
+    "readinessMustTraverseRequiredHttpsRoute": true
   },
   "observation": {
-    "phase5Diagnostic": "full-gate-smoke-20260902T125932+0800-6f0e811",
-    "collidingHostname": "templates.twodart.localhost",
-    "result": "second-stack-readiness-timeout"
+    "namespaceCollision": {
+      "phase5Diagnostic": "full-gate-smoke-20260902T125932+0800-6f0e811",
+      "collidingHostname": "templates.twodart.localhost",
+      "result": "second-stack-readiness-timeout"
+    },
+    "proxyStateMismatch": {
+      "candidateCommit": "94365db1817f53a73f0c80241972cff24779bfff",
+      "phase5Diagnostic": "full-gate-smoke-20260902T193904+0800-94365db-r4",
+      "activeHttpsProxyOwner": "root",
+      "activeHttpsProxyPort": 443,
+      "routeRegistrationOwner": "sanjevi",
+      "routeRegistrationFile": "/home/sanjevi/.portless/routes.json",
+      "routeRegistrationProxyMarkersPresent": false,
+      "secondUserProxyPort": 1355,
+      "listedRoutes": {
+        "phase5-official.templates.twodart.localhost": 4135,
+        "phase5-official.twodartnet.twodart.localhost": 4743
+      },
+      "directApplicationStatuses": {
+        "templates": 200,
+        "twodartnet": 200
+      },
+      "requiredHttpsStatuses": {
+        "templates": 404,
+        "twodartnet": 404
+      },
+      "requiredHttpsResponseHeader": "X-Portless: 1",
+      "officialFullDatasetStarted": true,
+      "officialExportCompleted": true,
+      "firesideStarted": false,
+      "kernelOomEvidence": 0,
+      "failedSystemdUnits": 0,
+      "result": "active privileged proxy did not read the user route-registration store"
+    }
   }
 }
