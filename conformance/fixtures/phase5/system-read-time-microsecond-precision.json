@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "component": "official Firestore emulator",
+    "emulatorVersion": "1.21.0",
+    "firebaseToolsVersion": "15.22.0",
+    "javaVersion": "26.0.2.1",
+    "outcome": "the identical projected inequality query and cache build completed"
+  },
+  "observation": {
+    "capturedAt": "2026-09-02T08:03:43.000Z",
+    "firesideCandidateRevision": "dab88338eb6e0726c64c8162ba51523aa9d1b87a",
+    "twodartRevision": "f424c373b0947ed57db90f7d7f51455fadca547c",
+    "manifestSha256": "a0e58c98e1b6962c6de04de0809b625948b126968903f4ca1c41de6ffcb433b0",
+    "diagnostic": "full-gate-smoke-20260902T155118+0800-dab8833-r2",
+    "datasetDocuments": 211202,
+    "officialCacheBuildMilliseconds": 24763,
+    "officialJavaToolOptions": "-Xmx8g",
+    "firesideImportCompleted": true,
+    "failingRpc": "google.firestore.v1.Firestore.RunQuery",
+    "queryShape": "projected coreSlideId != null collection query used by the Twodart theme-metadata cache build",
+    "grpcCode": 3,
+    "grpcStatus": "INVALID_ARGUMENT",
+    "grpcDetails": "read_time cannot have more than microseconds precision",
+    "failureMechanism": "a streaming retry reused Fireside's previously emitted read_time as the next request consistency selector",
+    "kernelOomEvidence": 0,
+    "failedSystemdUnits": 0
+  },
+  "contract": {
+    "systemReadTimeMaximumPrecision": "microseconds",
+    "systemReadTimeNanosecondsDivisor": 1000,
+    "systemReadTimeNanosecondsRemainder": 0,
+    "appliesTo": [
+      "BatchGetDocumentsResponse.read_time",
+      "RunQueryResponse.read_time",
+      "RunAggregationQueryResponse.read_time"
+    ],
+    "userTimestampFieldPrecision": "nanoseconds remain supported",
+    "incomingUnaryReadTimePrecisionRuleMayChange": false,
+    "phase5ThresholdsMayChange": false
+  }
+}
