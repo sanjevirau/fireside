@@ -4,6 +4,7 @@ import {
   mkdir,
   readFile,
   readlink,
+  rm,
   stat,
   symlink,
   writeFile,
@@ -221,7 +222,7 @@ async function main(): Promise<void> {
     if (dependencyRevision !== revision) {
       throw new Error("Dependency source does not use the measured Twodart revision");
     }
-    await stageDirectoryLink(
+    await stageHardlinkedDependencyTree(
       path.join(dependencyRoot, "node_modules"),
       path.join(stackRoot, "node_modules"),
     );
@@ -341,6 +342,33 @@ async function stageDirectoryLink(
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     await symlink(source, destination, "dir");
+  }
+}
+
+export async function stageHardlinkedDependencyTree(
+  source: string,
+  destination: string,
+): Promise<void> {
+  await assertDirectory(source);
+  await mkdir(path.dirname(destination), { recursive: true });
+  try {
+    await lstat(destination);
+    throw new Error(`Refusing to replace dependency staging path: ${destination}`);
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+
+  await mkdir(destination);
+  try {
+    await run(
+      "cp",
+      ["-a", "-l", `${source}${path.sep}.`, destination],
+      process.cwd(),
+      process.env,
+    );
+  } catch (error: unknown) {
+    await rm(destination, { force: true, recursive: true });
+    throw error;
   }
 }
 
