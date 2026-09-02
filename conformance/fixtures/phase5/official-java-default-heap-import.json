@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "component": "official Firestore emulator",
+    "emulatorVersion": "1.21.0",
+    "firebaseToolsVersion": "15.22.0",
+    "javaVersion": "26.0.2.1"
+  },
+  "observation": {
+    "capturedAt": "2026-09-02T07:27:03.432Z",
+    "firesideCandidateRevision": "8b383276d9b186a11d355a6d1ff78481d9e18f9c",
+    "twodartRevision": "f424c373b0947ed57db90f7d7f51455fadca547c",
+    "diagnostic": "full-gate-smoke-20260902T152312+0800-8b38327-r2",
+    "datasetDocuments": 211202,
+    "requestedJavaBinary": "/home/sanjevi/.local/share/mise/installs/java/26.0.2.1/bin/java",
+    "reportedJavaBinary": "/home/sanjevi/.local/share/mise/installs/java/26.0.2.1/bin/java",
+    "javaToolOptions": null,
+    "failure": "java.lang.OutOfMemoryError: Java heap space",
+    "failureOperation": "seedData while firebase-tools registered the first Firestore Eventarc trigger",
+    "surfaceStatus": 500,
+    "surfaceBody": {
+      "error": {
+        "code": 500,
+        "status": "UNKNOWN"
+      }
+    },
+    "gateExitCode": 1,
+    "firesideStackStarted": false,
+    "gateListenersRemainingAfterCleanup": 0,
+    "kernelOomEvidence": 0,
+    "failedSystemdUnits": 0
+  },
+  "contract": {
+    "classification": "official Java comparison limitation",
+    "defaultAttemptMustRemainPreserved": true,
+    "fullDatasetComparisonRetryRequired": true,
+    "retryJavaToolOptions": "-Xmx8g",
+    "retryMustBeReportedSeparately": true,
+    "firesideThresholdsMayChange": false,
+    "functionalCriteriaMayChange": false
+  }
+}
