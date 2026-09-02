@@ -6,6 +6,10 @@ const runnerUrl = new URL("../src/suite/run-phase5-gate.ts", import.meta.url);
 
 test("Phase 5 gate runs the frozen lifecycle in order", async () => {
   const source = await readFile(runnerUrl, "utf8");
+  assert.ok(
+    source.lastIndexOf("await main();") > source.indexOf("const stackNames"),
+    "top-level execution must begin after runtime constants are initialized",
+  );
   const ordered = [
     'startPair(args, manifest, "initial"',
     "const initialSnapshots = await exercisePair(",

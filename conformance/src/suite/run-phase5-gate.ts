@@ -154,8 +154,6 @@ const collectionIds = [
 ] as const;
 const buckets = ["demo-twodart-local.appspot.com", "assets-local.twodart.com"] as const;
 
-await main();
-
 async function main(): Promise<void> {
   const args = parseArguments(process.argv.slice(2));
   await requireAbsent(args.outputDirectory);
@@ -1170,3 +1168,5 @@ function digest(value: string): string {
 function errorText(error: unknown): string {
   return error instanceof Error ? (error.stack ?? error.message) : String(error);
 }
+
+await main();
