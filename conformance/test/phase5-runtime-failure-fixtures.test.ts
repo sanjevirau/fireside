@@ -263,9 +263,11 @@ test("the tiny browser smoke freezes runtime-path and client-route failures befo
 test("the corrected tiny smoke freezes reparented cleanup failures before fixes", async () => {
   const fixture = JSON.parse(await readFile(tinyBrowserR5CleanupUrl, "utf8")) as {
     readonly contract: {
+      readonly commandArgumentReferenceMayConferOwnership: boolean;
       readonly directoryOwnershipMustBeRevalidatedBeforeEverySignal: boolean;
       readonly directoryProcessDiscoveryMustConvergeAfterReparenting: boolean;
       readonly exportMetadataRequiredBeforeControllerShutdown: boolean;
+      readonly launchPathUnderDirectoryMayConferOwnership: boolean;
       readonly phase5ThresholdsMayChange: boolean;
       readonly twoConsecutiveEmptyDirectoryScansRequired: boolean;
       readonly zeroDirectoryOwnedProcessesRequired: boolean;
@@ -305,9 +307,11 @@ test("the corrected tiny smoke freezes reparented cleanup failures before fixes"
   assert.equal(fixture.observation.failedSystemdUnits, 0);
   assert.equal(fixture.observation.kernelOomEvidence, 0);
   assert.deepEqual(fixture.contract, {
+    commandArgumentReferenceMayConferOwnership: false,
     directoryOwnershipMustBeRevalidatedBeforeEverySignal: true,
     directoryProcessDiscoveryMustConvergeAfterReparenting: true,
     exportMetadataRequiredBeforeControllerShutdown: true,
+    launchPathUnderDirectoryMayConferOwnership: true,
     phase5ThresholdsMayChange: false,
     twoConsecutiveEmptyDirectoryScansRequired: true,
     zeroDirectoryOwnedProcessesRequired: true,
