@@ -23,12 +23,15 @@ import {
   type Phase5Manifest,
 } from "./phase5-acceptance-plan.ts";
 import {
+  assertDistinctPhase5ApplicationUrls,
+  PHASE5_APPLICATION_URL_KEYS,
   PHASE5_STACK_PORTS,
   stageHardlinkedDirectoryTree,
   type Phase5StackName,
 } from "./phase5-host-prepare.ts";
 import {
   cacheOutputDigest,
+  readPhase5PortEnvironment,
   startPhase5Stack,
   stopPhase5Stack,
   type RunningPhase5Stack,
@@ -731,6 +734,22 @@ async function verifyEnvironment(
       `Phase 5 Twodart checkouts do not use one exact measured revision: ${JSON.stringify({ expected: args.twodartRevision, revisions })}`,
     );
   }
+  const stackPortEnvironments = {
+    official: await readPhase5PortEnvironment(args.officialDirectory),
+    fireside: await readPhase5PortEnvironment(args.firesideDirectory),
+  };
+  assertDistinctPhase5ApplicationUrls(
+    stackPortEnvironments.official,
+    stackPortEnvironments.fireside,
+  );
+  const applicationUrls = Object.fromEntries(
+    Object.entries(stackPortEnvironments).map(([name, environment]) => [
+      name,
+      Object.fromEntries(
+        PHASE5_APPLICATION_URL_KEYS.map((key) => [key, environment[key]]),
+      ),
+    ]),
+  );
   for (const candidate of [
     args.fullData,
     args.runtimeAssetsRoot,
@@ -827,6 +846,7 @@ async function verifyEnvironment(
   }
   const hostHealth = await captureHostHealth(manifest, args.smoke);
   return {
+    applicationUrls,
     candidateRevision,
     capturedAt: new Date().toISOString(),
     cpuCount: cpus().length,

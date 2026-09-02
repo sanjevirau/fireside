@@ -77,4 +77,5 @@ test("Phase 5 gate includes smoke, fresh colleague, regression, and checksum pat
   assert.match(source, /expected: args\.twodartRevision, revisions/u);
   assert.match(source, /import root must be a real directory for firebase-tools lstat parity/u);
   assert.match(source, /stageHardlinkedDirectoryTree\(\s*args\.fullData,/u);
+  assert.match(source, /assertDistinctPhase5ApplicationUrls/u);
 });

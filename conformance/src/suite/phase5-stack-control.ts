@@ -136,7 +136,7 @@ export async function startPhase5Stack(
     "execute Phase 5 launch command",
   );
 
-  const env = await readPortEnvironment(input.directory);
+  const env = await readPhase5PortEnvironment(input.directory);
   const baseUrl = requiredEnvironment(env, "FE_URL");
   const twodartNetUrl = requiredEnvironment(env, "TWODARTNET_API_URL");
   const started = performance.now();
@@ -328,7 +328,9 @@ async function fetchOk(url: string): Promise<boolean> {
   }
 }
 
-async function readPortEnvironment(directory: string): Promise<Readonly<Record<string, string>>> {
+export async function readPhase5PortEnvironment(
+  directory: string,
+): Promise<Readonly<Record<string, string>>> {
   const contents = await readFile(path.join(directory, ".env.ports"), "utf8");
   return Object.fromEntries(
     contents

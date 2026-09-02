@@ -67,6 +67,35 @@ export const PHASE5_STACK_PORTS: Readonly<
   },
 };
 
+export const PHASE5_APPLICATION_URL_KEYS = [
+  "CF_WORKER_URL",
+  "FE_URL",
+  "FIREBASE_STORAGE_EMULATOR_URL",
+  "PAPI_URL",
+  "TWODART_IMAGES_API",
+  "TWODARTNET_API_URL",
+] as const;
+
+export function assertDistinctPhase5ApplicationUrls(
+  official: Readonly<Record<string, string>>,
+  fireside: Readonly<Record<string, string>>,
+): void {
+  for (const key of PHASE5_APPLICATION_URL_KEYS) {
+    const officialValue = official[key];
+    const firesideValue = fireside[key];
+    if (officialValue === undefined || firesideValue === undefined) {
+      throw new Error(`Phase 5 application URL is missing: ${key}`);
+    }
+    const officialHost = new URL(officialValue).host;
+    const firesideHost = new URL(firesideValue).host;
+    if (officialHost === firesideHost) {
+      throw new Error(
+        `Phase 5 application URL namespace collides for ${key}: ${officialHost}`,
+      );
+    }
+  }
+}
+
 export function phase5DatasetPaths(
   gateRoot: string,
   stack: Phase5StackName,

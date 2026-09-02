@@ -5,12 +5,23 @@ import path from "node:path";
 import test from "node:test";
 import {
   applyPhase5Ports,
+  assertDistinctPhase5ApplicationUrls,
+  PHASE5_APPLICATION_URL_KEYS,
   phase5PortEnvironment,
   phase5DatasetPaths,
   PHASE5_STACK_PORTS,
   renderSafeTwodartEnvironment,
   stageHardlinkedDirectoryTree,
 } from "../src/suite/phase5-host-prepare.ts";
+
+function applicationUrls(prefix: string): Readonly<Record<string, string>> {
+  return Object.fromEntries(
+    PHASE5_APPLICATION_URL_KEYS.map((key) => [
+      key,
+      `https://${prefix}-${key.toLowerCase().replaceAll("_", "-")}.twodart.localhost`,
+    ]),
+  );
+}
 
 test("Phase 5 host preparation uses only synthetic local provider values", () => {
   const environment = renderSafeTwodartEnvironment();
@@ -73,6 +84,24 @@ test("Phase 5 input staging is immutable and uses distinct lifecycle exports", (
   assert.notEqual(official.exportPath, fireside.exportPath);
   assert.notEqual(official.importPath, official.exportPath);
   assert.notEqual(fireside.importPath, fireside.exportPath);
+});
+
+test("Phase 5 application URL namespaces must be distinct", () => {
+  const official = applicationUrls("phase5-official");
+  const fireside = applicationUrls("phase5-fireside");
+  assert.doesNotThrow(() => assertDistinctPhase5ApplicationUrls(official, fireside));
+  assert.throws(
+    () => assertDistinctPhase5ApplicationUrls(official, official),
+    /application URL namespace collides/u,
+  );
+  assert.throws(
+    () =>
+      assertDistinctPhase5ApplicationUrls(official, {
+        ...fireside,
+        FE_URL: undefined as unknown as string,
+      }),
+    /application URL is missing: FE_URL/u,
+  );
 });
 
 test("Phase 5 directory staging keeps a real tree with hardlinked files", async () => {
