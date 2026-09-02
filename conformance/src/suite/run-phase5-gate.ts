@@ -372,11 +372,16 @@ async function startPair(
   const pair = new Map<Phase5StackName, RunningPhase5Stack>();
   for (const stack of stackNames) {
     const directory = stack === "official" ? args.officialDirectory : args.firesideDirectory;
+    const runNamespace = args.smoke
+      ? path.join("smoke", path.basename(args.outputDirectory))
+      : label === "initial"
+        ? "full-data"
+        : "restart-full-data";
     const exportPath = path.join(
       path.dirname(path.dirname(args.fullData)),
       "exports",
       stack,
-      label === "initial" ? "full-data" : "restart-full-data",
+      runNamespace,
     );
     await mkdir(exportPath, { recursive: true });
     const running = await startPhase5Stack(
@@ -391,8 +396,8 @@ async function startPair(
         nodeBinary: args.nodeBinary,
         ports: PHASE5_STACK_PORTS[stack],
         runtimeDirectory: path.join(
-          path.dirname(args.outputDirectory),
-          "runtime",
+          path.dirname(path.dirname(args.fullData)),
+          `runtime-${path.basename(args.outputDirectory)}`,
           `${stack}-${label}`,
         ),
         stack,
@@ -644,8 +649,8 @@ async function runFreshColleague(
         nodeBinary: args.nodeBinary,
         ports: PHASE5_STACK_PORTS.fireside,
         runtimeDirectory: path.join(
-          path.dirname(args.outputDirectory),
-          "runtime",
+          path.dirname(path.dirname(args.fullData)),
+          `runtime-${path.basename(args.outputDirectory)}`,
           label,
         ),
         stack: backend ?? "fireside",
