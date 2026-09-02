@@ -1811,6 +1811,24 @@ versioned releases, and prebuilt macOS arm64/x64 and Linux binaries. Publish the
 generated compatibility scoreboard. Gate criteria are fixed before the release
 candidate run.
 
+The Twodart application-acceptance gate uses two linked worktrees at one exact
+Twodart revision. Their branch leaf names must differ because Portless derives
+the application hostname namespace from that leaf; copying the repository into
+two directories does not create distinct application URLs. The frozen Firebase
+import is staged as a real directory tree with hardlinked files because
+firebase-tools probes the import root with `lstat()` and rejects a directory
+symlink before reading its metadata. Source bytes and all three staged views are
+rehash-verified after the lifecycle so neither stack may mutate the corpus.
+
+Headless mprocs shutdown is export-first. The gate sends `SIGINT` only to the
+validated emulator launch process group, waits up to 600 seconds for the full
+8 GB export to complete, and only then sends `c: force-quit` over the pinned
+mprocs control connection to reap the remaining controller tree. Terminal key
+injection is not a lifecycle API because a focused child can consume it. Any
+child process whose stdout or stderr is captured is evaluated on Node's
+`close` event, not `exit`, so revision, health, and command evidence cannot be
+read before the pipes are fully drained.
+
 ## 12. Benchmarks
 
 Starting in Phase 1, CI tracks fireside and the official Java emulator on the
