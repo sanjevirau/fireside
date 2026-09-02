@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "kind": "exact synthetic Phase 5 browser observation separating a font request from document and router state",
+    "candidateRevision": "02a4390b8c808feb51eb83de6bc6af1b22665a17",
+    "twodartRevision": "daa55b893ab0564f558b3f4116c102762e964aeb",
+    "diagnostic": "two-tier-smoke-20260902T232435+0800-02a4390-r10",
+    "manifestSha256": "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa"
+  },
+  "evidence": {
+    "browserSha256": "3b09abf5647fe74f410fb89935fe4cd5e7716cc6087661c9e57c683474680212",
+    "browserLogSha256": "deb304147df49acecc96e7e9540d516d6a96179d93308e0197d94886a7e2bc28",
+    "failureSha256": "e769f0ccc422cbd2bfa66e64c4166b1c969f801e57f84bb29de77b82ab7aa3c2",
+    "officialTmuxSha256": "86fcf929575cff41b7cf0fb1bfa88211e104de974aecaf79e1ef4596e0d460ea",
+    "preflightSha256": "2f9001ea49d98486140ae789b6ec4cedfa3b07d59ccfc64076573ca8d0edfd23",
+    "vmstatSha256": "df906eb81d11288b8d51e79bd1923dd81c9191e1ebbf0c4dd5d242cf9869494a"
+  },
+  "observation": {
+    "stack": "official",
+    "syntheticOnly": true,
+    "loginNavigationStatus": 200,
+    "finalDocumentPath": "/login/overview",
+    "finalDocumentQueryKeys": [],
+    "nextRouter": {
+      "asPath": "/login/overview",
+      "pathname": "/login/[loginType]",
+      "queryKeys": [
+        "loginType"
+      ],
+      "route": "/login/[loginType]"
+    },
+    "historyEvents": 0,
+    "undefinedLoginRequests": {
+      "count": 1,
+      "initiatorTypes": [
+        "other"
+      ],
+      "navigationRequests": 0,
+      "resourceTypes": [
+        "font"
+      ]
+    },
+    "emailSelectorVisible": false,
+    "browserJourneysCompleted": 0,
+    "browserPageErrors": 1,
+    "browserConsoleErrors": 2,
+    "browserRequestFailures": 3,
+    "officialExportMetadataPresent": true,
+    "officialExportFiles": 10,
+    "officialExportBytes": 181960,
+    "isolatedProcessesAfterCleanup": 0,
+    "isolatedListenersAfterCleanup": 0,
+    "failedSystemdUnits": 0,
+    "kernelOomEvidence": 0,
+    "steadySwapActivity": [
+      [0, 0],
+      [0, 0],
+      [0, 0]
+    ]
+  },
+  "contract": {
+    "canonicalSignedOutLoginPath": "/login/overview",
+    "undefinedFontRequestIsDocumentNavigation": false,
+    "undefinedFontRequestIsNextRouterTransition": false,
+    "browserMustRenderEmailSelector": "#workEmail",
+    "nextDiagnosticMustStoreSafeDomState": true,
+    "nextDiagnosticMustStorePageErrorClasses": true,
+    "nextDiagnosticMustStoreConsoleErrorOrigins": true,
+    "diagnosticMayStoreBodyText": false,
+    "diagnosticMayStoreQueryValues": false,
+    "diagnosticMayStorePrivateContent": false,
+    "diagnosticMayStoreCredentials": false,
+    "exportFirstShutdownRequiredOnBrowserFailure": true,
+    "zeroDirectoryOwnedProcessesRequired": true,
+    "zeroIsolatedListenersRequired": true,
+    "phase5ThresholdsMayChange": false
+  }
+}

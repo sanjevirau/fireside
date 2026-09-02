@@ -30,6 +30,10 @@ const tinyBrowserR9LoginDiagnosticGapUrl = new URL(
   "../fixtures/phase5/tiny-browser-r9-login-diagnostic-gap-contract.json",
   import.meta.url,
 );
+const tinyBrowserR10LoginRenderUrl = new URL(
+  "../fixtures/phase5/tiny-browser-r10-login-render-contract.json",
+  import.meta.url,
+);
 
 test("the exact lifecycle observation requires one SIGINT to one emulator process", async () => {
   const fixture = JSON.parse(await readFile(singleSigintUrl, "utf8")) as {
@@ -402,6 +406,105 @@ test("the r9 smoke freezes the remaining login diagnostic gap", async () => {
     true,
   );
   assert.equal(fixture.contract.diagnosticMayStoreQueryKeys, true);
+  assert.equal(fixture.contract.diagnosticMayStoreQueryValues, false);
+  assert.equal(fixture.contract.diagnosticMayStorePrivateContent, false);
+  assert.equal(fixture.contract.diagnosticMayStoreCredentials, false);
+  assert.equal(fixture.contract.phase5ThresholdsMayChange, false);
+});
+
+test("the r10 smoke separates the font failure from login navigation", async () => {
+  const fixture = JSON.parse(
+    await readFile(tinyBrowserR10LoginRenderUrl, "utf8"),
+  ) as {
+    readonly schemaVersion: number;
+    readonly oracle: {
+      readonly candidateRevision: string;
+      readonly diagnostic: string;
+      readonly manifestSha256: string;
+      readonly twodartRevision: string;
+    };
+    readonly observation: {
+      readonly browserJourneysCompleted: number;
+      readonly browserPageErrors: number;
+      readonly emailSelectorVisible: boolean;
+      readonly finalDocumentPath: string;
+      readonly finalDocumentQueryKeys: readonly string[];
+      readonly historyEvents: number;
+      readonly nextRouter: {
+        readonly asPath: string;
+        readonly pathname: string;
+        readonly queryKeys: readonly string[];
+        readonly route: string;
+      };
+      readonly officialExportMetadataPresent: boolean;
+      readonly isolatedListenersAfterCleanup: number;
+      readonly isolatedProcessesAfterCleanup: number;
+      readonly steadySwapActivity: readonly (readonly [number, number])[];
+      readonly undefinedLoginRequests: {
+        readonly count: number;
+        readonly initiatorTypes: readonly string[];
+        readonly navigationRequests: number;
+        readonly resourceTypes: readonly string[];
+      };
+    };
+    readonly contract: {
+      readonly browserMustRenderEmailSelector: string;
+      readonly canonicalSignedOutLoginPath: string;
+      readonly diagnosticMayStoreBodyText: boolean;
+      readonly diagnosticMayStoreCredentials: boolean;
+      readonly diagnosticMayStorePrivateContent: boolean;
+      readonly diagnosticMayStoreQueryValues: boolean;
+      readonly nextDiagnosticMustStoreConsoleErrorOrigins: boolean;
+      readonly nextDiagnosticMustStorePageErrorClasses: boolean;
+      readonly nextDiagnosticMustStoreSafeDomState: boolean;
+      readonly phase5ThresholdsMayChange: boolean;
+      readonly undefinedFontRequestIsDocumentNavigation: boolean;
+      readonly undefinedFontRequestIsNextRouterTransition: boolean;
+    };
+  };
+
+  assert.equal(fixture.schemaVersion, 1);
+  assert.deepEqual(fixture.oracle, {
+    candidateRevision: "02a4390b8c808feb51eb83de6bc6af1b22665a17",
+    diagnostic: "two-tier-smoke-20260902T232435+0800-02a4390-r10",
+    kind: "exact synthetic Phase 5 browser observation separating a font request from document and router state",
+    manifestSha256: "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa",
+    twodartRevision: "daa55b893ab0564f558b3f4116c102762e964aeb",
+  });
+  assert.equal(fixture.observation.finalDocumentPath, "/login/overview");
+  assert.deepEqual(fixture.observation.finalDocumentQueryKeys, []);
+  assert.deepEqual(fixture.observation.nextRouter, {
+    asPath: "/login/overview",
+    pathname: "/login/[loginType]",
+    queryKeys: ["loginType"],
+    route: "/login/[loginType]",
+  });
+  assert.equal(fixture.observation.historyEvents, 0);
+  assert.deepEqual(fixture.observation.undefinedLoginRequests, {
+    count: 1,
+    initiatorTypes: ["other"],
+    navigationRequests: 0,
+    resourceTypes: ["font"],
+  });
+  assert.equal(fixture.observation.emailSelectorVisible, false);
+  assert.equal(fixture.observation.browserJourneysCompleted, 0);
+  assert.equal(fixture.observation.browserPageErrors, 1);
+  assert.equal(fixture.observation.officialExportMetadataPresent, true);
+  assert.equal(fixture.observation.isolatedProcessesAfterCleanup, 0);
+  assert.equal(fixture.observation.isolatedListenersAfterCleanup, 0);
+  assert.deepEqual(fixture.observation.steadySwapActivity, [
+    [0, 0],
+    [0, 0],
+    [0, 0],
+  ]);
+  assert.equal(fixture.contract.canonicalSignedOutLoginPath, "/login/overview");
+  assert.equal(fixture.contract.undefinedFontRequestIsDocumentNavigation, false);
+  assert.equal(fixture.contract.undefinedFontRequestIsNextRouterTransition, false);
+  assert.equal(fixture.contract.browserMustRenderEmailSelector, "#workEmail");
+  assert.equal(fixture.contract.nextDiagnosticMustStoreSafeDomState, true);
+  assert.equal(fixture.contract.nextDiagnosticMustStorePageErrorClasses, true);
+  assert.equal(fixture.contract.nextDiagnosticMustStoreConsoleErrorOrigins, true);
+  assert.equal(fixture.contract.diagnosticMayStoreBodyText, false);
   assert.equal(fixture.contract.diagnosticMayStoreQueryValues, false);
   assert.equal(fixture.contract.diagnosticMayStorePrivateContent, false);
   assert.equal(fixture.contract.diagnosticMayStoreCredentials, false);
