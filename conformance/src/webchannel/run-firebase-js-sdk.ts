@@ -117,7 +117,7 @@ async function main(): Promise<void> {
         )}\n`,
     ),
   );
-  const restoreGeneratedMetadata = await pinGeneratedMetadata(
+  let restoreGeneratedMetadata = await pinGeneratedMetadata(
     generatedMetadataFiles.map(({ path }, index) => ({
       path,
       pinnedContents: pinnedGeneratedMetadata[index]!,
@@ -130,11 +130,36 @@ async function main(): Promise<void> {
       join(sdkDirectory, "config", "project.json"),
     );
 
-    await runCommand(
+    let dependencyBuild = await runObservedCommand(
       "yarn",
       ["--cwd", join(sdkDirectory, "packages", "firestore"), "build:deps"],
       sdkDirectory,
+      process.env,
     );
+    if (dependencyBuild.exitCode !== 0) {
+      if (!dependencyBuild.output.includes("Unexpected end of JSON input")) {
+        throw observedCommandError("yarn build:deps", dependencyBuild);
+      }
+      process.stderr.write(
+        "firebase-js-sdk generated package metadata was observed mid-write; restoring the pinned revision and retrying the pre-workload dependency build once.\n",
+      );
+      await restoreGeneratedMetadata();
+      restoreGeneratedMetadata = await pinGeneratedMetadata(
+        generatedMetadataFiles.map(({ path }, index) => ({
+          path,
+          pinnedContents: pinnedGeneratedMetadata[index]!,
+        })),
+      );
+      dependencyBuild = await runObservedCommand(
+        "yarn",
+        ["--cwd", join(sdkDirectory, "packages", "firestore"), "build:deps"],
+        sdkDirectory,
+        process.env,
+      );
+      if (dependencyBuild.exitCode !== 0) {
+        throw observedCommandError("yarn build:deps retry", dependencyBuild);
+      }
+    }
     await runCommand(
       "yarn",
       ["--cwd", integrationDirectory, `build:${arguments_.clientPersistence}`],
@@ -426,6 +451,18 @@ async function runObservedCommand(
       });
     });
   });
+}
+
+function observedCommandError(
+  label: string,
+  result: {
+    readonly exitCode: number | null;
+    readonly signal: NodeJS.Signals | null;
+  },
+): Error {
+  return new Error(
+    `${label} exited with code ${String(result.exitCode)} and signal ${String(result.signal)}`,
+  );
 }
 
 async function waitUntilListening(

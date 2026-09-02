@@ -111,3 +111,17 @@ test("SDK metadata pin and restore never expose partial JSON to readers", async 
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("SDK bootstrap makes the observed metadata race explicit and bounded", async () => {
+  const runner = await readFile(
+    join(testDirectory, "../src/webchannel/run-firebase-js-sdk.ts"),
+    "utf8",
+  );
+  assert.match(runner, /Unexpected end of JSON input/u);
+  assert.match(runner, /retrying the pre-workload dependency build once/u);
+  assert.match(runner, /yarn build:deps retry/u);
+  assert.equal(
+    [...runner.matchAll(/retrying the pre-workload dependency build once/gu)].length,
+    1,
+  );
+});
