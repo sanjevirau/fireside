@@ -730,7 +730,9 @@ async function verifyEnvironment(
     ),
   );
   if (Object.values(revisions).some((revision) => revision !== args.twodartRevision)) {
-    throw new Error("Phase 5 Twodart checkouts do not use one exact measured revision");
+    throw new Error(
+      `Phase 5 Twodart checkouts do not use one exact measured revision: ${JSON.stringify({ expected: args.twodartRevision, revisions })}`,
+    );
   }
   for (const candidate of [
     args.fullData,

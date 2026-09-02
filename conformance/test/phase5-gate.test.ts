@@ -70,4 +70,5 @@ test("Phase 5 gate includes smoke, fresh colleague, regression, and checksum pat
   );
   assert.match(source, /violations\.push\(`swapInPagesPerSecond=/u);
   assert.match(source, /JSON\.stringify\(\{ \.\.\.snapshot, violations \}\)/u);
+  assert.match(source, /expected: args\.twodartRevision, revisions/u);
 });
