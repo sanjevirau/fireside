@@ -26,6 +26,10 @@ const tinyBrowserR8LoginRouteUrl = new URL(
   "../fixtures/phase5/tiny-browser-r8-login-route-contract.json",
   import.meta.url,
 );
+const tinyBrowserR9LoginDiagnosticGapUrl = new URL(
+  "../fixtures/phase5/tiny-browser-r9-login-diagnostic-gap-contract.json",
+  import.meta.url,
+);
 
 test("the exact lifecycle observation requires one SIGINT to one emulator process", async () => {
   const fixture = JSON.parse(await readFile(singleSigintUrl, "utf8")) as {
@@ -286,6 +290,122 @@ test("the r8 smoke freezes the runtime-independent canonical login route", async
     zeroDirectoryOwnedProcessesRequired: true,
     zeroIsolatedListenersRequired: true,
   });
+});
+
+test("the r9 smoke freezes the remaining login diagnostic gap", async () => {
+  const fixture = JSON.parse(
+    await readFile(tinyBrowserR9LoginDiagnosticGapUrl, "utf8"),
+  ) as {
+    readonly schemaVersion: number;
+    readonly oracle: {
+      readonly candidateRevision: string;
+      readonly diagnostic: string;
+      readonly manifestSha256: string;
+      readonly twodartRevision: string;
+    };
+    readonly evidence: Readonly<Record<string, string>>;
+    readonly sourceUnderObservation: Readonly<Record<string, string>>;
+    readonly observation: {
+      readonly browserJourneysCompleted: number;
+      readonly emailSelectorVisible: boolean;
+      readonly finalDocumentPathStored: boolean;
+      readonly isolatedListenersAfterCleanup: number;
+      readonly isolatedProcessesAfterCleanup: number;
+      readonly nextRouterStateStored: boolean;
+      readonly officialExportBytes: number;
+      readonly officialExportFiles: number;
+      readonly officialExportMetadataPresent: boolean;
+      readonly routeClasses: readonly string[];
+      readonly routeClassificationConclusive: boolean;
+      readonly steadySwapActivity: readonly (readonly [number, number])[];
+      readonly syntheticOnly: boolean;
+      readonly undefinedRequestInitiatorStored: boolean;
+    };
+    readonly contract: {
+      readonly browserMustRenderEmailSelector: string;
+      readonly canonicalSignedOutLoginPath: string;
+      readonly diagnosticMayStoreCredentials: boolean;
+      readonly diagnosticMayStorePrivateContent: boolean;
+      readonly diagnosticMayStoreQueryKeys: boolean;
+      readonly diagnosticMayStoreQueryValues: boolean;
+      readonly nextDiagnosticMustStoreFinalDocumentPath: boolean;
+      readonly nextDiagnosticMustStoreNextRouterState: boolean;
+      readonly nextDiagnosticMustStoreUndefinedRequestInitiator: boolean;
+      readonly phase5ThresholdsMayChange: boolean;
+      readonly undefinedLoginPathAllowed: boolean;
+    };
+  };
+
+  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(
+    fixture.oracle.candidateRevision,
+    "ea6797475dc22861eeccb8d2cb68d9669fe6cb96",
+  );
+  assert.equal(
+    fixture.oracle.twodartRevision,
+    "daa55b893ab0564f558b3f4116c102762e964aeb",
+  );
+  assert.equal(
+    fixture.oracle.diagnostic,
+    "two-tier-smoke-20260902T230212+0800-ea67974-r9",
+  );
+  assert.equal(
+    fixture.oracle.manifestSha256,
+    "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa",
+  );
+  assert.deepEqual(fixture.evidence, {
+    browserLogSha256:
+      "d9e1a18e1259d973cac2f9bc671d73d9000c55325ad09184ab3abeae80214c28",
+    browserSha256:
+      "b985d5f45150649cf52e01e476dec7f4384f8ef9733b943306563caa7e582c09",
+    failureSha256:
+      "5806cf85047ed17b2912a42988f1c487e036679ce065ccad8e5a17eab6dea879",
+    officialTmuxSha256:
+      "06f1854b570aed9bb2bd6cebad97d631b7a7c039517ee15e12bc2c3d409339a8",
+    preflightSha256:
+      "3b9bb8e2ea1e9d7bfa76395ea318f780a1f42094925ebfedbd853f6f1a236bf8",
+    vmstatSha256:
+      "b39d71171865674044d4f319184b3a2454f7b199ebd96b10b2b4c3a300297617",
+  });
+  assert.equal(
+    fixture.sourceUnderObservation.appSha256,
+    "caf31bb0c09dec59e300ce659526bb58bcd43927e9475a5ec257ff9246d84bfc",
+  );
+  assert.equal(fixture.observation.syntheticOnly, true);
+  assert.deepEqual(fixture.observation.routeClasses, [
+    "https://templates.twodart.localhost:443/login/overview",
+    "https://templates.twodart.localhost:443/login/undefined",
+  ]);
+  assert.equal(fixture.observation.emailSelectorVisible, false);
+  assert.equal(fixture.observation.browserJourneysCompleted, 0);
+  assert.equal(fixture.observation.officialExportMetadataPresent, true);
+  assert.equal(fixture.observation.officialExportFiles, 10);
+  assert.equal(fixture.observation.officialExportBytes, 181960);
+  assert.equal(fixture.observation.isolatedProcessesAfterCleanup, 0);
+  assert.equal(fixture.observation.isolatedListenersAfterCleanup, 0);
+  assert.deepEqual(fixture.observation.steadySwapActivity, [
+    [0, 0],
+    [0, 0],
+    [0, 0],
+  ]);
+  assert.equal(fixture.observation.finalDocumentPathStored, false);
+  assert.equal(fixture.observation.nextRouterStateStored, false);
+  assert.equal(fixture.observation.undefinedRequestInitiatorStored, false);
+  assert.equal(fixture.observation.routeClassificationConclusive, false);
+  assert.equal(fixture.contract.canonicalSignedOutLoginPath, "/login/overview");
+  assert.equal(fixture.contract.undefinedLoginPathAllowed, false);
+  assert.equal(fixture.contract.browserMustRenderEmailSelector, "#workEmail");
+  assert.equal(fixture.contract.nextDiagnosticMustStoreFinalDocumentPath, true);
+  assert.equal(fixture.contract.nextDiagnosticMustStoreNextRouterState, true);
+  assert.equal(
+    fixture.contract.nextDiagnosticMustStoreUndefinedRequestInitiator,
+    true,
+  );
+  assert.equal(fixture.contract.diagnosticMayStoreQueryKeys, true);
+  assert.equal(fixture.contract.diagnosticMayStoreQueryValues, false);
+  assert.equal(fixture.contract.diagnosticMayStorePrivateContent, false);
+  assert.equal(fixture.contract.diagnosticMayStoreCredentials, false);
+  assert.equal(fixture.contract.phase5ThresholdsMayChange, false);
 });
 
 test("the failed browser journey freezes the exact readiness routes and evidence gaps", async () => {

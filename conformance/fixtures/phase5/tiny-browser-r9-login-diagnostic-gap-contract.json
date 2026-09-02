@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "kind": "exact synthetic Phase 5 browser observation after the canonical login redirect source fix",
+    "candidateRevision": "ea6797475dc22861eeccb8d2cb68d9669fe6cb96",
+    "twodartRevision": "daa55b893ab0564f558b3f4116c102762e964aeb",
+    "diagnostic": "two-tier-smoke-20260902T230212+0800-ea67974-r9",
+    "manifestSha256": "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa"
+  },
+  "evidence": {
+    "browserSha256": "b985d5f45150649cf52e01e476dec7f4384f8ef9733b943306563caa7e582c09",
+    "browserLogSha256": "d9e1a18e1259d973cac2f9bc671d73d9000c55325ad09184ab3abeae80214c28",
+    "failureSha256": "5806cf85047ed17b2912a42988f1c487e036679ce065ccad8e5a17eab6dea879",
+    "officialTmuxSha256": "06f1854b570aed9bb2bd6cebad97d631b7a7c039517ee15e12bc2c3d409339a8",
+    "preflightSha256": "3b9bb8e2ea1e9d7bfa76395ea318f780a1f42094925ebfedbd853f6f1a236bf8",
+    "vmstatSha256": "b39d71171865674044d4f319184b3a2454f7b199ebd96b10b2b4c3a300297617"
+  },
+  "sourceUnderObservation": {
+    "appPath": "apps/templates/pages/_app.tsx",
+    "appSha256": "caf31bb0c09dec59e300ce659526bb58bcd43927e9475a5ec257ff9246d84bfc",
+    "authStorePath": "apps/templates/stores/AuthStore.ts",
+    "authStoreSha256": "e39953e2e52b9c33c84643533b65ea15b34e1370f239612fd59cbba2053e7a5a",
+    "loginBoxPath": "apps/templates/components/Login/components/LoginPage/LoginBox/LoginBox.tsx",
+    "loginBoxSha256": "5e7e08d01b43ab3cee4e5eaad600bf7a61065e80e4a9bb99ad7f67ca7072bc74",
+    "loginPagePath": "apps/templates/components/Login/components/LoginPage/LoginPage.tsx",
+    "loginPageSha256": "a84fd83b6b5bef3a36209f3710515c8131fe13aa290112db4670af96e3ce4c07",
+    "mainPagePath": "apps/templates/components/Login/components/MainPage/MainPage.tsx",
+    "mainPageSha256": "93470af0c69a473c5e645383bf58a494566f57875c8ea128c3ead0262cea0cd5",
+    "oneTapPath": "apps/templates/utils/hooks/useGoogleOneTap.ts",
+    "oneTapSha256": "823fc55962d11c8e92085e01d34eb7be44b633f1acaa8fced7542b9056d6a90b"
+  },
+  "observation": {
+    "stack": "official",
+    "syntheticOnly": true,
+    "loginNavigationStatus": 200,
+    "routeClasses": [
+      "https://templates.twodart.localhost:443/login/overview",
+      "https://templates.twodart.localhost:443/login/undefined"
+    ],
+    "emailSelectorVisible": false,
+    "browserJourneysCompleted": 0,
+    "browserPageErrors": 0,
+    "browserConsoleErrors": 2,
+    "browserRequestFailures": 3,
+    "browserErrorHash": "0bc6a1b0445a39480dda1f9230810cf569dbbe7e34d7ff9faf6859d441e81c72",
+    "gateErrorHash": "55b4a1ef17681642ceb1eeb53a53b1cb42fcc0606f7914409ebe259e33b54a05",
+    "officialExportMetadataPresent": true,
+    "officialExportFiles": 10,
+    "officialExportBytes": 181960,
+    "isolatedProcessesAfterCleanup": 0,
+    "isolatedListenersAfterCleanup": 0,
+    "failedSystemdUnits": 0,
+    "kernelOomEvidence": 0,
+    "steadySwapActivity": [
+      [0, 0],
+      [0, 0],
+      [0, 0]
+    ],
+    "finalDocumentPathStored": false,
+    "nextRouterStateStored": false,
+    "undefinedRequestInitiatorStored": false,
+    "routeClassificationConclusive": false
+  },
+  "contract": {
+    "canonicalSignedOutLoginPath": "/login/overview",
+    "undefinedLoginPathAllowed": false,
+    "browserMustRenderEmailSelector": "#workEmail",
+    "nextDiagnosticMustStoreFinalDocumentPath": true,
+    "nextDiagnosticMustStoreNextRouterState": true,
+    "nextDiagnosticMustStoreUndefinedRequestInitiator": true,
+    "diagnosticMayStoreQueryKeys": true,
+    "diagnosticMayStoreQueryValues": false,
+    "diagnosticMayStorePrivateContent": false,
+    "diagnosticMayStoreCredentials": false,
+    "exportFirstShutdownRequiredOnBrowserFailure": true,
+    "zeroDirectoryOwnedProcessesRequired": true,
+    "zeroIsolatedListenersRequired": true,
+    "phase5ThresholdsMayChange": false
+  }
+}
