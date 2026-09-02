@@ -16,8 +16,10 @@
     "controlEventAfterEmulatorExit": "c: force-quit",
     "directEmulatorProcessGroupSigintRequired": true,
     "emulatorGrandchildExitGuaranteed": false,
+    "applicationGrandchildExitGuaranteed": false,
     "forceQuitSafeOnlyAfterEmulatorProcessGroupExited": true,
     "headlessTransport": "configured TCP control server",
+    "postQuitDirectoryProcessAuditRequired": true,
     "quitRequestsConfiguredChildStop": true,
     "terminalKeyDependsOnFocus": true,
     "quitStopsServerAfterChildrenExit": true
@@ -31,6 +33,20 @@
       "sigintSentAt": "2026-09-02T13:34:48+08:00"
     },
     "terminalKeyResult": "delivered to focused child terminal",
-    "controlEventResult": "c: quit left emulator launch groups and one non-emulator watcher live; direct emulator SIGINT completed export, then c: force-quit reaped the remaining controller tree"
+    "controlEventResult": "c: quit left emulator launch groups and one non-emulator watcher live; direct emulator SIGINT completed export, then c: force-quit reaped the remaining controller tree",
+    "failedStartCleanup": {
+      "phase5Diagnostic": "full-gate-smoke-20260902T144044+0800-11dadd4",
+      "gateExitCode": 1,
+      "gateListenersRemaining": 0,
+      "orphanedApplicationProcessGroups": [
+        "templates-python",
+        "dotnet",
+        "images",
+        "templates"
+      ],
+      "orphanedProcessCount": 22,
+      "orphanedListeners": [4599, 4848, 4659, 40629, 40745, 4115],
+      "requiredCleanup": "validate every process-group member against the isolated stack directory, signal only those groups, and require zero remaining directory-owned processes"
+    }
   }
 }
