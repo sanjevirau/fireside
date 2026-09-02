@@ -16,6 +16,7 @@ export type Phase5StackName = "official" | "fireside";
 
 export const PHASE5_EXPORT_SHUTDOWN_SECONDS = 600;
 export const PHASE5_DIRECTORY_REAP_SECONDS = 60;
+export const PHASE5_DIRECTORY_EMPTY_SCANS = 2;
 export const PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS = "-Xmx8g";
 export const PHASE5_LOGIN_ROUTE = "/login/overview";
 export const PHASE5_PORTLESS_STATE_DIRECTORY = "/home/sanjevi/.portless";
@@ -582,20 +583,38 @@ async function reapPhase5DirectoryProcessGroups(
   directory: string,
   maximumSeconds: number,
 ): Promise<void> {
-  let groups = await phase5DirectoryProcessGroups(directory);
-  if (groups.length === 0) return;
-  for (const group of groups) await assertPhase5ProcessGroupScope(group, directory);
-  signalPhase5Groups(groups, "SIGINT");
-
   const started = Date.now();
   const termAt = started + Math.floor((maximumSeconds * 1_000) / 2);
   const deadline = started + maximumSeconds * 1_000;
-  let termSent = false;
-  while ((groups = await phase5DirectoryProcessGroups(directory)).length > 0) {
-    if (!termSent && Date.now() >= termAt) {
-      for (const group of groups) await assertPhase5ProcessGroupScope(group, directory);
-      signalPhase5Groups(groups, "SIGTERM");
-      termSent = true;
+  const interruptedGroups = new Set<number>();
+  const terminatedGroups = new Set<number>();
+  let consecutiveEmptyScans = 0;
+  while (true) {
+    const groups = await phase5DirectoryProcessGroups(directory);
+    if (groups.length === 0) {
+      consecutiveEmptyScans += 1;
+      if (consecutiveEmptyScans >= PHASE5_DIRECTORY_EMPTY_SCANS) return;
+    } else {
+      consecutiveEmptyScans = 0;
+      const newlyDiscoveredGroups = groups.filter(
+        (group) => !interruptedGroups.has(group),
+      );
+      for (const group of newlyDiscoveredGroups) {
+        await assertPhase5ProcessGroupScope(group, directory);
+      }
+      signalPhase5Groups(newlyDiscoveredGroups, "SIGINT");
+      for (const group of newlyDiscoveredGroups) interruptedGroups.add(group);
+
+      if (Date.now() >= termAt) {
+        const unterminatedGroups = groups.filter(
+          (group) => !terminatedGroups.has(group),
+        );
+        for (const group of unterminatedGroups) {
+          await assertPhase5ProcessGroupScope(group, directory);
+        }
+        signalPhase5Groups(unterminatedGroups, "SIGTERM");
+        for (const group of unterminatedGroups) terminatedGroups.add(group);
+      }
     }
     if (Date.now() >= deadline) {
       throw new Error(
@@ -612,8 +631,17 @@ async function phase5DirectoryProcessGroups(directory: string): Promise<readonly
   for (const entry of await readdir("/proc", { withFileTypes: true })) {
     if (!entry.isDirectory() || !/^\d+$/u.test(entry.name)) continue;
     try {
-      const cwd = path.resolve(await readlink(`/proc/${entry.name}/cwd`));
-      if (cwd !== resolvedDirectory && !cwd.startsWith(`${resolvedDirectory}${path.sep}`)) {
+      const [commandBytes, cwdValue] = await Promise.all([
+        readFile(`/proc/${entry.name}/cmdline`),
+        readlink(`/proc/${entry.name}/cwd`),
+      ]);
+      const command = commandBytes.toString("utf8");
+      const cwd = path.resolve(cwdValue);
+      if (
+        cwd !== resolvedDirectory &&
+        !cwd.startsWith(`${resolvedDirectory}${path.sep}`) &&
+        !command.includes(resolvedDirectory)
+      ) {
         continue;
       }
       const group = processGroupFromStat(await readFile(`/proc/${entry.name}/stat`, "utf8"));
