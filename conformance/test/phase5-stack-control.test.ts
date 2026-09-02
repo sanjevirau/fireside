@@ -8,6 +8,7 @@ import {
   PHASE5_EXPORT_SHUTDOWN_SECONDS,
   PHASE5_LOGIN_ROUTE,
   PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS,
+  PHASE5_PORTLESS_STATE_DIRECTORY,
   PHASE5_TWODARTNET_HEALTH_ROUTE,
   parseCacheOutputCounts,
   phase5EmulatorProcessMatches,
@@ -56,6 +57,7 @@ test("Phase 5 stack launch uses the exact isolated runtime contract", () => {
     "FIREBASE_SKIP_PREBUILD='1'",
     "JAVA_HOME='/home/sanjevi/.local/share/mise/installs/java/26.0.2.1'",
     "JAVA_TOOL_OPTIONS=''",
+    "PORTLESS_STATE_DIR='/home/sanjevi/.portless'",
     "TWODART_DISABLE_EXTERNALS='1'",
     "TWODART_EMULATOR_EXPORT_OVERRIDE='/gate/exports/official/full-data'",
     "TWODART_EMULATOR_JAVA_TOOL_OPTIONS='-Xmx8g'",
@@ -87,6 +89,7 @@ test("Phase 5 stack shutdown uses the pinned mprocs control event", () => {
   assert.equal(PHASE5_DIRECTORY_REAP_SECONDS, 60);
   assert.equal(PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS, "-Xmx8g");
   assert.equal(PHASE5_LOGIN_ROUTE, "/login/overview");
+  assert.equal(PHASE5_PORTLESS_STATE_DIRECTORY, "/home/sanjevi/.portless");
   assert.equal(PHASE5_TWODARTNET_HEALTH_ROUTE, "/api/HealthCheck");
   assert.deepEqual(
     renderPhase5MprocsControlCommand("/gate/stack-official", 23011),
@@ -215,8 +218,15 @@ test("failed startup reaps its directory before asserting listener cleanup", asy
   const cleanupEnd = source.indexOf("async function stopPhase5EmulatorProcess", cleanupStart);
   const cleanupSource = source.slice(cleanupStart, cleanupEnd);
   const directoryReap = cleanupSource.indexOf("await reapPhase5DirectoryProcessGroups");
+  const controllerSessionClose = cleanupSource.indexOf(
+    '"close failed Phase 5 startup session"',
+  );
   const listenerAssertion = cleanupSource.indexOf("const deadline");
   assert.ok(directoryReap >= 0, "failed startup must reap its scoped directory");
+  assert.ok(
+    controllerSessionClose >= 0 && controllerSessionClose < directoryReap,
+    "failed startup must close its exact tmux session before directory reaping",
+  );
   assert.ok(
     listenerAssertion > directoryReap,
     "listener cleanup must be asserted only after directory process reaping",

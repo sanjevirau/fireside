@@ -18,6 +18,7 @@ export const PHASE5_EXPORT_SHUTDOWN_SECONDS = 600;
 export const PHASE5_DIRECTORY_REAP_SECONDS = 60;
 export const PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS = "-Xmx8g";
 export const PHASE5_LOGIN_ROUTE = "/login/overview";
+export const PHASE5_PORTLESS_STATE_DIRECTORY = "/home/sanjevi/.portless";
 export const PHASE5_TWODARTNET_HEALTH_ROUTE = "/api/HealthCheck";
 
 export interface StackLaunchInput {
@@ -126,6 +127,7 @@ export function renderPhase5StackCommand(input: StackLaunchInput): string {
     JAVA_HOME: input.javaHome,
     JAVA_TOOL_OPTIONS: "",
     PATH: exactPath,
+    PORTLESS_STATE_DIR: PHASE5_PORTLESS_STATE_DIRECTORY,
     TWODART_DISABLE_EXTERNALS: "1",
     TWODART_EMULATOR_EXPORT_OVERRIDE: input.exportPath,
     TWODART_EMULATOR_JAVA_BIN: path.join(input.javaHome, "bin", "java"),
@@ -402,7 +404,8 @@ async function cleanupFailedStart(
   );
   if (await listenerOpen(input.ports.mprocsControl)) {
     await requestHeadlessMprocsShutdown(input.directory, input.ports.mprocsControl);
-  } else if ((await run("tmux", ["has-session", "-t", input.tmuxSession])).exitCode === 0) {
+  }
+  if ((await run("tmux", ["has-session", "-t", input.tmuxSession])).exitCode === 0) {
     await requireCommand(
       "tmux",
       ["kill-session", "-t", input.tmuxSession],
