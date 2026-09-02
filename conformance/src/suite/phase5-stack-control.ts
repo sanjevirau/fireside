@@ -15,6 +15,7 @@ import type { Phase5StackPorts } from "./phase5-host-prepare.ts";
 export type Phase5StackName = "official" | "fireside";
 
 export const PHASE5_EXPORT_SHUTDOWN_SECONDS = 600;
+export const PHASE5_DIRECTORY_REAP_SECONDS = 60;
 
 export interface StackLaunchInput {
   readonly backendOverride?: Phase5StackName | null;
@@ -279,14 +280,6 @@ export async function stopPhase5Stack(
   if (!Number.isInteger(exitCode) || exitCode !== 0) {
     throw new Error(`${running.stack} mprocs exited with ${String(exitCode)}`);
   }
-  const ports = Object.values(running.ports);
-  const listenerDeadline = Date.now() + 60_000;
-  while ((await Promise.all(ports.map(async (port) => listenerOpen(port)))).some(Boolean)) {
-    if (Date.now() >= listenerDeadline) {
-      throw new Error(`${running.stack} left a listener after graceful shutdown`);
-    }
-    await delay(500);
-  }
   const exportMetadata = path.join(running.exportPath, "firebase-export-metadata.json");
   const exportMetadataPresent = await exists(exportMetadata);
   if (!exportMetadataPresent) {
@@ -297,6 +290,18 @@ export async function stopPhase5Stack(
     ["kill-session", "-t", running.tmuxSession],
     "close completed Phase 5 tmux session",
   );
+  await reapPhase5DirectoryProcessGroups(
+    running.directory,
+    PHASE5_DIRECTORY_REAP_SECONDS,
+  );
+  const ports = Object.values(running.ports);
+  const listenerDeadline = Date.now() + 60_000;
+  while ((await Promise.all(ports.map(async (port) => listenerOpen(port)))).some(Boolean)) {
+    if (Date.now() >= listenerDeadline) {
+      throw new Error(`${running.stack} left a listener after graceful shutdown`);
+    }
+    await delay(500);
+  }
   return {
     exitCode,
     exportMetadataPresent,
@@ -363,6 +368,10 @@ async function cleanupFailedStart(
       "close cleaned Phase 5 startup session",
     );
   }
+  await reapPhase5DirectoryProcessGroups(
+    input.directory,
+    PHASE5_DIRECTORY_REAP_SECONDS,
+  );
 }
 
 async function stopPhase5EmulatorProcessGroup(
@@ -428,6 +437,63 @@ async function phase5EmulatorProcessGroups(
     }
   }
   return [...groups].sort((left, right) => left - right);
+}
+
+async function reapPhase5DirectoryProcessGroups(
+  directory: string,
+  maximumSeconds: number,
+): Promise<void> {
+  let groups = await phase5DirectoryProcessGroups(directory);
+  if (groups.length === 0) return;
+  for (const group of groups) await assertPhase5ProcessGroupScope(group, directory);
+  signalPhase5Groups(groups, "SIGINT");
+
+  const started = Date.now();
+  const termAt = started + Math.floor((maximumSeconds * 1_000) / 2);
+  const deadline = started + maximumSeconds * 1_000;
+  let termSent = false;
+  while ((groups = await phase5DirectoryProcessGroups(directory)).length > 0) {
+    if (!termSent && Date.now() >= termAt) {
+      for (const group of groups) await assertPhase5ProcessGroupScope(group, directory);
+      signalPhase5Groups(groups, "SIGTERM");
+      termSent = true;
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `Phase 5 directory-owned process groups did not stop: ${groups.join(",")}`,
+      );
+    }
+    await delay(500);
+  }
+}
+
+async function phase5DirectoryProcessGroups(directory: string): Promise<readonly number[]> {
+  const resolvedDirectory = path.resolve(directory);
+  const groups = new Set<number>();
+  for (const entry of await readdir("/proc", { withFileTypes: true })) {
+    if (!entry.isDirectory() || !/^\d+$/u.test(entry.name)) continue;
+    try {
+      const cwd = path.resolve(await readlink(`/proc/${entry.name}/cwd`));
+      if (cwd !== resolvedDirectory && !cwd.startsWith(`${resolvedDirectory}${path.sep}`)) {
+        continue;
+      }
+      const group = processGroupFromStat(await readFile(`/proc/${entry.name}/stat`, "utf8"));
+      if (group > 1) groups.add(group);
+    } catch {
+      // The process can exit between /proc reads.
+    }
+  }
+  return [...groups].sort((left, right) => left - right);
+}
+
+function signalPhase5Groups(groups: readonly number[], signal: NodeJS.Signals): void {
+  for (const group of groups) {
+    try {
+      process.kill(-group, signal);
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+    }
+  }
 }
 
 async function assertPhase5ProcessGroupScope(

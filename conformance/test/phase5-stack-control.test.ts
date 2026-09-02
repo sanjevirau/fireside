@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   cacheOutputDigest,
+  PHASE5_DIRECTORY_REAP_SECONDS,
   PHASE5_EXPORT_SHUTDOWN_SECONDS,
   parseCacheOutputCounts,
   phase5EmulatorProcessMatches,
@@ -76,6 +77,7 @@ test("Phase 5 stack launch uses the exact isolated runtime contract", () => {
 
 test("Phase 5 stack shutdown uses the pinned mprocs control event", () => {
   assert.equal(PHASE5_EXPORT_SHUTDOWN_SECONDS, 600);
+  assert.equal(PHASE5_DIRECTORY_REAP_SECONDS, 60);
   assert.deepEqual(
     renderPhase5MprocsControlCommand("/gate/stack-official", 23011),
     {
@@ -162,6 +164,11 @@ test("mprocs control readiness never opens a protocol-less TCP connection", asyn
   assert.match(source, /cleanupFailedStart\(input, exitMarker\)/u);
   assert.match(source, /emulatorProcessObserved/u);
   assert.match(source, /emulator process exited before readiness/u);
+  assert.match(source, /reapPhase5DirectoryProcessGroups/u);
+  assert.match(source, /phase5DirectoryProcessGroups/u);
+  assert.match(source, /signalPhase5Groups\(groups, "SIGINT"\)/u);
+  assert.match(source, /signalPhase5Groups\(groups, "SIGTERM"\)/u);
+  assert.match(source, /cwd !== resolvedDirectory/u);
   assert.match(source, /child\.once\("close", \(exitCode\) =>/u);
   assert.doesNotMatch(source, /send-keys[\s\S]{0,100}["']q["']/u);
 });
