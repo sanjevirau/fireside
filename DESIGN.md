@@ -1959,6 +1959,21 @@ public cache-port setting, signed-out initialization must preserve
 leave room below Linux's 107-byte Unix-socket pathname boundary. None of these
 plumbing corrections changes a Phase 5 workload or threshold.
 
+Corrected diagnostic
+`two-tier-smoke-20260902T215453+0800-179f8d3-r5` confirmed that the public
+cache port and short Functions runtime path were fixed: the browser opened the
+isolated cache WebSocket and firebase-tools accepted the Unix-socket path. It
+also isolated a second route bug in `useGoogleOneTap`: both authentication
+branches aliased `router.query` and deleted `loginType` from the live object.
+Those branches may remove `loginType` only from a copied query object. The same
+attempt completed export-first shutdown but exposed a cleanup race in which
+cache-watcher, Next, Images, and TwodartNet processes became visible only after
+their controller exited. Directory cleanup therefore discovers ownership by
+either cwd or the exact worktree path in the command, signals newly discovered
+validated groups, and requires two consecutive empty ownership scans before
+declaring convergence. Listener-zero verification still follows process
+convergence, and the no-intervention rule for an immutable gate is unchanged.
+
 The full-data Twodart cache build also exposed a reusable-system-timestamp
 contract. A `RunQuery` response `read_time` can be supplied by the client as a
 later consistency selector. The identical Java cache build completed, while
