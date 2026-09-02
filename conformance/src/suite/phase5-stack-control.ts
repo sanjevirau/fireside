@@ -70,7 +70,7 @@ export function renderPhase5MprocsControlCommand(
   port: number,
 ): Phase5MprocsControlCommand {
   return {
-    arguments: ["--server", `127.0.0.1:${String(port)}`, "--ctl", "c: quit"],
+    arguments: ["--server", `127.0.0.1:${String(port)}`, "--ctl", "c: force-quit"],
     command: path.join(directory, "node_modules", ".bin", "mprocs"),
   };
 }
@@ -295,7 +295,7 @@ async function requestHeadlessMprocsShutdown(
   await requireCommand(
     control.command,
     control.arguments,
-    "request graceful headless mprocs shutdown",
+    "reap post-export headless mprocs controller",
   );
 }
 

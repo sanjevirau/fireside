@@ -65,7 +65,7 @@ test("Phase 5 stack shutdown uses the pinned mprocs control event", () => {
   assert.deepEqual(
     renderPhase5MprocsControlCommand("/gate/stack-official", 23011),
     {
-      arguments: ["--server", "127.0.0.1:23011", "--ctl", "c: quit"],
+      arguments: ["--server", "127.0.0.1:23011", "--ctl", "c: force-quit"],
       command: "/gate/stack-official/node_modules/.bin/mprocs",
     },
   );
