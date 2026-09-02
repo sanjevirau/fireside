@@ -12,6 +12,7 @@ import {
   PHASE5_PORTLESS_STATE_DIRECTORY,
   PHASE5_TWODARTNET_HEALTH_ROUTE,
   parseCacheOutputCounts,
+  phase5CommandLaunchPathMatches,
   phase5EmulatorProcessMatches,
   phase5ProcessIdentityFromStat,
   renderPhase5MprocsControlCommand,
@@ -161,6 +162,31 @@ test("Phase 5 process identities include PID reuse protection", () => {
   );
 });
 
+test("directory ownership accepts launch paths but rejects mere argument references", () => {
+  const directory = "/gate/stack-official";
+  assert.equal(
+    phase5CommandLaunchPathMatches(
+      "/usr/bin/node\0/gate/stack-official/node_modules/.bin/next\0dev\0",
+      directory,
+    ),
+    true,
+  );
+  assert.equal(
+    phase5CommandLaunchPathMatches(
+      "/gate/stack-official/engines/images/.venv/bin/python\0server.py\0",
+      directory,
+    ),
+    true,
+  );
+  assert.equal(
+    phase5CommandLaunchPathMatches(
+      "/usr/bin/node\0/gate/harness/run-phase5-gate.ts\0--official-dir\0/gate/stack-official\0",
+      directory,
+    ),
+    false,
+  );
+});
+
 test("cache summary parsing is content-free and deterministic", () => {
   const log = `
 📊 Data summary:
@@ -259,7 +285,10 @@ test("directory cleanup converges across reparenting and revalidates every signa
   const discoveryEnd = source.indexOf("function signalPhase5Groups", discoveryStart);
   const discoverySource = source.slice(discoveryStart, discoveryEnd);
   assert.match(discoverySource, /readFile\(`\/proc\/\$\{entry\.name\}\/cmdline`\)/u);
-  assert.match(discoverySource, /!command\.includes\(resolvedDirectory\)/u);
+  assert.match(
+    discoverySource,
+    /!phase5CommandLaunchPathMatches\(command, resolvedDirectory\)/u,
+  );
 });
 
 test("diagnostic readiness fails fast only after healthy process and listener gates", async () => {

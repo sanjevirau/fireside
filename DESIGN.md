@@ -1965,13 +1965,15 @@ cache port and short Functions runtime path were fixed: the browser opened the
 isolated cache WebSocket and firebase-tools accepted the Unix-socket path. It
 also isolated a second route bug in `useGoogleOneTap`: both authentication
 branches aliased `router.query` and deleted `loginType` from the live object.
-Those branches may remove `loginType` only from a copied query object. The same
+Those branches no longer remove `loginType`; authentication redirects select
+an explicit destination and do not consume the live dynamic-route query. The same
 attempt completed export-first shutdown but exposed a cleanup race in which
 cache-watcher, Next, Images, and TwodartNet processes became visible only after
 their controller exited. Directory cleanup therefore discovers ownership by
-either cwd or the exact worktree path in the command, signals newly discovered
-validated groups, and requires two consecutive empty ownership scans before
-declaring convergence. Listener-zero verification still follows process
+either cwd or an executable/module launch path inside the exact worktree,
+signals newly discovered validated groups, and requires two consecutive empty
+ownership scans before declaring convergence. A worktree path appearing only
+as a controller argument does not confer ownership. Listener-zero verification still follows process
 convergence, and the no-intervention rule for an immutable gate is unchanged.
 
 The full-data Twodart cache build also exposed a reusable-system-timestamp

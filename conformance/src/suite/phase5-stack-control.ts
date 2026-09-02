@@ -113,6 +113,24 @@ export function phase5EmulatorProcessMatches(
   return command.startsWith(`${firesideBinary}\0suite\0`);
 }
 
+export function phase5CommandLaunchPathMatches(
+  command: string,
+  directory: string,
+): boolean {
+  const resolvedDirectory = path.resolve(directory);
+  return command
+    .split("\0")
+    .slice(0, 2)
+    .some((value) => {
+      if (!path.isAbsolute(value)) return false;
+      const resolvedValue = path.resolve(value);
+      return (
+        resolvedValue === resolvedDirectory ||
+        resolvedValue.startsWith(`${resolvedDirectory}${path.sep}`)
+      );
+    });
+}
+
 export function renderPhase5StackCommand(input: StackLaunchInput): string {
   const exactPath = [
     path.join(input.javaHome, "bin"),
@@ -514,7 +532,7 @@ async function phase5EmulatorProcesses(
       if (
         cwd !== resolvedDirectory &&
         !cwd.startsWith(`${resolvedDirectory}${path.sep}`) &&
-        !command.includes(resolvedDirectory)
+        !phase5CommandLaunchPathMatches(command, resolvedDirectory)
       ) {
         continue;
       }
@@ -553,7 +571,7 @@ async function assertPhase5EmulatorProcessScope(
     if (
       cwd !== resolvedDirectory &&
       !cwd.startsWith(`${resolvedDirectory}${path.sep}`) &&
-      !command.includes(resolvedDirectory)
+      !phase5CommandLaunchPathMatches(command, resolvedDirectory)
     ) {
       throw new Error(
         `refusing to signal emulator process ${String(identity.pid)} outside ${resolvedDirectory}`,
@@ -640,7 +658,7 @@ async function phase5DirectoryProcessGroups(directory: string): Promise<readonly
       if (
         cwd !== resolvedDirectory &&
         !cwd.startsWith(`${resolvedDirectory}${path.sep}`) &&
-        !command.includes(resolvedDirectory)
+        !phase5CommandLaunchPathMatches(command, resolvedDirectory)
       ) {
         continue;
       }
@@ -684,7 +702,7 @@ async function assertPhase5ProcessGroupScope(
       if (
         cwd !== resolvedDirectory &&
         !cwd.startsWith(`${resolvedDirectory}${path.sep}`) &&
-        !command.includes(resolvedDirectory)
+        !phase5CommandLaunchPathMatches(command, resolvedDirectory)
       ) {
         throw new Error(
           `refusing to signal process group ${String(group)} outside ${resolvedDirectory}`,
