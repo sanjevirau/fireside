@@ -1829,6 +1829,17 @@ child process whose stdout or stderr is captured is evaluated on Node's
 `close` event, not `exit`, so revision, health, and command evidence cannot be
 read before the pipes are fully drained.
 
+The controlled Linux stack command places every frozen Phase 5 tool directory
+(Java, Node, Bun, .NET, Python, and Rust) ahead of the mutable mise shim layer.
+Invoking Bun through a mise shim re-activated the host's Java 21 and .NET
+10.0.100 defaults inside mprocs despite the parent gate having verified Java 26
+and .NET 10.0.301. The official Firestore emulator then exhausted its Java 21
+heap while seeding the 211,202-document corpus. The corrected launcher keeps
+the official comparison untuned—no heap cap or `JAVA_TOOL_OPTIONS` is added—
+while ensuring it actually uses the frozen Java executable. Once an emulator
+launch process has been observed, its disappearance before stack readiness is
+an immediate startup failure rather than a 20-minute readiness wait.
+
 ## 12. Benchmarks
 
 Starting in Phase 1, CI tracks fireside and the official Java emulator on the
