@@ -14,13 +14,16 @@
   "contract": {
     "cliFlag": "--ctl",
     "controlEvent": "c: quit",
+    "directEmulatorProcessGroupSigintRequired": true,
+    "emulatorGrandchildExitGuaranteed": false,
     "headlessTransport": "configured TCP control server",
+    "quitRequestsConfiguredChildStop": true,
     "terminalKeyDependsOnFocus": true,
-    "quitStopsServerAndChildren": true
+    "quitStopsServerAfterChildrenExit": true
   },
   "observation": {
     "phase5Diagnostic": "full-gate-smoke-20260902T125932+0800-6f0e811",
     "terminalKeyResult": "delivered to focused child terminal",
-    "controlEventResult": "accepted by both isolated mprocs servers"
+    "controlEventResult": "accepted by both isolated mprocs servers; emulator launch groups remained live until direct SIGINT"
   }
 }

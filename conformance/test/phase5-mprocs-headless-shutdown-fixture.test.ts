@@ -12,8 +12,11 @@ test("mprocs oracle defines deterministic headless lifecycle shutdown", async ()
     readonly contract: {
       readonly cliFlag: string;
       readonly controlEvent: string;
+      readonly directEmulatorProcessGroupSigintRequired: boolean;
+      readonly emulatorGrandchildExitGuaranteed: boolean;
       readonly headlessTransport: string;
-      readonly quitStopsServerAndChildren: boolean;
+      readonly quitRequestsConfiguredChildStop: boolean;
+      readonly quitStopsServerAfterChildrenExit: boolean;
       readonly terminalKeyDependsOnFocus: boolean;
     };
     readonly oracle: {
@@ -38,7 +41,10 @@ test("mprocs oracle defines deterministic headless lifecycle shutdown", async ()
   });
   assert.equal(fixture.contract.cliFlag, "--ctl");
   assert.equal(fixture.contract.controlEvent, "c: quit");
+  assert.equal(fixture.contract.directEmulatorProcessGroupSigintRequired, true);
+  assert.equal(fixture.contract.emulatorGrandchildExitGuaranteed, false);
   assert.equal(fixture.contract.headlessTransport, "configured TCP control server");
+  assert.equal(fixture.contract.quitRequestsConfiguredChildStop, true);
   assert.equal(fixture.contract.terminalKeyDependsOnFocus, true);
-  assert.equal(fixture.contract.quitStopsServerAndChildren, true);
+  assert.equal(fixture.contract.quitStopsServerAfterChildrenExit, true);
 });
