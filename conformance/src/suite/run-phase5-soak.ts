@@ -27,6 +27,7 @@ interface Arguments {
   readonly output: string;
   readonly projectId: string;
   readonly smoke: boolean;
+  readonly stack: StackName;
 }
 
 interface StackPorts {
@@ -114,12 +115,12 @@ interface MemorySample {
     readonly swapOutPages: number;
     readonly swapTotalBytes: number;
   };
-  readonly stacks: Readonly<Record<StackName, {
+  readonly stacks: Readonly<Partial<Record<StackName, {
     readonly processCount: number;
     readonly processes: readonly ProcessMetric[];
     readonly pssBytes: number | null;
     readonly rssBytes: number;
-  }>>;
+  }>>>;
 }
 
 interface HealthEvidence {
@@ -154,7 +155,9 @@ async function main(): Promise<void> {
   const manifestBytes = await readFile(manifestPath);
   const manifest = JSON.parse(manifestBytes.toString("utf8")) as Phase5Manifest;
   assertPhase5Manifest(manifest, manifestBytes);
-  const durationSeconds = args.smoke ? 60 : manifest.soak.durationSeconds;
+  const durationSeconds = args.smoke
+    ? manifest.diagnosticSmoke.shortSoakSecondsPerStack
+    : manifest.soak.durationSeconds;
   const definitions = stackDefinitions(args, manifest);
   const startedAt = new Date().toISOString();
   const healthBefore = await captureHealth();
@@ -254,6 +257,8 @@ async function main(): Promise<void> {
     },
     schemaVersion: 1,
     smoke: args.smoke,
+    swapActivity: summarizeSwapActivity(),
+    stack: args.stack,
     stacks: summaries,
     startedAt,
     syntheticIdentifiersStored: false,
@@ -676,7 +681,7 @@ async function sampleMemory(
           ] as const;
         }),
       ),
-    ) as unknown as Readonly<Record<StackName, MemorySample["stacks"][StackName]>>;
+    ) as MemorySample["stacks"];
     memorySamples.push({
       capturedAt: new Date().toISOString(),
       elapsedMilliseconds: Date.now() - startedAt,
@@ -899,6 +904,16 @@ function validateGate(
   smoke: boolean,
 ): string[] {
   const failures: string[] = [...cleanupFailures];
+  const swapActivity = summarizeSwapActivity();
+  if (swapActivity.sampleCount < 2) {
+    failures.push(digest(`swap-samples:${String(swapActivity.sampleCount)}`));
+  }
+  if (swapActivity.swapInPagesDelta !== 0) {
+    failures.push(digest(`swap-in-pages:${String(swapActivity.swapInPagesDelta)}`));
+  }
+  if (swapActivity.swapOutPagesDelta !== 0) {
+    failures.push(digest(`swap-out-pages:${String(swapActivity.swapOutPagesDelta)}`));
+  }
   if (
     (!smoke && health.failedUnits !== manifest.soak.thresholds.failedUnits) ||
     (smoke && health.failedUnits !== healthBefore.failedUnits)
@@ -952,16 +967,48 @@ function validateGate(
   return failures;
 }
 
+function summarizeSwapActivity(): {
+  readonly residualSwapBytesAtEnd: number | null;
+  readonly residualSwapBytesAtStart: number | null;
+  readonly sampleCount: number;
+  readonly swapInPagesDelta: number | null;
+  readonly swapOutPagesDelta: number | null;
+} {
+  const first = memorySamples[0]?.host;
+  const last = memorySamples.at(-1)?.host;
+  return {
+    residualSwapBytesAtEnd:
+      last === undefined ? null : last.swapTotalBytes - last.swapFreeBytes,
+    residualSwapBytesAtStart:
+      first === undefined ? null : first.swapTotalBytes - first.swapFreeBytes,
+    sampleCount: memorySamples.length,
+    swapInPagesDelta:
+      first === undefined || last === undefined
+        ? null
+        : last.swapInPages - first.swapInPages,
+    swapOutPagesDelta:
+      first === undefined || last === undefined
+        ? null
+        : last.swapOutPages - first.swapOutPages,
+  };
+}
+
 function summarizeMemory(
   definitions: readonly StackDefinition[],
 ): Readonly<Record<StackName, Record<string, unknown>>> {
   return Object.fromEntries(
     definitions.map((definition) => {
-      const samples = memorySamples.map(({ elapsedMilliseconds, stacks }) => ({
-        elapsedMilliseconds,
-        pssBytes: stacks[definition.name].pssBytes,
-        rssBytes: stacks[definition.name].rssBytes,
-      }));
+      const samples = memorySamples.map(({ elapsedMilliseconds, stacks }) => {
+        const stack = stacks[definition.name];
+        if (stack === undefined) {
+          throw new Error(`Phase 5 memory sample omitted ${definition.name}`);
+        }
+        return {
+          elapsedMilliseconds,
+          pssBytes: stack.pssBytes,
+          rssBytes: stack.rssBytes,
+        };
+      });
       const pss = samples
         .map(({ elapsedMilliseconds, pssBytes }) => ({ elapsedMilliseconds, value: pssBytes }))
         .filter(
@@ -1092,10 +1139,9 @@ function stackDefinitions(
       storage: required("storage"),
     };
   };
-  return [
-    { directory: args.officialDirectory, name: "official", ports: ports("official") },
-    { directory: args.firesideDirectory, name: "fireside", ports: ports("fireside") },
-  ];
+  return args.stack === "official"
+    ? [{ directory: args.officialDirectory, name: "official", ports: ports("official") }]
+    : [{ directory: args.firesideDirectory, name: "fireside", ports: ports("fireside") }];
 }
 
 function emptyCounts(): WorkloadCounts {
@@ -1135,12 +1181,17 @@ function parseArguments(values: readonly string[]): Arguments {
   if (projectId !== "demo-twodart-local") {
     throw new Error("Phase 5 soak must use demo-twodart-local");
   }
+  const stack = required("stack");
+  if (stack !== "official" && stack !== "fireside") {
+    throw new Error("Phase 5 soak --stack must be official or fireside");
+  }
   return {
     firesideDirectory: path.resolve(required("fireside-dir")),
     officialDirectory: path.resolve(required("official-dir")),
     output: path.resolve(required("output")),
     projectId,
     smoke,
+    stack,
   };
 }
 

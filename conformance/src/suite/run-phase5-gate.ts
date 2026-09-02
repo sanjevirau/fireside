@@ -54,6 +54,7 @@ interface Arguments {
   readonly reportPath: string;
   readonly runtimeAssetsRoot: string;
   readonly smoke: boolean;
+  readonly smokeEvidence: string | null;
   readonly twodartRevision: string;
 }
 
@@ -173,155 +174,110 @@ async function main(): Promise<void> {
     flag: "wx",
   });
 
+  const smokePrerequisite = args.smoke
+    ? null
+    : await validateSmokePrerequisite(args, manifest);
+  if (smokePrerequisite !== null) {
+    await writeJson(
+      path.join(args.outputDirectory, "smoke-prerequisite.json"),
+      smokePrerequisite,
+    );
+  }
+
   const environment = await verifyEnvironment(args, manifest);
   await writeJson(path.join(args.outputDirectory, "environment.json"), environment);
 
   const lifecycle = new Map<Phase5StackName, Partial<LifecycleRecord>>();
   const active = new Map<Phase5StackName, RunningPhase5Stack>();
+  const initialRunning = new Map<Phase5StackName, RunningPhase5Stack>();
+  const initialBefore = new Map<Phase5StackName, StackState>();
+  const initialAfter = new Map<Phase5StackName, StackState>();
+  const restartRunning = new Map<Phase5StackName, RunningPhase5Stack>();
+  const restartBefore = new Map<Phase5StackName, StackState>();
+  const restartAfter = new Map<Phase5StackName, StackState>();
   const cleanupFailureHashes: string[] = [];
   let completed = false;
   try {
-    const initial = await startPair(args, manifest, "initial", "full-data", active);
-    const initialSnapshots = await exercisePair(
-      args,
-      manifest,
-      initial,
-      "initial",
-    );
-    assertCacheParity(initial);
-    assertPairState(initialSnapshots.before, manifest, true);
-    assertPairState(initialSnapshots.after, manifest, true);
-
-    if (!args.smoke) {
-      for (const stack of stackNames) {
-        const running = requiredMap(initial, stack);
-        const stopped = await stopPhase5Stack(
-          running,
-          PHASE5_EXPORT_SHUTDOWN_SECONDS,
-        );
-        active.delete(stack);
-        lifecycle.set(stack, {
-          initial: {
-            browser: requiredMap(initialSnapshots.browser, stack),
-            cacheDigest: cacheOutputDigest(running.cacheBuild.outputCounts),
-            stateAfterJourney: requiredMap(initialSnapshots.after, stack),
-            stateBeforeJourney: requiredMap(initialSnapshots.before, stack),
-          },
-          stops: { initial: stopped } as LifecycleRecord["stops"],
-        });
-      }
-      const restartDataset = await stageLifecycleExports(args);
-      const restarted = await startPair(
+    for (const stack of stackNames) {
+      await writeJson(
+        path.join(args.outputDirectory, `preflight-${stack}-soak.json`),
+        await captureHostHealth(manifest, args.smoke),
+      );
+      const running = await startStack(
         args,
         manifest,
-        "restart",
-        restartDataset,
+        stack,
+        "initial",
+        args.smoke ? "phase5-smoke" : "full-data",
         active,
       );
-      const restartSnapshots = await exercisePair(
-        args,
-        manifest,
-        restarted,
-        "restart",
-      );
-      assertCacheParity(restarted);
-      assertPairState(restartSnapshots.before, manifest, false);
-      assertPairState(restartSnapshots.after, manifest, false);
-      for (const stack of stackNames) {
-        const initialRecord = lifecycle.get(stack)?.initial;
-        if (initialRecord === undefined) throw new Error(`${stack} initial record is missing`);
-        assertExactState(initialRecord.stateAfterJourney, requiredMap(restartSnapshots.before, stack));
-      }
+      initialRunning.set(stack, running);
+      const initial = await exerciseStack(args, manifest, running, "initial");
+      initialBefore.set(stack, initial.before);
+      initialAfter.set(stack, initial.after);
+      await runSoak(args, manifest, stack);
+      const initialStop = await stopPhase5Stack(running, PHASE5_EXPORT_SHUTDOWN_SECONDS);
+      active.delete(stack);
+      lifecycle.set(stack, {
+        initial: {
+          browser: initial.browser,
+          cacheDigest: cacheOutputDigest(running.cacheBuild.outputCounts),
+          stateAfterJourney: initial.after,
+          stateBeforeJourney: initial.before,
+        },
+        stops: { initial: initialStop } as LifecycleRecord["stops"],
+      });
 
-      const soak = await runCommand(
-        "two-hour-differential-soak",
-        process.execPath,
-        [
-          "--import",
-          tsxImportSpecifier,
-          path.join(conformanceDirectory, "src/suite/run-phase5-soak.ts"),
-          "--official-dir",
-          args.officialDirectory,
-          "--fireside-dir",
-          args.firesideDirectory,
-          "--project-id",
-          args.projectId,
-          "--output",
-          path.join(args.outputDirectory, "soak.json"),
-        ],
-        repositoryRoot,
-        args.outputDirectory,
-        3 * 60 * 60_000,
-      );
-      assertCommand(soak);
-      await assertJsonPassed(path.join(args.outputDirectory, "soak.json"), "soak");
-
-      for (const stack of stackNames) {
-        const running = requiredMap(restarted, stack);
-        const stopped = await stopPhase5Stack(
-          running,
+      if (!args.smoke) {
+        const restartDataset = await stageLifecycleExport(args, stack);
+        await writeJson(
+          path.join(args.outputDirectory, `preflight-${stack}-restart.json`),
+          await captureHostHealth(manifest, false),
+        );
+        const restarted = await startStack(
+          args,
+          manifest,
+          stack,
+          "restart",
+          restartDataset,
+          active,
+        );
+        restartRunning.set(stack, restarted);
+        const restart = await exerciseStack(args, manifest, restarted, "restart");
+        restartBefore.set(stack, restart.before);
+        restartAfter.set(stack, restart.after);
+        assertExactState(initial.after, restart.before);
+        const restartStop = await stopPhase5Stack(
+          restarted,
           PHASE5_EXPORT_SHUTDOWN_SECONDS,
         );
         active.delete(stack);
-        const record = lifecycle.get(stack);
-        if (record?.initial === undefined || record.stops?.initial === undefined) {
-          throw new Error(`${stack} lifecycle record is incomplete`);
+        const initialRecord = requiredMap(lifecycle, stack).initial;
+        if (initialRecord === undefined) {
+          throw new Error(`${stack} initial lifecycle record is missing`);
         }
         lifecycle.set(stack, {
-          initial: record.initial,
+          initial: initialRecord,
           restart: {
-            browser: requiredMap(restartSnapshots.browser, stack),
-            cacheDigest: cacheOutputDigest(running.cacheBuild.outputCounts),
-            stateAfterJourney: requiredMap(restartSnapshots.after, stack),
-            stateBeforeJourney: requiredMap(restartSnapshots.before, stack),
+            browser: restart.browser,
+            cacheDigest: cacheOutputDigest(restarted.cacheBuild.outputCounts),
+            stateAfterJourney: restart.after,
+            stateBeforeJourney: restart.before,
           },
-          stops: { initial: record.stops.initial, restart: stopped },
+          stops: { initial: initialStop, restart: restartStop },
         });
       }
+    }
 
+    assertCacheParity(initialRunning);
+    assertPairState(initialBefore, manifest, !args.smoke);
+    assertPairState(initialAfter, manifest, !args.smoke);
+    if (!args.smoke) {
+      assertCacheParity(restartRunning);
+      assertPairState(restartBefore, manifest, false);
+      assertPairState(restartAfter, manifest, false);
       await runFreshColleague(args, manifest, active);
       await runRegressions(args);
-    } else {
-      const soak = await runCommand(
-        "differential-soak-smoke",
-        process.execPath,
-        [
-          "--import",
-          tsxImportSpecifier,
-          path.join(conformanceDirectory, "src/suite/run-phase5-soak.ts"),
-          "--official-dir",
-          args.officialDirectory,
-          "--fireside-dir",
-          args.firesideDirectory,
-          "--project-id",
-          args.projectId,
-          "--output",
-          path.join(args.outputDirectory, "soak-smoke.json"),
-          "--smoke",
-        ],
-        repositoryRoot,
-        args.outputDirectory,
-        15 * 60_000,
-      );
-      assertCommand(soak);
-      await assertJsonPassed(path.join(args.outputDirectory, "soak-smoke.json"), "soak smoke");
-      for (const stack of stackNames) {
-        const running = requiredMap(initial, stack);
-        const stopped = await stopPhase5Stack(
-          running,
-          PHASE5_EXPORT_SHUTDOWN_SECONDS,
-        );
-        active.delete(stack);
-        lifecycle.set(stack, {
-          initial: {
-            browser: requiredMap(initialSnapshots.browser, stack),
-            cacheDigest: cacheOutputDigest(running.cacheBuild.outputCounts),
-            stateAfterJourney: requiredMap(initialSnapshots.after, stack),
-            stateBeforeJourney: requiredMap(initialSnapshots.before, stack),
-          },
-          stops: { initial: stopped } as LifecycleRecord["stops"],
-        });
-      }
     }
 
     await writeJson(
@@ -332,9 +288,20 @@ async function main(): Promise<void> {
     await writeJson(path.join(args.outputDirectory, "lifecycle.json"), {
       allowedCountMismatch: manifest.lifecycle.allowedCountMismatch,
       cacheOutputsMatched: true,
+      executionOrder: stackNames,
+      maximumConcurrentStacks: 1,
       records: Object.fromEntries(lifecycle),
       schemaVersion: 1,
       smoke: args.smoke,
+      smokeRequirements: args.smoke
+        ? {
+            allNineBrowserJourneys: true,
+            bothStacks: true,
+            cleanup: true,
+            exportFirstShutdown: true,
+            orphanCheck: true,
+          }
+        : null,
     });
     await writeChecksums(args.outputDirectory);
     if (!args.smoke) await writeReport(args, manifest, environment);
@@ -384,21 +351,140 @@ async function main(): Promise<void> {
   }
 }
 
+async function validateSmokePrerequisite(
+  args: Arguments,
+  manifest: Phase5Manifest,
+): Promise<Record<string, unknown>> {
+  if (args.smokeEvidence === null) {
+    throw new Error(
+      "A passed --smoke-evidence directory is required before a full-data Phase 5 attempt",
+    );
+  }
+  const smokeEvidence = args.smokeEvidence;
+  const currentRevision = await capture("git", ["rev-parse", "HEAD"], repositoryRoot);
+  const [result, environment, lifecycle, dataset, soakOfficial, soakFireside] =
+    await Promise.all([
+      readJsonRecord(path.join(smokeEvidence, "result.json")),
+      readJsonRecord(path.join(smokeEvidence, "environment.json")),
+      readJsonRecord(path.join(smokeEvidence, "lifecycle.json")),
+      readJsonRecord(path.join(smokeEvidence, "dataset-final.json")),
+      readJsonRecord(path.join(smokeEvidence, "soak-smoke-official.json")),
+      readJsonRecord(path.join(smokeEvidence, "soak-smoke-fireside.json")),
+    ]);
+  if (
+    result.passed !== true ||
+    result.smoke !== true ||
+    result.manifestSha256 !== PHASE5_MANIFEST_SHA256 ||
+    environment.candidateRevision !== currentRevision ||
+    environment.manifestSha256 !== PHASE5_MANIFEST_SHA256 ||
+    environment.smoke !== true ||
+    dataset.passed !== true ||
+    lifecycle.smoke !== true ||
+    lifecycle.maximumConcurrentStacks !== 1 ||
+    JSON.stringify(lifecycle.executionOrder) !== JSON.stringify(stackNames)
+  ) {
+    throw new Error("Phase 5 smoke prerequisite identity or result diverged");
+  }
+  const records = lifecycle.records as
+    | Readonly<Record<string, { readonly initial?: LifecycleRecord["initial"]; readonly stops?: { readonly initial?: StoppedPhase5Stack } }>>
+    | undefined;
+  for (const stack of stackNames) {
+    const record = records?.[stack];
+    const stopped = record?.stops?.initial;
+    if (
+      record?.initial?.browser.passed !== true ||
+      record.initial.browser.journeys.length !==
+        manifest.differentialJourneys.journeys.length ||
+      stopped?.exportMetadataPresent !== true ||
+      stopped.orphanCheckPassed !== true ||
+      stopped.remainingDirectoryProcessGroups !== 0 ||
+      stopped.remainingListenerPorts !== 0 ||
+      stopped.shutdownOrder !== "emulator-export-first-then-mprocs"
+    ) {
+      throw new Error(`Phase 5 ${stack} smoke lifecycle prerequisite diverged`);
+    }
+  }
+  for (const [stack, soak] of [
+    ["official", soakOfficial],
+    ["fireside", soakFireside],
+  ] as const) {
+    const swap = soak.swapActivity as
+      | {
+          readonly sampleCount?: number;
+          readonly swapInPagesDelta?: number;
+          readonly swapOutPagesDelta?: number;
+        }
+      | undefined;
+    if (
+      soak.passed !== true ||
+      soak.smoke !== true ||
+      soak.stack !== stack ||
+      soak.durationSeconds !== manifest.diagnosticSmoke.shortSoakSecondsPerStack ||
+      (swap?.sampleCount ?? 0) < 2 ||
+      swap?.swapInPagesDelta !== 0 ||
+      swap.swapOutPagesDelta !== 0
+    ) {
+      throw new Error(`Phase 5 ${stack} smoke soak prerequisite diverged`);
+    }
+  }
+  await verifyChecksumManifest(smokeEvidence);
+  return {
+    candidateRevision: currentRevision,
+    checkedAt: new Date().toISOString(),
+    directory: smokeEvidence,
+    manifestSha256: PHASE5_MANIFEST_SHA256,
+    passed: true,
+    resultSha256: await hashFile(path.join(smokeEvidence, "result.json")),
+    schemaVersion: 1,
+  };
+}
+
+async function readJsonRecord(file: string): Promise<Record<string, unknown>> {
+  return JSON.parse(await readFile(file, "utf8")) as Record<string, unknown>;
+}
+
+async function verifyChecksumManifest(directory: string): Promise<void> {
+  const manifest = await readFile(path.join(directory, "checksums.sha256"), "utf8");
+  const lines = manifest.split("\n").filter((line) => line.length > 0);
+  if (lines.length === 0) throw new Error("Phase 5 smoke checksum manifest is empty");
+  for (const line of lines) {
+    const match = /^([0-9a-f]{64})  ([^/].*)$/u.exec(line);
+    const expected = match?.[1];
+    const relative = match?.[2];
+    if (
+      expected === undefined ||
+      relative === undefined ||
+      path.isAbsolute(relative) ||
+      relative.split("/").includes("..")
+    ) {
+      throw new Error("Phase 5 smoke checksum manifest contains an unsafe entry");
+    }
+    if ((await hashFile(path.join(directory, relative))) !== expected) {
+      throw new Error(`Phase 5 smoke checksum mismatch: ${relative}`);
+    }
+  }
+}
+
 async function verifyFinalDatasetIdentity(
   args: Arguments,
   manifest: Phase5Manifest,
 ): Promise<Record<string, unknown>> {
+  const datasetName = args.smoke ? "phase5-smoke" : "full-data";
+  const source = args.smoke
+    ? path.join(repositoryRoot, manifest.diagnosticSmoke.dataset.path)
+    : args.fullData;
   const roots = {
     fireside: path.join(
       args.firesideDirectory,
-      "apps/templates-firebase/loadData/datasets/full-data",
+      `apps/templates-firebase/loadData/datasets/${datasetName}`,
     ),
-    frozen: args.fullData,
+    frozen: source,
     official: path.join(
       args.officialDirectory,
-      "apps/templates-firebase/loadData/datasets/full-data",
+      `apps/templates-firebase/loadData/datasets/${datasetName}`,
     ),
   };
+  const expected = args.smoke ? manifest.diagnosticSmoke.dataset : manifest.dataset;
   const identities: Record<string, Awaited<ReturnType<typeof treeIdentity>>> = Object.fromEntries(
     await Promise.all(
       Object.entries(roots).map(async ([name, root]) => [name, await treeIdentity(root)] as const),
@@ -406,9 +492,9 @@ async function verifyFinalDatasetIdentity(
   );
   for (const [name, identity] of Object.entries(identities)) {
     if (
-      identity.fileCount !== manifest.dataset.fileCount ||
-      identity.fileBytes !== manifest.dataset.fileBytes ||
-      identity.treeSha256 !== manifest.dataset.treeSha256
+      identity.fileCount !== expected.fileCount ||
+      identity.fileBytes !== expected.fileBytes ||
+      identity.treeSha256 !== expected.treeSha256
     ) {
       throw new Error(`Phase 5 ${name} dataset changed during the measured lifecycle`);
     }
@@ -424,84 +510,84 @@ async function verifyFinalDatasetIdentity(
 
 const stackNames = ["official", "fireside"] as const;
 
-async function startPair(
+async function startStack(
   args: Arguments,
   manifest: Phase5Manifest,
+  stack: Phase5StackName,
   label: "initial" | "restart",
   datasetName: string,
   active: Map<Phase5StackName, RunningPhase5Stack>,
-): Promise<Map<Phase5StackName, RunningPhase5Stack>> {
-  const pair = new Map<Phase5StackName, RunningPhase5Stack>();
-  for (const stack of stackNames) {
-    const directory = stack === "official" ? args.officialDirectory : args.firesideDirectory;
-    const runNamespace = args.smoke
-      ? path.join("smoke", path.basename(args.outputDirectory))
-      : label === "initial"
-        ? "full-data"
-        : "restart-full-data";
-    const exportPath = path.join(
-      path.dirname(path.dirname(args.fullData)),
-      "exports",
+): Promise<RunningPhase5Stack> {
+  const directory = stack === "official" ? args.officialDirectory : args.firesideDirectory;
+  const runNamespace = args.smoke
+    ? path.join("smoke", path.basename(args.outputDirectory))
+    : label === "initial"
+      ? "full-data"
+      : "restart-full-data";
+  const exportPath = path.join(
+    path.dirname(path.dirname(args.fullData)),
+    "exports",
+    stack,
+    runNamespace,
+  );
+  await mkdir(exportPath, { recursive: true });
+  const running = await startPhase5Stack(
+    {
+      datasetName,
+      diagnosticFailFast: args.smoke,
+      directory,
+      evidenceDirectory: args.outputDirectory,
+      exportPath,
+      firesideBinary: args.firesideBinary,
+      javaHome: args.javaHome,
+      ...(stack === "official" && !args.smoke
+        ? { javaToolOptions: PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS }
+        : {}),
+      label,
+      nodeBinary: args.nodeBinary,
+      ports: PHASE5_STACK_PORTS[stack],
+      runtimeDirectory: path.join(
+        path.dirname(path.dirname(args.fullData)),
+        `runtime-${path.basename(args.outputDirectory)}`,
+        `${stack}-${label}`,
+      ),
       stack,
-      runNamespace,
-    );
-    await mkdir(exportPath, { recursive: true });
-    const running = await startPhase5Stack(
-      {
-        datasetName,
-        directory,
-        evidenceDirectory: args.outputDirectory,
-        exportPath,
-        firesideBinary: args.firesideBinary,
-        javaHome: args.javaHome,
-        ...(stack === "official"
-          ? { javaToolOptions: PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS }
-          : {}),
-        label,
-        nodeBinary: args.nodeBinary,
-        ports: PHASE5_STACK_PORTS[stack],
-        runtimeDirectory: path.join(
-          path.dirname(path.dirname(args.fullData)),
-          `runtime-${path.basename(args.outputDirectory)}`,
-          `${stack}-${label}`,
-        ),
-        stack,
-        tmuxSession: `fireside-phase5-${stack}-${label}-${process.pid.toString(36)}`,
-      },
-      manifest.cacheWatcher.maximumReadySeconds,
-      manifest.dataset.logicalCounts.firestoreDocuments,
-    );
-    pair.set(stack, running);
-    active.set(stack, running);
-  }
-  return pair;
+      tmuxSession: `fireside-phase5-${stack}-${label}-${process.pid.toString(36)}`,
+    },
+    args.smoke
+      ? manifest.diagnosticSmoke.maximumReadySeconds
+      : manifest.cacheWatcher.maximumReadySeconds,
+    args.smoke
+      ? manifest.diagnosticSmoke.dataset.baseFirestoreDocuments
+      : manifest.dataset.logicalCounts.firestoreDocuments,
+  );
+  active.set(stack, running);
+  return running;
 }
 
-async function exercisePair(
+async function exerciseStack(
   args: Arguments,
   manifest: Phase5Manifest,
-  running: Map<Phase5StackName, RunningPhase5Stack>,
+  running: RunningPhase5Stack,
   iteration: "initial" | "restart",
 ): Promise<{
-  readonly after: Map<Phase5StackName, StackState>;
-  readonly before: Map<Phase5StackName, StackState>;
-  readonly browser: Map<Phase5StackName, BrowserEvidence>;
+  readonly after: StackState;
+  readonly before: StackState;
+  readonly browser: BrowserEvidence;
 }> {
-  const before = new Map<Phase5StackName, StackState>();
-  const after = new Map<Phase5StackName, StackState>();
-  const browser = new Map<Phase5StackName, BrowserEvidence>();
-  for (const stack of stackNames) {
-    const item = requiredMap(running, stack);
-    before.set(stack, await captureStackState(item, args.projectId));
-    await waitForPhase5FrontendReady(
-      item.baseUrl,
-      manifest.cacheWatcher.maximumReadySeconds,
-    );
-    const output = path.join(args.outputDirectory, `browser-${stack}-${iteration}.json`);
-    const command = await runCommand(
-      `browser-${stack}-${iteration}`,
-      process.execPath,
-      [
+  const stack = running.stack;
+  const before = await captureStackState(running, args.projectId);
+  await waitForPhase5FrontendReady(
+    running.baseUrl,
+    args.smoke
+      ? manifest.diagnosticSmoke.maximumReadySeconds
+      : manifest.cacheWatcher.maximumReadySeconds,
+  );
+  const output = path.join(args.outputDirectory, `browser-${stack}-${iteration}.json`);
+  const command = await runCommand(
+    `browser-${stack}-${iteration}`,
+    process.execPath,
+    [
         "--import",
         tsxImportSpecifier,
         path.join(conformanceDirectory, "src/suite/run-phase5-browser-journeys.ts"),
@@ -514,40 +600,75 @@ async function exercisePair(
         "--project-id",
         args.projectId,
         "--base-url",
-        item.baseUrl,
+        running.baseUrl,
         "--twodart-dir",
         stack === "official" ? args.officialDirectory : args.firesideDirectory,
         "--firestore-port",
-        String(item.ports.firestore),
+        String(running.ports.firestore),
         "--auth-port",
-        String(item.ports.auth),
+        String(running.ports.auth),
         "--storage-port",
-        String(item.ports.storage),
+        String(running.ports.storage),
         "--functions-port",
-        String(item.ports.functions),
+        String(running.ports.functions),
         "--cache-websocket-port",
-        String(item.ports.cacheWebsocket),
+        String(running.ports.cacheWebsocket),
         "--output",
         output,
-      ],
-      repositoryRoot,
-      args.outputDirectory,
-      45 * 60_000,
-    );
-    assertCommand(command);
-    const evidence = JSON.parse(await readFile(output, "utf8")) as BrowserEvidence;
-    if (
-      !evidence.passed ||
-      evidence.stack !== stack ||
-      evidence.iteration !== iteration ||
-      evidence.journeys.length !== manifest.differentialJourneys.journeys.length
-    ) {
-      throw new Error(`${stack} ${iteration} browser journey evidence diverged`);
-    }
-    browser.set(stack, evidence);
-    after.set(stack, await captureStackState(item, args.projectId));
+        ...(args.smoke ? ["--seed-smoke"] : []),
+    ],
+    repositoryRoot,
+    args.outputDirectory,
+    45 * 60_000,
+  );
+  assertCommand(command);
+  const evidence = JSON.parse(await readFile(output, "utf8")) as BrowserEvidence;
+  if (
+    !evidence.passed ||
+    evidence.stack !== stack ||
+    evidence.iteration !== iteration ||
+    evidence.journeys.length !== manifest.differentialJourneys.journeys.length
+  ) {
+    throw new Error(`${stack} ${iteration} browser journey evidence diverged`);
   }
-  return { after, before, browser };
+  const after = await captureStackState(running, args.projectId);
+  return { after, before, browser: evidence };
+}
+
+async function runSoak(
+  args: Arguments,
+  manifest: Phase5Manifest,
+  stack: Phase5StackName,
+): Promise<void> {
+  const prefix = args.smoke ? "soak-smoke" : "soak";
+  const output = path.join(args.outputDirectory, `${prefix}-${stack}.json`);
+  const soak = await runCommand(
+    `${prefix}-${stack}`,
+    process.execPath,
+    [
+      "--import",
+      tsxImportSpecifier,
+      path.join(conformanceDirectory, "src/suite/run-phase5-soak.ts"),
+      "--official-dir",
+      args.officialDirectory,
+      "--fireside-dir",
+      args.firesideDirectory,
+      "--project-id",
+      args.projectId,
+      "--stack",
+      stack,
+      "--output",
+      output,
+      ...(args.smoke ? ["--smoke"] : []),
+    ],
+    repositoryRoot,
+    args.outputDirectory,
+    args.smoke
+      ? (manifest.diagnosticSmoke.shortSoakSecondsPerStack + 10 * 60) * 1_000
+      : 3 * 60 * 60_000,
+  );
+  assertCommand(soak);
+  await assertJsonPassed(output, `${stack} ${args.smoke ? "smoke " : ""}soak`);
 }
 
 async function captureStackState(
@@ -654,23 +775,24 @@ function assertCacheParity(pair: Map<Phase5StackName, RunningPhase5Stack>): void
   }
 }
 
-async function stageLifecycleExports(args: Arguments): Promise<string> {
+async function stageLifecycleExport(
+  args: Arguments,
+  stack: Phase5StackName,
+): Promise<string> {
   const name = "phase5-lifecycle-export";
-  for (const stack of stackNames) {
-    const directory = stack === "official" ? args.officialDirectory : args.firesideDirectory;
-    const source = path.join(
-      path.dirname(path.dirname(args.fullData)),
-      "exports",
-      stack,
-      "full-data",
-    );
-    const destination = path.join(
-      directory,
-      "apps/templates-firebase/loadData/datasets",
-      name,
-    );
-    await stageHardlinkedDirectoryTree(source, destination);
-  }
+  const directory = stack === "official" ? args.officialDirectory : args.firesideDirectory;
+  const source = path.join(
+    path.dirname(path.dirname(args.fullData)),
+    "exports",
+    stack,
+    "full-data",
+  );
+  const destination = path.join(
+    directory,
+    "apps/templates-firebase/loadData/datasets",
+    name,
+  );
+  await stageHardlinkedDirectoryTree(source, destination);
   return name;
 }
 
@@ -822,8 +944,12 @@ async function verifyEnvironment(
       ),
     ]),
   );
+  const datasetSource = args.smoke
+    ? path.join(repositoryRoot, manifest.diagnosticSmoke.dataset.path)
+    : args.fullData;
+  const datasetName = args.smoke ? "phase5-smoke" : "full-data";
   for (const candidate of [
-    args.fullData,
+    datasetSource,
     args.runtimeAssetsRoot,
     args.firesideBinary,
     args.javaHome,
@@ -831,11 +957,12 @@ async function verifyEnvironment(
   ]) {
     await access(candidate);
   }
-  const dataset = await treeIdentity(args.fullData);
+  const dataset = await treeIdentity(datasetSource);
+  const expectedDataset = args.smoke ? manifest.diagnosticSmoke.dataset : manifest.dataset;
   if (
-    dataset.fileCount !== manifest.dataset.fileCount ||
-    dataset.fileBytes !== manifest.dataset.fileBytes ||
-    dataset.treeSha256 !== manifest.dataset.treeSha256
+    dataset.fileCount !== expectedDataset.fileCount ||
+    dataset.fileBytes !== expectedDataset.fileBytes ||
+    dataset.treeSha256 !== expectedDataset.treeSha256
   ) {
     throw new Error("Phase 5 dataset identity diverged from the frozen manifest");
   }
@@ -846,8 +973,11 @@ async function verifyEnvironment(
   ] as const) {
     const importRoot = path.join(
       directory,
-      "apps/templates-firebase/loadData/datasets/full-data",
+      `apps/templates-firebase/loadData/datasets/${datasetName}`,
     );
+    if (args.smoke) {
+      await stageHardlinkedDirectoryTree(datasetSource, importRoot);
+    }
     if (!(await lstat(importRoot)).isDirectory()) {
       throw new Error(
         `Phase 5 ${name} import root must be a real directory for firebase-tools lstat parity: ${importRoot}`,
@@ -1082,9 +1212,16 @@ async function writeReport(
   manifest: Phase5Manifest,
   environment: Record<string, unknown>,
 ): Promise<void> {
-  const soak = JSON.parse(
-    await readFile(path.join(args.outputDirectory, "soak.json"), "utf8"),
-  ) as Record<string, unknown>;
+  const soak = Object.fromEntries(
+    await Promise.all(
+      stackNames.map(async (stack) => [
+        stack,
+        JSON.parse(
+          await readFile(path.join(args.outputDirectory, `soak-${stack}.json`), "utf8"),
+        ) as Record<string, unknown>,
+      ] as const),
+    ),
+  );
   const lifecycle = JSON.parse(
     await readFile(path.join(args.outputDirectory, "lifecycle.json"), "utf8"),
   ) as Record<string, unknown>;
@@ -1103,7 +1240,7 @@ async function writeReport(
     `- All nine real browser journeys passed against both backends before and after graceful export/restart.\n` +
     `- Firestore, Auth, Storage object, and Storage byte counts matched exactly across backends and lifecycle restart.\n` +
     `- Cache-watcher output counts matched exactly; external providers remained disabled.\n` +
-    `- The simultaneous 7,200-second two-session-per-backend app-shaped soak passed all zero-tolerance correctness and health criteria.\n` +
+    `- The sequential official-then-Fireside 7,200-second two-session-per-backend app-shaped soaks passed under fresh quiescent preflights with all zero-tolerance correctness and health criteria unchanged.\n` +
     `- A fresh checkout started Fireside with \`bun dev:mprocs\` and the documented official fallback also started successfully.\n` +
     `- Existing Fireside and Twodart regression/build gates passed.\n\n` +
     `Machine-readable lifecycle evidence: \`${digest(JSON.stringify(lifecycle))}\`. Machine-readable soak evidence: \`${digest(JSON.stringify(soak))}\`.\n\n` +
@@ -1231,6 +1368,10 @@ function parseArguments(values: readonly string[]): Arguments {
   if (!/^[0-9a-f]{40}$/u.test(twodartRevision)) {
     throw new Error("--twodart-revision must be an exact commit");
   }
+  const smokeEvidenceValue = parsed.get("smoke-evidence");
+  if (!smoke && (smokeEvidenceValue === undefined || smokeEvidenceValue.length === 0)) {
+    throw new Error("--smoke-evidence is required for a full-data Phase 5 attempt");
+  }
   return {
     firesideBinary: required("fireside-binary"),
     firesideDirectory: required("fireside-dir"),
@@ -1244,6 +1385,8 @@ function parseArguments(values: readonly string[]): Arguments {
     reportPath: required("report-path"),
     runtimeAssetsRoot: required("runtime-assets-root"),
     smoke,
+    smokeEvidence:
+      smokeEvidenceValue === undefined ? null : path.resolve(smokeEvidenceValue),
     twodartRevision,
   };
 }

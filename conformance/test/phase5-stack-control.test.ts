@@ -72,9 +72,9 @@ test("Phase 5 stack launch uses the exact isolated runtime contract", () => {
   for (const exactToolDirectory of [
     "node/24.20.0/bin",
     "bun/1.3.14/bin",
-    "dotnet/10.0.301",
+    "mise/dotnet-root",
     "python/3.14.6/bin",
-    "rust/1.98.0/bin",
+    ".rustup/toolchains/1.98.0-x86_64-unknown-linux-gnu/bin",
   ]) {
     assert.ok(
       command.indexOf(exactToolDirectory) < command.indexOf("mise/shims"),
@@ -111,6 +111,10 @@ test("Phase 5 stack shutdown waits for export before force-quit and always settl
   assert.ok(forceQuit > exportWait, "mprocs force-quit must follow completed export");
   assert.match(stopSource, /await settlePhase5StackCleanup\(running\)/u);
   assert.match(stopSource, /lifecycle and isolated cleanup both failed/u);
+  assert.match(stopSource, /remainingDirectoryProcessGroups/u);
+  assert.match(stopSource, /remainingListenerPorts/u);
+  assert.match(stopSource, /orphanCheckPassed: true/u);
+  assert.match(stopSource, /shutdownOrder: "emulator-export-first-then-mprocs"/u);
 });
 
 test("Phase 5 stack shutdown identifies only exact emulator launch processes", () => {
@@ -232,4 +236,12 @@ test("failed startup reaps its directory before asserting listener cleanup", asy
     "listener cleanup must be asserted only after directory process reaping",
   );
   assert.match(cleanupSource, /close cleaned Phase 5 startup session/u);
+});
+
+test("diagnostic readiness fails fast only after healthy process and listener gates", async () => {
+  const source = await readFile(controlUrl, "utf8");
+  assert.match(source, /input\.diagnosticFailFast === true && readiness\.definitiveError !== null/u);
+  assert.match(source, /if \(!logs\.every\(Boolean\)\) return \{ definitiveError: null, ready: false \}/u);
+  assert.match(source, /if \(!portsReady\.every\(Boolean\)\) return \{ definitiveError: null, ready: false \}/u);
+  assert.match(source, /definitive readiness failure/u);
 });

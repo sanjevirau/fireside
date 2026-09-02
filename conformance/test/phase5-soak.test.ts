@@ -21,6 +21,8 @@ test("the Phase 5 soak runner freezes the two-session app-shaped arithmetic", as
   }
   assert.match(source, /tokenWrites: tokenBatches \* workload\.tokenBatch\.writesPerBatch/u);
   assert.match(source, /Math\.floor\(durationSeconds \/ intervalSeconds\) \* sessionCount/u);
+  assert.match(source, /--stack must be official or fireside/u);
+  assert.match(source, /args\.stack === "official"/u);
 });
 
 test("the Phase 5 soak keeps one live listener per session and checks delivery exactly", async () => {
@@ -42,6 +44,8 @@ test("the Phase 5 soak measures full stack memory and host health", async () => 
     "VmRSS",
     "pswpin",
     "pswpout",
+    "swapInPagesDelta",
+    "swapOutPagesDelta",
     "journalctl",
     "systemctl",
     "rssSlopeBytesPerHour",
@@ -53,6 +57,8 @@ test("the Phase 5 soak measures full stack memory and host health", async () => 
   assert.match(source, /smoke && health\.failedUnits !== healthBefore\.failedUnits/u);
   assert.match(source, /!smoke &&\s+health\.oomOrResourceEvidence !== manifest\.soak\.thresholds\.oomOrResourceKills/u);
   assert.match(source, /smoke && health\.oomOrResourceEvidence !== healthBefore\.oomOrResourceEvidence/u);
+  assert.match(source, /swapActivity\.swapInPagesDelta !== 0/u);
+  assert.match(source, /swapActivity\.swapOutPagesDelta !== 0/u);
 });
 
 test("the Phase 5 soak verifies Storage bytes, safe functions, cleanup, and evidence privacy", async () => {

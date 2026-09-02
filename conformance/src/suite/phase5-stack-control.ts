@@ -36,6 +36,7 @@ export interface StackLaunchInput {
   readonly runtimeDirectory: string;
   readonly stack: Phase5StackName;
   readonly tmuxSession: string;
+  readonly diagnosticFailFast?: boolean;
 }
 
 export interface CacheBuildMetrics {
@@ -65,6 +66,10 @@ export interface RunningPhase5Stack {
 export interface StoppedPhase5Stack {
   readonly exportMetadataPresent: boolean;
   readonly exitCode: number;
+  readonly orphanCheckPassed: boolean;
+  readonly remainingDirectoryProcessGroups: number;
+  readonly remainingListenerPorts: number;
+  readonly shutdownOrder: "emulator-export-first-then-mprocs";
   readonly shutdownMilliseconds: number;
 }
 
@@ -112,9 +117,9 @@ export function renderPhase5StackCommand(input: StackLaunchInput): string {
     path.join(input.javaHome, "bin"),
     path.dirname(input.nodeBinary),
     "/home/sanjevi/.local/share/mise/installs/bun/1.3.14/bin",
-    "/home/sanjevi/.local/share/mise/installs/dotnet/10.0.301",
+    "/home/sanjevi/.local/share/mise/dotnet-root",
     "/home/sanjevi/.local/share/mise/installs/python/3.14.6/bin",
-    "/home/sanjevi/.local/share/mise/installs/rust/1.98.0/bin",
+    "/home/sanjevi/.rustup/toolchains/1.98.0-x86_64-unknown-linux-gnu/bin",
     "/home/sanjevi/.local/share/mise/shims",
     "/home/sanjevi/.local/bin",
     "/usr/local/bin",
@@ -224,8 +229,11 @@ export async function startPhase5Stack(
         peakPssBytes = Math.max(peakPssBytes, watcher.pssBytes);
       }
 
-      const ready = await stackReady(input, baseUrl, twodartNetUrl);
-      if (ready) break;
+      const readiness = await stackReadiness(input, baseUrl, twodartNetUrl);
+      if (readiness.ready) break;
+      if (input.diagnosticFailFast === true && readiness.definitiveError !== null) {
+        throw new Error(`${input.stack} definitive readiness failure: ${readiness.definitiveError}`);
+      }
       if (await exists(exitMarker)) {
         const status = (await readFile(exitMarker, "utf8")).trim();
         throw new Error(`${input.stack} exited before readiness with status ${status}`);
@@ -336,9 +344,26 @@ export async function stopPhase5Stack(
   if (lifecycleError !== undefined) throw lifecycleError;
   if (cleanupError !== undefined) throw cleanupError;
   if (exitCode === null) throw new Error(`${running.stack} lifecycle omitted its exit code`);
+  const remainingDirectoryProcessGroups = (
+    await phase5DirectoryProcessGroups(running.directory)
+  ).length;
+  const remainingListenerPorts = (
+    await Promise.all(
+      Object.values(running.ports).map(async (port) => listenerOpen(port)),
+    )
+  ).filter(Boolean).length;
+  if (remainingDirectoryProcessGroups !== 0 || remainingListenerPorts !== 0) {
+    throw new Error(
+      `${running.stack} orphan verification failed after settled cleanup`,
+    );
+  }
   return {
     exitCode,
     exportMetadataPresent,
+    orphanCheckPassed: true,
+    remainingDirectoryProcessGroups,
+    remainingListenerPorts,
+    shutdownOrder: "emulator-export-first-then-mprocs",
     shutdownMilliseconds: performance.now() - started,
   };
 }
@@ -693,11 +718,16 @@ export function cacheOutputDigest(counts: Readonly<Record<string, number | boole
   return createHash("sha256").update(JSON.stringify(counts)).digest("hex");
 }
 
-async function stackReady(
+interface StackReadiness {
+  readonly definitiveError: string | null;
+  readonly ready: boolean;
+}
+
+async function stackReadiness(
   input: StackLaunchInput,
   baseUrl: string,
   twodartNetUrl: string,
-): Promise<boolean> {
+): Promise<StackReadiness> {
   const logs = await Promise.all(
     [
       ["firebase-emulator.log", "All emulators ready"],
@@ -713,24 +743,31 @@ async function stackReady(
       }
     }),
   );
-  if (!logs.every(Boolean)) return false;
+  if (!logs.every(Boolean)) return { definitiveError: null, ready: false };
   const portsReady = await Promise.all(
     Object.entries(input.ports).map(async ([name, port]) =>
       name === "mprocsControl" ? listenerOpen(port) : portOpen(port),
     ),
   );
-  if (!portsReady.every(Boolean)) return false;
-  const [functions, hub, frontend, dotnet] = await Promise.all([
-    fetchOk(`http://127.0.0.1:${String(input.ports.functions)}/backends`),
-    fetchOk(`http://127.0.0.1:${String(input.ports.hub)}/emulators`),
-    curlOk(new URL(PHASE5_LOGIN_ROUTE, baseUrl).href),
-    curlOk(new URL(PHASE5_TWODARTNET_HEALTH_ROUTE, twodartNetUrl).href),
+  if (!portsReady.every(Boolean)) return { definitiveError: null, ready: false };
+  const probes = await Promise.all([
+    fetchStatus(`http://127.0.0.1:${String(input.ports.functions)}/backends`),
+    fetchStatus(`http://127.0.0.1:${String(input.ports.hub)}/emulators`),
+    curlStatus(new URL(PHASE5_LOGIN_ROUTE, baseUrl).href),
+    curlStatus(new URL(PHASE5_TWODARTNET_HEALTH_ROUTE, twodartNetUrl).href),
   ]);
-  return functions && hub && frontend && dotnet;
+  const labels = ["functions inventory", "emulator hub", "frontend login", "TwodartNet health"];
+  const failed = probes.findIndex((status) => status !== null && (status < 200 || status >= 400));
+  if (failed >= 0) {
+    return {
+      definitiveError: `${labels[failed] ?? "probe"} returned ${String(probes[failed])}`,
+      ready: false,
+    };
+  }
+  return { definitiveError: null, ready: probes.every(isSuccessfulStatus) };
 }
 
-async function curlOk(url: string): Promise<boolean> {
-  const status = await curlStatus(url);
+function isSuccessfulStatus(status: number | null): boolean {
   return status !== null && status >= 200 && status < 400;
 }
 
@@ -751,6 +788,16 @@ async function curlStatus(url: string): Promise<number | null> {
   if (result.exitCode !== 0) return null;
   const status = Number(result.stdout.trim());
   return Number.isInteger(status) ? status : null;
+}
+
+async function fetchStatus(url: string): Promise<number | null> {
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(5_000) });
+    await response.body?.cancel();
+    return response.status;
+  } catch {
+    return null;
+  }
 }
 
 export async function waitForPhase5FrontendReady(
@@ -775,15 +822,6 @@ export async function waitForPhase5FrontendReady(
       );
     }
     await delay(1_000);
-  }
-}
-
-async function fetchOk(url: string): Promise<boolean> {
-  try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(5_000) });
-    return response.ok;
-  } catch {
-    return false;
   }
 }
 

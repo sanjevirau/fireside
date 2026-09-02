@@ -136,19 +136,22 @@ test("Phase 5 gate runs the frozen lifecycle in order", async () => {
   const source = await readFile(runnerUrl, "utf8");
   assert.equal([...source.matchAll(/child\.once\("close"/gu)].length, 2);
   assert.match(source, /const tsxImportSpecifier = import\.meta\.resolve\("tsx"\)/u);
-  assert.equal([...source.matchAll(/"--import",\s+tsxImportSpecifier/gu)].length, 3);
+  assert.equal([...source.matchAll(/"--import",\s+tsxImportSpecifier/gu)].length, 2);
   assert.doesNotMatch(source, /"--import",\s+"tsx"/u);
   assert.ok(
     source.lastIndexOf("await main();") > source.indexOf("const stackNames"),
     "top-level execution must begin after runtime constants are initialized",
   );
   const ordered = [
-    'startPair(args, manifest, "initial"',
-    "const initialSnapshots = await exercisePair(",
-    "stageLifecycleExports(args)",
-    "const restarted = await startPair(",
-    "const restartSnapshots = await exercisePair(",
-    '"two-hour-differential-soak"',
+    "for (const stack of stackNames)",
+    "await captureHostHealth(manifest, args.smoke)",
+    "const running = await startStack(",
+    "const initial = await exerciseStack(",
+    "await runSoak(args, manifest, stack)",
+    "await stopPhase5Stack(running",
+    "stageLifecycleExport(args, stack)",
+    "const restarted = await startStack(",
+    "const restart = await exerciseStack(",
     "runFreshColleague(args, manifest, active)",
     "runRegressions(args)",
   ];
@@ -213,4 +216,11 @@ test("Phase 5 gate includes smoke, fresh colleague, regression, and checksum pat
   assert.match(source, /assertDistinctPhase5ApplicationUrls/u);
   assert.match(source, /verifyFinalDatasetIdentity\(args, manifest\)/u);
   assert.match(source, /dataset-final\.json/u);
+  assert.match(source, /maximumConcurrentStacks: 1/u);
+  assert.match(source, /exportFirstShutdown: true/u);
+  assert.match(source, /orphanCheck: true/u);
+  assert.match(source, /--smoke-evidence is required for a full-data Phase 5 attempt/u);
+  assert.match(source, /validateSmokePrerequisite\(args, manifest\)/u);
+  assert.match(source, /environment\.candidateRevision !== currentRevision/u);
+  assert.match(source, /await verifyChecksumManifest\(smokeEvidence\)/u);
 });

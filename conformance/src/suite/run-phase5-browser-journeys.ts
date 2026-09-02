@@ -21,6 +21,7 @@ interface Arguments {
   readonly projectId: string;
   readonly stack: StackName;
   readonly storagePort: number;
+  readonly seedSmoke: boolean;
   readonly twodartDirectory: string;
 }
 
@@ -35,7 +36,10 @@ interface AuthListResult {
 }
 
 interface AdminAuth {
+  createUser(properties: Record<string, unknown>): Promise<AuthUser>;
+  deleteUser(uid: string): Promise<void>;
   listUsers(maxResults?: number): Promise<AuthListResult>;
+  setCustomUserClaims(uid: string, claims: Record<string, unknown>): Promise<void>;
 }
 
 interface DocumentSnapshot {
@@ -138,6 +142,7 @@ const bucket = getAdminStorage(app).bucket(defaultBucket);
 let browser: Browser | undefined;
 
 try {
+  if (args.seedSmoke) await seedSmokeApplication();
   const listedUsers = await auth.listUsers(2);
   if (listedUsers.users.length !== 1) {
     throw new Error(`Phase 5 requires exactly one imported Auth user, observed ${String(listedUsers.users.length)}`);
@@ -797,6 +802,171 @@ async function deleteAdminApp(value: unknown): Promise<void> {
   await module.deleteApp(value);
 }
 
+async function seedSmokeApplication(): Promise<void> {
+  const uid = "phase5-smoke-user";
+  const deckId = "phase5-smoke-deck";
+  const slideId = "phase5-smoke-slide";
+  const coreSlideId = "phase5-smoke-core-slide";
+  const now = new Date("2026-09-02T00:00:00.000Z");
+  const existing = await auth.listUsers(2);
+  for (const user of existing.users) await auth.deleteUser(user.uid);
+  await auth.createUser({
+    displayName: "Phase Five",
+    email: "phase5-smoke@twodart.com",
+    emailVerified: true,
+    uid,
+  });
+  await auth.setCustomUserClaims(uid, { admin: true });
+  const font = {
+    family: "Arial",
+    fileUrl: "",
+    fullName: "Arial Regular",
+    id: "phase5-smoke-font",
+    isCustom: false,
+    variant: "400",
+  };
+  const branding = {
+    brandColor: ["#ffffff", "#111111", "#ffffff", "#111111"],
+    colorHex: "#3366ff",
+    id: "phase5-smoke-branding",
+    name: "Phase 5 Smoke Branding",
+    theme: "Light",
+  };
+  const footer = {
+    createdAt: now,
+    data: [],
+    id: "phase5-smoke-footer",
+    isDefault: true,
+    type: "footers",
+    updatedAt: now,
+  };
+  const slide = {
+    categories: ["phase5-smoke-category"],
+    coreSlideId,
+    createdAt: now,
+    createdBy: uid,
+    hasFooter: false,
+    id: coreSlideId,
+    isFree: true,
+    keywords: ["smoke"],
+    licenseId: null,
+    masterShapes: [],
+    no: 1,
+    shapeSVGContent: "",
+    shapes: [],
+    slideImageLink: "",
+    slideImagePath: "",
+    splitSvgContents: [],
+    template: "core",
+    themeId: "phase5-smoke-theme",
+    uniqueId: coreSlideId,
+    updatedAt: now,
+  };
+  const documents: Readonly<Record<string, Record<string, unknown>>> = {
+    [`users/${uid}`]: {
+      createdAt: now,
+      emailVerified: true,
+      firstName: "Phase",
+      id: uid,
+      isUsingVersion: "v2",
+      lastName: "Five",
+    },
+    [`users/${uid}/read/general`]: {
+      createdAt: now,
+      fromCholadeck: true,
+      licenseId: uid,
+      updatedAt: now,
+    },
+    [`licenses/${uid}`]: {
+      createdAt: now,
+      fromCholadeck: true,
+      userId: uid,
+      updatedAt: now,
+    },
+    [`presentations/${deckId}`]: {
+      createdAt: now,
+      createdBy: uid,
+      currentSelectedFooterId: footer.id,
+      currentSelectedHeaderId: "phase5-smoke-header",
+      defaultBrandingData: [branding],
+      enableFooter: false,
+      fontPairData: { primaryFontData: font, secondaryFontData: font },
+      footerData: footer,
+      headerAlignment: "left",
+      id: deckId,
+      licenseId: null,
+      name: "Phase 5 Smoke Deck",
+      presentationFolderId: "personal",
+      primaryBrandingData: branding,
+      secondaryBrandingData: null,
+      slideOrder: [slideId],
+      themeId: "phase5-smoke-theme",
+      updatedAt: now,
+    },
+    [`presentations/${deckId}/slides/${slideId}`]: {
+      ...slide,
+      id: coreSlideId,
+      uniqueId: slideId,
+    },
+    [`presentations/${deckId}/general/tracking`]: {
+      activeUsers: [],
+      createdBy: uid,
+      editorUserId: "",
+      lastUpdated: now,
+      licenseId: null,
+    },
+    [`slidesCore/${coreSlideId}`]: slide,
+    "categoriesCore/phase5-smoke-category": {
+      createdAt: now,
+      id: "phase5-smoke-category",
+      isShowToUser: true,
+      name: "Smoke",
+      template: "core",
+      updatedAt: now,
+    },
+    "themes/phase5-smoke-theme": {
+      createdAt: now,
+      id: "phase5-smoke-theme",
+      isDefault: true,
+      name: "Smoke",
+      templateId: "core",
+      themeId: "phase5-smoke-theme",
+      updatedAt: now,
+    },
+    "editorStyle/phase5-smoke-footer": footer,
+    "editorStyle/phase5-smoke-header": {
+      createdAt: now,
+      data: [],
+      id: "phase5-smoke-header",
+      isDefault: true,
+      type: "headers",
+      updatedAt: now,
+    },
+    "fonts/phase5-smoke-font": { ...font, createdAt: now, updatedAt: now },
+    "fontPairs/phase5-smoke-font-pair": {
+      createdAt: now,
+      id: "phase5-smoke-font-pair",
+      isDefault: true,
+      primaryFontId: font.id,
+      secondaryFontId: font.id,
+      updatedAt: now,
+    },
+    "colors/phase5-smoke-color": {
+      colorHex: "#3366ff",
+      createdAt: now,
+      id: "phase5-smoke-color",
+      name: "Smoke Blue",
+      updatedAt: now,
+    },
+  };
+  await Promise.all(
+    Object.entries(documents).map(async ([documentPath, data]) => {
+      await firestore.doc(documentPath).set(data);
+    }),
+  );
+  await new Promise((resolvePromise) => setTimeout(resolvePromise, 5_000));
+}
+
 async function writeEvidence(result: {
   readonly errorHash?: string;
   readonly passed: boolean;
@@ -844,13 +1014,19 @@ function digest(value: string): string {
 
 function parseArguments(values: readonly string[]): Arguments {
   const parsed = new Map<string, string>();
-  for (let index = 0; index < values.length; index += 2) {
+  let seedSmoke = false;
+  for (let index = 0; index < values.length; index += 1) {
     const key = values[index];
+    if (key === "--seed-smoke") {
+      seedSmoke = true;
+      continue;
+    }
     const value = values[index + 1];
     if (key === undefined || value === undefined || !key.startsWith("--")) {
       throw new Error("Phase 5 browser arguments must be --key value pairs");
     }
     parsed.set(key.slice(2), value);
+    index += 1;
   }
   const required = (key: string): string => {
     const value = parsed.get(key);
@@ -881,6 +1057,7 @@ function parseArguments(values: readonly string[]): Arguments {
     output: required("output"),
     projectId: required("project-id"),
     stack,
+    seedSmoke,
     storagePort: port("storage-port"),
     twodartDirectory: required("twodart-dir"),
   };
