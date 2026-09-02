@@ -885,25 +885,7 @@ async function captureHostHealth(
     .split("\n")
     .filter((line) => gatePorts.some((port) => line.includes(`:${String(port)} `))).length;
   const availableDiskBytes = Number(filesystem.bavail) * Number(filesystem.bsize);
-  if (
-    systemState !== "running" ||
-    sshState !== "active" ||
-    failedUnits !== manifest.host.preflight.failedUnits ||
-    (!smoke &&
-      oomOrResourceEvidence !== manifest.host.preflight.currentBootOomOrResourceKills) ||
-    steady.length !== manifest.host.preflight.steadyVmstatSamples ||
-    swapInPagesPerSecond.some(
-      (value) => value > manifest.host.preflight.maximumSwapInPagesPerSecond,
-    ) ||
-    swapOutPagesPerSecond.some(
-      (value) => value > manifest.host.preflight.maximumSwapOutPagesPerSecond,
-    ) ||
-    conflictingListeners !== 0 ||
-    availableDiskBytes < manifest.host.minimumAvailableDiskBytes
-  ) {
-    throw new Error("Phase 5 controlled-host preflight failed");
-  }
-  return {
+  const snapshot = {
     availableDiskBytes,
     conflictingListeners,
     failedUnits,
@@ -914,6 +896,47 @@ async function captureHostHealth(
     swapOutPagesPerSecond,
     systemState,
   };
+  const violations: string[] = [];
+  if (systemState !== "running") violations.push(`systemState=${systemState}`);
+  if (sshState !== "active") violations.push(`sshState=${sshState}`);
+  if (failedUnits !== manifest.host.preflight.failedUnits) {
+    violations.push(`failedUnits=${String(failedUnits)}`);
+  }
+  if (
+    !smoke &&
+    oomOrResourceEvidence !== manifest.host.preflight.currentBootOomOrResourceKills
+  ) {
+    violations.push(`oomOrResourceEvidence=${String(oomOrResourceEvidence)}`);
+  }
+  if (steady.length !== manifest.host.preflight.steadyVmstatSamples) {
+    violations.push(`steadyVmstatSamples=${String(steady.length)}`);
+  }
+  if (
+    swapInPagesPerSecond.some(
+      (value) => value > manifest.host.preflight.maximumSwapInPagesPerSecond,
+    )
+  ) {
+    violations.push(`swapInPagesPerSecond=${swapInPagesPerSecond.join(",")}`);
+  }
+  if (
+    swapOutPagesPerSecond.some(
+      (value) => value > manifest.host.preflight.maximumSwapOutPagesPerSecond,
+    )
+  ) {
+    violations.push(`swapOutPagesPerSecond=${swapOutPagesPerSecond.join(",")}`);
+  }
+  if (conflictingListeners !== 0) {
+    violations.push(`conflictingListeners=${String(conflictingListeners)}`);
+  }
+  if (availableDiskBytes < manifest.host.minimumAvailableDiskBytes) {
+    violations.push(`availableDiskBytes=${String(availableDiskBytes)}`);
+  }
+  if (violations.length > 0) {
+    throw new Error(
+      `Phase 5 controlled-host preflight failed: ${JSON.stringify({ ...snapshot, violations })}`,
+    );
+  }
+  return snapshot;
 }
 
 async function listFiles(root: string): Promise<string[]> {

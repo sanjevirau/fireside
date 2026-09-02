@@ -66,6 +66,8 @@ test("Phase 5 gate includes smoke, fresh colleague, regression, and checksum pat
   }
   assert.match(
     source,
-    /\(!smoke &&\s+oomOrResourceEvidence !== manifest\.host\.preflight\.currentBootOomOrResourceKills\)/u,
+    /!smoke &&\s+oomOrResourceEvidence !== manifest\.host\.preflight\.currentBootOomOrResourceKills/u,
   );
+  assert.match(source, /violations\.push\(`swapInPagesPerSecond=/u);
+  assert.match(source, /JSON\.stringify\(\{ \.\.\.snapshot, violations \}\)/u);
 });
