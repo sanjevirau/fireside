@@ -311,6 +311,11 @@ async function main(): Promise<void> {
       }
     }
 
+    await writeJson(
+      path.join(args.outputDirectory, "dataset-final.json"),
+      await verifyFinalDatasetIdentity(args, manifest),
+    );
+
     await writeJson(path.join(args.outputDirectory, "lifecycle.json"), {
       allowedCountMismatch: manifest.lifecycle.allowedCountMismatch,
       cacheOutputsMatched: true,
@@ -358,6 +363,44 @@ async function main(): Promise<void> {
       }
     }
   }
+}
+
+async function verifyFinalDatasetIdentity(
+  args: Arguments,
+  manifest: Phase5Manifest,
+): Promise<Record<string, unknown>> {
+  const roots = {
+    fireside: path.join(
+      args.firesideDirectory,
+      "apps/templates-firebase/loadData/datasets/full-data",
+    ),
+    frozen: args.fullData,
+    official: path.join(
+      args.officialDirectory,
+      "apps/templates-firebase/loadData/datasets/full-data",
+    ),
+  };
+  const identities: Record<string, Awaited<ReturnType<typeof treeIdentity>>> = Object.fromEntries(
+    await Promise.all(
+      Object.entries(roots).map(async ([name, root]) => [name, await treeIdentity(root)] as const),
+    ),
+  );
+  for (const [name, identity] of Object.entries(identities)) {
+    if (
+      identity.fileCount !== manifest.dataset.fileCount ||
+      identity.fileBytes !== manifest.dataset.fileBytes ||
+      identity.treeSha256 !== manifest.dataset.treeSha256
+    ) {
+      throw new Error(`Phase 5 ${name} dataset changed during the measured lifecycle`);
+    }
+  }
+  return {
+    checkedAt: new Date().toISOString(),
+    identities,
+    manifestSha256: PHASE5_MANIFEST_SHA256,
+    passed: true,
+    schemaVersion: 1,
+  };
 }
 
 const stackNames = ["official", "fireside"] as const;
