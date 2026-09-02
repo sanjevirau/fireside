@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "oracle": "readable-twodart-source",
   "repository": "git@github.com:sanjevirau/twodart.git",
   "revision": "f424c373b0947ed57db90f7d7f51455fadca547c",
@@ -21,6 +21,10 @@
       "sha256": "93470af0c69a473c5e645383bf58a494566f57875c8ea128c3ead0262cea0cd5"
     },
     {
+      "path": "apps/templates/components/Login/components/LoginPage/LoginPage.tsx",
+      "sha256": "a84fd83b6b5bef3a36209f3710515c8131fe13aa290112db4670af96e3ce4c07"
+    },
+    {
       "path": "apps/templates/components/Login/components/VerificationStep/VerificationStep.tsx",
       "sha256": "dd2cb107e749ccfe42bef4c7f4f4d0accb82acd5c08c67650b7aa5801b6b45d6"
     },
@@ -35,10 +39,19 @@
     {
       "path": "apps/templates/pages/admin/index.tsx",
       "sha256": "40d816b869dbab0511e9c9342fca6db19bda6376b611a7278306da186a050b12"
+    },
+    {
+      "path": "apps/templates/pages/login/[loginType].tsx",
+      "sha256": "c8914442c98d7d42bf2eaa3c825ff7a5c122b96c567f11c3841b78ead1e432f7"
+    },
+    {
+      "path": "engines/twodartnet/TwodartNet/Controllers/HealthCheckController.cs",
+      "sha256": "1a455cbef94d540b7304793e378a9435e5eb3272cf167fbf3439bc04e984c3ec"
     }
   ],
   "browserContract": {
-    "loginRoute": "/login",
+    "loginRoute": "/login/overview",
+    "loginPageTypeMain": "overview",
     "emailInputId": "workEmail",
     "emailSubmitText": "Continue",
     "verificationInputId": "verificationCode",
@@ -50,7 +63,8 @@
     "deckRoutePrefix": "/presentation/",
     "premadeTemplatesRoute": "/premade-templates",
     "slideLibraryRoute": "/slide-library",
-    "adminRoute": "/admin"
+    "adminRoute": "/admin",
+    "twodartNetHealthRoute": "/api/HealthCheck"
   },
   "adminNavigationPageIds": [
     "templates-master-slides",

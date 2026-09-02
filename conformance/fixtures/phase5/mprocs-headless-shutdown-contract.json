@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "oracle": {
     "component": "mprocs",
     "packageRevision": "024743006f46effc5c72b91bca11eef3c6253460",
@@ -20,6 +20,7 @@
     "exportMetadataRequiredBeforeForceQuit": true,
     "forceQuitSafeOnlyAfterEmulatorProcessGroupExited": true,
     "headlessTransport": "configured TCP control server",
+    "failedStartDirectoryReapBeforeListenerAssertion": true,
     "postQuitDirectoryProcessAuditRequired": true,
     "quitRequestsConfiguredChildStop": true,
     "terminalKeyDependsOnFocus": true,
@@ -65,6 +66,24 @@
       "failedSystemdUnits": 0,
       "manualScopedCleanupRemainingGroups": 0,
       "requiredOrdering": "after direct emulator SIGINT, require export-on-exit metadata before sending mprocs c: force-quit; cleanup failures must still reap all validated directory-owned process groups"
+    },
+    "failedReadinessCleanup": {
+      "candidateCommit": "b66deef88729f6078db34f9cfbda1682fd3b6c7b",
+      "phase5Diagnostic": "full-gate-smoke-20260902T1851+0800-b66deef-r3",
+      "primaryFailure": "readiness probes targeted legitimate HTTP 404 routes",
+      "officialFullDatasetStarted": true,
+      "officialExportCompleted": true,
+      "firesideStarted": false,
+      "controllerShutdownRequested": true,
+      "orphanedDirectoryProcessGroups": 6,
+      "orphanedListeners": [23012],
+      "cleanupWaitSecondsBeforeThrow": 600,
+      "manualScopedCleanupSignal": "SIGINT",
+      "manualScopedCleanupRemainingGroups": 0,
+      "manualScopedCleanupRemainingListeners": 0,
+      "kernelOomEvidence": 0,
+      "failedSystemdUnits": 0,
+      "requiredOrdering": "after requesting controller shutdown or closing the controller session, immediately reap validated directory-owned process groups before asserting zero listeners"
     }
   }
 }

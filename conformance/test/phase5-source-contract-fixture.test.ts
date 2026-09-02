@@ -30,20 +30,21 @@ test("the Twodart source oracle freezes the exact Phase 5 browser contract", asy
     await readFile(new URL("fixture.json", root), "utf8"),
   ) as Fixture;
 
-  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.schemaVersion, 2);
   assert.equal(fixture.oracle, "readable-twodart-source");
   assert.equal(fixture.revision, "f424c373b0947ed57db90f7d7f51455fadca547c");
   assert.equal(fixture.credentialsStored, false);
   assert.equal(fixture.accessTokensStored, false);
   assert.equal(fixture.realUserDataStored, false);
-  assert.equal(fixture.sourceFiles.length, 7);
+  assert.equal(fixture.sourceFiles.length, 10);
   for (const source of fixture.sourceFiles) {
-    assert.match(source.path, /^(?:apps\/templates)\//u);
+    assert.match(source.path, /^(?:apps\/templates|engines\/twodartnet)\//u);
     assert.match(source.sha256, /^[0-9a-f]{64}$/u);
   }
 
   assert.deepEqual(fixture.browserContract, {
-    loginRoute: "/login",
+    loginRoute: "/login/overview",
+    loginPageTypeMain: "overview",
     emailInputId: "workEmail",
     emailSubmitText: "Continue",
     verificationInputId: "verificationCode",
@@ -56,6 +57,7 @@ test("the Twodart source oracle freezes the exact Phase 5 browser contract", asy
     premadeTemplatesRoute: "/premade-templates",
     slideLibraryRoute: "/slide-library",
     adminRoute: "/admin",
+    twodartNetHealthRoute: "/api/HealthCheck",
   });
 
   assert.deepEqual(fixture.journeyIds, [

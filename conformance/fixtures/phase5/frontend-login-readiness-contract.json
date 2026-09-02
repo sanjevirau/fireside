@@ -1,34 +1,62 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "oracle": {
     "kind": "exact Twodart source plus Phase 5 smoke observation",
     "twodartRevision": "f424c373b0947ed57db90f7d7f51455fadca547c",
-    "candidateCommit": "a081386df5fbe67e199069d4ca98aba113d6d93b",
-    "diagnostic": "full-gate-smoke-20260902T1714+0800-a081386"
+    "candidateCommit": "b66deef88729f6078db34f9cfbda1682fd3b6c7b",
+    "diagnostic": "full-gate-smoke-20260902T1851+0800-b66deef-r3",
+    "priorDiagnostic": "full-gate-smoke-20260902T1714+0800-a081386"
   },
   "sourceContract": {
-    "loginRoute": "/login",
-    "emailInputId": "workEmail"
+    "dotnetHealthControllerPath": "engines/twodartnet/TwodartNet/Controllers/HealthCheckController.cs",
+    "dotnetHealthRoute": "/api/HealthCheck",
+    "emailInputId": "workEmail",
+    "loginPageTypeMain": "overview",
+    "loginPageTypePath": "apps/templates/components/Login/components/LoginPage/LoginPage.tsx",
+    "loginRoute": "/login/overview",
+    "loginRoutePath": "apps/templates/pages/login/[loginType].tsx"
   },
-  "observation": {
-    "stack": "official",
-    "fullDatasetReady": true,
-    "cacheBuildReady": true,
-    "journeysCompleted": 0,
-    "firstPartyResponses": 1,
-    "requiredRequests": 1,
-    "requiredFailures": 1,
-    "observedRouteClass": "https://phase5-official.templates.twodart.localhost:443/login",
-    "navigationStatusClass": ">=400",
-    "exactNavigationStatusStored": false,
-    "selectorFailure": "workEmail was not found before the 30000 ms locator timeout",
-    "browserEvidenceSha256": "a85c07e75e91fdc1a1f993b7d232893133c626ccf749d22c074a1f51ecbeb5e5",
-    "browserErrorHash": "c11cd719e31ad32230b53c5f8e78d59764b8cac13ebe610bca4133567d8b2812",
-    "kernelOomEvidence": 0,
-    "failedSystemdUnits": 0
+  "observations": {
+    "priorBrowserFailure": {
+      "stack": "official",
+      "fullDatasetReady": true,
+      "cacheBuildReady": true,
+      "journeysCompleted": 0,
+      "firstPartyResponses": 1,
+      "requiredRequests": 1,
+      "requiredFailures": 1,
+      "observedRouteClass": "https://phase5-official.templates.twodart.localhost:443/login",
+      "navigationStatusClass": ">=400",
+      "exactNavigationStatusStored": false,
+      "selectorFailure": "workEmail was not found before the 30000 ms locator timeout",
+      "browserEvidenceSha256": "a85c07e75e91fdc1a1f993b7d232893133c626ccf749d22c074a1f51ecbeb5e5",
+      "browserErrorHash": "c11cd719e31ad32230b53c5f8e78d59764b8cac13ebe610bca4133567d8b2812",
+      "kernelOomEvidence": 0,
+      "failedSystemdUnits": 0
+    },
+    "correctedReadinessFailure": {
+      "stack": "official",
+      "officialFullDatasetStarted": true,
+      "officialCacheReady": true,
+      "firesideStarted": false,
+      "readinessTimeoutSeconds": 1200,
+      "bareLoginStatus": 404,
+      "dotnetRootStatus": 404,
+      "officialStorageExportObjects": 33353,
+      "officialStorageExportSize": "6.23 GB",
+      "officialExportCompleted": true,
+      "orphanedDirectoryProcessGroups": [78521, 78525, 78538, 78540, 79096, 79097],
+      "orphanedListenerPorts": [23012],
+      "manualScopedCleanupSignal": "SIGINT",
+      "isolatedProcessesAfterScopedCleanup": 0,
+      "isolatedListenersAfterScopedCleanup": 0,
+      "kernelOomEvidence": 0,
+      "failedSystemdUnits": 0
+    }
   },
   "contract": {
-    "readinessProbeRoute": "/login",
+    "readinessProbeRoute": "/login/overview",
+    "twodartNetHealthProbeRoute": "/api/HealthCheck",
     "maximumAcceptedReadinessStatus": 399,
     "revalidateImmediatelyBeforeBrowserJourney": true,
     "browserNavigationStatusMustBeRecorded": true,

@@ -16,6 +16,7 @@ test("mprocs oracle defines deterministic headless lifecycle shutdown", async ()
       readonly emulatorGrandchildExitGuaranteed: boolean;
       readonly applicationGrandchildExitGuaranteed: boolean;
       readonly exportMetadataRequiredBeforeForceQuit: boolean;
+      readonly failedStartDirectoryReapBeforeListenerAssertion: boolean;
       readonly forceQuitSafeOnlyAfterEmulatorProcessGroupExited: boolean;
       readonly headlessTransport: string;
       readonly postQuitDirectoryProcessAuditRequired: boolean;
@@ -29,6 +30,16 @@ test("mprocs oracle defines deterministic headless lifecycle shutdown", async ()
       readonly version: string;
     };
     readonly observation: {
+      readonly failedReadinessCleanup: {
+        readonly cleanupWaitSecondsBeforeThrow: number;
+        readonly controllerShutdownRequested: boolean;
+        readonly firesideStarted: boolean;
+        readonly manualScopedCleanupRemainingGroups: number;
+        readonly manualScopedCleanupRemainingListeners: number;
+        readonly orphanedDirectoryProcessGroups: number;
+        readonly orphanedListeners: readonly number[];
+        readonly requiredOrdering: string;
+      };
       readonly failedStartCleanup: {
         readonly gateExitCode: number;
         readonly gateListenersRemaining: number;
@@ -64,7 +75,7 @@ test("mprocs oracle defines deterministic headless lifecycle shutdown", async ()
     readonly schemaVersion: number;
   };
 
-  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.schemaVersion, 2);
   assert.deepEqual(fixture.oracle, {
     component: "mprocs",
     packageRevision: "024743006f46effc5c72b91bca11eef3c6253460",
@@ -82,6 +93,7 @@ test("mprocs oracle defines deterministic headless lifecycle shutdown", async ()
   assert.equal(fixture.contract.emulatorGrandchildExitGuaranteed, false);
   assert.equal(fixture.contract.applicationGrandchildExitGuaranteed, false);
   assert.equal(fixture.contract.exportMetadataRequiredBeforeForceQuit, true);
+  assert.equal(fixture.contract.failedStartDirectoryReapBeforeListenerAssertion, true);
   assert.equal(fixture.contract.forceQuitSafeOnlyAfterEmulatorProcessGroupExited, true);
   assert.equal(fixture.contract.headlessTransport, "configured TCP control server");
   assert.equal(fixture.contract.postQuitDirectoryProcessAuditRequired, true);
@@ -130,4 +142,15 @@ test("mprocs oracle defines deterministic headless lifecycle shutdown", async ()
     secondSigintForcedExit: true,
     subprocessesStillRunningReported: 2,
   });
+  assert.equal(fixture.observation.failedReadinessCleanup.controllerShutdownRequested, true);
+  assert.equal(fixture.observation.failedReadinessCleanup.firesideStarted, false);
+  assert.equal(fixture.observation.failedReadinessCleanup.cleanupWaitSecondsBeforeThrow, 600);
+  assert.equal(fixture.observation.failedReadinessCleanup.orphanedDirectoryProcessGroups, 6);
+  assert.deepEqual(fixture.observation.failedReadinessCleanup.orphanedListeners, [23012]);
+  assert.equal(fixture.observation.failedReadinessCleanup.manualScopedCleanupRemainingGroups, 0);
+  assert.equal(fixture.observation.failedReadinessCleanup.manualScopedCleanupRemainingListeners, 0);
+  assert.match(
+    fixture.observation.failedReadinessCleanup.requiredOrdering,
+    /reap validated directory-owned process groups before asserting zero listeners/u,
+  );
 });

@@ -87,7 +87,7 @@ test("the exact lifecycle observation requires one SIGINT to one emulator proces
   });
 });
 
-test("the failed browser journey freezes the login readiness and evidence gap", async () => {
+test("the failed browser journey freezes the exact readiness routes and evidence gaps", async () => {
   const fixture = JSON.parse(await readFile(loginReadinessUrl, "utf8")) as {
     readonly contract: {
       readonly browserNavigationMustFailBeforeSelectorWaitOnStatusError: boolean;
@@ -98,25 +98,53 @@ test("the failed browser journey freezes the login readiness and evidence gap", 
       readonly readinessProbeRoute: string;
       readonly renderedSelectorTimeoutMilliseconds: number;
       readonly revalidateImmediatelyBeforeBrowserJourney: boolean;
+      readonly twodartNetHealthProbeRoute: string;
     };
-    readonly observation: {
-      readonly exactNavigationStatusStored: boolean;
-      readonly firstPartyResponses: number;
-      readonly journeysCompleted: number;
-      readonly navigationStatusClass: string;
-      readonly requiredFailures: number;
-      readonly requiredRequests: number;
+    readonly observations: {
+      readonly correctedReadinessFailure: {
+        readonly bareLoginStatus: number;
+        readonly dotnetRootStatus: number;
+        readonly firesideStarted: boolean;
+        readonly isolatedListenersAfterScopedCleanup: number;
+        readonly isolatedProcessesAfterScopedCleanup: number;
+        readonly officialExportCompleted: boolean;
+        readonly orphanedDirectoryProcessGroups: readonly number[];
+        readonly orphanedListenerPorts: readonly number[];
+      };
+      readonly priorBrowserFailure: {
+        readonly exactNavigationStatusStored: boolean;
+        readonly firstPartyResponses: number;
+        readonly journeysCompleted: number;
+        readonly navigationStatusClass: string;
+        readonly requiredFailures: number;
+        readonly requiredRequests: number;
+      };
     };
-    readonly sourceContract: { readonly emailInputId: string; readonly loginRoute: string };
+    readonly sourceContract: {
+      readonly dotnetHealthControllerPath: string;
+      readonly dotnetHealthRoute: string;
+      readonly emailInputId: string;
+      readonly loginPageTypeMain: string;
+      readonly loginPageTypePath: string;
+      readonly loginRoute: string;
+      readonly loginRoutePath: string;
+    };
     readonly schemaVersion: number;
   };
 
-  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.schemaVersion, 2);
   assert.deepEqual(fixture.sourceContract, {
+    dotnetHealthControllerPath:
+      "engines/twodartnet/TwodartNet/Controllers/HealthCheckController.cs",
+    dotnetHealthRoute: "/api/HealthCheck",
     emailInputId: "workEmail",
-    loginRoute: "/login",
+    loginPageTypeMain: "overview",
+    loginPageTypePath:
+      "apps/templates/components/Login/components/LoginPage/LoginPage.tsx",
+    loginRoute: "/login/overview",
+    loginRoutePath: "apps/templates/pages/login/[loginType].tsx",
   });
-  assert.deepEqual(fixture.observation, {
+  assert.deepEqual(fixture.observations.priorBrowserFailure, {
     browserErrorHash: "c11cd719e31ad32230b53c5f8e78d59764b8cac13ebe610bca4133567d8b2812",
     browserEvidenceSha256: "a85c07e75e91fdc1a1f993b7d232893133c626ccf749d22c074a1f51ecbeb5e5",
     cacheBuildReady: true,
@@ -133,14 +161,34 @@ test("the failed browser journey freezes the login readiness and evidence gap", 
     selectorFailure: "workEmail was not found before the 30000 ms locator timeout",
     stack: "official",
   });
+  assert.deepEqual(fixture.observations.correctedReadinessFailure, {
+    bareLoginStatus: 404,
+    dotnetRootStatus: 404,
+    failedSystemdUnits: 0,
+    firesideStarted: false,
+    isolatedListenersAfterScopedCleanup: 0,
+    isolatedProcessesAfterScopedCleanup: 0,
+    kernelOomEvidence: 0,
+    manualScopedCleanupSignal: "SIGINT",
+    officialCacheReady: true,
+    officialExportCompleted: true,
+    officialFullDatasetStarted: true,
+    officialStorageExportObjects: 33353,
+    officialStorageExportSize: "6.23 GB",
+    orphanedDirectoryProcessGroups: [78521, 78525, 78538, 78540, 79096, 79097],
+    orphanedListenerPorts: [23012],
+    readinessTimeoutSeconds: 1200,
+    stack: "official",
+  });
   assert.deepEqual(fixture.contract, {
     browserNavigationMustFailBeforeSelectorWaitOnStatusError: true,
     browserNavigationStatusMustBeRecorded: true,
     maximumAcceptedReadinessStatus: 399,
     phase5ThresholdsMayChange: false,
     privateResponseBodiesMayBeStored: false,
-    readinessProbeRoute: "/login",
+    readinessProbeRoute: "/login/overview",
     renderedSelectorTimeoutMilliseconds: 180_000,
     revalidateImmediatelyBeforeBrowserJourney: true,
+    twodartNetHealthProbeRoute: "/api/HealthCheck",
   });
 });
