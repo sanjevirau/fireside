@@ -59,6 +59,18 @@ test("Phase 5 stack launch uses the exact isolated runtime contract", () => {
     assert.ok(command.includes(boundary), `${boundary} is missing`);
   }
   assert.ok(command.indexOf("java/26.0.2.1/bin") < command.indexOf("mise/shims"));
+  for (const exactToolDirectory of [
+    "node/24.20.0/bin",
+    "bun/1.3.14/bin",
+    "dotnet/10.0.301",
+    "python/3.14.6/bin",
+    "rust/1.98.0/bin",
+  ]) {
+    assert.ok(
+      command.indexOf(exactToolDirectory) < command.indexOf("mise/shims"),
+      `${exactToolDirectory} must precede the mutable mise shim layer`,
+    );
+  }
   assert.match(command, /official-initial\.exit/u);
 });
 
@@ -148,6 +160,8 @@ test("mprocs control readiness never opens a protocol-less TCP connection", asyn
     /ports\.map\(async \(port\) => listenerOpen\(port\)\)/u,
   );
   assert.match(source, /cleanupFailedStart\(input, exitMarker\)/u);
+  assert.match(source, /emulatorProcessObserved/u);
+  assert.match(source, /emulator process exited before readiness/u);
   assert.match(source, /child\.once\("close", \(exitCode\) =>/u);
   assert.doesNotMatch(source, /send-keys[\s\S]{0,100}["']q["']/u);
 });

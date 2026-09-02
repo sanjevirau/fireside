@@ -94,6 +94,11 @@ export function phase5EmulatorProcessMatches(
 export function renderPhase5StackCommand(input: StackLaunchInput): string {
   const exactPath = [
     path.join(input.javaHome, "bin"),
+    path.dirname(input.nodeBinary),
+    "/home/sanjevi/.local/share/mise/installs/bun/1.3.14/bin",
+    "/home/sanjevi/.local/share/mise/installs/dotnet/10.0.301",
+    "/home/sanjevi/.local/share/mise/installs/python/3.14.6/bin",
+    "/home/sanjevi/.local/share/mise/installs/rust/1.98.0/bin",
     "/home/sanjevi/.local/share/mise/shims",
     "/home/sanjevi/.local/bin",
     "/usr/local/bin",
@@ -176,8 +181,18 @@ export async function startPhase5Stack(
     const started = performance.now();
     let peakRssBytes = 0;
     let peakPssBytes: number | null = 0;
+    let emulatorProcessObserved = false;
     const deadline = Date.now() + maximumReadySeconds * 1_000;
     while (true) {
+      const emulatorGroups = await phase5EmulatorProcessGroups(
+        input.directory,
+        input.stack,
+        input.firesideBinary,
+      );
+      if (emulatorGroups.length > 0) emulatorProcessObserved = true;
+      else if (emulatorProcessObserved) {
+        throw new Error(`${input.stack} emulator process exited before readiness`);
+      }
       const watcher = await processMetricsContaining(
         input.directory,
         "watch-firestore-cache.ts",
