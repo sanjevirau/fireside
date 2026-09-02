@@ -3,7 +3,9 @@
 This fixture freezes the browser-visible routes, the concrete `/login/overview` login
 variant, stable login selectors, the TwodartNet `/api/HealthCheck` readiness endpoint,
 local OTP API, admin navigation inventory, and ordered acceptance journeys observed in
-the readable Twodart source at the exact Phase 5 candidate revision.
+the readable Twodart source at the exact Phase 5 candidate revision. It also pins the
+signed-out dynamic-route behavior and the cache watcher's server/browser port handoff
+that the tiny diagnostic smoke exercises.
 
 It contains only contract metadata and source hashes. It intentionally contains no
 dataset values, user identifiers, OTP values, credentials, access tokens, or provider

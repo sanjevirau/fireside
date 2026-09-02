@@ -32,13 +32,16 @@ test("the Twodart source oracle freezes the exact Phase 5 browser contract", asy
 
   assert.equal(fixture.schemaVersion, 2);
   assert.equal(fixture.oracle, "readable-twodart-source");
-  assert.equal(fixture.revision, "f424c373b0947ed57db90f7d7f51455fadca547c");
+  assert.equal(fixture.revision, "36728e702ab9d90940456962899287a2b935fb1e");
   assert.equal(fixture.credentialsStored, false);
   assert.equal(fixture.accessTokensStored, false);
   assert.equal(fixture.realUserDataStored, false);
-  assert.equal(fixture.sourceFiles.length, 10);
+  assert.equal(fixture.sourceFiles.length, 13);
   for (const source of fixture.sourceFiles) {
-    assert.match(source.path, /^(?:apps\/templates|engines\/twodartnet)\//u);
+    assert.match(
+      source.path,
+      /^(?:apps\/templates|engines\/twodartnet|scripts\/setup)\//u,
+    );
     assert.match(source.sha256, /^[0-9a-f]{64}$/u);
   }
 
