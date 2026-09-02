@@ -18,6 +18,10 @@ const tinyBrowserR5CleanupUrl = new URL(
   "../fixtures/phase5/tiny-browser-r5-cleanup-contract.json",
   import.meta.url,
 );
+const tinyBrowserR6ReadinessCleanupUrl = new URL(
+  "../fixtures/phase5/tiny-browser-r6-readiness-cleanup-contract.json",
+  import.meta.url,
+);
 
 test("the exact lifecycle observation requires one SIGINT to one emulator process", async () => {
   const fixture = JSON.parse(await readFile(singleSigintUrl, "utf8")) as {
@@ -92,6 +96,104 @@ test("the exact lifecycle observation requires one SIGINT to one emulator proces
     processIdentityFields: ["pid", "procStatStartTimeTicks"],
     waitForExactProcessIdentityExit: true,
     zeroDirectoryOwnedProcessesRequiredAfterCleanup: true,
+  });
+});
+
+test("the r6 smoke freezes stable readiness errors and identity-scoped cleanup", async () => {
+  const fixture = JSON.parse(
+    await readFile(tinyBrowserR6ReadinessCleanupUrl, "utf8"),
+  ) as {
+    readonly schemaVersion: number;
+    readonly oracle: {
+      readonly candidateRevision: string;
+      readonly diagnostic: string;
+      readonly manifestSha256: string;
+      readonly twodartRevision: string;
+    };
+    readonly sourceBeforeFix: { readonly sha256: string };
+    readonly observation: {
+      readonly allRequiredListenersReady: boolean;
+      readonly allRequiredLogGatesReady: boolean;
+      readonly browserJourneysCompleted: number;
+      readonly cleanupRefusedMixedProcessGroup: number;
+      readonly directoryOwnedMembersInMixedGroup: number;
+      readonly directoryOwnedProcessesAfterManualCleanup: number;
+      readonly directoryOwnedProcessesBeforeManualCleanup: number;
+      readonly failedSystemdUnits: number;
+      readonly frontendLoginFirstObservedStatus: number;
+      readonly identicalErrorSamplesBeforeFailFast: number;
+      readonly isolatedListenersAfterManualCleanup: number;
+      readonly kernelOomEvidence: number;
+      readonly outsideDirectoryMembersInMixedGroup: number;
+      readonly outsideDirectoryProcessClass: string;
+      readonly sharedCompilerPreserved: boolean;
+      readonly steadySwapInOutSamples: readonly (readonly [number, number])[];
+      readonly syntheticOnly: boolean;
+    };
+    readonly contract: {
+      readonly cleanupProcessIdentityFields: readonly string[];
+      readonly cleanupSignalTarget: string;
+      readonly diagnosticDefinitiveErrorRequiresConsecutiveIdenticalSamples: number;
+      readonly directoryOwnershipMustBeRevalidatedBeforeEverySignal: boolean;
+      readonly mixedProcessGroupMayBeSignaledAsAGroup: boolean;
+      readonly phase5ThresholdsMayChange: boolean;
+      readonly readinessLimitSeconds: number;
+      readonly sharedOutOfDirectoryProcessesMustRemainUntouched: boolean;
+      readonly successfulProbeClearsErrorStreak: boolean;
+      readonly twoConsecutiveEmptyDirectoryScansRequired: boolean;
+      readonly unavailableProbeClearsErrorStreak: boolean;
+      readonly zeroDirectoryOwnedProcessesRequired: boolean;
+      readonly zeroIsolatedListenersRequired: boolean;
+    };
+  };
+
+  assert.equal(fixture.schemaVersion, 1);
+  assert.deepEqual(fixture.oracle, {
+    candidateRevision: "775ceda0b8c0992f95b5b3203502bb75b8d6b102",
+    diagnostic: "two-tier-smoke-20260902T222845+0800-775ceda-r6",
+    kind: "exact synthetic Phase 5 diagnostic smoke failure plus post-failure process audit",
+    manifestSha256: "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa",
+    twodartRevision: "b13c6bd0b4b6fdb5c211395ebfb35e5eebb50c08",
+  });
+  assert.equal(
+    fixture.sourceBeforeFix.sha256,
+    "ff3065b046ef4517e6bbba006e61a5b8d1e718c90a85c433f80f4ca59e9363d3",
+  );
+  assert.deepEqual(fixture.observation, {
+    allRequiredListenersReady: true,
+    allRequiredLogGatesReady: true,
+    browserJourneysCompleted: 0,
+    cleanupRefusedMixedProcessGroup: 129879,
+    directoryOwnedMembersInMixedGroup: 5,
+    directoryOwnedProcessesAfterManualCleanup: 0,
+    directoryOwnedProcessesBeforeManualCleanup: 22,
+    failedSystemdUnits: 0,
+    frontendLoginFirstObservedStatus: 404,
+    gateFailureHash: "713ded432f9843c51bfbdffad4027109cde9eefaf8c9e57afd364ebd6c7ead31",
+    identicalErrorSamplesBeforeFailFast: 1,
+    isolatedListenersAfterManualCleanup: 0,
+    kernelOomEvidence: 0,
+    outsideDirectoryMembersInMixedGroup: 1,
+    outsideDirectoryProcessClass: "dotnet-vbcscompiler",
+    sharedCompilerPreserved: true,
+    stack: "official",
+    steadySwapInOutSamples: [[0, 0], [0, 0], [0, 0]],
+    syntheticOnly: true,
+  });
+  assert.deepEqual(fixture.contract, {
+    cleanupProcessIdentityFields: ["pid", "procStatStartTimeTicks"],
+    cleanupSignalTarget: "exact directory-owned process identity",
+    diagnosticDefinitiveErrorRequiresConsecutiveIdenticalSamples: 3,
+    directoryOwnershipMustBeRevalidatedBeforeEverySignal: true,
+    mixedProcessGroupMayBeSignaledAsAGroup: false,
+    phase5ThresholdsMayChange: false,
+    readinessLimitSeconds: 60,
+    sharedOutOfDirectoryProcessesMustRemainUntouched: true,
+    successfulProbeClearsErrorStreak: true,
+    twoConsecutiveEmptyDirectoryScansRequired: true,
+    unavailableProbeClearsErrorStreak: true,
+    zeroDirectoryOwnedProcessesRequired: true,
+    zeroIsolatedListenersRequired: true,
   });
 });
 

@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "kind": "exact synthetic Phase 5 diagnostic smoke failure plus post-failure process audit",
+    "candidateRevision": "775ceda0b8c0992f95b5b3203502bb75b8d6b102",
+    "twodartRevision": "b13c6bd0b4b6fdb5c211395ebfb35e5eebb50c08",
+    "diagnostic": "two-tier-smoke-20260902T222845+0800-775ceda-r6",
+    "manifestSha256": "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa"
+  },
+  "sourceBeforeFix": {
+    "path": "conformance/src/suite/phase5-stack-control.ts",
+    "sha256": "ff3065b046ef4517e6bbba006e61a5b8d1e718c90a85c433f80f4ca59e9363d3"
+  },
+  "observation": {
+    "stack": "official",
+    "syntheticOnly": true,
+    "allRequiredLogGatesReady": true,
+    "allRequiredListenersReady": true,
+    "frontendLoginFirstObservedStatus": 404,
+    "identicalErrorSamplesBeforeFailFast": 1,
+    "browserJourneysCompleted": 0,
+    "gateFailureHash": "713ded432f9843c51bfbdffad4027109cde9eefaf8c9e57afd364ebd6c7ead31",
+    "cleanupRefusedMixedProcessGroup": 129879,
+    "directoryOwnedMembersInMixedGroup": 5,
+    "outsideDirectoryMembersInMixedGroup": 1,
+    "outsideDirectoryProcessClass": "dotnet-vbcscompiler",
+    "directoryOwnedProcessesBeforeManualCleanup": 22,
+    "directoryOwnedProcessesAfterManualCleanup": 0,
+    "isolatedListenersAfterManualCleanup": 0,
+    "sharedCompilerPreserved": true,
+    "failedSystemdUnits": 0,
+    "kernelOomEvidence": 0,
+    "steadySwapInOutSamples": [[0, 0], [0, 0], [0, 0]]
+  },
+  "contract": {
+    "diagnosticDefinitiveErrorRequiresConsecutiveIdenticalSamples": 3,
+    "successfulProbeClearsErrorStreak": true,
+    "unavailableProbeClearsErrorStreak": true,
+    "readinessLimitSeconds": 60,
+    "cleanupSignalTarget": "exact directory-owned process identity",
+    "cleanupProcessIdentityFields": ["pid", "procStatStartTimeTicks"],
+    "directoryOwnershipMustBeRevalidatedBeforeEverySignal": true,
+    "mixedProcessGroupMayBeSignaledAsAGroup": false,
+    "sharedOutOfDirectoryProcessesMustRemainUntouched": true,
+    "twoConsecutiveEmptyDirectoryScansRequired": true,
+    "zeroDirectoryOwnedProcessesRequired": true,
+    "zeroIsolatedListenersRequired": true,
+    "phase5ThresholdsMayChange": false
+  }
+}
