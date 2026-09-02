@@ -14,6 +14,10 @@ const tinyBrowserRuntimeUrl = new URL(
   "../fixtures/phase5/tiny-browser-runtime-contract.json",
   import.meta.url,
 );
+const tinyBrowserR5CleanupUrl = new URL(
+  "../fixtures/phase5/tiny-browser-r5-cleanup-contract.json",
+  import.meta.url,
+);
 
 test("the exact lifecycle observation requires one SIGINT to one emulator process", async () => {
   const fixture = JSON.parse(await readFile(singleSigintUrl, "utf8")) as {
@@ -253,5 +257,60 @@ test("the tiny browser smoke freezes runtime-path and client-route failures befo
     runtimeDirectoryMustLeaveSocketSuffixHeadroom: true,
     signedOutAuthCallbackMayMutateDynamicRouteQuery: false,
     signedOutLoginPathMustRemain: "/login/overview",
+  });
+});
+
+test("the corrected tiny smoke freezes reparented cleanup failures before fixes", async () => {
+  const fixture = JSON.parse(await readFile(tinyBrowserR5CleanupUrl, "utf8")) as {
+    readonly contract: {
+      readonly directoryOwnershipMustBeRevalidatedBeforeEverySignal: boolean;
+      readonly directoryProcessDiscoveryMustConvergeAfterReparenting: boolean;
+      readonly exportMetadataRequiredBeforeControllerShutdown: boolean;
+      readonly phase5ThresholdsMayChange: boolean;
+      readonly twoConsecutiveEmptyDirectoryScansRequired: boolean;
+      readonly zeroDirectoryOwnedProcessesRequired: boolean;
+      readonly zeroIsolatedListenersRequired: boolean;
+    };
+    readonly observation: {
+      readonly cacheWebsocketConnected: boolean;
+      readonly exportFirstShutdownCompleted: boolean;
+      readonly failedSystemdUnits: number;
+      readonly functionsRuntimeSocketPathAccepted: boolean;
+      readonly isolatedListenersAfterManualCleanup: number;
+      readonly isolatedProcessesAfterManualCleanup: number;
+      readonly kernelOomEvidence: number;
+      readonly manualScopedCleanupRequired: boolean;
+      readonly orphanedListenerPorts: readonly number[];
+      readonly reparentedProcessClasses: readonly string[];
+      readonly syntheticOnly: boolean;
+    };
+    readonly schemaVersion: number;
+  };
+
+  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.observation.syntheticOnly, true);
+  assert.equal(fixture.observation.cacheWebsocketConnected, true);
+  assert.equal(fixture.observation.functionsRuntimeSocketPathAccepted, true);
+  assert.equal(fixture.observation.exportFirstShutdownCompleted, true);
+  assert.deepEqual(fixture.observation.reparentedProcessClasses, [
+    "cache-watcher",
+    "next",
+    "images",
+    "twodartnet",
+  ]);
+  assert.deepEqual(fixture.observation.orphanedListenerPorts, [23_012]);
+  assert.equal(fixture.observation.manualScopedCleanupRequired, true);
+  assert.equal(fixture.observation.isolatedProcessesAfterManualCleanup, 0);
+  assert.equal(fixture.observation.isolatedListenersAfterManualCleanup, 0);
+  assert.equal(fixture.observation.failedSystemdUnits, 0);
+  assert.equal(fixture.observation.kernelOomEvidence, 0);
+  assert.deepEqual(fixture.contract, {
+    directoryOwnershipMustBeRevalidatedBeforeEverySignal: true,
+    directoryProcessDiscoveryMustConvergeAfterReparenting: true,
+    exportMetadataRequiredBeforeControllerShutdown: true,
+    phase5ThresholdsMayChange: false,
+    twoConsecutiveEmptyDirectoryScansRequired: true,
+    zeroDirectoryOwnedProcessesRequired: true,
+    zeroIsolatedListenersRequired: true,
   });
 });

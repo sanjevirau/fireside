@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "kind": "exact synthetic Phase 5 diagnostic smoke observation plus process ownership audit",
+    "candidateRevision": "179f8d3de910bf8569430caa6d86df18f5c26eb3",
+    "twodartRevision": "36728e702ab9d90940456962899287a2b935fb1e",
+    "diagnostic": "two-tier-smoke-20260902T215453+0800-179f8d3-r5",
+    "manifestSha256": "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa"
+  },
+  "sourceBeforeFix": {
+    "path": "conformance/src/suite/phase5-stack-control.ts",
+    "sha256": "db2f2003891a115c99067f5aa7b09d5d510a4a95f09e4f8b679a9307090a4981"
+  },
+  "observation": {
+    "stack": "official",
+    "syntheticOnly": true,
+    "cacheWebsocketConnected": true,
+    "functionsRuntimeSocketPathAccepted": true,
+    "exportFirstShutdownCompleted": true,
+    "browserErrorHash": "d6bc1bc87fc1b111eef73094f537662b2d3054b9eaf42613c586fe40335246cc",
+    "gateFailureHash": "f5e510def191ebc02ccecb93d3fcd804a7ff7e3a12cc2c58a566f22de5261a83",
+    "cleanupFailureHash": "04a51228e02715740539809c5fda4c40d255e2f4279523c0a0bb26d966ee04c7",
+    "reparentedProcessClasses": [
+      "cache-watcher",
+      "next",
+      "images",
+      "twodartnet"
+    ],
+    "orphanedListenerPorts": [23012],
+    "manualScopedCleanupRequired": true,
+    "isolatedProcessesAfterManualCleanup": 0,
+    "isolatedListenersAfterManualCleanup": 0,
+    "failedSystemdUnits": 0,
+    "kernelOomEvidence": 0
+  },
+  "contract": {
+    "exportMetadataRequiredBeforeControllerShutdown": true,
+    "directoryOwnershipMustBeRevalidatedBeforeEverySignal": true,
+    "directoryProcessDiscoveryMustConvergeAfterReparenting": true,
+    "twoConsecutiveEmptyDirectoryScansRequired": true,
+    "zeroDirectoryOwnedProcessesRequired": true,
+    "zeroIsolatedListenersRequired": true,
+    "phase5ThresholdsMayChange": false
+  }
+}
