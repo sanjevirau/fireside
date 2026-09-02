@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "kind": "exact Twodart source plus Phase 5 smoke observation",
+    "twodartRevision": "f424c373b0947ed57db90f7d7f51455fadca547c",
+    "candidateCommit": "a081386df5fbe67e199069d4ca98aba113d6d93b",
+    "diagnostic": "full-gate-smoke-20260902T1714+0800-a081386"
+  },
+  "sourceContract": {
+    "loginRoute": "/login",
+    "emailInputId": "workEmail"
+  },
+  "observation": {
+    "stack": "official",
+    "fullDatasetReady": true,
+    "cacheBuildReady": true,
+    "journeysCompleted": 0,
+    "firstPartyResponses": 1,
+    "requiredRequests": 1,
+    "requiredFailures": 1,
+    "observedRouteClass": "https://phase5-official.templates.twodart.localhost:443/login",
+    "navigationStatusClass": ">=400",
+    "exactNavigationStatusStored": false,
+    "selectorFailure": "workEmail was not found before the 30000 ms locator timeout",
+    "browserEvidenceSha256": "a85c07e75e91fdc1a1f993b7d232893133c626ccf749d22c074a1f51ecbeb5e5",
+    "browserErrorHash": "c11cd719e31ad32230b53c5f8e78d59764b8cac13ebe610bca4133567d8b2812",
+    "kernelOomEvidence": 0,
+    "failedSystemdUnits": 0
+  },
+  "contract": {
+    "readinessProbeRoute": "/login",
+    "maximumAcceptedReadinessStatus": 399,
+    "revalidateImmediatelyBeforeBrowserJourney": true,
+    "browserNavigationStatusMustBeRecorded": true,
+    "browserNavigationMustFailBeforeSelectorWaitOnStatusError": true,
+    "renderedSelectorTimeoutMilliseconds": 180000,
+    "privateResponseBodiesMayBeStored": false,
+    "phase5ThresholdsMayChange": false
+  }
+}

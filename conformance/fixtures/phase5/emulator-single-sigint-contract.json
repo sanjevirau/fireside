@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "kind": "exact Phase 5 smoke observation",
+    "candidateCommit": "a081386df5fbe67e199069d4ca98aba113d6d93b",
+    "diagnostic": "full-gate-smoke-20260902T1714+0800-a081386",
+    "supersedes": {
+      "fixture": "mprocs-headless-shutdown-contract.json",
+      "field": "contract.directEmulatorProcessGroupSigintRequired"
+    }
+  },
+  "observation": {
+    "bothStacksReachedFullDatasetReadiness": true,
+    "bothCacheBuildsCompleted": true,
+    "official": {
+      "firstSigintStartedCleanShutdown": true,
+      "secondSigintForcedExit": true,
+      "subprocessesStillRunningReported": 2,
+      "exportMetadataPresent": false
+    },
+    "fireside": {
+      "exportMetadataPresent": true,
+      "emulatorListenerOutlivedExport": true,
+      "lifecycleBoundaryExceeded": true
+    },
+    "host": {
+      "kernelOomEvidence": 0,
+      "failedSystemdUnits": 0,
+      "isolatedProcessesAfterScopedCleanup": 0,
+      "isolatedListenersAfterScopedCleanup": 0
+    }
+  },
+  "contract": {
+    "gracefulSignal": "SIGINT",
+    "gracefulSignalTarget": "exact emulator launch process",
+    "gracefulSignalDeliveryCount": 1,
+    "processGroupSignalAllowedForGracefulShutdown": false,
+    "processIdentityFields": [
+      "pid",
+      "procStatStartTimeTicks"
+    ],
+    "waitForExactProcessIdentityExit": true,
+    "exportMetadataRequiredBeforeMprocsForceQuit": true,
+    "directoryProcessGroupReapIsFallbackOnly": true,
+    "zeroDirectoryOwnedProcessesRequiredAfterCleanup": true,
+    "phase5ThresholdsMayChange": false
+  }
+}
