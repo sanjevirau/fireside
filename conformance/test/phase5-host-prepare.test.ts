@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import {
   applyPhase5Ports,
+  phase5PortEnvironment,
   phase5DatasetPaths,
   PHASE5_STACK_PORTS,
   renderSafeTwodartEnvironment,
@@ -43,6 +44,20 @@ test("Phase 5 host preparation freezes every official and Fireside port", () => 
     assert.equal(rendered.emulators.logging?.port, ports.logging);
     assert.equal(rendered.emulators.eventarc?.port, ports.eventarc);
     assert.equal(rendered.emulators.tasks?.port, ports.tasks);
+    assert.deepEqual(phase5PortEnvironment(ports), {
+      FIREBASE_EMULATOR_AUTH_PORT: String(ports.auth),
+      FIREBASE_EMULATOR_FIRESTORE_PORT: String(ports.firestore),
+      FIREBASE_EMULATOR_FUNCTIONS_PORT: String(ports.functions),
+      FIREBASE_EMULATOR_HUB_PORT: String(ports.hub),
+      FIREBASE_EMULATOR_PUBSUB_PORT: String(ports.pubsub),
+      FIREBASE_EMULATOR_STORAGE_PORT: String(ports.storage),
+      FIREBASE_EMULATOR_UI_PORT: String(ports.ui),
+      MPROCS_CONTROL_PORT: String(ports.mprocsControl),
+      TWODART_FIREBASE_EVENTARC_PORT: String(ports.eventarc),
+      TWODART_FIREBASE_LOGGING_PORT: String(ports.logging),
+      TWODART_FIREBASE_TASKS_PORT: String(ports.tasks),
+      TWODART_FIREBASE_WEBSOCKET_PORT: String(ports.firestoreWebsocket),
+    });
   }
   const allPorts = Object.values(PHASE5_STACK_PORTS).flatMap((ports) =>
     Object.values(ports)

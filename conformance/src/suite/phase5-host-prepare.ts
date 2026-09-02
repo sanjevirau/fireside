@@ -12,7 +12,7 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const TWODART_CANDIDATE = "6703ee77bb678e6b6ef26237c447b5d13dc51c62";
+const TWODART_CANDIDATE = "709ba2459ef13031ae243cc66a40dbd391144e95";
 
 export type Phase5StackName = "official" | "fireside";
 
@@ -158,6 +158,25 @@ export function applyPhase5Ports(
   return `${JSON.stringify(config, null, 2)}\n`;
 }
 
+export function phase5PortEnvironment(
+  ports: Phase5StackPorts,
+): Readonly<Record<string, string>> {
+  return {
+    FIREBASE_EMULATOR_AUTH_PORT: String(ports.auth),
+    FIREBASE_EMULATOR_FIRESTORE_PORT: String(ports.firestore),
+    FIREBASE_EMULATOR_FUNCTIONS_PORT: String(ports.functions),
+    FIREBASE_EMULATOR_HUB_PORT: String(ports.hub),
+    FIREBASE_EMULATOR_PUBSUB_PORT: String(ports.pubsub),
+    FIREBASE_EMULATOR_STORAGE_PORT: String(ports.storage),
+    FIREBASE_EMULATOR_UI_PORT: String(ports.ui),
+    MPROCS_CONTROL_PORT: String(ports.mprocsControl),
+    TWODART_FIREBASE_EVENTARC_PORT: String(ports.eventarc),
+    TWODART_FIREBASE_LOGGING_PORT: String(ports.logging),
+    TWODART_FIREBASE_TASKS_PORT: String(ports.tasks),
+    TWODART_FIREBASE_WEBSOCKET_PORT: String(ports.firestoreWebsocket),
+  };
+}
+
 interface Arguments {
   readonly gateRoot: string;
   readonly reuseDependenciesFrom?: string;
@@ -198,14 +217,7 @@ async function main(): Promise<void> {
 
   const setupEnvironment = {
     ...process.env,
-    FIREBASE_EMULATOR_AUTH_PORT: String(ports.auth),
-    FIREBASE_EMULATOR_FIRESTORE_PORT: String(ports.firestore),
-    FIREBASE_EMULATOR_FUNCTIONS_PORT: String(ports.functions),
-    FIREBASE_EMULATOR_HUB_PORT: String(ports.hub),
-    FIREBASE_EMULATOR_PUBSUB_PORT: String(ports.pubsub),
-    FIREBASE_EMULATOR_STORAGE_PORT: String(ports.storage),
-    FIREBASE_EMULATOR_UI_PORT: String(ports.ui),
-    MPROCS_CONTROL_PORT: String(ports.mprocsControl),
+    ...phase5PortEnvironment(ports),
     TWODART_DISABLE_EXTERNALS: "1",
     TWODART_SETUP_SKIP_WORKTREE_BOOTSTRAP: "1",
   };
@@ -259,8 +271,10 @@ async function main(): Promise<void> {
 
   const portsPath = path.join(stackRoot, ".env.ports");
   const portEnvironment = await readFile(portsPath, "utf8");
-  if (!portEnvironment.includes(`MPROCS_CONTROL_PORT="${ports.mprocsControl}"`)) {
-    throw new Error(`mprocs port was not frozen for ${args.stack}`);
+  for (const [key, value] of Object.entries(phase5PortEnvironment(ports))) {
+    if (!portEnvironment.includes(`${key}="${value}"`)) {
+      throw new Error(`${key} was not frozen for ${args.stack}`);
+    }
   }
   const status = await capture("git", ["-C", stackRoot, "status", "--porcelain"]);
   const trackedChanges = status
