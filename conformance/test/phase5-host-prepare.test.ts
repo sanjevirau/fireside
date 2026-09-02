@@ -46,6 +46,7 @@ test("Phase 5 host preparation freezes every official and Fireside port", () => 
     assert.equal(rendered.emulators.tasks?.port, ports.tasks);
     assert.deepEqual(phase5PortEnvironment(ports), {
       FIREBASE_EMULATOR_AUTH_PORT: String(ports.auth),
+      FIREBASE_CACHE_WEBSOCKET_PORT: String(ports.cacheWebsocket),
       FIREBASE_EMULATOR_FIRESTORE_PORT: String(ports.firestore),
       FIREBASE_EMULATOR_FUNCTIONS_PORT: String(ports.functions),
       FIREBASE_EMULATOR_HUB_PORT: String(ports.hub),

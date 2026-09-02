@@ -12,12 +12,13 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const TWODART_CANDIDATE = "709ba2459ef13031ae243cc66a40dbd391144e95";
+const TWODART_CANDIDATE = "ba3ea11b8d4ac5ecd24cb4b80b4fceaf9046e9bc";
 
 export type Phase5StackName = "official" | "fireside";
 
 export interface Phase5StackPorts {
   readonly auth: number;
+  readonly cacheWebsocket: number;
   readonly eventarc: number;
   readonly firestore: number;
   readonly firestoreWebsocket: number;
@@ -47,6 +48,7 @@ export const PHASE5_STACK_PORTS: Readonly<
     eventarc: 23_009,
     tasks: 23_010,
     mprocsControl: 23_011,
+    cacheWebsocket: 23_012,
   },
   fireside: {
     firestore: 23_100,
@@ -61,6 +63,7 @@ export const PHASE5_STACK_PORTS: Readonly<
     eventarc: 23_109,
     tasks: 23_110,
     mprocsControl: 23_111,
+    cacheWebsocket: 23_112,
   },
 };
 
@@ -163,6 +166,7 @@ export function phase5PortEnvironment(
 ): Readonly<Record<string, string>> {
   return {
     FIREBASE_EMULATOR_AUTH_PORT: String(ports.auth),
+    FIREBASE_CACHE_WEBSOCKET_PORT: String(ports.cacheWebsocket),
     FIREBASE_EMULATOR_FIRESTORE_PORT: String(ports.firestore),
     FIREBASE_EMULATOR_FUNCTIONS_PORT: String(ports.functions),
     FIREBASE_EMULATOR_HUB_PORT: String(ports.hub),
