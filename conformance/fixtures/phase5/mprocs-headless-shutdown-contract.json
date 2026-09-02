@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "component": "mprocs",
+    "packageRevision": "024743006f46effc5c72b91bca11eef3c6253460",
+    "sourceRevision": "aeba627ff59c1dd1444f0d0dcbed7759d1dbcf9c",
+    "version": "0.9.6-twodart.2",
+    "sourceFiles": [
+      "src/mprocs/ctl.rs",
+      "src/mprocs/event.rs",
+      "src/mprocs/modal/quit.rs"
+    ]
+  },
+  "contract": {
+    "cliFlag": "--ctl",
+    "controlEvent": "c: quit",
+    "headlessTransport": "configured TCP control server",
+    "terminalKeyDependsOnFocus": true,
+    "quitStopsServerAndChildren": true
+  },
+  "observation": {
+    "phase5Diagnostic": "full-gate-smoke-20260902T125932+0800-6f0e811",
+    "terminalKeyResult": "delivered to focused child terminal",
+    "controlEventResult": "accepted by both isolated mprocs servers"
+  }
+}
