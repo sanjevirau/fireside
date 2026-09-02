@@ -1,7 +1,7 @@
 # fireside design and compatibility contract
 
 Status: Phase 2 living specification
-Last updated: 2026-08-31
+Last updated: 2026-09-02
 
 This document is normative for project process and architecture, but not for
 Google Cloud behavior. Every behavioral assertion must be promoted from a
@@ -1820,14 +1820,32 @@ firebase-tools probes the import root with `lstat()` and rejects a directory
 symlink before reading its metadata. Source bytes and all three staged views are
 rehash-verified after the lifecycle so neither stack may mutate the corpus.
 
-Headless mprocs shutdown is export-first. The gate sends `SIGINT` only to the
-validated emulator launch process group, waits up to 600 seconds for the full
+Headless mprocs shutdown is export-first. The gate sends exactly one `SIGINT`
+to the validated emulator launch PID, waits up to 600 seconds for the full
 8 GB export to complete, and only then sends `c: force-quit` over the pinned
 mprocs control connection to reap the remaining controller tree. Terminal key
 injection is not a lifecycle API because a focused child can consume it. Any
 child process whose stdout or stderr is captured is evaluated on Node's
 `close` event, not `exit`, so revision, health, and command evidence cannot be
 read before the pipes are fully drained.
+
+The graceful signal target is identified by both PID and `/proc` start-time
+ticks so PID reuse cannot make a later wait or signal refer to another process.
+Signalling the emulator's whole process group is not a graceful-shutdown API:
+the group also contains controller or wrapper processes which can forward a
+second `SIGINT`. An exact full-data smoke observed that duplicate delivery made
+firebase-tools force-exit with two emulator subprocesses still running, while
+Fireside completed its export but its launch listener outlived the lifecycle
+boundary. Process-group signals remain only the validated, directory-scoped
+fallback after the emulator lifecycle has completed or failed.
+
+Frontend readiness is the actual Portless `/login` route with an HTTP status
+below 400, not merely an open listener, a Next.js ready log, or an arbitrary
+status below 500. The gate repeats this readiness check immediately before each
+browser journey because bringing the other full-data stack online can change
+host pressure after initial startup. Browser evidence records the privacy-safe
+status of every explicitly asserted navigation, and login fails on an HTTP
+error before waiting for `#workEmail`; response bodies remain excluded.
 
 The export boundary is the durable `firebase-export-metadata.json`, not merely
 the disappearance of the firebase-tools launcher command. A full-data smoke

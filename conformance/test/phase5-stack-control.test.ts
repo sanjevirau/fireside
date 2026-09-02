@@ -9,6 +9,7 @@ import {
   PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS,
   parseCacheOutputCounts,
   phase5EmulatorProcessMatches,
+  phase5ProcessIdentityFromStat,
   renderPhase5MprocsControlCommand,
   renderPhase5StackCommand,
   type StackLaunchInput,
@@ -137,6 +138,16 @@ test("Phase 5 stack shutdown identifies only exact emulator launch processes", (
   );
 });
 
+test("Phase 5 process identities include PID reuse protection", () => {
+  assert.deepEqual(
+    phase5ProcessIdentityFromStat(
+      42,
+      "42 (firebase process) S 1 42 42 0 -1 0 0 0 0 0 0 0 0 0 20 0 1 0 987654 0 0",
+    ),
+    { pid: 42, procStatStartTimeTicks: "987654" },
+  );
+});
+
 test("cache summary parsing is content-free and deterministic", () => {
   const log = `
 📊 Data summary:
@@ -184,6 +195,9 @@ test("mprocs control readiness never opens a protocol-less TCP connection", asyn
   assert.match(source, /emulator process exited before readiness/u);
   assert.match(source, /reapPhase5DirectoryProcessGroups/u);
   assert.match(source, /phase5DirectoryProcessGroups/u);
+  assert.match(source, /phase5EmulatorProcesses/u);
+  assert.match(source, /process\.kill\(identity\.pid, "SIGINT"\)/u);
+  assert.match(source, /phase5ProcessIdentityAlive/u);
   assert.match(source, /signalPhase5Groups\(groups, "SIGINT"\)/u);
   assert.match(source, /signalPhase5Groups\(groups, "SIGTERM"\)/u);
   assert.match(source, /cwd !== resolvedDirectory/u);

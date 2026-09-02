@@ -62,3 +62,19 @@ test("the browser runner covers both lifecycle iterations and all admin routes",
     assert.match(source, new RegExp(`"${pageId}"`, "u"));
   }
 });
+
+test("login readiness records status before waiting for rendered controls", async () => {
+  const source = await readFile(runnerUrl, "utf8");
+  const loginStart = source.indexOf("async function loginThroughRenderedUi");
+  const loginEnd = source.indexOf("async function waitForOtp", loginStart);
+  const loginSource = source.slice(loginStart, loginEnd);
+  const navigationAssertion = loginSource.indexOf(
+    'assertSuccessfulNavigation(response, "login")',
+  );
+  const selectorWait = loginSource.indexOf("await emailInput.waitFor");
+  assert.ok(navigationAssertion >= 0, "login navigation status must be asserted");
+  assert.ok(selectorWait > navigationAssertion, "status assertion must precede selector wait");
+  assert.match(loginSource, /timeout: 180_000/u);
+  assert.match(source, /navigations\.push\(\{ label, status: response\?\.status\(\) \?\? null \}\)/u);
+  assert.match(source, /navigations,/u);
+});

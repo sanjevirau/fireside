@@ -102,6 +102,11 @@ interface FailureEvidence {
   hashes: Set<string>;
 }
 
+interface NavigationEvidence {
+  readonly label: string;
+  readonly status: number | null;
+}
+
 const args = parseArguments(process.argv.slice(2));
 const runId = `phase5-${args.stack}-${args.iteration}-${randomUUID()}`;
 const sentinel = `__fireside_phase5_${randomUUID()}`;
@@ -123,6 +128,7 @@ const browserFailures: FailureEvidence = { count: 0, hashes: new Set<string>() }
 const consoleFailures: FailureEvidence = { count: 0, hashes: new Set<string>() };
 const requestFailures: FailureEvidence = { count: 0, hashes: new Set<string>() };
 const journeys: JourneyEvidence[] = [];
+const navigations: NavigationEvidence[] = [];
 const app = prepareAdminApp();
 const auth = getAdminAuth(app);
 const firestore = getAdminFirestore(app);
@@ -454,10 +460,16 @@ async function journey(
 
 async function loginThroughRenderedUi(page: Page, user: AuthUser): Promise<void> {
   if (user.email === undefined) throw new Error("Auth user email missing");
-  await page.goto(new URL("/login", args.baseUrl).href, { waitUntil: "domcontentloaded" });
+  const response = await page.goto(new URL("/login", args.baseUrl).href, {
+    timeout: 180_000,
+    waitUntil: "domcontentloaded",
+  });
+  assertSuccessfulNavigation(response, "login");
   const otpReference = firestore.doc(`users/${user.uid}/private/general`);
   const previousOtp = (await otpReference.get()).data()?.otpCode;
-  await page.locator("#workEmail").fill(user.email);
+  const emailInput = page.locator("#workEmail");
+  await emailInput.waitFor({ state: "visible", timeout: 180_000 });
+  await emailInput.fill(user.email);
   const requestResponse = page.waitForResponse(isVerificationResponse);
   await page.getByRole("button", { exact: true, name: "Continue" }).click();
   assertSuccessfulNavigation(await requestResponse, "otp-request");
@@ -510,6 +522,7 @@ function isVerificationResponse(response: Response): boolean {
 }
 
 function assertSuccessfulNavigation(response: Response | null, label: string): void {
+  navigations.push({ label, status: response?.status() ?? null });
   if (response === null || response.status() >= 400) {
     throw new Error(`${label} returned ${response === null ? "no response" : String(response.status())}`);
   }
@@ -799,6 +812,7 @@ async function writeEvidence(result: {
     errorHash: result.errorHash,
     iteration: args.iteration,
     journeys,
+    navigations,
     network: {
       firstPartyResponses: network.firstPartyResponses,
       requiredFailures: network.requiredFailures,

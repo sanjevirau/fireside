@@ -65,6 +65,16 @@ export interface StoppedPhase5Stack {
   readonly shutdownMilliseconds: number;
 }
 
+export interface Phase5ProcessIdentity {
+  readonly pid: number;
+  readonly procStatStartTimeTicks: string;
+}
+
+export interface Phase5FrontendReadiness {
+  readonly readyMilliseconds: number;
+  readonly status: number;
+}
+
 export interface Phase5MprocsControlCommand {
   readonly arguments: readonly string[];
   readonly command: string;
@@ -191,12 +201,12 @@ export async function startPhase5Stack(
     let emulatorProcessObserved = false;
     const deadline = Date.now() + maximumReadySeconds * 1_000;
     while (true) {
-      const emulatorGroups = await phase5EmulatorProcessGroups(
+      const emulatorProcesses = await phase5EmulatorProcesses(
         input.directory,
         input.stack,
         input.firesideBinary,
       );
-      if (emulatorGroups.length > 0) emulatorProcessObserved = true;
+      if (emulatorProcesses.length > 0) emulatorProcessObserved = true;
       else if (emulatorProcessObserved) {
         throw new Error(`${input.stack} emulator process exited before readiness`);
       }
@@ -284,7 +294,7 @@ export async function stopPhase5Stack(
   let exitCode: number | null = null;
   let lifecycleError: unknown;
   try {
-    await stopPhase5EmulatorProcessGroup(
+    await stopPhase5EmulatorProcess(
       running.directory,
       running.stack,
       running.firesideBinary,
@@ -383,7 +393,7 @@ async function cleanupFailedStart(
   input: StackLaunchInput,
   exitMarker: string,
 ): Promise<void> {
-  await stopPhase5EmulatorProcessGroup(
+  await stopPhase5EmulatorProcess(
     input.directory,
     input.stack,
     input.firesideBinary,
@@ -432,48 +442,48 @@ async function cleanupFailedStart(
   );
 }
 
-async function stopPhase5EmulatorProcessGroup(
+async function stopPhase5EmulatorProcess(
   directory: string,
   stack: Phase5StackName,
   firesideBinary: string,
   maximumShutdownSeconds: number,
 ): Promise<void> {
-  const groups = await phase5EmulatorProcessGroups(directory, stack, firesideBinary);
-  if (groups.length === 0) return;
-  if (groups.length !== 1) {
+  const processes = await phase5EmulatorProcesses(directory, stack, firesideBinary);
+  if (processes.length === 0) return;
+  if (processes.length !== 1) {
     throw new Error(
-      `${stack} has ${String(groups.length)} emulator process groups instead of exactly one`,
+      `${stack} has ${String(processes.length)} emulator launch processes instead of exactly one`,
     );
   }
-  const group = groups[0];
-  if (group === undefined || group <= 1) {
-    throw new Error(`${stack} resolved an unsafe emulator process group`);
+  const identity = processes[0];
+  if (identity === undefined || identity.pid <= 1) {
+    throw new Error(`${stack} resolved an unsafe emulator process identity`);
   }
-  await assertPhase5ProcessGroupScope(group, directory);
+  if (!(await assertPhase5EmulatorProcessScope(identity, directory, stack, firesideBinary))) {
+    return;
+  }
   try {
-    process.kill(-group, "SIGINT");
+    process.kill(identity.pid, "SIGINT");
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
     return;
   }
 
   const deadline = Date.now() + maximumShutdownSeconds * 1_000;
-  while (
-    (await phase5EmulatorProcessGroups(directory, stack, firesideBinary)).includes(group)
-  ) {
+  while (await phase5ProcessIdentityAlive(identity)) {
     if (Date.now() >= deadline) {
-      throw new Error(`${stack} emulator process group did not stop cleanly`);
+      throw new Error(`${stack} emulator launch process did not stop cleanly`);
     }
     await delay(1_000);
   }
 }
 
-async function phase5EmulatorProcessGroups(
+async function phase5EmulatorProcesses(
   directory: string,
   stack: Phase5StackName,
   firesideBinary: string,
-): Promise<readonly number[]> {
-  const groups = new Set<number>();
+): Promise<readonly Phase5ProcessIdentity[]> {
+  const processes: Phase5ProcessIdentity[] = [];
   for (const entry of await readdir("/proc", { withFileTypes: true })) {
     if (!entry.isDirectory() || !/^\d+$/u.test(entry.name)) continue;
     try {
@@ -488,13 +498,65 @@ async function phase5EmulatorProcessGroups(
       ) {
         continue;
       }
-      const group = processGroupFromStat(await readFile(`/proc/${entry.name}/stat`, "utf8"));
-      if (group > 1) groups.add(group);
+      const identity = phase5ProcessIdentityFromStat(
+        Number(entry.name),
+        await readFile(`/proc/${entry.name}/stat`, "utf8"),
+      );
+      if (identity.pid > 1) processes.push(identity);
     } catch {
       // The process can exit between /proc reads.
     }
   }
-  return [...groups].sort((left, right) => left - right);
+  return processes.sort((left, right) => left.pid - right.pid);
+}
+
+async function assertPhase5EmulatorProcessScope(
+  identity: Phase5ProcessIdentity,
+  directory: string,
+  stack: Phase5StackName,
+  firesideBinary: string,
+): Promise<boolean> {
+  try {
+    const [commandBytes, cwdValue, stat] = await Promise.all([
+      readFile(`/proc/${String(identity.pid)}/cmdline`),
+      readlink(`/proc/${String(identity.pid)}/cwd`),
+      readFile(`/proc/${String(identity.pid)}/stat`, "utf8"),
+    ]);
+    const current = phase5ProcessIdentityFromStat(identity.pid, stat);
+    if (current.procStatStartTimeTicks !== identity.procStatStartTimeTicks) return false;
+    const command = commandBytes.toString("utf8");
+    if (!phase5EmulatorProcessMatches(stack, command, firesideBinary)) {
+      throw new Error(`${stack} emulator process identity no longer matches its launch command`);
+    }
+    const cwd = path.resolve(cwdValue);
+    const resolvedDirectory = path.resolve(directory);
+    if (
+      cwd !== resolvedDirectory &&
+      !cwd.startsWith(`${resolvedDirectory}${path.sep}`) &&
+      !command.includes(resolvedDirectory)
+    ) {
+      throw new Error(
+        `refusing to signal emulator process ${String(identity.pid)} outside ${resolvedDirectory}`,
+      );
+    }
+    return true;
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+async function phase5ProcessIdentityAlive(identity: Phase5ProcessIdentity): Promise<boolean> {
+  try {
+    const current = phase5ProcessIdentityFromStat(
+      identity.pid,
+      await readFile(`/proc/${String(identity.pid)}/stat`, "utf8"),
+    );
+    return current.procStatStartTimeTicks === identity.procStatStartTimeTicks;
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
 }
 
 async function reapPhase5DirectoryProcessGroups(
@@ -597,6 +659,20 @@ function processGroupFromStat(stat: string): number {
   return Number(fields[2] ?? 0);
 }
 
+export function phase5ProcessIdentityFromStat(
+  pid: number,
+  stat: string,
+): Phase5ProcessIdentity {
+  const commandEnd = stat.lastIndexOf(")");
+  if (commandEnd < 0) throw new Error("invalid /proc stat record");
+  const fields = stat.slice(commandEnd + 2).trim().split(/\s+/u);
+  const procStatStartTimeTicks = fields[19];
+  if (!Number.isInteger(pid) || pid <= 1 || procStatStartTimeTicks === undefined) {
+    throw new Error("invalid Phase 5 process identity");
+  }
+  return { pid, procStatStartTimeTicks };
+}
+
 export function parseCacheOutputCounts(log: string): Readonly<Record<string, number | boolean>> {
   const numeric = (label: string): number => {
     const match = new RegExp(`^\\s*- ${label}: (\\d+)\\s*$`, "mu").exec(log);
@@ -653,13 +729,18 @@ async function stackReady(
   const [functions, hub, frontend, dotnet] = await Promise.all([
     fetchOk(`http://127.0.0.1:${String(input.ports.functions)}/backends`),
     fetchOk(`http://127.0.0.1:${String(input.ports.hub)}/emulators`),
-    curlOk(baseUrl),
+    curlOk(new URL("/login", baseUrl).href),
     curlOk(twodartNetUrl),
   ]);
   return functions && hub && frontend && dotnet;
 }
 
 async function curlOk(url: string): Promise<boolean> {
+  const status = await curlStatus(url);
+  return status !== null && status >= 200 && status < 400;
+}
+
+async function curlStatus(url: string): Promise<number | null> {
   const result = await run("curl", [
     "--connect-timeout",
     "3",
@@ -673,9 +754,34 @@ async function curlOk(url: string): Promise<boolean> {
     "%{http_code}",
     url,
   ]);
-  if (result.exitCode !== 0) return false;
+  if (result.exitCode !== 0) return null;
   const status = Number(result.stdout.trim());
-  return status >= 200 && status < 500;
+  return Number.isInteger(status) ? status : null;
+}
+
+export async function waitForPhase5FrontendReady(
+  baseUrl: string,
+  maximumReadySeconds: number,
+): Promise<Phase5FrontendReadiness> {
+  const started = performance.now();
+  const deadline = Date.now() + maximumReadySeconds * 1_000;
+  const loginUrl = new URL("/login", baseUrl).href;
+  let lastStatus: number | null = null;
+  while (true) {
+    lastStatus = await curlStatus(loginUrl);
+    if (lastStatus !== null && lastStatus >= 200 && lastStatus < 400) {
+      return {
+        readyMilliseconds: performance.now() - started,
+        status: lastStatus,
+      };
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `Phase 5 frontend /login did not become ready; last status ${lastStatus === null ? "unavailable" : String(lastStatus)}`,
+      );
+    }
+    await delay(1_000);
+  }
 }
 
 async function fetchOk(url: string): Promise<boolean> {

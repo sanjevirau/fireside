@@ -36,6 +36,7 @@ import {
   readPhase5PortEnvironment,
   startPhase5Stack,
   stopPhase5Stack,
+  waitForPhase5FrontendReady,
   type RunningPhase5Stack,
   type StoppedPhase5Stack,
 } from "./phase5-stack-control.ts";
@@ -492,6 +493,10 @@ async function exercisePair(
   for (const stack of stackNames) {
     const item = requiredMap(running, stack);
     before.set(stack, await captureStackState(item, args.projectId));
+    await waitForPhase5FrontendReady(
+      item.baseUrl,
+      manifest.cacheWatcher.maximumReadySeconds,
+    );
     const output = path.join(args.outputDirectory, `browser-${stack}-${iteration}.json`);
     const command = await runCommand(
       `browser-${stack}-${iteration}`,
