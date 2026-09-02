@@ -1,8 +1,8 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "oracle": "readable-twodart-source",
   "repository": "git@github.com:sanjevirau/twodart.git",
-  "revision": "36728e702ab9d90940456962899287a2b935fb1e",
+  "revision": "a4718646a5b5a8a1b54746d42906f8f58468ccb4",
   "branch": "feature/san/fireside-emulator",
   "credentialsStored": false,
   "accessTokensStored": false,
@@ -51,6 +51,10 @@
     {
       "path": "apps/templates/utils/useMainFirestoreCache.ts",
       "sha256": "298c1316f91ea57bea906bbf23f1609f98361099236ccaf426f93ae60f9db087"
+    },
+    {
+      "path": "apps/templates/utils/hooks/useGoogleOneTap.ts",
+      "sha256": "2558725ada1236516ef80ef647aa9f3adaa40c39e37f7c29b6f413e01c250e47"
     },
     {
       "path": "engines/twodartnet/TwodartNet/Controllers/HealthCheckController.cs",
@@ -114,6 +118,7 @@
     "otpMayAppearInEvidence": false,
     "datasetIdentityMayAppearInEvidence": false,
     "browserMustCompleteCustomTokenSignIn": true,
+    "authCallbacksMayMutateRouterQuery": false,
     "allJourneysUseRenderedApplicationUi": true,
     "allJourneysAssertNetworkAndBackendState": true,
     "syntheticMutationsAreRestoredOrDeleted": true,

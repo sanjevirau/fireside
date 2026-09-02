@@ -30,13 +30,13 @@ test("the Twodart source oracle freezes the exact Phase 5 browser contract", asy
     await readFile(new URL("fixture.json", root), "utf8"),
   ) as Fixture;
 
-  assert.equal(fixture.schemaVersion, 2);
+  assert.equal(fixture.schemaVersion, 3);
   assert.equal(fixture.oracle, "readable-twodart-source");
-  assert.equal(fixture.revision, "36728e702ab9d90940456962899287a2b935fb1e");
+  assert.equal(fixture.revision, "a4718646a5b5a8a1b54746d42906f8f58468ccb4");
   assert.equal(fixture.credentialsStored, false);
   assert.equal(fixture.accessTokensStored, false);
   assert.equal(fixture.realUserDataStored, false);
-  assert.equal(fixture.sourceFiles.length, 13);
+  assert.equal(fixture.sourceFiles.length, 14);
   for (const source of fixture.sourceFiles) {
     assert.match(
       source.path,
@@ -77,6 +77,7 @@ test("the Twodart source oracle freezes the exact Phase 5 browser contract", asy
   assert.equal(fixture.adminNavigationPageIds.length, 18);
   assert.equal(fixture.invariants.otpMayAppearInEvidence, false);
   assert.equal(fixture.invariants.datasetIdentityMayAppearInEvidence, false);
+  assert.equal(fixture.invariants.authCallbacksMayMutateRouterQuery, false);
   assert.equal(fixture.invariants.externalProviderMutationsAllowed, false);
   assert.equal(fixture.invariants.liveMacMprocsMayBeTouched, false);
 });
