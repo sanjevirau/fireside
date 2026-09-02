@@ -62,6 +62,13 @@ test("login diagnostics classify the undefined route without storing query value
   assert.match(source, /initiatorCallsiteHashes/u);
   assert.match(source, /finalDocumentPath/u);
   assert.match(source, /finalDocumentQueryKeys/u);
+  assert.match(source, /emailInputCount: document\.querySelectorAll\("#workEmail"\)\.length/u);
+  assert.match(source, /loadingSpinnerCount: document\.querySelectorAll\("svg\.animate-spin"\)\.length/u);
+  assert.match(source, /nextErrorOverlayCount: document\.querySelectorAll\("nextjs-portal"\)\.length/u);
+  assert.match(source, /pageErrorCallsiteClasses/u);
+  assert.match(source, /pageErrorNames/u);
+  assert.match(source, /consoleErrorOrigins/u);
+  assert.match(source, /requestFailureClasses/u);
   assert.match(source, /Object\.keys\(router\.query \?\? \{\}\)\.sort\(\)/u);
   assert.doesNotMatch(source, /finalDocumentQueryValues/u);
   assert.doesNotMatch(source, /initiatorPayload/u);

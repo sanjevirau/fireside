@@ -130,6 +130,16 @@ interface UndefinedLoginRequestEvidence {
 }
 
 interface SafeClientRouteState {
+  readonly dom: {
+    readonly bodyChildCount: number;
+    readonly documentReadyState: string;
+    readonly emailInputCount: number;
+    readonly inputCount: number;
+    readonly loginFormCount: number;
+    readonly loadingSpinnerCount: number;
+    readonly nextErrorOverlayCount: number;
+    readonly rootDivCount: number;
+  };
   readonly finalDocumentPath: string;
   readonly finalDocumentQueryKeys: readonly string[];
   readonly history: readonly {
@@ -165,6 +175,10 @@ const network: NetworkEvidence = {
 const browserFailures: FailureEvidence = { count: 0, hashes: new Set<string>() };
 const consoleFailures: FailureEvidence = { count: 0, hashes: new Set<string>() };
 const requestFailures: FailureEvidence = { count: 0, hashes: new Set<string>() };
+const pageErrorCallsiteClasses = new Set<string>();
+const pageErrorNames = new Set<string>();
+const consoleErrorOrigins = new Set<string>();
+const requestFailureClasses = new Set<string>();
 const undefinedLoginRequests: UndefinedLoginRequestEvidence = {
   count: 0,
   initiatorCallsiteClasses: new Set<string>(),
@@ -582,12 +596,22 @@ async function installObservation(page: Page): Promise<void> {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Network.enable");
   installCdpObservation(cdp);
-  page.on("pageerror", (error) => recordFailure(browserFailures, error.stack ?? error.message));
+  page.on("pageerror", (error) => {
+    recordFailure(browserFailures, error.stack ?? error.message);
+    pageErrorNames.add(error.name);
+    pageErrorCallsiteClasses.add(classifyStackCallsite(error.stack));
+  });
   page.on("console", (message) => {
-    if (message.type() === "error") recordFailure(consoleFailures, message.text());
+    if (message.type() === "error") {
+      recordFailure(consoleFailures, message.text());
+      consoleErrorOrigins.add(classifyDiagnosticUrl(message.location().url));
+    }
   });
   page.on("requestfailed", (request) => {
     if (isRequiredOrigin(request.url())) {
+      requestFailureClasses.add(
+        `${request.method()}:${request.resourceType()}:${classifyUrl(request.url())}`,
+      );
       recordFailure(
         requestFailures,
         `${request.method()} ${classifyUrl(request.url())} ${request.failure()?.errorText ?? "failed"}`,
@@ -747,6 +771,30 @@ function classifyScriptUrl(value: string): string {
   try {
     const url = new URL(value);
     return classifyUrl(`${url.origin}${url.pathname}`);
+  } catch {
+    return "unparseable";
+  }
+}
+
+function classifyStackCallsite(value: string | undefined): string {
+  if (value === undefined) return "no-stack";
+  const match = value.match(/(?<url>(?:https?|file):\/\/[^\s)]+?):(?<line>\d+):(?<column>\d+)/u);
+  if (match?.groups === undefined) return "unclassified-stack";
+  const { column, line, url } = match.groups;
+  if (column === undefined || line === undefined || url === undefined) return "unclassified-stack";
+  return `${classifyDiagnosticUrl(url)}:${line}:${column}`;
+}
+
+function classifyDiagnosticUrl(value: string): string {
+  if (value.length === 0) return "no-url";
+  try {
+    const url = new URL(value);
+    if (url.protocol === "file:") {
+      const chunkName = url.pathname.split("/").at(-1) ?? "unknown";
+      return `next-file:${chunkName.replace(/[^A-Za-z0-9._-]/gu, "_")}`;
+    }
+    if (url.origin === new URL(args.baseUrl).origin) return `first-party:${classifyUrl(value)}`;
+    return `external:${url.hostname}`;
   } catch {
     return "unparseable";
   }
@@ -1162,9 +1210,13 @@ async function writeEvidence(result: {
     browser: {
       pageErrors: browserFailures.count,
       pageErrorHashes: [...browserFailures.hashes].sort(),
+      pageErrorCallsiteClasses: [...pageErrorCallsiteClasses].sort(),
+      pageErrorNames: [...pageErrorNames].sort(),
       consoleErrors: consoleFailures.count,
       consoleErrorHashes: [...consoleFailures.hashes].sort(),
+      consoleErrorOrigins: [...consoleErrorOrigins].sort(),
       requestFailures: requestFailures.count,
+      requestFailureClasses: [...requestFailureClasses].sort(),
       requestFailureHashes: [...requestFailures.hashes].sort(),
     },
     candidateIdentityStored: false,
@@ -1228,6 +1280,16 @@ async function readSafeClientRouteState(page: Page): Promise<SafeClientRouteStat
       const current = new URL(window.location.href);
       const router = diagnosticWindow.next?.router;
       return {
+        dom: {
+          bodyChildCount: document.body.childElementCount,
+          documentReadyState: document.readyState,
+          emailInputCount: document.querySelectorAll("#workEmail").length,
+          inputCount: document.querySelectorAll("input").length,
+          loginFormCount: document.querySelectorAll("form").length,
+          loadingSpinnerCount: document.querySelectorAll("svg.animate-spin").length,
+          nextErrorOverlayCount: document.querySelectorAll("nextjs-portal").length,
+          rootDivCount: document.querySelectorAll("#rootDiv").length,
+        },
         finalDocumentPath: current.pathname,
         finalDocumentQueryKeys: [...current.searchParams.keys()].sort(),
         history: [...(diagnosticWindow.__phase5NavigationTrace ?? [])].slice(-32),
@@ -1242,6 +1304,7 @@ async function readSafeClientRouteState(page: Page): Promise<SafeClientRouteStat
       };
     });
     return {
+      dom: state.dom,
       finalDocumentPath: sanitizePath(state.finalDocumentPath),
       finalDocumentQueryKeys: state.finalDocumentQueryKeys,
       history: state.history.map((entry) => ({
