@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-02T20:49:33+08:00",
+  "supersedesManifestSha256": "a0e58c98e1b6962c6de04de0809b625948b126968903f4ca1c41de6ffcb433b0",
+  "reason": "Two simultaneous full Twodart stacks cannot remain swap-free on the 16 GiB acceptance host.",
+  "contract": {
+    "criteriaWeakened": false,
+    "thresholdsChanged": false,
+    "workloadChanged": false,
+    "diagnosticSmoke": {
+      "mustPassBeforeFullData": true,
+      "dataset": "conformance/fixtures/official-export-v1.22.0",
+      "datasetTreeSha256": "e3a9bca45b0a70942922cc6690f5fbf277bd48ad213840b6981c5fd9ae68ff04",
+      "syntheticOnly": true,
+      "maximumReadySeconds": 60,
+      "shortSoakSecondsPerStack": 60,
+      "executionOrder": ["official", "fireside"],
+      "allNineBrowserJourneys": true,
+      "exportFirstShutdown": true,
+      "cleanupAndZeroOrphans": true,
+      "definitiveHealthyProcessProbeErrorsMayFailFast": true
+    },
+    "fullGate": {
+      "soakDurationSecondsPerStack": 7200,
+      "executionOrder": ["official", "fireside"],
+      "freshQuiescentPreflightBeforeEachStack": true,
+      "zeroSwapActivity": true,
+      "immutableGateInterventionAllowed": false
+    },
+    "ci": {
+      "harnessOnlyPreSmokeJobs": ["Phase 5 harness", "Rust quality gate"],
+      "fullSixJobMatrixRequiredFor": [
+        "crates product changes",
+        "WebChannel harness changes",
+        "Firebase JS SDK harness changes",
+        "final immutable candidate"
+      ]
+    }
+  }
+}

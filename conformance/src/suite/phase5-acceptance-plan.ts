@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 export const PHASE5_MANIFEST_SHA256 =
-  "a0e58c98e1b6962c6de04de0809b625948b126968903f4ca1c41de6ffcb433b0";
+  "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa";
 
 export const PHASE5_TWODART_REVISION =
   "90881bf9611c9de09bcfc326943494bc28fcd1bd";
@@ -10,6 +10,13 @@ export const PHASE5_DATASET_TREE_SHA256 =
   "3505b5fd24dc4e8fb1f9925b5201c6e28dbb993c7a0a2bebb34cb70d13d91fc7";
 
 export interface Phase5Manifest {
+  readonly amendment: {
+    readonly amendedBeforeMeasurement: boolean;
+    readonly criteriaWeakened: boolean;
+    readonly previousManifestSha256: string;
+    readonly thresholdsChanged: boolean;
+    readonly workloadChanged: boolean;
+  };
   readonly cacheWatcher: {
     readonly maximumReadySeconds: number;
     readonly officialAndFiresideOutputsMustMatch: boolean;
@@ -26,6 +33,29 @@ export interface Phase5Manifest {
     readonly piiMayAppearInEvidence: boolean;
     readonly realDataMayAppearInEvidence: boolean;
     readonly treeSha256: string;
+  };
+  readonly diagnosticSmoke: {
+    readonly dataset: {
+      readonly baseFirestoreDocuments: number;
+      readonly fileBytes: number;
+      readonly fileCount: number;
+      readonly path: string;
+      readonly syntheticOnly: boolean;
+      readonly treeSha256: string;
+    };
+    readonly executionOrder: readonly string[];
+    readonly immutableGateInterventionAllowed: boolean;
+    readonly maximumReadySeconds: number;
+    readonly requirements: {
+      readonly allNineBrowserJourneys: boolean;
+      readonly bothStacks: boolean;
+      readonly cleanup: boolean;
+      readonly exportFirstShutdown: boolean;
+      readonly fullDataForbiddenUntilPass: boolean;
+      readonly orphanCheck: boolean;
+    };
+    readonly requiredBeforeEveryFullDataAttempt: boolean;
+    readonly shortSoakSecondsPerStack: number;
   };
   readonly differentialJourneys: {
     readonly allowedFunctionalDivergences: number;
@@ -69,6 +99,12 @@ export interface Phase5Manifest {
     readonly productionSecretsAllowed: boolean;
   };
   readonly schemaVersion: number;
+  readonly ciGating: {
+    readonly finalCandidateRequiresFullMatrix: boolean;
+    readonly fullMatrixJobCount: number;
+    readonly fullMatrixRequiredScopes: readonly string[];
+    readonly harnessOnlyPreSmokeRequiredJobs: readonly string[];
+  };
   readonly soak: {
     readonly activeListenersPerEditorSession: number;
     readonly durationSeconds: number;
@@ -76,6 +112,9 @@ export interface Phase5Manifest {
     readonly memorySampleIntervalSeconds: number;
     readonly minimumSteadyMemorySamplesPerBackend: number;
     readonly simultaneousBackends: boolean;
+    readonly executionOrder: readonly string[];
+    readonly freshQuiescentPreflightBeforeEachBackend: boolean;
+    readonly identicalConditions: boolean;
     readonly thresholds: {
       readonly acknowledgedStateMismatches: number;
       readonly duplicateObservableEffects: number;
@@ -128,6 +167,7 @@ export interface Phase5Manifest {
     readonly sameSourceRevision: boolean;
     readonly sameToolchain: boolean;
     readonly simultaneous: boolean;
+    readonly executionOrder: readonly string[];
   };
   readonly twodartSource: {
     readonly baselineRevision: string;
@@ -150,11 +190,11 @@ export function assertPhase5Manifest(
   manifestBytes: Uint8Array,
 ): void {
   if (
-    manifest.schemaVersion !== 1 ||
+    manifest.schemaVersion !== 2 ||
     manifest.name !== "phase-5-twodart-acceptance" ||
     !manifest.frozen
   ) {
-    throw new Error("Phase 5 manifest is not the frozen schema-v1 manifest");
+    throw new Error("Phase 5 manifest is not the frozen schema-v2 manifest");
   }
 
   const digest = createHash("sha256").update(manifestBytes).digest("hex");
@@ -174,6 +214,7 @@ export function assertPhase5Manifest(
   assertSoakContract(manifest);
   assertRuntimeAssets(manifest);
   assertSafetyContract(manifest);
+  assertEfficiencyCorrection(manifest);
 }
 
 function assertJourneyContract(manifest: Phase5Manifest): void {
@@ -202,7 +243,8 @@ function assertJourneyContract(manifest: Phase5Manifest): void {
 function assertStackContract(manifest: Phase5Manifest): void {
   const stacks = manifest.stacks;
   if (
-    !stacks.simultaneous ||
+    stacks.simultaneous ||
+    JSON.stringify(stacks.executionOrder) !== JSON.stringify(["official", "fireside"]) ||
     !stacks.sameDataset ||
     !stacks.sameSourceRevision ||
     !stacks.sameToolchain ||
@@ -227,7 +269,10 @@ function assertSoakContract(manifest: Phase5Manifest): void {
     soak.memorySampleIntervalSeconds !== 30 ||
     soak.minimumSteadyMemorySamplesPerBackend !== 240 ||
     soak.activeListenersPerEditorSession !== 1 ||
-    !soak.simultaneousBackends ||
+    soak.simultaneousBackends ||
+    JSON.stringify(soak.executionOrder) !== JSON.stringify(["official", "fireside"]) ||
+    !soak.freshQuiescentPreflightBeforeEachBackend ||
+    !soak.identicalConditions ||
     thresholds.some((value) => value !== 0)
   ) {
     throw new Error("Phase 5 soak boundary diverged");
@@ -246,6 +291,43 @@ function assertSoakContract(manifest: Phase5Manifest): void {
     workload.twodartFunctionTrigger.expectedDispatchesPerBackend !== 240
   ) {
     throw new Error("Phase 5 app-shaped workload diverged");
+  }
+}
+
+function assertEfficiencyCorrection(manifest: Phase5Manifest): void {
+  const correction = manifest.amendment;
+  const smoke = manifest.diagnosticSmoke;
+  if (
+    correction.previousManifestSha256 !==
+      "a0e58c98e1b6962c6de04de0809b625948b126968903f4ca1c41de6ffcb433b0" ||
+    !correction.amendedBeforeMeasurement ||
+    correction.criteriaWeakened ||
+    correction.thresholdsChanged ||
+    correction.workloadChanged ||
+    !smoke.requiredBeforeEveryFullDataAttempt ||
+    smoke.maximumReadySeconds !== 60 ||
+    smoke.shortSoakSecondsPerStack !== 60 ||
+    JSON.stringify(smoke.executionOrder) !== JSON.stringify(["official", "fireside"]) ||
+    smoke.immutableGateInterventionAllowed ||
+    !Object.values(smoke.requirements).every(Boolean) ||
+    smoke.dataset.path !== "conformance/fixtures/official-export-v1.22.0" ||
+    !smoke.dataset.syntheticOnly ||
+    smoke.dataset.baseFirestoreDocuments !== 4 ||
+    smoke.dataset.fileCount !== 5 ||
+    smoke.dataset.fileBytes !== 163_041 ||
+    smoke.dataset.treeSha256 !==
+      "e3a9bca45b0a70942922cc6690f5fbf277bd48ad213840b6981c5fd9ae68ff04"
+  ) {
+    throw new Error("Phase 5 two-tier diagnostic smoke contract diverged");
+  }
+  if (
+    JSON.stringify(manifest.ciGating.harnessOnlyPreSmokeRequiredJobs) !==
+      JSON.stringify(["Phase 5 harness", "Rust quality gate"]) ||
+    manifest.ciGating.fullMatrixJobCount !== 6 ||
+    manifest.ciGating.fullMatrixRequiredScopes.length !== 4 ||
+    !manifest.ciGating.finalCandidateRequiresFullMatrix
+  ) {
+    throw new Error("Phase 5 tiered CI contract diverged");
   }
 }
 

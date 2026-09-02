@@ -1,8 +1,16 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "phase-5-twodart-acceptance",
   "frozen": true,
-  "frozenAt": "2026-09-02T06:16:06+08:00",
+  "frozenAt": "2026-09-02T20:49:33+08:00",
+  "amendment": {
+    "previousManifestSha256": "a0e58c98e1b6962c6de04de0809b625948b126968903f4ca1c41de6ffcb433b0",
+    "reason": "The 16 GiB acceptance host cannot hold both full Twodart stacks in steady state without swap activity. Freeze a mandatory cheap end-to-end smoke before full-data work, run the unchanged two-hour workloads sequentially under identical fresh preflights, and tier pre-smoke CI by change scope.",
+    "criteriaWeakened": false,
+    "thresholdsChanged": false,
+    "workloadChanged": false,
+    "amendedBeforeMeasurement": true
+  },
   "objective": "Prove that the real Twodart application on the dev-based Fireside cutover branch behaves the same against Fireside and the official Firebase Emulator Suite on a clean Linux host using the frozen full Twodart dataset.",
   "phase4Baseline": {
     "tag": "phase-4",
@@ -63,6 +71,34 @@
     ],
     "realDataMayAppearInEvidence": false,
     "piiMayAppearInEvidence": false
+  },
+  "diagnosticSmoke": {
+    "requiredBeforeEveryFullDataAttempt": true,
+    "dataset": {
+      "path": "conformance/fixtures/official-export-v1.22.0",
+      "syntheticOnly": true,
+      "baseFirestoreDocuments": 4,
+      "fileCount": 5,
+      "fileBytes": 163041,
+      "treeSha256": "e3a9bca45b0a70942922cc6690f5fbf277bd48ad213840b6981c5fd9ae68ff04",
+      "applicationSeed": "deterministic synthetic Auth, Firestore, and Storage state sufficient for all nine browser journeys"
+    },
+    "maximumReadySeconds": 60,
+    "shortSoakSecondsPerStack": 60,
+    "executionOrder": [
+      "official",
+      "fireside"
+    ],
+    "requirements": {
+      "bothStacks": true,
+      "allNineBrowserJourneys": true,
+      "exportFirstShutdown": true,
+      "cleanup": true,
+      "orphanCheck": true,
+      "fullDataForbiddenUntilPass": true
+    },
+    "readinessFailurePolicy": "A diagnostic smoke may fail fast before the 60-second allowance when a probe returns a definitive non-transient error while every required process remains healthy; unavailable or transient responses continue polling.",
+    "immutableGateInterventionAllowed": false
   },
   "twodartRuntimeAssets": {
     "sourceEnvironmentVariable": "TWODART_PHASE5_RUNTIME_ASSETS_SOURCE",
@@ -150,7 +186,11 @@
     "evalLabRunsAllowed": false
   },
   "stacks": {
-    "simultaneous": true,
+    "simultaneous": false,
+    "executionOrder": [
+      "official",
+      "fireside"
+    ],
     "sameDataset": true,
     "sameSourceRevision": true,
     "sameToolchain": true,
@@ -305,7 +345,13 @@
   },
   "soak": {
     "durationSeconds": 7200,
-    "simultaneousBackends": true,
+    "simultaneousBackends": false,
+    "executionOrder": [
+      "official",
+      "fireside"
+    ],
+    "freshQuiescentPreflightBeforeEachBackend": true,
+    "identicalConditions": true,
     "editorSessionsPerBackend": 2,
     "memorySampleIntervalSeconds": 30,
     "minimumSteadyMemorySamplesPerBackend": 240,
@@ -385,6 +431,25 @@
     "twodartFunctionsBuildRequired": true,
     "twodartApplicationBuildOrTypecheckRequired": true,
     "fullJourneyRerunAfterRestartRequired": true
+  },
+  "ciGating": {
+    "harnessOnlyScope": [
+      "conformance TypeScript used only by Phase 5",
+      "Phase 5 fixtures",
+      "Phase 5 launcher scripts"
+    ],
+    "harnessOnlyPreSmokeRequiredJobs": [
+      "Phase 5 harness",
+      "Rust quality gate"
+    ],
+    "fullMatrixRequiredScopes": [
+      "product changes under crates/",
+      "WebChannel harness changes",
+      "Firebase JS SDK harness changes",
+      "final immutable Phase 5 candidate"
+    ],
+    "fullMatrixJobCount": 6,
+    "finalCandidateRequiresFullMatrix": true
   },
   "deliverables": {
     "report": "reports/phase-5-twodart-acceptance.md",

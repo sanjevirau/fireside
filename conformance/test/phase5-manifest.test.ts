@@ -33,6 +33,18 @@ test("the immutable Phase 5 manifest freezes the full Twodart differential gate"
   });
   assert.equal(manifest.host.sshAlias, "sanjevi-linux");
   assert.equal(manifest.host.minimumAvailableDiskBytes, 80_000_000_000);
+  assert.equal(manifest.schemaVersion, 2);
+  assert.equal(manifest.amendment.criteriaWeakened, false);
+  assert.equal(manifest.amendment.thresholdsChanged, false);
+  assert.equal(manifest.amendment.workloadChanged, false);
+  assert.equal(manifest.diagnosticSmoke.requiredBeforeEveryFullDataAttempt, true);
+  assert.equal(manifest.diagnosticSmoke.maximumReadySeconds, 60);
+  assert.equal(manifest.diagnosticSmoke.shortSoakSecondsPerStack, 60);
+  assert.deepEqual(manifest.stacks.executionOrder, ["official", "fireside"]);
+  assert.equal(manifest.stacks.simultaneous, false);
+  assert.deepEqual(manifest.soak.executionOrder, ["official", "fireside"]);
+  assert.equal(manifest.soak.simultaneousBackends, false);
+  assert.equal(manifest.soak.durationSeconds, 7_200);
   assert.equal(manifest.lifecycle.allowedCountMismatch, 0);
   assert.equal(manifest.lifecycle.acknowledgedWriteLossAllowed, 0);
   assert.equal(manifest.twodartRuntimeAssets.trees.length, 3);

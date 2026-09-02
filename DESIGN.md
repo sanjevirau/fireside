@@ -1920,6 +1920,28 @@ official-comparison starts. Fireside starts remain untuned. The retry is labeled
 separately in the report and does not change any functional, lifecycle, soak,
 or Fireside threshold.
 
+The Phase 5 acceptance gate uses two cost tiers. Every prospective full-data
+attempt must first pass a complete diagnostic smoke against a tiny,
+synthetic-only export: the official stack and then Fireside, all nine browser
+journeys, a 60-second app-shaped soak per stack, export-first shutdown,
+directory-scoped cleanup, and a zero-orphan assertion. Readiness must complete
+within 60 seconds. A diagnostic smoke may fail earlier when a concrete probe
+returns a definitive non-transient error while all required processes remain
+healthy; missing listeners and transient/unavailable responses continue to be
+polled. The immutable gate retains its no-intervention rule.
+
+The 16 GiB acceptance host cannot keep both full Twodart process trees in
+steady state without swap activity. The two unchanged 7,200-second workloads
+therefore run sequentially, official first and Fireside second. Each stack is
+started only after a fresh quiescent host preflight, under the same workload,
+toolchain, dataset, and sampling conditions. The zero-swap-activity criterion
+and every correctness, health, workload, and duration threshold remain
+unchanged; only concurrency is removed. Phase 5 harness-only commits may
+advance to the cheap smoke after the dedicated Phase 5 harness job and the Rust
+quality job are green. Product changes under `crates/`, WebChannel or Firebase
+JS SDK harness changes, and the final immutable candidate still require the
+full six-job matrix.
+
 The full-data Twodart cache build also exposed a reusable-system-timestamp
 contract. A `RunQuery` response `read_time` can be supplied by the client as a
 later consistency selector. The identical Java cache build completed, while
