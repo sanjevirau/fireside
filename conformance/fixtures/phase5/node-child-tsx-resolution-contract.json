@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "contract": {
+    "childImportSpecifier": "The Phase 5 parent must resolve tsx before spawning a TypeScript child whose working directory does not contain conformance/node_modules",
+    "workingDirectory": "Repository root is intentional for Phase 5 command and evidence paths",
+    "failurePolicy": "A child-loader resolution failure fails the smoke or full gate and must not be retried silently"
+  },
+  "observation": {
+    "candidateRevision": "67ce1c0a781bfbb8aeba7fe10106e8c14a00147b",
+    "diagnostic": "full-gate-smoke-20260902T162708+0800-67ce1c0-r2",
+    "bothStacksReady": true,
+    "browserWorkloadStarted": false,
+    "errorCode": "ERR_MODULE_NOT_FOUND",
+    "error": "Cannot find package 'tsx' imported from the Phase 5 repository root",
+    "manifestSha256": "a0e58c98e1b6962c6de04de0809b625948b126968903f4ca1c41de6ffcb433b0",
+    "privateContentStored": false
+  }
+}

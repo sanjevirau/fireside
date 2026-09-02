@@ -7,6 +7,10 @@ const outputDrainFixtureUrl = new URL(
   "../fixtures/phase5/node-child-output-drain-contract.json",
   import.meta.url,
 );
+const childTsxResolutionFixtureUrl = new URL(
+  "../fixtures/phase5/node-child-tsx-resolution-contract.json",
+  import.meta.url,
+);
 const officialJavaFixtureUrl = new URL(
   "../fixtures/phase5/official-explicit-java-contract.json",
   import.meta.url,
@@ -84,6 +88,48 @@ test("Phase 5 child-process output drain boundary is frozen", async () => {
     fresh: "",
   });
   assert.equal(fixture.observation.stackWorkloadStarted, false);
+});
+
+test("Phase 5 child TypeScript loader resolution boundary is frozen", async () => {
+  const fixture = JSON.parse(await readFile(childTsxResolutionFixtureUrl, "utf8")) as {
+    readonly contract: {
+      readonly childImportSpecifier: string;
+      readonly failurePolicy: string;
+      readonly workingDirectory: string;
+    };
+    readonly observation: {
+      readonly bothStacksReady: boolean;
+      readonly browserWorkloadStarted: boolean;
+      readonly candidateRevision: string;
+      readonly diagnostic: string;
+      readonly error: string;
+      readonly errorCode: string;
+      readonly manifestSha256: string;
+      readonly privateContentStored: boolean;
+    };
+    readonly schemaVersion: number;
+  };
+  assert.equal(fixture.schemaVersion, 1);
+  assert.match(fixture.contract.childImportSpecifier, /parent must resolve tsx/u);
+  assert.match(fixture.contract.workingDirectory, /Repository root is intentional/u);
+  assert.match(fixture.contract.failurePolicy, /must not be retried silently/u);
+  assert.equal(
+    fixture.observation.candidateRevision,
+    "67ce1c0a781bfbb8aeba7fe10106e8c14a00147b",
+  );
+  assert.equal(
+    fixture.observation.manifestSha256,
+    "a0e58c98e1b6962c6de04de0809b625948b126968903f4ca1c41de6ffcb433b0",
+  );
+  assert.equal(
+    fixture.observation.diagnostic,
+    "full-gate-smoke-20260902T162708+0800-67ce1c0-r2",
+  );
+  assert.equal(fixture.observation.bothStacksReady, true);
+  assert.equal(fixture.observation.browserWorkloadStarted, false);
+  assert.equal(fixture.observation.errorCode, "ERR_MODULE_NOT_FOUND");
+  assert.match(fixture.observation.error, /Cannot find package 'tsx'/u);
+  assert.equal(fixture.observation.privateContentStored, false);
 });
 
 test("Phase 5 gate runs the frozen lifecycle in order", async () => {
