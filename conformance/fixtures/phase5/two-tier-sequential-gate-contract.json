@@ -18,7 +18,9 @@
       "allNineBrowserJourneys": true,
       "exportFirstShutdown": true,
       "cleanupAndZeroOrphans": true,
-      "definitiveHealthyProcessProbeErrorsMayFailFast": true
+      "definitiveHealthyProcessProbeErrorsMayFailFast": true,
+      "failedAttemptStagingIsPreserved": true,
+      "perAttemptDatasetNamespace": true
     },
     "fullGate": {
       "soakDurationSecondsPerStack": 7200,
@@ -36,5 +38,14 @@
         "final immutable candidate"
       ]
     }
+  },
+  "observation": {
+    "candidateRevision": "ccdea5415f83977fc70842bd256621bc661a2333",
+    "diagnostic": "two-tier-smoke-20260902T211133+0800-ccdea54-r2",
+    "errorHash": "78e2884478562351ee88512e327770d1a9ec7ff6171f490d37cfd7c1a3aae62c",
+    "manifestSha256": "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa",
+    "observedSwapInPagesPerSecond": [0, 256, 0],
+    "stackWorkloadStarted": false,
+    "staticStagingDirectoriesPreserved": 2
   }
 }

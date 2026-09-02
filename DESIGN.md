@@ -1930,6 +1930,10 @@ returns a definitive non-transient error while all required processes remain
 healthy; missing listeners and transient/unavailable responses continue to be
 polled. The immutable gate retains its no-intervention rule.
 
+Each diagnostic smoke stages its tiny import under a dataset namespace derived
+from that attempt's evidence directory. A failed attempt and its staged files
+remain intact, while the next diagnostic cannot collide with or overwrite them.
+
 The 16 GiB acceptance host cannot keep both full Twodart process trees in
 steady state without swap activity. The two unchanged 7,200-second workloads
 therefore run sequentially, official first and Fireside second. Each stack is
