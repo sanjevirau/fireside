@@ -43,12 +43,28 @@ test("durable browser evidence explicitly excludes private identities and conten
     "datasetIdentityStored: false",
     "deckContentStored: false",
     "otpStored: false",
+    "queryValuesStored: false",
+    "requestInitiatorPayloadStored: false",
     "userIdentityStored: false",
     "candidateIdentityStored: false",
   ]) {
     assert.match(source, new RegExp(boundary.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
   }
   assert.doesNotMatch(source, /writeEvidence\([^)]*(?:user\.email|selectedDeckId|originalDeckData|otp\b)/u);
+});
+
+test("login diagnostics classify the undefined route without storing query values", async () => {
+  const source = await readFile(runnerUrl, "utf8");
+  assert.match(source, /url\.pathname === "\/login\/undefined"/u);
+  assert.match(source, /request\.isNavigationRequest\(\)/u);
+  assert.match(source, /Network\.requestWillBeSent/u);
+  assert.match(source, /initiatorCallsiteClasses/u);
+  assert.match(source, /initiatorCallsiteHashes/u);
+  assert.match(source, /finalDocumentPath/u);
+  assert.match(source, /finalDocumentQueryKeys/u);
+  assert.match(source, /Object\.keys\(router\.query \?\? \{\}\)\.sort\(\)/u);
+  assert.doesNotMatch(source, /finalDocumentQueryValues/u);
+  assert.doesNotMatch(source, /initiatorPayload/u);
 });
 
 test("the browser runner covers both lifecycle iterations and all admin routes", async () => {

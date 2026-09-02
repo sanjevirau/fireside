@@ -3,7 +3,14 @@ import { createRequire } from "node:module";
 import { access, mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { chromium, type Browser, type Page, type Response } from "playwright";
+import {
+  chromium,
+  type Browser,
+  type CDPSession,
+  type Page,
+  type Request,
+  type Response,
+} from "playwright";
 
 import { PHASE5_LOGIN_ROUTE } from "./phase5-stack-control.ts";
 
@@ -113,6 +120,31 @@ interface NavigationEvidence {
   readonly status: number | null;
 }
 
+interface UndefinedLoginRequestEvidence {
+  count: number;
+  initiatorCallsiteClasses: Set<string>;
+  initiatorCallsiteHashes: Set<string>;
+  initiatorTypes: Set<string>;
+  navigationRequests: number;
+  resourceTypes: Set<string>;
+}
+
+interface SafeClientRouteState {
+  readonly finalDocumentPath: string;
+  readonly finalDocumentQueryKeys: readonly string[];
+  readonly history: readonly {
+    readonly kind: string;
+    readonly path: string;
+    readonly queryKeys: readonly string[];
+  }[];
+  readonly nextRouter: null | {
+    readonly asPath: string;
+    readonly pathname: string;
+    readonly queryKeys: readonly string[];
+    readonly route: string;
+  };
+}
+
 const args = parseArguments(process.argv.slice(2));
 const runId = `phase5-${args.stack}-${args.iteration}-${randomUUID()}`;
 const sentinel = `__fireside_phase5_${randomUUID()}`;
@@ -133,6 +165,14 @@ const network: NetworkEvidence = {
 const browserFailures: FailureEvidence = { count: 0, hashes: new Set<string>() };
 const consoleFailures: FailureEvidence = { count: 0, hashes: new Set<string>() };
 const requestFailures: FailureEvidence = { count: 0, hashes: new Set<string>() };
+const undefinedLoginRequests: UndefinedLoginRequestEvidence = {
+  count: 0,
+  initiatorCallsiteClasses: new Set<string>(),
+  initiatorCallsiteHashes: new Set<string>(),
+  initiatorTypes: new Set<string>(),
+  navigationRequests: 0,
+  resourceTypes: new Set<string>(),
+};
 const journeys: JourneyEvidence[] = [];
 const navigations: NavigationEvidence[] = [];
 const app = prepareAdminApp();
@@ -140,6 +180,7 @@ const auth = getAdminAuth(app);
 const firestore = getAdminFirestore(app);
 const bucket = getAdminStorage(app).bucket(defaultBucket);
 let browser: Browser | undefined;
+let evidencePage: Page | undefined;
 
 try {
   if (args.seedSmoke) await seedSmokeApplication();
@@ -155,7 +196,8 @@ try {
   browser = await launchBrowser();
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
   const page = await context.newPage();
-  installObservation(page);
+  evidencePage = page;
+  await installObservation(page);
 
   await journey("otp-auth-login", async () => {
     await loginThroughRenderedUi(page, user);
@@ -206,7 +248,7 @@ try {
     await page.locator(`a[href="/presentation/${selectedDeckId}"]`).first().click();
     await waitForEditor(page);
     const observerPage = await context.newPage();
-    installObservation(observerPage);
+    await installObservation(observerPage);
     try {
       await observerPage.goto(
         new URL(`/presentation/${selectedDeckId}`, args.baseUrl).href,
@@ -535,7 +577,11 @@ function assertSuccessfulNavigation(response: Response | null, label: string): v
   }
 }
 
-function installObservation(page: Page): void {
+async function installObservation(page: Page): Promise<void> {
+  await installSafeClientNavigationTrace(page);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Network.enable");
+  installCdpObservation(cdp);
   page.on("pageerror", (error) => recordFailure(browserFailures, error.stack ?? error.message));
   page.on("console", (message) => {
     if (message.type() === "error") recordFailure(consoleFailures, message.text());
@@ -548,6 +594,7 @@ function installObservation(page: Page): void {
       );
     }
   });
+  page.on("request", (request) => recordUndefinedLoginRequest(request));
   page.on("response", (response) => {
     if (!isRequiredOrigin(response.url())) return;
     network.firstPartyResponses += 1;
@@ -566,6 +613,143 @@ function installObservation(page: Page): void {
       });
     }
   });
+}
+
+async function installSafeClientNavigationTrace(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    type TraceEntry = {
+      readonly kind: string;
+      readonly path: string;
+      readonly queryKeys: readonly string[];
+    };
+    type TraceWindow = Window & {
+      __phase5NavigationTrace?: TraceEntry[];
+    };
+    const traceWindow = window as TraceWindow;
+    traceWindow.__phase5NavigationTrace = [];
+    const record = (kind: string, value: string | URL | null | undefined): void => {
+      if (value === null || value === undefined) return;
+      try {
+        const url = new URL(String(value), window.location.href);
+        traceWindow.__phase5NavigationTrace?.push({
+          kind,
+          path: url.pathname,
+          queryKeys: [...url.searchParams.keys()].sort(),
+        });
+      } catch {
+        traceWindow.__phase5NavigationTrace?.push({
+          kind: `${kind}:unparseable`,
+          path: "",
+          queryKeys: [],
+        });
+      }
+    };
+    const pushState = window.history.pushState.bind(window.history);
+    window.history.pushState = (data, unused, url) => {
+      record("history.pushState", url);
+      pushState(data, unused, url);
+    };
+    const replaceState = window.history.replaceState.bind(window.history);
+    window.history.replaceState = (data, unused, url) => {
+      record("history.replaceState", url);
+      replaceState(data, unused, url);
+    };
+    const open = window.open.bind(window);
+    window.open = (url, target, features) => {
+      record("window.open", url);
+      return open(url, target, features);
+    };
+  });
+}
+
+function installCdpObservation(cdp: CDPSession): void {
+  cdp.on("Network.requestWillBeSent", (event) => {
+    if (!isUndefinedLoginPath(event.request.url)) return;
+    const initiator = event.initiator;
+    undefinedLoginRequests.initiatorTypes.add(initiator.type);
+    const frames = collectInitiatorFrames(initiator.stack);
+    if (frames.length === 0) {
+      undefinedLoginRequests.initiatorCallsiteClasses.add(`${initiator.type}:no-stack`);
+      return;
+    }
+    const safeFrames = frames.map((frame) => ({
+      columnNumber: frame.columnNumber,
+      functionName: frame.functionName,
+      lineNumber: frame.lineNumber,
+      scriptClass: classifyScriptUrl(frame.url),
+    }));
+    const first = safeFrames[0];
+    if (first !== undefined) {
+      undefinedLoginRequests.initiatorCallsiteClasses.add(
+        `${initiator.type}:${first.scriptClass}:${String(first.lineNumber)}:${String(first.columnNumber)}`,
+      );
+    }
+    undefinedLoginRequests.initiatorCallsiteHashes.add(digest(JSON.stringify(safeFrames)));
+  });
+}
+
+function collectInitiatorFrames(
+  stack: undefined | {
+    readonly callFrames: readonly {
+      readonly columnNumber: number;
+      readonly functionName: string;
+      readonly lineNumber: number;
+      readonly url: string;
+    }[];
+    readonly parent?: unknown;
+  },
+): readonly {
+  readonly columnNumber: number;
+  readonly functionName: string;
+  readonly lineNumber: number;
+  readonly url: string;
+}[] {
+  const frames: {
+    readonly columnNumber: number;
+    readonly functionName: string;
+    readonly lineNumber: number;
+    readonly url: string;
+  }[] = [];
+  let current: unknown = stack;
+  while (current !== undefined && current !== null && typeof current === "object") {
+    const typed = current as {
+      readonly callFrames?: readonly {
+        readonly columnNumber: number;
+        readonly functionName: string;
+        readonly lineNumber: number;
+        readonly url: string;
+      }[];
+      readonly parent?: unknown;
+    };
+    if (typed.callFrames !== undefined) frames.push(...typed.callFrames);
+    current = typed.parent;
+  }
+  return frames;
+}
+
+function recordUndefinedLoginRequest(request: Request): void {
+  if (!isUndefinedLoginPath(request.url())) return;
+  undefinedLoginRequests.count += 1;
+  undefinedLoginRequests.resourceTypes.add(request.resourceType());
+  if (request.isNavigationRequest()) undefinedLoginRequests.navigationRequests += 1;
+}
+
+function isUndefinedLoginPath(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.origin === new URL(args.baseUrl).origin && url.pathname === "/login/undefined";
+  } catch {
+    return false;
+  }
+}
+
+function classifyScriptUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    return classifyUrl(`${url.origin}${url.pathname}`);
+  } catch {
+    return "unparseable";
+  }
 }
 
 function isRequiredOrigin(value: string): boolean {
@@ -971,6 +1155,9 @@ async function writeEvidence(result: {
   readonly errorHash?: string;
   readonly passed: boolean;
 }): Promise<void> {
+  const clientRouteState = evidencePage === undefined
+    ? null
+    : await readSafeClientRouteState(evidencePage);
   const evidence = {
     browser: {
       pageErrors: browserFailures.count,
@@ -985,6 +1172,7 @@ async function writeEvidence(result: {
     iteration: args.iteration,
     journeys,
     navigations,
+    clientRouteState,
     network: {
       firstPartyResponses: network.firstPartyResponses,
       requiredFailures: network.requiredFailures,
@@ -993,12 +1181,22 @@ async function writeEvidence(result: {
       websocketConnections: network.websocketConnections,
       websocketFramesReceived: network.websocketFramesReceived,
     },
+    undefinedLoginRequests: {
+      count: undefinedLoginRequests.count,
+      initiatorCallsiteClasses: [...undefinedLoginRequests.initiatorCallsiteClasses].sort(),
+      initiatorCallsiteHashes: [...undefinedLoginRequests.initiatorCallsiteHashes].sort(),
+      initiatorTypes: [...undefinedLoginRequests.initiatorTypes].sort(),
+      navigationRequests: undefinedLoginRequests.navigationRequests,
+      resourceTypes: [...undefinedLoginRequests.resourceTypes].sort(),
+    },
     passed: result.passed,
     privacy: {
       credentialsStored: false,
       datasetIdentityStored: false,
       deckContentStored: false,
       otpStored: false,
+      queryValuesStored: false,
+      requestInitiatorPayloadStored: false,
       userIdentityStored: false,
     },
     schemaVersion: 1,
@@ -1006,6 +1204,72 @@ async function writeEvidence(result: {
   };
   await mkdir(path.dirname(path.resolve(args.output)), { recursive: true });
   await writeFile(path.resolve(args.output), `${JSON.stringify(evidence, null, 2)}\n`);
+}
+
+async function readSafeClientRouteState(page: Page): Promise<SafeClientRouteState | null> {
+  try {
+    const state = await page.evaluate(() => {
+      type TraceEntry = {
+        readonly kind: string;
+        readonly path: string;
+        readonly queryKeys: readonly string[];
+      };
+      type NextRouter = {
+        readonly asPath?: string;
+        readonly pathname?: string;
+        readonly query?: Readonly<Record<string, unknown>>;
+        readonly route?: string;
+      };
+      type DiagnosticWindow = Window & {
+        readonly __phase5NavigationTrace?: readonly TraceEntry[];
+        readonly next?: { readonly router?: NextRouter };
+      };
+      const diagnosticWindow = window as DiagnosticWindow;
+      const current = new URL(window.location.href);
+      const router = diagnosticWindow.next?.router;
+      return {
+        finalDocumentPath: current.pathname,
+        finalDocumentQueryKeys: [...current.searchParams.keys()].sort(),
+        history: [...(diagnosticWindow.__phase5NavigationTrace ?? [])].slice(-32),
+        nextRouter: router === undefined
+          ? null
+          : {
+              asPath: router.asPath ?? "",
+              pathname: router.pathname ?? "",
+              queryKeys: Object.keys(router.query ?? {}).sort(),
+              route: router.route ?? "",
+            },
+      };
+    });
+    return {
+      finalDocumentPath: sanitizePath(state.finalDocumentPath),
+      finalDocumentQueryKeys: state.finalDocumentQueryKeys,
+      history: state.history.map((entry) => ({
+        ...entry,
+        path: sanitizePath(entry.path),
+      })),
+      nextRouter: state.nextRouter === null
+        ? null
+        : {
+            asPath: sanitizePath(state.nextRouter.asPath.split("?", 1)[0] ?? ""),
+            pathname: sanitizePath(state.nextRouter.pathname),
+            queryKeys: state.nextRouter.queryKeys,
+            route: sanitizePath(state.nextRouter.route),
+          },
+    };
+  } catch {
+    return null;
+  }
+}
+
+function sanitizePath(value: string): string {
+  return `/${value
+    .split("/", 32)
+    .filter(Boolean)
+    .map((segment) =>
+      segment.length >= 16 && /^[A-Za-z0-9_-]+$/u.test(segment) ? ":id" : segment,
+    )
+    .join("/")}`;
 }
 
 function digest(value: string): string {
