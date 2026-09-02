@@ -1839,13 +1839,18 @@ Fireside completed its export but its launch listener outlived the lifecycle
 boundary. Process-group signals remain only the validated, directory-scoped
 fallback after the emulator lifecycle has completed or failed.
 
-Frontend readiness is the actual Portless `/login` route with an HTTP status
-below 400, not merely an open listener, a Next.js ready log, or an arbitrary
-status below 500. The gate repeats this readiness check immediately before each
-browser journey because bringing the other full-data stack online can change
-host pressure after initial startup. Browser evidence records the privacy-safe
-status of every explicitly asserted navigation, and login fails on an HTTP
-error before waiting for `#workEmail`; response bodies remain excluded.
+Frontend readiness is the concrete Portless `/login/overview` route with an
+HTTP status below 400. Twodart's login page is a dynamic `[loginType]` route and
+the readable source defines `LoginPageType.MAIN` as `overview`; bare `/login`
+legitimately returns 404. TwodartNet readiness similarly uses its public
+`GET /api/HealthCheck` controller because its root path also legitimately
+returns 404. These are application-level probes, not merely open listeners,
+ready logs, or arbitrary statuses below 500. The gate repeats frontend
+readiness immediately before each browser journey because bringing the other
+full-data stack online can change host pressure after initial startup. Browser
+evidence records the privacy-safe status of every explicitly asserted
+navigation, and login fails on an HTTP error before waiting for `#workEmail`;
+response bodies remain excluded.
 
 The export boundary is the durable `firebase-export-metadata.json`, not merely
 the disappearance of the firebase-tools launcher command. A full-data smoke
@@ -1871,7 +1876,12 @@ and verifies that every member of each group is scoped to that same tree before
 signalling it. Cleanup sends `SIGINT`, escalates to `SIGTERM` after a bounded
 grace interval, and requires zero directory-owned processes before accepting
 the shutdown. The same directory-scoped cleanup runs after a failed startup so
-a rejected comparison cannot contaminate the next namespace.
+a rejected comparison cannot contaminate the next namespace. A full-data
+readiness failure showed that waiting for zero listeners before this reap can
+spend the full cleanup boundary and throw while application grandchildren
+still own a cache listener. Failed-start cleanup therefore requests controller
+shutdown, reaps every validated directory-owned process group, closes the
+controller session, and only then asserts zero isolated listeners.
 
 The controlled Linux stack command places every frozen Phase 5 tool directory
 (Java, Node, Bun, .NET, Python, and Rust) ahead of the mutable mise shim layer.

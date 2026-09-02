@@ -5,6 +5,8 @@ import path from "node:path";
 
 import { chromium, type Browser, type Page, type Response } from "playwright";
 
+import { PHASE5_LOGIN_ROUTE } from "./phase5-stack-control.ts";
+
 type StackName = "official" | "fireside";
 
 interface Arguments {
@@ -460,7 +462,7 @@ async function journey(
 
 async function loginThroughRenderedUi(page: Page, user: AuthUser): Promise<void> {
   if (user.email === undefined) throw new Error("Auth user email missing");
-  const response = await page.goto(new URL("/login", args.baseUrl).href, {
+  const response = await page.goto(new URL(PHASE5_LOGIN_ROUTE, args.baseUrl).href, {
     timeout: 180_000,
     waitUntil: "domcontentloaded",
   });

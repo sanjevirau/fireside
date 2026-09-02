@@ -6,7 +6,9 @@ import {
   cacheOutputDigest,
   PHASE5_DIRECTORY_REAP_SECONDS,
   PHASE5_EXPORT_SHUTDOWN_SECONDS,
+  PHASE5_LOGIN_ROUTE,
   PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS,
+  PHASE5_TWODARTNET_HEALTH_ROUTE,
   parseCacheOutputCounts,
   phase5EmulatorProcessMatches,
   phase5ProcessIdentityFromStat,
@@ -84,6 +86,8 @@ test("Phase 5 stack shutdown uses the pinned mprocs control event", () => {
   assert.equal(PHASE5_EXPORT_SHUTDOWN_SECONDS, 600);
   assert.equal(PHASE5_DIRECTORY_REAP_SECONDS, 60);
   assert.equal(PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS, "-Xmx8g");
+  assert.equal(PHASE5_LOGIN_ROUTE, "/login/overview");
+  assert.equal(PHASE5_TWODARTNET_HEALTH_ROUTE, "/api/HealthCheck");
   assert.deepEqual(
     renderPhase5MprocsControlCommand("/gate/stack-official", 23011),
     {
@@ -190,7 +194,7 @@ test("mprocs control readiness never opens a protocol-less TCP connection", asyn
     source,
     /ports\.map\(async \(port\) => listenerOpen\(port\)\)/u,
   );
-  assert.match(source, /cleanupFailedStart\(input, exitMarker\)/u);
+  assert.match(source, /cleanupFailedStart\(input\)/u);
   assert.match(source, /emulatorProcessObserved/u);
   assert.match(source, /emulator process exited before readiness/u);
   assert.match(source, /reapPhase5DirectoryProcessGroups/u);
@@ -203,4 +207,19 @@ test("mprocs control readiness never opens a protocol-less TCP connection", asyn
   assert.match(source, /cwd !== resolvedDirectory/u);
   assert.match(source, /child\.once\("close", \(exitCode\) =>/u);
   assert.doesNotMatch(source, /send-keys[\s\S]{0,100}["']q["']/u);
+});
+
+test("failed startup reaps its directory before asserting listener cleanup", async () => {
+  const source = await readFile(controlUrl, "utf8");
+  const cleanupStart = source.indexOf("async function cleanupFailedStart");
+  const cleanupEnd = source.indexOf("async function stopPhase5EmulatorProcess", cleanupStart);
+  const cleanupSource = source.slice(cleanupStart, cleanupEnd);
+  const directoryReap = cleanupSource.indexOf("await reapPhase5DirectoryProcessGroups");
+  const listenerAssertion = cleanupSource.indexOf("const deadline");
+  assert.ok(directoryReap >= 0, "failed startup must reap its scoped directory");
+  assert.ok(
+    listenerAssertion > directoryReap,
+    "listener cleanup must be asserted only after directory process reaping",
+  );
+  assert.match(cleanupSource, /close cleaned Phase 5 startup session/u);
 });

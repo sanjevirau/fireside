@@ -17,6 +17,8 @@ export type Phase5StackName = "official" | "fireside";
 export const PHASE5_EXPORT_SHUTDOWN_SECONDS = 600;
 export const PHASE5_DIRECTORY_REAP_SECONDS = 60;
 export const PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS = "-Xmx8g";
+export const PHASE5_LOGIN_ROUTE = "/login/overview";
+export const PHASE5_TWODARTNET_HEALTH_ROUTE = "/api/HealthCheck";
 
 export interface StackLaunchInput {
   readonly backendOverride?: Phase5StackName | null;
@@ -273,7 +275,7 @@ export async function startPhase5Stack(
     };
   } catch (error: unknown) {
     try {
-      await cleanupFailedStart(input, exitMarker);
+      await cleanupFailedStart(input);
     } catch (cleanupError: unknown) {
       throw new AggregateError(
         [error, cleanupError],
@@ -391,7 +393,6 @@ async function requestHeadlessMprocsShutdown(
 
 async function cleanupFailedStart(
   input: StackLaunchInput,
-  exitMarker: string,
 ): Promise<void> {
   await stopPhase5EmulatorProcess(
     input.directory,
@@ -408,27 +409,10 @@ async function cleanupFailedStart(
       "close failed Phase 5 startup session",
     );
   }
-
-  const deadline = Date.now() + PHASE5_EXPORT_SHUTDOWN_SECONDS * 1_000;
-  const ports = Object.values(input.ports);
-  while (true) {
-    const listeners = await Promise.all(ports.map(async (port) => listenerOpen(port)));
-    const sessionAlive =
-      (await run("tmux", ["has-session", "-t", input.tmuxSession])).exitCode === 0;
-    if (!listeners.some(Boolean) && (!sessionAlive || (await exists(exitMarker)))) break;
-    if (Date.now() >= deadline) {
-      if (sessionAlive) {
-        await requireCommand(
-          "tmux",
-          ["kill-session", "-t", input.tmuxSession],
-          "force-close failed Phase 5 startup session",
-        );
-      }
-      throw new Error(`${input.stack} left an isolated listener after startup failure`);
-    }
-    await delay(1_000);
-  }
-
+  await reapPhase5DirectoryProcessGroups(
+    input.directory,
+    PHASE5_DIRECTORY_REAP_SECONDS,
+  );
   if ((await run("tmux", ["has-session", "-t", input.tmuxSession])).exitCode === 0) {
     await requireCommand(
       "tmux",
@@ -436,10 +420,17 @@ async function cleanupFailedStart(
       "close cleaned Phase 5 startup session",
     );
   }
-  await reapPhase5DirectoryProcessGroups(
-    input.directory,
-    PHASE5_DIRECTORY_REAP_SECONDS,
-  );
+
+  const deadline = Date.now() + PHASE5_EXPORT_SHUTDOWN_SECONDS * 1_000;
+  const ports = Object.values(input.ports);
+  while (true) {
+    const listeners = await Promise.all(ports.map(async (port) => listenerOpen(port)));
+    if (!listeners.some(Boolean)) break;
+    if (Date.now() >= deadline) {
+      throw new Error(`${input.stack} left an isolated listener after startup failure`);
+    }
+    await delay(1_000);
+  }
 }
 
 async function stopPhase5EmulatorProcess(
@@ -729,8 +720,8 @@ async function stackReady(
   const [functions, hub, frontend, dotnet] = await Promise.all([
     fetchOk(`http://127.0.0.1:${String(input.ports.functions)}/backends`),
     fetchOk(`http://127.0.0.1:${String(input.ports.hub)}/emulators`),
-    curlOk(new URL("/login", baseUrl).href),
-    curlOk(twodartNetUrl),
+    curlOk(new URL(PHASE5_LOGIN_ROUTE, baseUrl).href),
+    curlOk(new URL(PHASE5_TWODARTNET_HEALTH_ROUTE, twodartNetUrl).href),
   ]);
   return functions && hub && frontend && dotnet;
 }
@@ -765,7 +756,7 @@ export async function waitForPhase5FrontendReady(
 ): Promise<Phase5FrontendReadiness> {
   const started = performance.now();
   const deadline = Date.now() + maximumReadySeconds * 1_000;
-  const loginUrl = new URL("/login", baseUrl).href;
+  const loginUrl = new URL(PHASE5_LOGIN_ROUTE, baseUrl).href;
   let lastStatus: number | null = null;
   while (true) {
     lastStatus = await curlStatus(loginUrl);
@@ -777,7 +768,7 @@ export async function waitForPhase5FrontendReady(
     }
     if (Date.now() >= deadline) {
       throw new Error(
-        `Phase 5 frontend /login did not become ready; last status ${lastStatus === null ? "unavailable" : String(lastStatus)}`,
+        `Phase 5 frontend ${PHASE5_LOGIN_ROUTE} did not become ready; last status ${lastStatus === null ? "unavailable" : String(lastStatus)}`,
       );
     }
     await delay(1_000);

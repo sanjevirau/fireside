@@ -68,6 +68,7 @@ test("login readiness records status before waiting for rendered controls", asyn
   const loginStart = source.indexOf("async function loginThroughRenderedUi");
   const loginEnd = source.indexOf("async function waitForOtp", loginStart);
   const loginSource = source.slice(loginStart, loginEnd);
+  assert.match(loginSource, /new URL\(PHASE5_LOGIN_ROUTE, args\.baseUrl\)/u);
   const navigationAssertion = loginSource.indexOf(
     'assertSuccessfulNavigation(response, "login")',
   );
