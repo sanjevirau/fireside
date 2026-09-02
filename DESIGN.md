@@ -1946,6 +1946,19 @@ quality job are green. Product changes under `crates/`, WebChannel or Firebase
 JS SDK harness changes, and the final immutable candidate still require the
 full six-job matrix.
 
+The tiny tier is also the oracle for application-launch plumbing. Diagnostic
+`two-tier-smoke-20260902T211906+0800-da10da5-r3` reached all official-stack
+readiness probes but completed zero browser journeys. Its content-free evidence
+showed three independent launch defects: the cache watcher listened on the
+isolated port while the browser fell back to `8081`, the signed-out callback
+mutated Next's live dynamic-route query and the browser fetched
+`/login/undefined`, and firebase-tools tried to create a Functions Unix socket
+under a 179-byte pathname. The browser and watcher must receive the same
+public cache-port setting, signed-out initialization must preserve
+`/login/overview`, and Phase 5 runtime directories must be short enough to
+leave room below Linux's 107-byte Unix-socket pathname boundary. None of these
+plumbing corrections changes a Phase 5 workload or threshold.
+
 The full-data Twodart cache build also exposed a reusable-system-timestamp
 contract. A `RunQuery` response `read_time` can be supplied by the client as a
 later consistency selector. The identical Java cache build completed, while

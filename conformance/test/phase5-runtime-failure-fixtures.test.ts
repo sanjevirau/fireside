@@ -10,6 +10,10 @@ const loginReadinessUrl = new URL(
   "../fixtures/phase5/frontend-login-readiness-contract.json",
   import.meta.url,
 );
+const tinyBrowserRuntimeUrl = new URL(
+  "../fixtures/phase5/tiny-browser-runtime-contract.json",
+  import.meta.url,
+);
 
 test("the exact lifecycle observation requires one SIGINT to one emulator process", async () => {
   const fixture = JSON.parse(await readFile(singleSigintUrl, "utf8")) as {
@@ -190,5 +194,64 @@ test("the failed browser journey freezes the exact readiness routes and evidence
     renderedSelectorTimeoutMilliseconds: 180_000,
     revalidateImmediatelyBeforeBrowserJourney: true,
     twodartNetHealthProbeRoute: "/api/HealthCheck",
+  });
+});
+
+test("the tiny browser smoke freezes runtime-path and client-route failures before fixes", async () => {
+  const fixture = JSON.parse(await readFile(tinyBrowserRuntimeUrl, "utf8")) as {
+    readonly contract: {
+      readonly browserAndWatcherCachePortsMustMatch: boolean;
+      readonly browserCachePortEnvironmentVariable: string;
+      readonly diagnosticEvidenceMustRemainContentFree: boolean;
+      readonly maximumLinuxUnixSocketPathBytes: number;
+      readonly phase5ThresholdsMayChange: boolean;
+      readonly runtimeDirectoryMustLeaveSocketSuffixHeadroom: boolean;
+      readonly signedOutAuthCallbackMayMutateDynamicRouteQuery: boolean;
+      readonly signedOutLoginPathMustRemain: string;
+    };
+    readonly observation: {
+      readonly browserCacheWebsocketAttemptPort: number;
+      readonly browserCacheWebsocketConnected: boolean;
+      readonly browserFinalPath: string;
+      readonly browserJourneysCompleted: number;
+      readonly cacheWatcherListenPort: number;
+      readonly emailSelectorVisible: boolean;
+      readonly expectedLoginPath: string;
+      readonly exportFirstShutdownCompleted: boolean;
+      readonly functionsRuntimeSocketError: string;
+      readonly functionsRuntimeSocketPathBytes: number;
+      readonly isolatedListenersAfterCleanup: number;
+      readonly isolatedProcessesAfterCleanup: number;
+      readonly syntheticOnly: boolean;
+    };
+    readonly schemaVersion: number;
+  };
+
+  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.observation.syntheticOnly, true);
+  assert.equal(fixture.observation.cacheWatcherListenPort, 23_012);
+  assert.equal(fixture.observation.browserCacheWebsocketAttemptPort, 8_081);
+  assert.equal(fixture.observation.browserCacheWebsocketConnected, false);
+  assert.equal(fixture.observation.expectedLoginPath, "/login/overview");
+  assert.equal(fixture.observation.browserFinalPath, "/login/undefined");
+  assert.equal(fixture.observation.emailSelectorVisible, false);
+  assert.equal(fixture.observation.browserJourneysCompleted, 0);
+  assert.equal(fixture.observation.functionsRuntimeSocketError, "EINVAL");
+  assert.ok(
+    fixture.observation.functionsRuntimeSocketPathBytes >
+      fixture.contract.maximumLinuxUnixSocketPathBytes,
+  );
+  assert.equal(fixture.observation.exportFirstShutdownCompleted, true);
+  assert.equal(fixture.observation.isolatedProcessesAfterCleanup, 0);
+  assert.equal(fixture.observation.isolatedListenersAfterCleanup, 0);
+  assert.deepEqual(fixture.contract, {
+    browserAndWatcherCachePortsMustMatch: true,
+    browserCachePortEnvironmentVariable: "NEXT_PUBLIC_FIREBASE_CACHE_WEBSOCKET_PORT",
+    diagnosticEvidenceMustRemainContentFree: true,
+    maximumLinuxUnixSocketPathBytes: 107,
+    phase5ThresholdsMayChange: false,
+    runtimeDirectoryMustLeaveSocketSuffixHeadroom: true,
+    signedOutAuthCallbackMayMutateDynamicRouteQuery: false,
+    signedOutLoginPathMustRemain: "/login/overview",
   });
 });
