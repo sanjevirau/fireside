@@ -17,6 +17,7 @@
     "directEmulatorProcessGroupSigintRequired": true,
     "emulatorGrandchildExitGuaranteed": false,
     "applicationGrandchildExitGuaranteed": false,
+    "exportMetadataRequiredBeforeForceQuit": true,
     "forceQuitSafeOnlyAfterEmulatorProcessGroupExited": true,
     "headlessTransport": "configured TCP control server",
     "postQuitDirectoryProcessAuditRequired": true,
@@ -47,6 +48,23 @@
       "orphanedProcessCount": 22,
       "orphanedListeners": [4599, 4848, 4659, 40629, 40745, 4115],
       "requiredCleanup": "validate every process-group member against the isolated stack directory, signal only those groups, and require zero remaining directory-owned processes"
+    },
+    "prematureForceQuit": {
+      "candidateCommit": "67ce1c0a781bfbb8aeba7fe10106e8c14a00147b",
+      "phase5Diagnostic": "full-gate-smoke-20260902T162708+0800-67ce1c0-r2",
+      "primaryFailure": "browser child loader resolution failed after both stacks reached readiness",
+      "browserWorkloadStarted": false,
+      "firstSigintStartedCleanShutdown": true,
+      "exportOnExitStarted": true,
+      "secondSigintForcedExit": true,
+      "subprocessesStillRunningReported": 2,
+      "exportMetadataPresent": false,
+      "orphanedDirectoryProcessGroups": 9,
+      "orphanedListeners": [23000, 23004, 23007, 23012],
+      "kernelOomEvidence": 0,
+      "failedSystemdUnits": 0,
+      "manualScopedCleanupRemainingGroups": 0,
+      "requiredOrdering": "after direct emulator SIGINT, require export-on-exit metadata before sending mprocs c: force-quit; cleanup failures must still reap all validated directory-owned process groups"
     }
   }
 }
