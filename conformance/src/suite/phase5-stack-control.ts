@@ -42,6 +42,7 @@ export interface CacheBuildMetrics {
 export interface RunningPhase5Stack {
   readonly baseUrl: string;
   readonly cacheBuild: CacheBuildMetrics;
+  readonly directory: string;
   readonly exitMarker: string;
   readonly exportPath: string;
   readonly label: string;
@@ -56,6 +57,21 @@ export interface StoppedPhase5Stack {
   readonly exportMetadataPresent: boolean;
   readonly exitCode: number;
   readonly shutdownMilliseconds: number;
+}
+
+export interface Phase5MprocsControlCommand {
+  readonly arguments: readonly string[];
+  readonly command: string;
+}
+
+export function renderPhase5MprocsControlCommand(
+  directory: string,
+  port: number,
+): Phase5MprocsControlCommand {
+  return {
+    arguments: ["--server", `127.0.0.1:${String(port)}`, "--ctl", "c: quit"],
+    command: path.join(directory, "node_modules", ".bin", "mprocs"),
+  };
 }
 
 export function renderPhase5StackCommand(input: StackLaunchInput): string {
@@ -136,60 +152,75 @@ export async function startPhase5Stack(
     "execute Phase 5 launch command",
   );
 
-  const env = await readPhase5PortEnvironment(input.directory);
-  const baseUrl = requiredEnvironment(env, "FE_URL");
-  const twodartNetUrl = requiredEnvironment(env, "TWODARTNET_API_URL");
-  const started = performance.now();
-  let peakRssBytes = 0;
-  let peakPssBytes: number | null = 0;
-  const deadline = Date.now() + maximumReadySeconds * 1_000;
-  while (true) {
-    const watcher = await processMetricsContaining(
-      input.directory,
-      "watch-firestore-cache.ts",
-    );
-    peakRssBytes = Math.max(peakRssBytes, watcher.rssBytes);
-    if (watcher.pssBytes === null) peakPssBytes = null;
-    else if (peakPssBytes !== null) peakPssBytes = Math.max(peakPssBytes, watcher.pssBytes);
+  try {
+    const env = await readPhase5PortEnvironment(input.directory);
+    const baseUrl = requiredEnvironment(env, "FE_URL");
+    const twodartNetUrl = requiredEnvironment(env, "TWODARTNET_API_URL");
+    const started = performance.now();
+    let peakRssBytes = 0;
+    let peakPssBytes: number | null = 0;
+    const deadline = Date.now() + maximumReadySeconds * 1_000;
+    while (true) {
+      const watcher = await processMetricsContaining(
+        input.directory,
+        "watch-firestore-cache.ts",
+      );
+      peakRssBytes = Math.max(peakRssBytes, watcher.rssBytes);
+      if (watcher.pssBytes === null) peakPssBytes = null;
+      else if (peakPssBytes !== null) {
+        peakPssBytes = Math.max(peakPssBytes, watcher.pssBytes);
+      }
 
-    const ready = await stackReady(input, baseUrl, twodartNetUrl);
-    if (ready) break;
-    if (await exists(exitMarker)) {
-      const status = (await readFile(exitMarker, "utf8")).trim();
-      throw new Error(`${input.stack} exited before readiness with status ${status}`);
+      const ready = await stackReady(input, baseUrl, twodartNetUrl);
+      if (ready) break;
+      if (await exists(exitMarker)) {
+        const status = (await readFile(exitMarker, "utf8")).trim();
+        throw new Error(`${input.stack} exited before readiness with status ${status}`);
+      }
+      if (Date.now() >= deadline) {
+        throw new Error(`${input.stack} exceeded ${String(maximumReadySeconds)} seconds to ready`);
+      }
+      await delay(1_000);
     }
-    if (Date.now() >= deadline) {
-      throw new Error(`${input.stack} exceeded ${String(maximumReadySeconds)} seconds to ready`);
+    const cacheLog = await readFile(
+      path.join(input.directory, ".logs", "firebase-cache-watch.log"),
+      "utf8",
+    );
+    const cacheBuild: CacheBuildMetrics = {
+      errors: cacheErrorCount(cacheLog),
+      inputDocumentCount,
+      outputCounts: parseCacheOutputCounts(cacheLog),
+      peakPssBytes,
+      peakRssBytes,
+      readyMilliseconds: performance.now() - started,
+    };
+    if (cacheBuild.errors !== 0) {
+      throw new Error(`${input.stack} cache watcher reported ${String(cacheBuild.errors)} errors`);
     }
-    await delay(1_000);
+    return {
+      baseUrl,
+      cacheBuild,
+      directory: input.directory,
+      exitMarker,
+      exportPath: input.exportPath,
+      label: input.label,
+      launchLog,
+      ports: input.ports,
+      stack: input.stack,
+      tmuxSession: input.tmuxSession,
+      twodartNetUrl,
+    };
+  } catch (error: unknown) {
+    try {
+      await cleanupFailedStart(input, exitMarker);
+    } catch (cleanupError: unknown) {
+      throw new AggregateError(
+        [error, cleanupError],
+        `${input.stack} startup failed and its isolated process tree did not cleanly stop`,
+      );
+    }
+    throw error;
   }
-  const cacheLog = await readFile(
-    path.join(input.directory, ".logs", "firebase-cache-watch.log"),
-    "utf8",
-  );
-  const cacheBuild: CacheBuildMetrics = {
-    errors: cacheErrorCount(cacheLog),
-    inputDocumentCount,
-    outputCounts: parseCacheOutputCounts(cacheLog),
-    peakPssBytes,
-    peakRssBytes,
-    readyMilliseconds: performance.now() - started,
-  };
-  if (cacheBuild.errors !== 0) {
-    throw new Error(`${input.stack} cache watcher reported ${String(cacheBuild.errors)} errors`);
-  }
-  return {
-    baseUrl,
-    cacheBuild,
-    exitMarker,
-    exportPath: input.exportPath,
-    label: input.label,
-    launchLog,
-    ports: input.ports,
-    stack: input.stack,
-    tmuxSession: input.tmuxSession,
-    twodartNetUrl,
-  };
 }
 
 export async function stopPhase5Stack(
@@ -197,11 +228,7 @@ export async function stopPhase5Stack(
   maximumShutdownSeconds: number,
 ): Promise<StoppedPhase5Stack> {
   const started = performance.now();
-  await requireCommand(
-    "tmux",
-    ["send-keys", "-t", running.tmuxSession, "q"],
-    "request graceful mprocs shutdown",
-  );
+  await requestHeadlessMprocsShutdown(running.directory, running.ports.mprocsControl);
   const deadline = Date.now() + maximumShutdownSeconds * 1_000;
   while (!(await exists(running.exitMarker))) {
     if (Date.now() >= deadline) {
@@ -236,6 +263,61 @@ export async function stopPhase5Stack(
     exportMetadataPresent,
     shutdownMilliseconds: performance.now() - started,
   };
+}
+
+async function requestHeadlessMprocsShutdown(
+  directory: string,
+  port: number,
+): Promise<void> {
+  const control = renderPhase5MprocsControlCommand(directory, port);
+  await requireCommand(
+    control.command,
+    control.arguments,
+    "request graceful headless mprocs shutdown",
+  );
+}
+
+async function cleanupFailedStart(
+  input: StackLaunchInput,
+  exitMarker: string,
+): Promise<void> {
+  if (await listenerOpen(input.ports.mprocsControl)) {
+    await requestHeadlessMprocsShutdown(input.directory, input.ports.mprocsControl);
+  } else if ((await run("tmux", ["has-session", "-t", input.tmuxSession])).exitCode === 0) {
+    await requireCommand(
+      "tmux",
+      ["kill-session", "-t", input.tmuxSession],
+      "close failed Phase 5 startup session",
+    );
+  }
+
+  const deadline = Date.now() + 180_000;
+  const ports = Object.values(input.ports);
+  while (true) {
+    const listeners = await Promise.all(ports.map(async (port) => listenerOpen(port)));
+    const sessionAlive =
+      (await run("tmux", ["has-session", "-t", input.tmuxSession])).exitCode === 0;
+    if (!listeners.some(Boolean) && (!sessionAlive || (await exists(exitMarker)))) break;
+    if (Date.now() >= deadline) {
+      if (sessionAlive) {
+        await requireCommand(
+          "tmux",
+          ["kill-session", "-t", input.tmuxSession],
+          "force-close failed Phase 5 startup session",
+        );
+      }
+      throw new Error(`${input.stack} left an isolated listener after startup failure`);
+    }
+    await delay(1_000);
+  }
+
+  if ((await run("tmux", ["has-session", "-t", input.tmuxSession])).exitCode === 0) {
+    await requireCommand(
+      "tmux",
+      ["kill-session", "-t", input.tmuxSession],
+      "close cleaned Phase 5 startup session",
+    );
+  }
 }
 
 export function parseCacheOutputCounts(log: string): Readonly<Record<string, number | boolean>> {

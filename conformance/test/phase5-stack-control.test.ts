@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   cacheOutputDigest,
   parseCacheOutputCounts,
+  renderPhase5MprocsControlCommand,
   renderPhase5StackCommand,
   type StackLaunchInput,
 } from "../src/suite/phase5-stack-control.ts";
@@ -59,6 +60,16 @@ test("Phase 5 stack launch uses the exact isolated runtime contract", () => {
   assert.match(command, /official-initial\.exit/u);
 });
 
+test("Phase 5 stack shutdown uses the pinned mprocs control event", () => {
+  assert.deepEqual(
+    renderPhase5MprocsControlCommand("/gate/stack-official", 23011),
+    {
+      arguments: ["--server", "127.0.0.1:23011", "--ctl", "c: quit"],
+      command: "/gate/stack-official/node_modules/.bin/mprocs",
+    },
+  );
+});
+
 test("cache summary parsing is content-free and deterministic", () => {
   const log = `
 📊 Data summary:
@@ -101,4 +112,6 @@ test("mprocs control readiness never opens a protocol-less TCP connection", asyn
     source,
     /ports\.map\(async \(port\) => listenerOpen\(port\)\)/u,
   );
+  assert.match(source, /cleanupFailedStart\(input, exitMarker\)/u);
+  assert.doesNotMatch(source, /send-keys[\s\S]{0,100}["']q["']/u);
 });
