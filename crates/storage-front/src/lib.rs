@@ -37,6 +37,8 @@ mod download;
 use download::file_response;
 #[cfg(test)]
 mod encoding_tests;
+#[cfg(test)]
+mod missing_object_tests;
 
 /// One rules source bound to a Storage bucket.
 #[derive(Debug, Clone)]
@@ -342,6 +344,45 @@ impl IntoResponse for StorageApiError {
     }
 }
 
+fn firebase_object_not_found() -> Response {
+    let mut response = (StatusCode::NOT_FOUND, "Not Found").into_response();
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("text/plain; charset=utf-8"),
+    );
+    response
+}
+
+fn gcs_object_not_found(bucket: &str, object: &str, media: bool) -> Response {
+    let message = format!("No such object: {bucket}/{object}");
+    if media {
+        let mut response = (StatusCode::NOT_FOUND, message).into_response();
+        response.headers_mut().insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("text/html; charset=utf-8"),
+        );
+        response
+    } else {
+        let encoded = serde_json::to_string(&message).expect("string JSON is infallible");
+        let body = format!(
+            "{{\"error\":{{\"code\":404,\"message\":{encoded},\"errors\":[{{\"message\":{encoded},\"domain\":\"global\",\"reason\":\"notFound\"}}]}}}}"
+        );
+        let length = body.len().to_string();
+        let mut response = Response::new(Body::from(body));
+        *response.status_mut() = StatusCode::NOT_FOUND;
+        let headers = response.headers_mut();
+        headers.insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("application/json; charset=utf-8"),
+        );
+        headers.insert(
+            header::CONTENT_LENGTH,
+            HeaderValue::from_str(&length).expect("decimal content length"),
+        );
+        response
+    }
+}
+
 async fn v0_upload(
     State(state): State<StorageState>,
     Path(bucket): Path<String>,
@@ -384,7 +425,13 @@ async fn v0_object(
 ) -> Result<Response, StorageApiError> {
     let object = decoded_object(&object);
     let query = query_fields(query.as_deref());
-    let stored = get_object(&state, &bucket, &object)?;
+    let stored = match get_object(&state, &bucket, &object) {
+        Ok(stored) => stored,
+        Err(error) if error.status == StatusCode::NOT_FOUND => {
+            return Ok(firebase_object_not_found());
+        }
+        Err(error) => return Err(error),
+    };
     if query.get("alt").map(String::as_str) == Some("media") {
         let token = query.get("token").map(String::as_str);
         authorize_read(&state, &stored, &headers, token).await?;
@@ -880,15 +927,22 @@ async fn gcs_metadata_or_copy(
             "Not Implemented",
         ));
     }
-    let object = get_object(&state, &bucket, &decoded_object(&object))?;
-    if query_fields(query.as_deref())
+    let object = decoded_object(&object);
+    let media = query_fields(query.as_deref())
         .get("alt")
         .map(String::as_str)
-        == Some("media")
-    {
-        file_response(&state, &object, &headers).await
+        == Some("media");
+    let stored = match get_object(&state, &bucket, &object) {
+        Ok(stored) => stored,
+        Err(error) if error.status == StatusCode::NOT_FOUND => {
+            return Ok(gcs_object_not_found(&bucket, &object, media));
+        }
+        Err(error) => return Err(error),
+    };
+    if media {
+        file_response(&state, &stored, &headers).await
     } else {
-        Ok(Json(gcs_metadata(&state, &object)).into_response())
+        Ok(Json(gcs_metadata(&state, &stored)).into_response())
     }
 }
 
@@ -898,8 +952,15 @@ async fn gcs_download(
     RawQuery(_query): RawQuery,
     headers: HeaderMap,
 ) -> Result<Response, StorageApiError> {
-    let object = get_object(&state, &bucket, &decoded_object(&object))?;
-    file_response(&state, &object, &headers).await
+    let object = decoded_object(&object);
+    let stored = match get_object(&state, &bucket, &object) {
+        Ok(stored) => stored,
+        Err(error) if error.status == StatusCode::NOT_FOUND => {
+            return Ok(gcs_object_not_found(&bucket, &object, true));
+        }
+        Err(error) => return Err(error),
+    };
+    file_response(&state, &stored, &headers).await
 }
 
 async fn gcs_patch(

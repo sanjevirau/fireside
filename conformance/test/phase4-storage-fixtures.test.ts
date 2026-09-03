@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import "./storage-content-encoding.test.ts";
+import "./storage-missing-object.test.ts";
 
 interface Observation {
   readonly id: string;
