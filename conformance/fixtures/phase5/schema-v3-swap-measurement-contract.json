@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "oracle": "explicit-maintainer-amendment-and-preserved-r20-measurements",
+  "previousManifestSha256": "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa",
+  "reason": "Evidence from r20: preflight showed 374 MiB residual swap with 11.7 GB free. During stack boot and the nine journeys, before the soak window opened, the kernel swapped out about 765 MiB while free memory never approached zero and no OOM occurred. The 64.7 MiB swapped in during the 60-second window was those pages returning; swap-out in the window was 0 and residual swap fell from 1139 MiB to 1073 MiB. The dominant consumer was the Next.js dev server at 7.24 GiB PSS. The official Java emulator was 0.59 GiB on the tiny dataset and reaches about 6.9 GB on the full dataset, so the official full-data stack is about 16 GiB PSS on a 15 GiB host. A zero-swap soak gate is therefore unpassable for the official baseline by physics, and a gate the baseline cannot pass proves nothing about Fireside. My earlier instruction not to weaken the zero-swap rule was wrong for the soak; the rule stays only for the quiescent preflight.",
+  "contract": {
+    "manifestSchemaVersion": 3,
+    "amendedBeforeMeasurement": true,
+    "criteriaWeakened": true,
+    "workloadChanged": false,
+    "browserRunnerSha256": "ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc",
+    "preflight": {
+      "drainCommands": [
+        "swapoff -a",
+        "swapon -a"
+      ],
+      "onlyWhenQuiescent": true,
+      "steadyVmstatSamples": 3,
+      "maximumSwapIn": 0,
+      "maximumSwapOut": 0,
+      "recordVmSwappiness": true,
+      "changeVmSwappinessAllowed": false
+    },
+    "soak": {
+      "swapActivityIsMeasurementOnly": true,
+      "swapCountersRequired": true,
+      "topProcessPssTableRequired": true,
+      "sideBySideRequired": true,
+      "winnerRequired": false,
+      "smokeSeconds": 60,
+      "fullSeconds": 7200,
+      "correctnessAndHealthThresholds": 0
+    }
+  },
+  "observation": {
+    "attempt": "two-tier-smoke-20260903T1157+0800-5229712-r20",
+    "candidateRevision": "5229712c94c5d734eca1f03414e4bfaad2d8695f",
+    "browserJourneysPassed": 9,
+    "soakPassedUnderSchema2": false,
+    "swapInPagesDelta": 16562,
+    "swapOutPagesDelta": 0,
+    "residualSwapBytesAtStart": 1193906176,
+    "residualSwapBytesAtEnd": 1125023744,
+    "soakEvidenceSha256": "6f0eab635867dcef84883d33a757b93c5d351f2856b4907c305162e7296a3b22",
+    "historicalResultMustNotBeReclassified": true
+  }
+}

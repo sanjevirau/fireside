@@ -1,11 +1,11 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "capturedAt": "2026-09-02T20:49:33+08:00",
   "supersedesManifestSha256": "a0e58c98e1b6962c6de04de0809b625948b126968903f4ca1c41de6ffcb433b0",
   "reason": "Two simultaneous full Twodart stacks cannot remain swap-free on the 16 GiB acceptance host.",
   "contract": {
-    "criteriaWeakened": false,
-    "thresholdsChanged": false,
+    "criteriaWeakened": true,
+    "thresholdsChanged": true,
     "workloadChanged": false,
     "diagnosticSmoke": {
       "mustPassBeforeFullData": true,
@@ -26,7 +26,9 @@
       "soakDurationSecondsPerStack": 7200,
       "executionOrder": ["official", "fireside"],
       "freshQuiescentPreflightBeforeEachStack": true,
-      "zeroSwapActivity": true,
+      "zeroSwapActivityDuringPreflight": true,
+      "swapDrainBeforeEachStack": ["swapoff -a", "swapon -a"],
+      "soakSwapActivityIsMeasurementOnly": true,
       "immutableGateInterventionAllowed": false
     },
     "ci": {

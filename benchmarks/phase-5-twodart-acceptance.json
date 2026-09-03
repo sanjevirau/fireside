@@ -1,13 +1,13 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "phase-5-twodart-acceptance",
   "frozen": true,
-  "frozenAt": "2026-09-02T20:49:33+08:00",
+  "frozenAt": "2026-09-03T12:20:00+08:00",
   "amendment": {
-    "previousManifestSha256": "a0e58c98e1b6962c6de04de0809b625948b126968903f4ca1c41de6ffcb433b0",
-    "reason": "The 16 GiB acceptance host cannot hold both full Twodart stacks in steady state without swap activity. Freeze a mandatory cheap end-to-end smoke before full-data work, run the unchanged two-hour workloads sequentially under identical fresh preflights, and tier pre-smoke CI by change scope.",
-    "criteriaWeakened": false,
-    "thresholdsChanged": false,
+    "previousManifestSha256": "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa",
+    "reason": "Evidence from r20: preflight showed 374 MiB residual swap with 11.7 GB free. During stack boot and the nine journeys, before the soak window opened, the kernel swapped out about 765 MiB while free memory never approached zero and no OOM occurred. The 64.7 MiB swapped in during the 60-second window was those pages returning; swap-out in the window was 0 and residual swap fell from 1139 MiB to 1073 MiB. The dominant consumer was the Next.js dev server at 7.24 GiB PSS. The official Java emulator was 0.59 GiB on the tiny dataset and reaches about 6.9 GB on the full dataset, so the official full-data stack is about 16 GiB PSS on a 15 GiB host. A zero-swap soak gate is therefore unpassable for the official baseline by physics, and a gate the baseline cannot pass proves nothing about Fireside. My earlier instruction not to weaken the zero-swap rule was wrong for the soak; the rule stays only for the quiescent preflight.",
+    "criteriaWeakened": true,
+    "thresholdsChanged": true,
     "workloadChanged": false,
     "amendedBeforeMeasurement": true
   },
@@ -141,6 +141,14 @@
       "maximumSwapInPagesPerSecond": 0,
       "maximumSwapOutPagesPerSecond": 0,
       "residualSwapBytesAllowedWhenInactive": true,
+      "swapDrain": {
+        "requiredBeforeEachStack": true,
+        "commands": ["swapoff -a", "swapon -a"],
+        "onlyWhenNoGateStackIsRunning": true,
+        "recordInEnvironment": true,
+        "recordVmSwappiness": true,
+        "changeVmSwappinessAllowed": false
+      },
       "conflictingGateProcesses": 0,
       "conflictingGateListeners": 0
     }
@@ -402,8 +410,16 @@
       "function delivery latency p50 and p99",
       "errors, stalls, listener gaps, and acknowledged-state mismatches",
       "swap usage and swap-in/swap-out activity",
+      "top processes ranked by sampled peak PSS per stack",
       "current-boot OOM/resource evidence"
     ],
+    "swapActivityPolicy": {
+      "gating": false,
+      "requiredMeasurement": true,
+      "reportSideBySide": true,
+      "winnerRequired": false,
+      "fields": ["swapInPagesDelta", "swapOutPagesDelta", "residualSwapBytesAtStart", "residualSwapBytesAtEnd"]
+    },
     "thresholds": {
       "errors": 0,
       "stalls": 0,
