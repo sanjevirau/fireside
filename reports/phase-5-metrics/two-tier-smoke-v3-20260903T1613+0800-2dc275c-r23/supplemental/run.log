@@ -1,0 +1,15 @@
+npm notice run fireside-conformance@0.0.1 test:suite:phase5-gate
+npm notice run node --import tsx src/suite/run-phase5-gate.ts --smoke --fireside-binary /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/target-67ce1c0/release/fireside --fireside-dir /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/stack-fireside --fresh-dir /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/fresh-colleague --full-data /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/inputs/full-data --java-home /home/sanjevi/.local/share/mise/installs/java/26.0.2.1 --node-binary /home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node --official-dir /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/stack-official --output-dir /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/diagnostics/two-tier-smoke-v3-20260903T1613+0800-2dc275c-r23 --project-id demo-twodart-local --report-path /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/diagnostics/two-tier-smoke-v3-20260903T1613+0800-2dc275c-r23.md --runtime-assets-root /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/inputs/Assets --twodart-revision 6bda5bf29b2399017d2a872e8f3fc1a15d073a54
+(node:212891) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+Error: browser-fireside-initial failed; see logs/browser-fireside-initial.log
+    at assertCommand (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-2dc275c/conformance/src/suite/run-phase5-gate.ts:1413:11)
+    at exerciseStack (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-2dc275c/conformance/src/suite/run-phase5-gate.ts:650:3)
+    at async main (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-2dc275c/conformance/src/suite/run-phase5-gate.ts:227:23)
+    at async <anonymous> (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-2dc275c/conformance/src/suite/run-phase5-gate.ts:1516:1)
+
+Node.js v24.20.0

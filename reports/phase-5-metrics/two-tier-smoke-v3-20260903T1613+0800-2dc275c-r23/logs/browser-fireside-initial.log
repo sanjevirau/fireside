@@ -1,0 +1,17 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+locator.waitFor: Timeout 180000ms exceeded.
+Call log:
+[2m  - waiting for locator('#workEmail') to be visible[22m
+
+    at loginThroughRenderedUi (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-2dc275c/conformance/src/suite/run-phase5-browser-journeys.ts:691:20)
+    at async <anonymous> (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-2dc275c/conformance/src/suite/run-phase5-browser-journeys.ts:259:5)
+    at async journey (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-2dc275c/conformance/src/suite/run-phase5-browser-journeys.ts:671:22)
+    at async <anonymous> (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-2dc275c/conformance/src/suite/run-phase5-browser-journeys.ts:258:3) {
+  log: [ "  - waiting for locator('#workEmail') to be visible" ],
+  name: 'TimeoutError'
+}
+
+Node.js v24.20.0

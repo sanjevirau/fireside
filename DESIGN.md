@@ -2156,6 +2156,19 @@ The ledger and final readiness summary are checksummed on success and failure.
 The browser runner, app code, workload, soak durations and thresholds do not
 change. A warmed checkout alone is not evidence that this correction works.
 
+Phase 5 cheap smoke r23 on `2dc275c` passed the corrected readiness policy on
+both stacks but failed Fireside's first browser journey. The cache watcher
+uploaded gzip JSON; both raw Storage port 23102 and the Portless alias returned
+the same gzip body as `application/json` without `Content-Encoding`. Object
+metadata reported `contentEncoding: identity`. The browser recorded the exact
+JSON parse error and loader DOM text, while the cache WebSocket connected.
+This is a Storage content-encoding diagnostic, not a login-routing attribution
+or an alias-only fault. The upload metadata and download response contract need
+an official-oracle fixture before a product fix; no implementation or runner
+change is included in this evidence commit. The current HTTP readiness probes
+also do not validate the cache JSON body. Full evidence and the unrun full-data
+boundary are in `reports/phase-5-smoke-20260903-r23.md`.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.
