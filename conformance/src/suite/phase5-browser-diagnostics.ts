@@ -41,6 +41,26 @@ export function redactPhase5Identifiers(text: string, identifiers: ReadonlySet<s
     (_match, prefix: string, otp: string) => `${prefix}[otp-sha256:${createHash("sha256").update(otp).digest("hex")}]`);
 }
 
+export async function readPhase5DiagnosticIdentities(url: string, fetcher: typeof fetch = fetch): Promise<Set<string>> {
+  const response = await fetcher(url, {
+    method: "POST", headers: { authorization: "Bearer owner", "content-type": "application/json" },
+    body: JSON.stringify({ order: "ASC", returnUserInfo: true, sortBy: "USER_ID" }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  if (!response.ok) {
+    throw new Error(`diagnostic identity redaction preflight returned ${response.status}: ${await response.text()}`);
+  }
+  const accounts = await response.json() as { userInfo?: readonly Record<string, unknown>[] };
+  if (accounts.userInfo === undefined || accounts.userInfo.length !== 1) {
+    throw new Error("diagnostic identity redaction requires the single seeded Auth account");
+  }
+  const result = new Set<string>();
+  for (const user of accounts.userInfo) {
+    for (const key of ["localId", "email", "displayName"]) if (typeof user[key] === "string") result.add(user[key]);
+  }
+  return result;
+}
+
 if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
   const argument = (name: string): string => {
     const index = process.argv.indexOf(`--${name}`);
@@ -121,18 +141,8 @@ if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
   const originalLaunch = chromium.launch.bind(chromium);
   chromium.launch = async (options) => {
     await mkdir(path.dirname(output), { recursive: true });
-    const response = await fetch(`http://127.0.0.1:${argument("auth-port")}/identitytoolkit.googleapis.com/v1/projects/${argument("project-id")}/accounts:query`, {
-      method: "POST", headers: { authorization: "Bearer owner", "content-type": "application/json" },
-      body: JSON.stringify({ returnUserInfo: true, limit: 10 }), signal: AbortSignal.timeout(5_000),
-    });
-    if (!response.ok) throw new Error(`diagnostic identity redaction preflight returned ${response.status}`);
-    const accounts = await response.json() as { userInfo?: readonly Record<string, unknown>[] };
-    if (accounts.userInfo === undefined || accounts.userInfo.length !== 1) {
-      throw new Error("diagnostic identity redaction requires the single seeded Auth account");
-    }
-    for (const user of accounts.userInfo) {
-      for (const key of ["localId", "email", "displayName"]) if (typeof user[key] === "string") identities.add(user[key]);
-    }
+    const known = await readPhase5DiagnosticIdentities(`http://127.0.0.1:${argument("auth-port")}/identitytoolkit.googleapis.com/v1/projects/${argument("project-id")}/accounts:query`);
+    for (const value of known) identities.add(value);
     const appEnv = await readFile(path.join(argument("twodart-dir"), "apps/templates/.env.local"), "utf8");
     syntheticGoogleClientId = /^NEXT_PUBLIC_FIREBASE_AUTH_GOAUTH=["']?false["']?\s*$/mu.test(appEnv);
     record("diagnostic-contract", { syntheticGoogleClientId, verbatimSyntheticText: true, userIdentifiersAndOtpsHashed: true, runnerEventsSuppressed: false });

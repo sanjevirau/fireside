@@ -2,7 +2,21 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { phase5BenignDiagnostic, redactPhase5Identifiers } from "../src/suite/phase5-browser-diagnostics.ts";
+import { phase5BenignDiagnostic, readPhase5DiagnosticIdentities, redactPhase5Identifiers } from "../src/suite/phase5-browser-diagnostics.ts";
+
+test("diagnostic redaction uses the exact working Auth query and response field", async () => {
+  const users = await readPhase5DiagnosticIdentities("http://127.0.0.1/accounts:query", async (url, options) => {
+    assert.equal(url, "http://127.0.0.1/accounts:query");
+    assert.equal(options?.method, "POST");
+    assert.deepEqual(JSON.parse(String(options?.body)), { order: "ASC", returnUserInfo: true, sortBy: "USER_ID" });
+    return Response.json({ userInfo: [{ localId: "test-user", email: "test@example.invalid", displayName: "Test User" }] });
+  });
+  assert.deepEqual([...users], ["test-user", "test@example.invalid", "Test User"]);
+  await assert.rejects(readPhase5DiagnosticIdentities("http://127.0.0.1/accounts:query", async () =>
+    new Response("limit is not implemented.", { status: 501 })), /501: limit is not implemented\./u);
+  await assert.rejects(readPhase5DiagnosticIdentities("http://127.0.0.1/accounts:query", async () =>
+    Response.json({ users: [{ localId: "test-user" }] })), /single seeded Auth account/u);
+});
 
 test("synthetic diagnostic allowlist excludes unrelated errors", () => {
   assert.equal(phase5BenignDiagnostic({ kind: "page-error", text: "ReferenceError: target is not defined at useGoogleOneTap", syntheticGoogleClientId: true }), "synthetic-google-one-tap-reference-error");
