@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "attempt": "r26",
+  "candidate": "a6c66b493480a6b716c9f32312cd52733a61dad0",
+  "failure": "Fireside completed login, then timed out waiting for a dashboard deck link; official completed all nine journeys and its short soak.",
+  "classification": "Unresolved application-path failure with a diagnostic evidence gap; no new product root cause established.",
+  "evidenceGap": "The loader-only DOM record is empty, and the existing observer does not record Listen target requests or completed response summaries. Thus it cannot distinguish an unissued query, an incomplete listener, or a render/state problem.",
+  "isolatedDiagnostic": "The preserved Fireside export and exact Twodart rules return the same single deck from Java 1.21.0 and Fireside through owner/user native queries and single/multiplexed browser listeners. This is not a replay of the full failed application session.",
+  "amendment": {
+    "amendedBeforeNextMeasurement": true,
+    "scope": "read-only Phase 5 diagnostics outside the protected browser runner",
+    "listenRequestShapesAndCompletedResponseSummaries": true,
+    "completeDomOnlyForSyntheticSmoke": true,
+    "credentialsQueryValuesAndDocumentContentsStored": false,
+    "runnerEventsSuppressed": false,
+    "workloadChanged": false,
+    "durationsChanged": false,
+    "thresholdsChanged": false,
+    "twodartChanged": false,
+    "protectedRunnerSha256": "ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc",
+    "manifestSha256": "fe9d44c1edb6105d6edc9f0ab3b3251cb34929b7b6113e559ff9a2558ad7b957"
+  }
+}

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { chromium, type Page } from "playwright";
+import { phase5ListenRequestSummary, phase5ListenResponseSummary, phase5SmokeDomEvidence } from "./phase5-listen-diagnostics.ts";
 
 interface DiagnosticFailure {
   readonly kind: string;
@@ -81,6 +82,7 @@ if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
       .finally(() => pending.delete(task));
   };
   const isCache = (url: string): boolean => /\/o\/cache%2Fmain-cache-local\.json(?:\?|$)/iu.test(url);
+  const isListen = (url: string): boolean => new URL(url).pathname === "/google.firestore.v1.Firestore/Listen/channel";
   const exportPath = "/api/user/editor/ExportEditorPresentationJob/start";
   const observePage = (page: Page): void => {
     page.on("pageerror", (error) => {
@@ -105,6 +107,24 @@ if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
       if (new URL(request.url()).pathname === exportPath || isCache(request.url())) {
         record("required-request", { method: request.method(), url: request.url() });
       }
+      if (isListen(request.url()) && request.method() === "POST" && request.postData() !== null) {
+        try {
+          record("listen-request", { url: request.url(), summary: phase5ListenRequestSummary(request.postData()!) });
+        } catch (error: unknown) { record("listen-observer-error", { text: String(error) }); }
+      }
+    });
+    // Wait for requestfinished rather than awaiting an open streaming response
+    // at shutdown. Observers must not keep a backchannel or browser alive.
+    page.on("requestfinished", (request) => {
+      if (!isListen(request.url())) return;
+      observeTask((async () => {
+        const response = await request.response();
+        if (response === null) return;
+        record("listen-response", {
+          url: response.url(), status: response.status(),
+          ...(response.ok() ? { summary: phase5ListenResponseSummary(await response.text()) } : {}),
+        });
+      })());
     });
     page.on("requestfailed", (request) => {
       const text = request.failure()?.errorText ?? "unknown transport failure";
@@ -144,7 +164,7 @@ if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
     for (const value of known) identities.add(value);
     const appEnv = await readFile(path.join(argument("twodart-dir"), "apps/templates/.env.local"), "utf8");
     syntheticGoogleClientId = /^NEXT_PUBLIC_FIREBASE_AUTH_GOAUTH=["']?false["']?\s*$/mu.test(appEnv);
-    record("diagnostic-contract", { syntheticGoogleClientId, verbatimSyntheticText: true, userIdentifiersAndOtpsHashed: true, runnerEventsSuppressed: false });
+    record("diagnostic-contract", { syntheticGoogleClientId, verbatimSyntheticText: true, userIdentifiersAndOtpsHashed: true, runnerEventsSuppressed: false, listenShapeObservations: true, completeDomSyntheticSmokeOnly: true });
     const browser = await originalLaunch(options);
     const originalContext = browser.newContext.bind(browser);
     browser.newContext = async (contextOptions) => {
@@ -158,6 +178,11 @@ if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
         try {
           const text = await page.locator("body").innerText({ timeout: 2_000 });
           record("loader-dom", { url: page.url(), text: text.split("\n").filter((line) => /Failed to load app data|Loading app|Loading\.\.\./iu.test(line)).join("\n") });
+          const smokeText = phase5SmokeDomEvidence(process.argv.includes("--seed-smoke"), text);
+          if (smokeText !== null) {
+            const overlayText: unknown = await page.evaluate(`Array.from(document.querySelectorAll('nextjs-portal')).map(function (portal) { var root = portal.shadowRoot; return root ? Array.from(root.querySelectorAll('[role="dialog"], [data-nextjs-dialog-body]')).map(function (node) { return node.textContent; }) : []; })`);
+            record("synthetic-smoke-dom", { url: page.url(), text: smokeText, overlayText });
+          }
         } catch (error: unknown) { record("loader-dom-error", { text: String(error) }); }
       }
       await Promise.allSettled([...pending]);

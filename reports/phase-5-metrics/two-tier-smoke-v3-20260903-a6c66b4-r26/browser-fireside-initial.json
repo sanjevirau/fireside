@@ -1,0 +1,133 @@
+{
+  "browser": {
+    "pageErrors": 0,
+    "pageErrorHashes": [],
+    "pageErrorCallsiteClasses": [],
+    "pageErrorNames": [],
+    "consoleErrors": 2,
+    "consoleErrorHashes": [
+      "21a970b08153ca8a62f97dd8e821779845624f8fc50c168c1e05c43dfe64909f",
+      "6e02c12b0362db5db78a7a024c4bcfcce864310d99a5c1e6064d2f50abb2f77e"
+    ],
+    "consoleErrorOrigins": [
+      "first-party:https://phase5-fireside.templates.twodart.localhost:443/_next/static",
+      "first-party:https://phase5-fireside.templates.twodart.localhost:443/login/overview"
+    ],
+    "requestFailures": 0,
+    "requestFailureClasses": [
+      "GET:fetch:http://127.0.0.1:23100/google.firestore.v1.Firestore/Listen:net::ERR_ABORTED",
+      "POST:fetch:http://127.0.0.1:23100/google.firestore.v1.Firestore/Listen:net::ERR_ABORTED"
+    ],
+    "requestFailureHashes": []
+  },
+  "candidateIdentityStored": false,
+  "errorHash": "b583926d32ab026380f1ae9751a3435b7e2e2e6f0e21934c5f998b4f774bdbb9",
+  "iteration": "initial",
+  "journeys": [
+    {
+      "backendAssertions": 2,
+      "durationMs": 6214,
+      "id": "otp-auth-login",
+      "networkAssertions": 2,
+      "renderedAssertions": 4
+    }
+  ],
+  "navigations": [
+    {
+      "label": "login",
+      "status": 200
+    },
+    {
+      "label": "otp-request",
+      "status": 200
+    },
+    {
+      "label": "otp-verify",
+      "status": 200
+    }
+  ],
+  "clientRouteState": {
+    "dom": {
+      "bodyChildCount": 5,
+      "documentReadyState": "complete",
+      "emailInputCount": 0,
+      "inputCount": 0,
+      "loginFormCount": 0,
+      "loadingSpinnerCount": 0,
+      "nextErrorOverlayCount": 1,
+      "rootDivCount": 1
+    },
+    "finalDocumentPath": "/home/recent",
+    "finalDocumentQueryKeys": [],
+    "history": [
+      {
+        "kind": "history.replaceState",
+        "path": "/home/recent",
+        "queryKeys": []
+      },
+      {
+        "kind": "history.replaceState",
+        "path": "/home/recent",
+        "queryKeys": []
+      }
+    ],
+    "nextRouter": {
+      "asPath": "/home/recent",
+      "pathname": "/home/[...slug]",
+      "queryKeys": [
+        "slug"
+      ],
+      "route": "/home/[...slug]"
+    }
+  },
+  "network": {
+    "firstPartyResponses": 533,
+    "requiredFailures": 0,
+    "requiredRequests": 524,
+    "routeClasses": [
+      "blob://:80/https:/phase5-fireside.templates.twodart.localhost",
+      "http://127.0.0.1:23100/google.firestore.v1.Firestore/Listen",
+      "http://127.0.0.1:23101/identitytoolkit.googleapis.com/v1",
+      "http://127.0.0.1:23101/securetoken.googleapis.com/v1",
+      "https://phase5-fireside.storage.twodart.localhost:443/v0/b",
+      "https://phase5-fireside.templates.twodart.localhost:443/__nextjs_font/geist-latin.woff2",
+      "https://phase5-fireside.templates.twodart.localhost:443/_next/static",
+      "https://phase5-fireside.templates.twodart.localhost:443/api/login",
+      "https://phase5-fireside.templates.twodart.localhost:443/choladeck-app-screenshot.jpg",
+      "https://phase5-fireside.templates.twodart.localhost:443/favicon.svg",
+      "https://phase5-fireside.templates.twodart.localhost:443/home/recent",
+      "https://phase5-fireside.templates.twodart.localhost:443/home/undefined",
+      "https://phase5-fireside.templates.twodart.localhost:443/login/overview",
+      "https://phase5-fireside.templates.twodart.localhost:443/login/undefined"
+    ],
+    "websocketConnections": 2,
+    "websocketFramesReceived": 3
+  },
+  "undefinedLoginRequests": {
+    "count": 1,
+    "initiatorCallsiteClasses": [
+      "other:no-stack"
+    ],
+    "initiatorCallsiteHashes": [],
+    "initiatorTypes": [
+      "other"
+    ],
+    "navigationRequests": 0,
+    "resourceTypes": [
+      "font"
+    ]
+  },
+  "passed": false,
+  "privacy": {
+    "credentialsStored": false,
+    "datasetIdentityStored": false,
+    "deckContentStored": false,
+    "otpStored": false,
+    "queryValuesStored": false,
+    "requestInitiatorPayloadStored": false,
+    "userIdentityStored": false
+  },
+  "schemaVersion": 1,
+  "skippedJourneys": [],
+  "stack": "fireside"
+}

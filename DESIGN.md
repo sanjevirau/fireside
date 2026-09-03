@@ -2299,6 +2299,26 @@ SDK refresh; anonymous sign-up is not implemented by the Phase 4 Auth router.
 Anonymous observations remain in the official fixture as reference-only evidence,
 not an advertised Fireside capability or a changed Phase 5 requirement.
 
+### Phase 5 r26 dashboard diagnostic gap
+
+R26's old query authorization exception did not recur, but the application still
+timed out before rendering a dashboard deck link. A separate read-only import of
+its saved export and rules returned the same owner deck from Java 1.21.0 and
+Fireside through native and single/multiplexed browser queries. This bounds the
+diagnosis; it does not reproduce the complete failed application sequence.
+
+Before another smoke, the external Phase 5 observer records Listen target shapes
+and completed response summaries. Its parser is tested against the committed
+Java WebChannel fixture, including nested message arrays, framed POST-response
+triples and UTF-16 framing. It does not store body-encoded headers, query values,
+resume tokens or document contents. It observes `requestfinished`, so reading an
+open backchannel cannot prevent browser shutdown. Complete DOM/overlay text is
+recorded only for the synthetic smoke, with identifiers and OTPs redacted; it is
+forbidden for full-data runs. These observations never suppress or replace runner
+events. The protected runner, source pin, manifest, workload and verdicts remain
+unchanged. See `conformance/fixtures/phase5/r26-observability-gap-contract.json`
+and `reports/phase-5-smoke-20260903-r26.md`.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.

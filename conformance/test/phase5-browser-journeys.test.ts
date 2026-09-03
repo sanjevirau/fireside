@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import "./phase5-listen-diagnostics.test.ts";
 import { phase5BenignDiagnostic, readPhase5DiagnosticIdentities, redactPhase5Identifiers } from "../src/suite/phase5-browser-diagnostics.ts";
 
 test("diagnostic redaction uses the exact working Auth query and response field", async () => {

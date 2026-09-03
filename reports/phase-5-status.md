@@ -2,8 +2,8 @@
 
 Phase 5 is **incomplete**. The current authorization is the bounded fix/cheap-smoke
 loop supplied after r25, followed immediately by the immutable full-data gate
-only when both complete cheap-smoke stacks pass. There have been **zero further
-cheap-smoke attempts** under this authorization (maximum eight). Oracle probes
+only when both complete cheap-smoke stacks pass. There has been **one further
+cheap-smoke attempt** under this authorization (maximum eight): r26 failed. Oracle probes
 are not acceptance smokes. No full-data gate has launched for the current
 candidate.
 
@@ -12,12 +12,13 @@ candidate.
 | Attempt | Journey reached | Classification | Fixture commit | Fix/candidate commit | Candidate CI | Outcome |
 | --- | --- | --- | --- | --- | --- | --- |
 | [r25](phase-5-smoke-20260903-r25.md) (incoming boundary) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard query failed | Fireside product: query-rules authorization; previous Auth error did not recur | `99a7cf0` (Auth refresh) | `710bfb7` | [33745161787](https://github.com/sanjevirau/fireside/actions/runs/33745161787), 7/7 green | Failed; export-first cleanup complete; full gate not started |
+| [r26](phase-5-smoke-20260903-r26.md) (attempt 1/8) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard timeout | Unresolved application path; no r25 rules error; diagnostic evidence gap | `34c8aed` | `a6c66b4` | [33752732445](https://github.com/sanjevirau/fireside/actions/runs/33752732445), 7/7 green | Failed; export-first cleanup complete, no full-data launch; diagnostic amendment awaiting CI before r27 |
 
 R25 failure evidence is published in `b79750636e1666e1d097b341b7cc9f85ba74d28c`;
 [evidence CI 33748445917](https://github.com/sanjevirau/fireside/actions/runs/33748445917)
 passed all seven jobs. This verifies the evidence commit, not Phase 5 acceptance.
 
-Next correction: general potential-result-set query authorization, oracle-first,
+The r25 correction was general potential-result-set query authorization, oracle-first,
 covering gRPC query/count/Listen and browser WebChannel. The source of the r25
 error is described in the report. No per-current-row authorization substitute,
 rules bypass, or Twodart-specific branch is permitted.
@@ -31,7 +32,7 @@ listener update/leave behavior. Oracle-only commit
 `34c8aeda8bcecb4ace06bf35aca408e782bd5baf` passed all seven jobs in
 [CI 33751408244](https://github.com/sanjevirau/fireside/actions/runs/33751408244).
 
-The following corrective commit implements typed constraint-based query
+Corrective commit `a6c66b493480a6b716c9f32312cd52733a61dad0` implements typed constraint-based query
 authorization in the shared rules path, collection-domain authorization, and
 the SDK REST unary-filter decoding exposed by the same raw fixture. Crate
 regressions have no query-result rows available to authorize against. Full
@@ -40,10 +41,29 @@ real-client replay passed locally in both memory and disk/WAL (173 native and
 The standalone replay harness now supplies a current synthetic JWT window,
 rechecked against Java 1.21.0 without changing the frozen observations or Auth
 policy, and records unexpected errors before failing. The protected Phase 5
-runner was not involved or changed. Candidate seven-job CI, a fresh Linux
-release build/hash, and r26 smoke are still pending. R26 will be attempt 1/8
-under the current authorization; both complete smoke stacks passing will
-automatically launch the sequential full-data gate.
+runner was not involved or changed. All seven jobs passed in
+[candidate CI 33752732445](https://github.com/sanjevirau/fireside/actions/runs/33752732445).
+The fresh Linux release build started at `2026-09-03T20:12:35+08:00` in tmux
+`fireside-phase5-build-a6c66b4`, with exact CI, source, and immutable-file guards.
+Build exited zero at `2026-09-03T20:14:03+08:00` (release compilation 1m15s).
+Binary SHA-256: `020e39595ac4dd610367fd3175a7cd2d764cc650db5e53455b112ae638b39c24`.
+R26 was attempt 1/8 under the current authorization. Controller tmux session:
+`fireside-phase5-a6c66b4-r26-controller`; diagnostic output under the existing
+Linux runtime root: `diagnostics/two-tier-smoke-v3-20260903-a6c66b4-r26`.
+It exited 1 at `2026-09-03T20:23:24+08:00`; the conditional
+`full-gates/full-gate-v3-20260903-a6c66b4` directory was never created.
+No immutable full-data outcome is claimed.
+
+The isolated r26 export/rules diagnostic returned the same deck on Java and
+Fireside through native and single/multi-target browser queries. That does not
+reproduce the whole failing application sequence. The next change is restricted
+to read-only Phase 5 observation: Listen shapes/completed-response summaries and
+synthetic-smoke-only final DOM/overlay text. Its contract records the evidence
+gap before another measurement. No product or Twodart change, verdict change,
+protected-runner change, or gate amendment is included. All 101 Phase 5 harness
+tests and type-check passed locally; CI is required before r27 (attempt 2/8).
+Private raw r26 backup: `/tmp/fireside-phase5-r26-raw.4973IM`; never publish its
+credentials, complete exports, or raw service/runtime state.
 
 ## Historical diagnostic context
 
