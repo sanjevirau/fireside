@@ -2300,6 +2300,27 @@ alone is insufficient: an undecodable/non-JSON body is a definitive diagnostic
 failure. This restores a missing prerequisite without changing the protected
 browser runner, workload, readiness deadlines, durations or soak criteria.
 
+### Phase 5 Storage missing-object oracle (r29)
+
+The `storage-missing-object` fixture freezes firebase-tools 15.22.0 behavior for
+a synthetic absent object before the r29 repair. Firebase `/v0` metadata and
+media requests both return status 404, `text/plain; charset=utf-8`, and the exact
+nine-byte body `Not Found`. In a cross-origin image load, Chromium records that
+response and the element error without a request-failed event. Returning a
+structured JSON error on this route is observably incompatible because Chromium
+may block it as `net::ERR_BLOCKED_BY_ORB` before the application receives a
+normal 404 response.
+
+The official GCS routes have a separate contract and must not inherit the
+Firebase response mechanically. Missing GCS metadata returns the captured
+structured JSON error with `application/json; charset=utf-8`; missing GCS media
+returns the captured `No such object: <bucket>/<object>` text with `text/html;
+charset=utf-8`. Fireside therefore selects the missing-object representation by
+API and media mode while leaving successful object handling unchanged. The
+fixture includes exact bodies, headers, hashes, source hashes and a real-browser
+observation. Its bucket, object and origin are synthetic; no credentials or user
+data are retained.
+
 ### Auth refresh grant reuse (r24 follow-up oracle)
 
 `auth-refresh-reuse` freezes 28 direct HTTP observations against firebase-tools

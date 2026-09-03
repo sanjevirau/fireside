@@ -1,0 +1,6 @@
+2026-09-04T01:29:07+08:00
+running
+0
+/swap.img                        file  4294963200 244396032 -1
+/srv/dev-fast/.swap/devhost.swap file 17179865088 234442752 -1
+291366 bash -c date --iso-8601=seconds; systemctl is-system-running; systemctl --failed --no-legend --plain | wc -l; swapon --show --bytes --noheadings 2>/dev/null || true; pgrep -af "fireside-phase5-ee8b2e9-r29|run-phase5-gate|run-phase5-browser-journeys|run-phase5-soak" || true; ss -ltnp | grep -E ":23(0|1)[0-9][[:space:]]" || true; journalctl -k -b --no-pager | grep -E -i "out of memory|oom-kill|killed process|memory cgroup out of memory|segfault|hardware error|I/O error" | tail -20 || true

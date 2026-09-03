@@ -2,8 +2,8 @@
 
 Phase 5 is **incomplete**. The current authorization is the bounded fix/cheap-smoke
 loop supplied after r25, followed immediately by the immutable full-data gate
-only when both complete cheap-smoke stacks pass. There have been **three further
-cheap-smoke attempts** under this authorization (maximum eight): r26, r27 and r28 failed. Oracle probes
+only when both complete cheap-smoke stacks pass. There have been **four further
+cheap-smoke attempts** under this authorization (maximum eight): r26 through r29 failed. Oracle probes
 are not acceptance smokes. No full-data gate has launched for the current
 candidate.
 
@@ -15,6 +15,7 @@ candidate.
 | [r26](phase-5-smoke-20260903-r26.md) (attempt 1/8) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard timeout | Unresolved application path; no r25 rules error; diagnostic evidence gap | `34c8aed` | `a6c66b4` | [33752732445](https://github.com/sanjevirau/fireside/actions/runs/33752732445), 7/7 green | Failed; export-first cleanup complete, no full-data launch; diagnostic amendment published in `4d6cf2f` |
 | [r27](phase-5-smoke-20260903-r27.md) (attempt 2/8) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard timeout | Fireside product: unbound child wildcard in invited-users query path raises before independent OR grant | `2c7ca67` (captured and committed before repair) | `4d6cf2f` | [33755740999](https://github.com/sanjevirau/fireside/actions/runs/33755740999), 7/7 green | Failed; export-first cleanup complete; no full-data launch |
 | [r28](phase-5-smoke-20260903-r28.md) (attempt 3/8) | Official 9/9 + 60 s soak; Fireside 6/9, export comparison failed | Serialization compatibility: repeated reads change map order, not canonical values, in isolation; original before/after values unavailable | `ff6fff7` (map oracle and r28 evidence) | `b1ef52b` | [33760383375](https://github.com/sanjevirau/fireside/actions/runs/33760383375), 7/7 green | Failed; both export-first exits zero; full-data gate absent |
+| [r29](phase-5-smoke-20260904-r29.md) (attempt 4/8) | Both stacks 9/9; official 60 s soak; Fireside final browser health failed | Fireside product: `/v0` missing object is JSON and Chrome ORB-blocks it as an image; official returns a normal plain-text 404 | `87ad833` | pending | [33781599941](https://github.com/sanjevirau/fireside/actions/runs/33781599941), 7/7 green on r29 candidate | Failed; both export-first exits zero; Fireside soak and full-data gate absent |
 
 R25 failure evidence is published in `b79750636e1666e1d097b341b7cc9f85ba74d28c`;
 [evidence CI 33748445917](https://github.com/sanjevirau/fireside/actions/runs/33748445917)
@@ -149,12 +150,26 @@ Before candidate publication, local validation passed the full Rust workspace,
 formatting, Clippy with warnings denied, TypeScript checking, all 225 harness
 tests, the map replay in both storage modes, and both prior query-rules corpora
 in both storage modes. These are regression checks, not Phase 5 acceptance.
-The next authorized acceptance action remains r29 only after all seven jobs pass
-on the exact product candidate and a fresh guarded Linux release build records
-its SHA-256.
+R29 then confirmed the deterministic map correction: both stacks completed all
+nine journeys and the exact export before/after comparison passed. Final Fireside
+browser health alone failed on one synthetic Storage image GET with
+`net::ERR_BLOCKED_BY_ORB`; official observed the corresponding transient missing
+derivative as a normal 404 response. The new firebase-tools 15.22.0 oracle freezes
+Firebase `/v0` status 404, `text/plain; charset=utf-8`, exact `Not Found` body and
+browser response-event behavior, plus the separate GCS missing-object forms.
+Oracle commit `87ad833b7a54b320450847f76eb789df08891752` precedes the product repair.
+R29 is attempt 4/8. Its candidate `ee8b2e9` passed all seven jobs in
+[CI 33781599941](https://github.com/sanjevirau/fireside/actions/runs/33781599941);
+fresh Linux binary SHA-256 was
+`e9529de0ceb08c09f076c8687fa2d6be14a470a9af5d461b4b3654f965c5aee3`.
+Both export-first shutdowns exited zero and no full-data directory was created.
+The next authorized acceptance action is unchanged r30 only after the generic
+Storage repair passes all seven jobs and a fresh guarded Linux release build.
 
 Private raw backup:
 `/tmp/fireside-phase5-r28-raw.6RFDYH`; never publish the whole directory.
+Private raw r29 backup: `/tmp/fireside-phase5-r29-raw.vLzJQ7`; never publish its
+complete exports, raw service logs, credentials, or runtime state.
 Private raw r26 backup: `/tmp/fireside-phase5-r26-raw.4973IM`; never publish its
 credentials, complete exports, or raw service/runtime state.
 
