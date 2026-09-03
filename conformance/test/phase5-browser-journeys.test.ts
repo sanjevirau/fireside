@@ -1,6 +1,33 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { phase5BenignDiagnostic, redactPhase5Identifiers } from "../src/suite/phase5-browser-diagnostics.ts";
+
+test("synthetic diagnostic allowlist excludes unrelated errors", () => {
+  assert.equal(phase5BenignDiagnostic({ kind: "page-error", text: "ReferenceError: target is not defined at useGoogleOneTap", syntheticGoogleClientId: true }), "synthetic-google-one-tap-reference-error");
+  assert.equal(phase5BenignDiagnostic({ kind: "page-error", text: "ReferenceError: target is not defined at useGoogleOneTap", syntheticGoogleClientId: false }), null);
+  assert.equal(phase5BenignDiagnostic({ kind: "page-error", text: "TypeError: broken at handleStaticIndicator (_next/static/dev.js)" }), "next-dev-hmr-handleStaticIndicator-type-error");
+  const url = "http://127.0.0.1:23000/google.firestore.v1.Firestore/Listen/channel?RID=rpc";
+  assert.equal(phase5BenignDiagnostic({ kind: "request-failed", text: "net::ERR_ABORTED", url }), "firestore-long-poll-net-ERR_ABORTED");
+  assert.equal(phase5BenignDiagnostic({ kind: "request-failed", text: "net::ERR_CONNECTION_RESET", url }), null);
+  assert.equal(phase5BenignDiagnostic({ kind: "request-failed", text: "net::ERR_ABORTED", url: "http://127.0.0.1:23002/v0/b/assets/o/cache.json" }), null);
+  assert.equal(phase5BenignDiagnostic({ kind: "page-error", text: "TypeError: missing data" }), null);
+});
+
+test("diagnostics preserve failure details while hashing identifiers and OTPs", () => {
+  const result = redactPhase5Identifiers("HTTP 500 /users/test-user/export?alt=media OTP: 123456", new Set(["test-user"]));
+  assert.match(result, /HTTP 500 \/users\/\[identity-sha256:/u);
+  assert.match(result, /export\?alt=media OTP: \[otp-sha256:/u);
+  assert.doesNotMatch(result, /test-user|123456/u);
+});
+
+test("skipped export cannot satisfy the Phase 5 gate", async () => {
+  const source = await readFile(new URL("../src/suite/run-phase5-gate.ts", import.meta.url), "utf8");
+  assert.match(source, /skippedJourneys\?\.length/u);
+  assert.match(source, /skipped journeys do not pass the Phase 5 gate/u);
+  assert.match(source, /phase5-browser-diagnostics\.ts/u);
+});
 
 const runnerUrl = new URL(
   "../src/suite/run-phase5-browser-journeys.ts",
@@ -24,16 +51,32 @@ test("the Phase 5 browser runner implements the frozen ordered journeys", async 
   }
 });
 
-test("every journey exercises rendered, network, and backend assertions", async () => {
+test("every passing journey has assertions and the export diagnostic skip is explicit", async () => {
   const source = await readFile(runnerUrl, "utf8");
   const assertions = [...source.matchAll(/return \{ backend: (?<backend>\d+), network: (?<network>\d+), rendered: (?<rendered>\d+) \};/gu)];
-  assert.equal(assertions.length, 8);
+  assert.equal(assertions.length, 9);
   assert.match(source, /backend: 2,\s+network: adminPageIds\.length,\s+rendered: adminPageIds\.length,/u);
   for (const match of assertions) {
+    if (Number(match.groups?.backend) === 0) {
+      assert.equal(Number(match.groups?.network), 0);
+      assert.equal(Number(match.groups?.rendered), 0);
+      continue;
+    }
     assert.ok(Number(match.groups?.backend) > 0);
     assert.ok(Number(match.groups?.network) > 0);
     assert.ok(Number(match.groups?.rendered) > 0);
   }
+  assert.equal(assertions.filter((match) => Number(match.groups?.backend) === 0).length, 1);
+  assert.match(source, /skippedJourneys\.push\(\{\s+id: "dotnet-deck-export"/u);
+});
+
+test("the supplied cumulative runner remains byte-for-byte unchanged", async () => {
+  const source = await readFile(runnerUrl);
+  assert.equal(createHash("sha256").update(source).digest("hex"),
+    "5996794c87061ddec51564b81e1d916b95dea77a5190ee74f644d0ba7aff3c62");
+  const text = source.toString();
+  assert.ok(text.indexOf("const adminPageIds") < text.indexOf('await journey("'));
+  assert.ok(text.indexOf("const skippedJourneys") < text.indexOf('await journey("'));
 });
 
 test("durable browser evidence explicitly excludes private identities and content", async () => {

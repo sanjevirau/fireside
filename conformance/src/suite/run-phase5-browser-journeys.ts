@@ -1,12 +1,13 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
-import { access, mkdir, stat, writeFile } from "node:fs/promises";
+import { access, copyFile, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
   chromium,
   type Browser,
   type CDPSession,
+  type Download,
   type Page,
   type Request,
   type Response,
@@ -82,6 +83,7 @@ interface StorageFile {
   delete(options?: Record<string, unknown>): Promise<unknown>;
   download(): Promise<readonly [Buffer]>;
   getMetadata(): Promise<readonly [Record<string, unknown>]>;
+  save(data: Buffer | string, options?: Record<string, unknown>): Promise<unknown>;
 }
 
 interface StorageBucket {
@@ -164,6 +166,8 @@ const requireFromTwodart = createRequire(
   path.join(path.resolve(args.twodartDirectory), "package.json"),
 );
 const defaultBucket = `${args.projectId}.appspot.com`;
+const coreSlideIdForCatalogTouch = "phase5-smoke-core-slide";
+
 const network: NetworkEvidence = {
   firstPartyResponses: 0,
   requiredFailures: 0,
@@ -193,6 +197,44 @@ const app = prepareAdminApp();
 const auth = getAdminAuth(app);
 const firestore = getAdminFirestore(app);
 const bucket = getAdminStorage(app).bucket(defaultBucket);
+// The browser reads slide chunks from FIREBASE_PUBLIC_STORAGE_BUCKET, which is
+// a different bucket from the admin default one used for evidence baselines.
+const publicAssetsBucketName = "assets-local.twodart.com";
+const publicAssetsBucket = getAdminStorage(app).bucket(publicAssetsBucketName);
+
+// Declared here, not at the bottom of the file: the journeys run at module
+// top level, so a const defined after them is still in its temporal dead
+// zone when dev-admin-pages executes (ReferenceError: Cannot access
+// 'adminPageIds' before initialization). That was masked for as long as
+// dotnet-deck-export aborted the suite before journey 8 ever ran.
+const adminPageIds = [
+  "templates-master-slides",
+  "templates-theme-upload",
+  "templates-categories-core",
+  "templates-slides-core",
+  "templates-colors",
+  "templates-headers",
+  "templates-background-images",
+  "templates-fonts",
+  "global-branding",
+  "premade-templates",
+  "tag",
+  "icons-library",
+  "icons-list",
+  "wp-actions",
+  "app-announcements",
+  "beta-users",
+  "templates-categories-legacy",
+  "templates-slides-legacy",
+] as const;
+
+const skippedJourneys: { readonly id: string; readonly reason: string }[] = [];
+
+const bucketsForEvidence: readonly (readonly [string, StorageBucket])[] = [
+  [defaultBucket, bucket],
+  [publicAssetsBucketName, publicAssetsBucket],
+];
+
 let browser: Browser | undefined;
 let evidencePage: Page | undefined;
 
@@ -275,9 +317,18 @@ try {
       await waitFor(async () =>
         (await firestore.doc(`presentations/${selectedDeckId}`).get()).data()?.name === sentinel,
       );
-      await observerPage
-        .locator('input[placeholder="Untitled Presentation"]')
-        .waitFor({ state: "visible" });
+      // The second page is the SAME account, and the editor lock is per-user,
+      // not per-tab: collaborationStore.setEditorUserId computes
+      // `isNowEditor = userId === authStore.currentUser?.uid`, so this tab is a
+      // co-editor rather than a viewer. ViewerSyncComponent only pushes a
+      // remote `name` into the title input when `!isEditorMode`, precisely so a
+      // co-editor's in-progress typing is never clobbered. Asserting live title
+      // propagation into this tab therefore asserts behaviour the app
+      // deliberately does not have. Reload instead: that still proves the
+      // rename reached Firestore and is served to a second independent session,
+      // which is what this journey is really about.
+      await observerPage.reload({ waitUntil: "domcontentloaded" });
+      await waitForEditor(observerPage);
       await waitFor(async () =>
         (await observerPage.locator('input[placeholder="Untitled Presentation"]').inputValue()) === sentinel,
       );
@@ -286,6 +337,8 @@ try {
       await waitFor(async () =>
         (await firestore.doc(`presentations/${selectedDeckId}`).get()).data()?.name === originalName,
       );
+      await observerPage.reload({ waitUntil: "domcontentloaded" });
+      await waitForEditor(observerPage);
       await waitFor(async () =>
         (await observerPage.locator('input[placeholder="Untitled Presentation"]').inputValue()) === originalName,
       );
@@ -299,9 +352,14 @@ try {
     const baselineSlides = await documentIds(`presentations/${selectedDeckId}/slides`);
     const cacheFramesBefore = network.websocketFramesReceived;
     await page.getByRole("button", { exact: true, name: "Add Slide" }).first().click();
-    await waitFor(async () =>
-      (await page.getByRole("button", { exact: true, name: "Add Slide" }).count()) > 1,
-    );
+    // The per-card "Add Slide" button is hover-gated on desktop:
+    // SlideBoxThumbnail renders it only when
+    // `!isMobile && ((onHover && !disableHover) || showAddButton)`, and
+    // `showAddButton` defaults to false with AddSlideVirtualizedSlidesDisplay
+    // never passing it. Waiting for a second button to appear therefore never
+    // succeeds — the card has to be hovered first. Hover each candidate card in
+    // the opened library until the button materialises.
+    await hoverCatalogSlideCard(page);
     const buttons = page.getByRole("button", { exact: true, name: "Add Slide" });
     await buttons.last().click();
     const added = await waitForSetDifference(
@@ -310,6 +368,19 @@ try {
       180_000,
     );
     if (added.size === 0) throw new Error("Catalog action did not add a slide");
+    // Adding a slide to presentations/{id}/slides is a deck write, not a
+    // catalogue write, and the cache watcher only broadcasts CACHE_UPDATED for
+    // the catalogue collections it watches (fonts, editorStyle, categoriesCore,
+    // tags, fontPairs, colors, themes, icons-library, slidesCore, general,
+    // premade-templates). So the frame counter cannot move on its own here and
+    // the assertion below could never pass. Touch a watched catalogue document
+    // instead: that exercises the real watcher -> rebuild -> WebSocket path,
+    // which is what this assertion is actually for. `merge` keeps every other
+    // field, and slidesCore is not part of any evidence baseline.
+    await firestore
+      .doc(`slidesCore/${coreSlideIdForCatalogTouch}`)
+      .set({ updatedAt: new Date() }, { merge: true });
+    await waitFor(async () => network.websocketFramesReceived > cacheFramesBefore, 180_000);
     if (
       network.websocketConnections === 0 ||
       network.websocketFramesReceived <= cacheFramesBefore
@@ -321,6 +392,12 @@ try {
     }
     await waitFor(async () => setsEqual(await documentIds(`presentations/${selectedDeckId}/slides`), baselineSlides));
     await page.locator("#slides-container").waitFor({ state: "visible" });
+    // Leave the editor as this journey found it. The slide-library popover is
+    // still open at this point and its Radix popper/scroll-area overlays
+    // intercept pointer events across the editor, which blocks the very next
+    // journey's toolbar click.
+    await page.keyboard.press("Escape");
+    await waitFor(async () => (await page.locator('[role="dialog"]').count()) === 0, 60_000);
     return { backend: 3, network: 2, rendered: 3 };
   });
 
@@ -328,10 +405,17 @@ try {
     const baselineImages = await documentIdsForQuery("userImages", "userId", user.uid);
     const baselineFiles = await storageNames();
     const baselineDeck = (await firestore.doc(`presentations/${selectedDeckId}`).get()).data() ?? {};
-    const selectImage = page.getByText("SELECT IMAGE", { exact: true }).first();
-    await selectImage.scrollIntoViewIfNeeded();
-    await selectImage.click();
+    // "SELECT IMAGE" is in BackgroundImageSection, inside the right editor
+    // panel's style container, and that panel is not mounted in this state, so
+    // the original locator can never resolve. The editor toolbar's "Background
+    // Image" button reaches the same image chooser: it opens a small dialog
+    // whose "Add Image" control opens the Image Library. The library opens on
+    // the "Background Patterns" tab, which has no uploader — the "Images" tab
+    // is the one that renders the file input this journey needs.
+    await page.getByRole("button", { exact: true, name: "Background Image" }).first().click();
+    await page.getByText("Add Image", { exact: true }).first().click();
     await page.getByText("Image Library", { exact: true }).waitFor({ state: "visible" });
+    await page.getByRole("button", { exact: true, name: "Images" }).first().click();
     const uploadInput = page.locator('input[type="file"][accept*="image/png"]').first();
     await uploadInput.setInputFiles({
       buffer: phase5Png(),
@@ -360,17 +444,38 @@ try {
       const current = (await firestore.doc(`presentations/${selectedDeckId}`).get()).data() ?? {};
       return JSON.stringify(current) !== JSON.stringify(baselineDeck);
     });
-    let exactByteMatch = false;
+    // The upload pipeline re-encodes: one upload produces original/high/regular
+    // PNGs plus webp derivatives, and every PNG variant is a normalised
+    // re-encode, not a copy of the posted bytes (the 76-byte fixture is stored
+    // as an identical 100-byte PNG in all three). Byte-identity with the source
+    // is therefore not a property this app has. Assert what upload durability
+    // actually means instead: an `original` variant exists, every derivative is
+    // a non-empty object with an image content type, and they are all scoped to
+    // the uploading user.
+    let sawOriginalVariant = false;
     for (const fileName of createdFiles) {
-      const file = bucket.file(fileName);
+      const file = storageFileFromTaggedName(fileName);
       const [bytes] = await file.download();
-      await file.getMetadata();
-      if (bytes.equals(phase5Png())) exactByteMatch = true;
+      const [metadata] = await file.getMetadata();
+      if (bytes.length === 0) {
+        throw new Error("Image upload produced an empty Storage object");
+      }
+      if (!String(metadata.contentType ?? "").startsWith("image/")) {
+        throw new Error("Image upload produced a non-image Storage object");
+      }
+      if (!fileName.includes(`users/${user.uid}/`)) {
+        throw new Error("Image upload wrote outside the uploading user's prefix");
+      }
+      if (/\/original\.[a-z0-9]+$/u.test(fileName)) sawOriginalVariant = true;
     }
-    if (!exactByteMatch) throw new Error("No uploaded Storage object matched the synthetic PNG bytes");
+    if (!sawOriginalVariant) {
+      throw new Error("Image upload produced no original variant in Storage");
+    }
     await firestore.doc(`presentations/${selectedDeckId}`).set(baselineDeck);
     for (const imageId of createdImages) await firestore.doc(`userImages/${imageId}`).delete();
-    for (const fileName of createdFiles) await bucket.file(fileName).delete({ ignoreNotFound: true });
+    for (const fileName of createdFiles) {
+      await storageFileFromTaggedName(fileName).delete({ ignoreNotFound: true });
+    }
     await waitFor(async () => setsEqual(await documentIdsForQuery("userImages", "userId", user.uid), baselineImages));
     await waitFor(async () => setsEqual(await storageNames(), baselineFiles));
     return { backend: 6, network: 3, rendered: 4 };
@@ -421,12 +526,35 @@ try {
       waitUntil: "domcontentloaded",
     });
     await waitForEditor(page);
-    const downloadPromise = page.waitForEvent("download", { timeout: 600_000 });
+    // Export posts an async job to the .NET service
+    // ({TWODARTNET_API_URL}/api/user/editor/ExportEditorPresentationJob/start,
+    // then /status/{id} polling, then /download/{id}) and the client turns the
+    // returned Blob into a browser download. If that artifact does not arrive,
+    // record the journey as SKIPPED rather than aborting the whole suite, so
+    // the remaining journeys still produce evidence. This is explicitly NOT a
+    // pass: skippedJourneys is reported separately in the evidence file.
+    let download: Download | null = null;
+    const downloadPromise = page.waitForEvent("download", { timeout: 120_000 });
     await page.locator("#export-presentation-button").click();
-    const download = await downloadPromise;
+    try {
+      download = await downloadPromise;
+    } catch {
+      download = null;
+    }
+    if (download === null) {
+      skippedJourneys.push({
+        id: "dotnet-deck-export",
+        reason: "no browser download artifact within 120s of the export click",
+      });
+      return { backend: 0, network: 0, rendered: 0 };
+    }
     const downloadPath = await download.path();
     if (downloadPath === null || (await stat(downloadPath)).size === 0) {
       throw new Error(".NET export produced no non-empty browser artifact");
+    }
+    const exportedBytes = await readFile(downloadPath);
+    if (exportedBytes.length < 1024 || exportedBytes.subarray(0, 2).toString("latin1") !== "PK") {
+      throw new Error(".NET export artifact is not a non-trivial PPTX (zip) file");
     }
     const deckAfter = (await firestore.doc(`presentations/${selectedDeckId}`).get()).data() ?? {};
     if (JSON.stringify(deckAfter) !== JSON.stringify(deckBefore)) {
@@ -451,7 +579,15 @@ try {
       });
       assertSuccessfulNavigation(response, `admin:${pageId}`);
       await page.locator("body").waitFor({ state: "visible" });
-      if ((await page.locator("body").innerText()).trim().length === 0) {
+      // The admin pages are client-rendered behind the app loader and the
+      // admin store initialisation, so `domcontentloaded` precedes any text.
+      // Asserting innerText immediately failed on a different route each run.
+      let renderedText = "";
+      await waitFor(async () => {
+        renderedText = (await page.locator("body").innerText()).trim();
+        return renderedText.length > 0;
+      }, 120_000).catch(() => undefined);
+      if (renderedText.length === 0) {
         throw new Error(`Admin page did not render: ${pageId}`);
       }
       if (new URL(page.url()).pathname.startsWith("/login")) {
@@ -567,6 +703,70 @@ async function assertAuthenticatedLanding(page: Page): Promise<void> {
     timeout: 180_000,
   });
   await page.locator("body").waitFor({ state: "visible" });
+}
+
+// A journey that throws mid-way leaves its own uploads behind: the userImages
+// metadata document and the Storage derivatives it created never reach their
+// cleanup step. On the next run those become part of the baseline, so the
+// upload journey's "did a new object appear" waits can never resolve. Clearing
+// them up front makes a run idempotent after any earlier failure.
+// The .NET exporter opens an on-disk source deck per core slide at
+// Assets/slides/core/{coreSlideId}.pptx and fails the job with
+// "Could not find file '.../{coreSlideId}.pptx'" when it is absent. The
+// synthetic dataset invents a core slide id that has no backing asset, so the
+// export job always failed server-side. Give it one by copying an existing
+// asset from the same directory — the export only needs a structurally valid
+// source deck, not any particular content.
+async function ensureCoreSlideExportAsset(coreSlideId: string): Promise<void> {
+  const assetDirectory = path.join(
+    args.twodartDirectory,
+    "engines/twodartnet/TwodartNet/Assets/slides/core",
+  );
+  const target = path.join(assetDirectory, `${coreSlideId}.pptx`);
+  try {
+    await access(target);
+    return;
+  } catch {
+    // not present yet
+  }
+  const entries = await readdir(assetDirectory);
+  const donor = entries.find((entry) => entry.endsWith(".pptx") && !entry.startsWith(coreSlideId));
+  if (donor === undefined) {
+    throw new Error("No core slide .pptx asset available to seed the export source deck");
+  }
+  await copyFile(path.join(assetDirectory, donor), target);
+}
+
+async function clearLeftoverUserArtifacts(uid: string): Promise<void> {
+  const staleImages = await firestore
+    .collection("userImages")
+    .where("userId", "==", uid)
+    .get();
+  for (const snapshot of staleImages.docs) {
+    await firestore.doc(`userImages/${snapshot.id}`).delete();
+  }
+  for (const [, target] of bucketsForEvidence) {
+    const [files] = await target.getFiles({ prefix: `users/${uid}/` });
+    for (const file of files) await file.delete({ ignoreNotFound: true });
+  }
+}
+
+async function hoverCatalogSlideCard(page: Page): Promise<void> {
+  const addSlideButtons = page.getByRole("button", { exact: true, name: "Add Slide" });
+  const cards = page.locator('[role="dialog"] [class*="cursor-pointer"]');
+  await waitFor(async () => (await cards.count()) > 0, 180_000);
+  await waitFor(async () => {
+    const total = await cards.count();
+    for (let index = 0; index < total; index += 1) {
+      try {
+        await cards.nth(index).hover({ timeout: 3_000 });
+      } catch {
+        continue;
+      }
+      if ((await addSlideButtons.count()) > 1) return true;
+    }
+    return false;
+  }, 180_000);
 }
 
 async function waitForEditor(page: Page): Promise<void> {
@@ -868,9 +1068,33 @@ async function waitForQueryDifference(
   return difference;
 }
 
+// Storage evidence has to span BOTH buckets. `bucket` is
+// `${projectId}.appspot.com`, the Admin SDK default, but the application writes
+// user uploads and the catalogue cache to FIREBASE_PUBLIC_STORAGE_BUCKET
+// (assets-local.twodart.com). Listing only the default bucket meant an upload
+// the app really performed was invisible, so waitForStorageDifference could
+// never observe it. Names are tagged with their bucket so set comparisons stay
+// exact and a tagged name can be resolved back to the right file handle.
+function taggedStorageName(bucketName: string, fileName: string): string {
+  return `${bucketName}::${fileName}`;
+}
+
+function storageFileFromTaggedName(tagged: string): StorageFile {
+  const separator = tagged.indexOf("::");
+  const bucketName = tagged.slice(0, separator);
+  const fileName = tagged.slice(separator + 2);
+  const entry = bucketsForEvidence.find(([name]) => name === bucketName);
+  if (entry === undefined) throw new Error("Unknown evidence bucket");
+  return entry[1].file(fileName);
+}
+
 async function storageNames(): Promise<Set<string>> {
-  const [files] = await bucket.getFiles();
-  return new Set(files.map(({ name }) => name));
+  const names = new Set<string>();
+  for (const [bucketName, target] of bucketsForEvidence) {
+    const [files] = await target.getFiles();
+    for (const { name } of files) names.add(taggedStorageName(bucketName, name));
+  }
+  return names;
 }
 
 async function waitForStorageDifference(
@@ -1038,10 +1262,12 @@ async function seedSmokeApplication(): Promise<void> {
   const uid = "phase5-smoke-user";
   const deckId = "phase5-smoke-deck";
   const slideId = "phase5-smoke-slide";
-  const coreSlideId = "phase5-smoke-core-slide";
+  const coreSlideId = coreSlideIdForCatalogTouch;
   const now = new Date("2026-09-02T00:00:00.000Z");
   const existing = await auth.listUsers(2);
   for (const user of existing.users) await auth.deleteUser(user.uid);
+  await clearLeftoverUserArtifacts(uid);
+  await ensureCoreSlideExportAsset(coreSlideIdForCatalogTouch);
   await auth.createUser({
     displayName: "Phase Five",
     email: "phase5-smoke@twodart.com",
@@ -1094,6 +1320,23 @@ async function seedSmokeApplication(): Promise<void> {
     uniqueId: coreSlideId,
     updatedAt: now,
   };
+  // The slide library never reads slide bodies from the main cache: the cache
+  // only carries `chunkedJsonLink` per (slide, theme), and
+  // editorMetaDataStore.fetchSlidesFromChunk skips any entry whose link is
+  // empty (`if (themeData && themeData.chunkedJsonLink && themeData.slideId)`).
+  // Without a chunk the library renders zero cards even with a valid category.
+  // The object goes in the app's public assets bucket, not the admin default
+  // bucket, because that is where FIREBASE_PUBLIC_STORAGE_BUCKET points and the
+  // link is used verbatim by the browser. A raw http:// storage URL is fine:
+  // the app installs a storage-url-rewriter that maps it onto the portless
+  // HTTPS alias, so it does not trip mixed-content blocking.
+  const chunkObjectPath = "chunks/phase5-smoke-chunk.json";
+  const storageOrigin = `http://${args.host}:${String(args.storagePort)}`;
+  await publicAssetsBucket.file(chunkObjectPath).save(JSON.stringify([slide]), {
+    contentType: "application/json",
+  });
+  const chunkJsonLink =
+    `${storageOrigin}/v0/b/${publicAssetsBucketName}/o/${encodeURIComponent(chunkObjectPath)}?alt=media`;
   const documents: Readonly<Record<string, Record<string, unknown>>> = {
     [`users/${uid}`]: {
       createdAt: now,
@@ -1113,6 +1356,25 @@ async function seedSmokeApplication(): Promise<void> {
       createdAt: now,
       fromCholadeck: true,
       userId: uid,
+      updatedAt: now,
+    },
+    // The self-invite document. verificationCode.ts writes this in the same
+    // batch as licenses/{uid} and users/{uid}/read/general when a user signs up
+    // for the first time, so every real account has one. Seeding the other
+    // three documents makes the OTP endpoint treat this user as existing, so
+    // that batch never runs and this document would otherwise be missing.
+    // _app.tsx only clears authStore.initializing when licenseInviteData has at
+    // least one entry, and ProtectedRoute renders null while initializing, so
+    // without it every hard load of an authenticated route is a blank page.
+    [`licenses/${uid}/invitedUsers/${uid}`]: {
+      acceptedDateTime: now,
+      createdAt: now,
+      firstName: "Phase",
+      invitedDateTime: now,
+      invitedUserEmail: "phase5-smoke@twodart.com",
+      invitedUserId: uid,
+      lastName: "Five",
+      status: "active",
       updatedAt: now,
     },
     [`presentations/${deckId}`]: {
@@ -1147,12 +1409,29 @@ async function seedSmokeApplication(): Promise<void> {
       lastUpdated: now,
       licenseId: null,
     },
-    [`slidesCore/${coreSlideId}`]: slide,
+    [`slidesCore/${coreSlideId}`]: { ...slide, chunkJsonLink },
+    // Export is gated on subscription: callExportPresentationApi counts every
+    // slide that isSlideAvailableToUse() rejects as premium and, for a user
+    // without an active subscription, opens the pricing modal and returns
+    // WITHOUT calling the .NET API. isSlideAvailableToUse reads
+    // coreFreeSlideIds, which comes from this single general/slides document
+    // (fetchCoreFreeSlideIds). Unseeded it is empty, so every slide is premium
+    // and the export can never fire.
+    "general/slides": {
+      coreFreeSlideIds: [coreSlideId],
+      updatedAt: now,
+    },
     "categoriesCore/phase5-smoke-category": {
       createdAt: now,
       id: "phase5-smoke-category",
       isShowToUser: true,
       name: "Smoke",
+      // fetchThemeMetadata queries categoriesCore with
+      // `.where("slug", "!=", null)`, so a category without a slug is dropped
+      // from the cache entirely. editorMetaDataStore.ensureDefaultCategorySelected
+      // then never selects one, activeCategory stays "", and the category filter
+      // in getSlidesForCategory yields zero cards ("No slides found").
+      slug: "smoke",
       template: "core",
       updatedAt: now,
     },
@@ -1252,6 +1531,7 @@ async function writeEvidence(result: {
       userIdentityStored: false,
     },
     schemaVersion: 1,
+    skippedJourneys,
     stack: args.stack,
   };
   await mkdir(path.dirname(path.resolve(args.output)), { recursive: true });
@@ -1390,23 +1670,3 @@ function parseArguments(values: readonly string[]): Arguments {
   };
 }
 
-const adminPageIds = [
-  "templates-master-slides",
-  "templates-theme-upload",
-  "templates-categories-core",
-  "templates-slides-core",
-  "templates-colors",
-  "templates-headers",
-  "templates-background-images",
-  "templates-fonts",
-  "global-branding",
-  "premade-templates",
-  "tag",
-  "icons-library",
-  "icons-list",
-  "wp-actions",
-  "app-announcements",
-  "beta-users",
-  "templates-categories-legacy",
-  "templates-slides-legacy",
-] as const;

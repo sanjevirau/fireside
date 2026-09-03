@@ -80,6 +80,7 @@ interface BrowserEvidence {
   readonly journeys: readonly unknown[];
   readonly passed: boolean;
   readonly stack: Phase5StackName;
+  readonly skippedJourneys?: readonly { readonly id: string; readonly reason: string }[];
 }
 
 interface LifecycleRecord {
@@ -606,6 +607,8 @@ async function exerciseStack(
     [
         "--import",
         tsxImportSpecifier,
+        "--import",
+        path.join(conformanceDirectory, "src/suite/phase5-browser-diagnostics.ts"),
         path.join(conformanceDirectory, "src/suite/run-phase5-browser-journeys.ts"),
         "--stack",
         stack,
@@ -639,6 +642,9 @@ async function exerciseStack(
   );
   assertCommand(command);
   const evidence = JSON.parse(await readFile(output, "utf8")) as BrowserEvidence;
+  if ((evidence.skippedJourneys?.length ?? 0) !== 0) {
+    throw new Error(`${stack} ${iteration} is diagnostic-only: skipped journeys do not pass the Phase 5 gate: ${JSON.stringify(evidence.skippedJourneys)}`);
+  }
   if (
     !evidence.passed ||
     evidence.stack !== stack ||
