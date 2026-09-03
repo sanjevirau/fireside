@@ -2160,7 +2160,9 @@ Phase 5 cheap smoke r23 on `2dc275c` passed the corrected readiness policy on
 both stacks but failed Fireside's first browser journey. The cache watcher
 uploaded gzip JSON; both raw Storage port 23102 and the Portless alias returned
 the same gzip body as `application/json` without `Content-Encoding`. Object
-metadata reported `contentEncoding: identity`. The browser recorded the exact
+metadata reported `contentEncoding: identity`. The post-shutdown official export
+preserved `contentEncoding: gzip` and the watcher's no-cache policy; Fireside's
+export omitted both fields. The browser recorded the exact
 JSON parse error and loader DOM text, while the cache WebSocket connected.
 This is a Storage content-encoding diagnostic, not a login-routing attribution
 or an alias-only fault. The upload metadata and download response contract need
