@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "oracle": "r21-launch-evidence-and-pinned-Twodart-portless-prefix.sh",
+  "candidateRevision": "b47a35dc06c604909c3cacff40636f7b8af1eba2",
+  "twodartRevision": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54",
+  "manifestSha256": "e5d43e4f41f7d2276754468e04b4131f76076e37aeb5afd536b6ce9c8d5b77ca",
+  "attempt": "two-tier-smoke-v3-20260903T1229+0800-b47a35d-r21",
+  "observed": {
+    "officialBrowserJourneysPassed": 9,
+    "officialSoakPassed": true,
+    "officialSwapInPages": 641,
+    "officialSwapOutPages": 0,
+    "firesideWorktreeDetached": true,
+    "capturedFrontendUrl": "https://phase5-fireside.templates.twodart.localhost",
+    "registeredFrontendUrl": "https://templates.twodart.localhost",
+    "registeredFrontendPort": 4640,
+    "postLaunchFrontendUrl": "https://templates.twodart.localhost",
+    "failure": "fireside definitive readiness failure after 3 identical samples: frontend login returned 404",
+    "firesideBrowserStarted": false,
+    "firesideSoakStarted": false,
+    "fullDataStarted": false,
+    "templatesLogSha256": "828ee698c8fa9d493b0664e3f21f394753dee97e8affacf7ed1e8be9269591b3",
+    "routesAfterFailureSha256": "a07769d01ac3cb45ee4e641d276ce6a6e9560903005189d6791c58db23ae5dd9"
+  },
+  "contract": {
+    "detachedHeadPrefix": "",
+    "namedLinkedWorktreeBranch": "feature/san/v3/phase5-fireside",
+    "namedLinkedWorktreePrefix": "phase5-fireside.",
+    "validateGeneratedUrlsAgainstLiveGitPrefixBeforeLaunch": true,
+    "preserveExactTwodartRevision": true,
+    "browserRunnerChangesAllowed": false,
+    "loginRoutingChangesAllowed": false,
+    "manifestChangesRequired": false,
+    "failureEvidenceMustRemain": true
+  }
+}
