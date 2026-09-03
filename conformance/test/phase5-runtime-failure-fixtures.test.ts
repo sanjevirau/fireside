@@ -2,6 +2,18 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+test("diagnostic Auth query must use the working gate request without limit", async () => {
+  const fixture = JSON.parse(await readFile(new URL(
+    "../fixtures/phase5/diagnostic-auth-query-contract.json", import.meta.url,
+  ), "utf8"));
+  assert.equal(fixture.observedStatus, 501);
+  assert.equal(fixture.sourceErrorText, "limit is not implemented.");
+  assert.deepEqual(fixture.workingGateBody, { order: "ASC", returnUserInfo: true, sortBy: "USER_ID" });
+  assert.equal(fixture.responseUsersField, "userInfo");
+  assert.equal(fixture.journeysStarted, 0);
+  assert.equal(fixture.suppliedRunnerChanged, false);
+});
+
 test("Mac journey corrections preserve skips and the immutable gate boundary", async () => {
   const fixture = JSON.parse(await readFile(new URL(
     "../fixtures/phase5/mac-journey-corrections-contract.json", import.meta.url,
