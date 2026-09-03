@@ -25,6 +25,18 @@ import {
 
 const hostPrepareUrl = new URL("../src/suite/phase5-host-prepare.ts", import.meta.url);
 
+test("the r13 rejection freezes the exact synthetic asset contamination", async () => {
+  const fixture = JSON.parse(await readFile(new URL(
+    "../fixtures/phase5/runtime-asset-isolation-contract.json", import.meta.url,
+  ), "utf8"));
+  assert.equal(fixture.observedFileCount, fixture.originalFileCount + 1);
+  assert.equal(fixture.generatedPath, "core/phase5-smoke-core-slide.pptx");
+  assert.equal(fixture.treeSha256ExcludingGeneratedFile, fixture.frozenTreeSha256);
+  assert.equal(fixture.rejectedAttemptStartedStack, false);
+  assert.equal(fixture.runnerChangesRequired, false);
+  assert.equal(fixture.manifestChangesRequired, false);
+});
+
 test("Phase 5 host preparation drains captured child output", async () => {
   const source = await readFile(hostPrepareUrl, "utf8");
   assert.match(source, /child\.once\("close", \(code, signal\) =>/u);

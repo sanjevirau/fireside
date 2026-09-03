@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "oracle": "r12 seed output, r13 preflight rejection, and supplied journey source",
+  "seedDiagnostic": "two-tier-smoke-20260903T104048+0800-77353dc-r12",
+  "rejectedDiagnostic": "two-tier-smoke-20260903T1047+0800-2c40c41-r13",
+  "errorText": "Phase 5 runtime asset identity diverged: engines/twodartnet/TwodartNet/Assets/slides",
+  "generatedPath": "core/phase5-smoke-core-slide.pptx",
+  "generatedBytes": 33152,
+  "generatedSha256": "0ac1ef829840651cf86c3894880d5b98abfa23cc2e84bcd479c25ffe8e3b5042",
+  "originalFileCount": 10918,
+  "observedFileCount": 10919,
+  "originalFileBytes": 522696779,
+  "treeSha256ExcludingGeneratedFile": "b1ecdef81da630d286fabcc5f6973b5544c09e3f381f9c29ffef1b93e543fd63",
+  "frozenTreeSha256": "b1ecdef81da630d286fabcc5f6973b5544c09e3f381f9c29ffef1b93e543fd63",
+  "cause": "Stack asset directory symlinks let the synthetic runner seed write into the frozen input tree.",
+  "requiredIsolation": "Independent writable stack asset copies, not directory symlinks or file hardlinks.",
+  "rejectedAttemptStartedStack": false,
+  "runnerChangesRequired": false,
+  "manifestChangesRequired": false
+}
