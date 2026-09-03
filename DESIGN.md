@@ -2022,6 +2022,16 @@ suppression is permitted. All other frozen criteria remain unchanged.
 
 ## 12. Benchmarks
 
+Phase 5 runtime-asset staging uses independent writable copies for each stack.
+The Mac-verified synthetic journey seed creates a source PPTX; r12 demonstrated
+that a directory symlink propagated this addition into the frozen input, and r13
+correctly rejected the changed tree before launching a stack. The exact rejection
+and unchanged original-tree checksum are frozen in
+`conformance/fixtures/phase5/runtime-asset-isolation-contract.json`. Preserve the
+generated artifact separately, restore the original verified input, and never use
+directory symlinks or file hardlinks for writable runtime assets. This changes no
+runner code, manifest checksum, workload, or acceptance threshold.
+
 Starting in Phase 1, CI tracks fireside and the official Java emulator on the
 same runner image and synthetic corpus:
 

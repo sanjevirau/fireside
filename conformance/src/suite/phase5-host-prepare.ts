@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import {
+  cp,
   lstat,
   mkdir,
   readFile,
@@ -246,7 +247,7 @@ async function main(): Promise<void> {
     ),
   );
   for (const name of ["globalFonts", "masterSlidesBase", "slides"] as const) {
-    await stageDirectoryLink(
+    await stageIsolatedRuntimeAssetTree(
       path.join(inputRoot, "Assets", name),
       path.join(stackRoot, "engines/twodartnet/TwodartNet/Assets", name),
     );
@@ -394,6 +395,28 @@ async function stageDirectoryLink(
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     await symlink(source, destination, "dir");
   }
+}
+
+// The smoke runner seeds a source PPTX in this tree. Neither new files nor
+// overwrites may reach the frozen input or the other comparison stack.
+export async function stageIsolatedRuntimeAssetTree(
+  source: string,
+  destination: string,
+): Promise<void> {
+  await assertDirectory(source);
+  try {
+    await lstat(destination);
+    throw new Error(`Refusing to replace runtime asset staging path: ${destination}`);
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  await mkdir(path.dirname(destination), { recursive: true });
+  await cp(source, destination, {
+    recursive: true,
+    dereference: true,
+    errorOnExist: true,
+    force: false,
+  });
 }
 
 export async function stageHardlinkedDirectoryTree(

@@ -21,6 +21,7 @@ import {
   PHASE5_STACK_PORTS,
   renderSafeTwodartEnvironment,
   stageHardlinkedDirectoryTree,
+  stageIsolatedRuntimeAssetTree,
 } from "../src/suite/phase5-host-prepare.ts";
 
 const hostPrepareUrl = new URL("../src/suite/phase5-host-prepare.ts", import.meta.url);
@@ -149,6 +150,37 @@ test("Phase 5 directory staging keeps a real tree with hardlinked files", async 
     assert.equal(destinationFile.dev, sourceFile.dev);
     assert.equal(destinationFile.ino, sourceFile.ino);
     assert.equal(await readlink(path.join(destination, "entry.js")), "package/index.js");
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test("runtime asset staging isolates additions and overwrites from frozen inputs and peers", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "phase5-assets-"));
+  try {
+    const source = path.join(root, "source");
+    const official = path.join(root, "official");
+    const fireside = path.join(root, "fireside");
+    await mkdir(path.join(source, "core"), { recursive: true });
+    await writeFile(path.join(source, "core/original.pptx"), "frozen");
+    await symlink("core/original.pptx", path.join(source, "alias.pptx"));
+    await stageIsolatedRuntimeAssetTree(source, official);
+    await stageIsolatedRuntimeAssetTree(source, fireside);
+    assert.notEqual((await stat(path.join(source, "core/original.pptx"))).ino,
+      (await stat(path.join(official, "core/original.pptx"))).ino);
+    await writeFile(path.join(official, "core/phase5-smoke-core-slide.pptx"), "seed");
+    await writeFile(path.join(official, "core/original.pptx"), "changed");
+    await writeFile(path.join(official, "alias.pptx"), "changed alias");
+    for (const pristine of [source, fireside]) {
+      assert.equal(await readFile(path.join(pristine, "core/original.pptx"), "utf8"), "frozen");
+      await assert.rejects(stat(path.join(pristine, "core/phase5-smoke-core-slide.pptx")), { code: "ENOENT" });
+    }
+    await assert.rejects(stageIsolatedRuntimeAssetTree(source, official), /Refusing to replace/u);
+    const linked = path.join(root, "linked");
+    await symlink(source, linked);
+    await assert.rejects(stageIsolatedRuntimeAssetTree(source, linked), /Refusing to replace/u);
+    const implementation = await readFile(hostPrepareUrl, "utf8");
+    assert.match(implementation, /for \(const name of \["globalFonts", "masterSlidesBase", "slides"\][\s\S]*?stageIsolatedRuntimeAssetTree\(/u);
   } finally {
     await rm(root, { force: true, recursive: true });
   }
