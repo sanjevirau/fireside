@@ -2171,6 +2171,27 @@ change is included in this evidence commit. The current HTTP readiness probes
 also do not validate the cache JSON body. Full evidence and the unrun full-data
 boundary are in `reports/phase-5-smoke-20260903-r23.md`.
 
+### Phase 5 Storage content-encoding oracle (2026-09-03)
+
+`storage-content-encoding` freezes firebase-tools 15.22.0 behavior before the
+r23 product fix: actual GCS SDK resumable/multipart gzip saves, Firebase SDK
+multipart upload, an explicit tiny Firebase resumable transaction, and copy.
+Standard metadata survives upload/copy/export, including contentEncoding,
+cacheControl, contentDisposition and contentLanguage. Object bytes stay encoded
+on disk. Both media APIs negotiate gzip by the official case-sensitive
+`Accept-Encoding` substring check. Decoding produces chunked 200 responses and
+ignores Range; unchanged encoded bytes support Range with 206. Hash headers
+describe stored bytes, not decoded bytes. The ordinary media routes do not call
+Firebase's `setObjectHeaders` (in particular, no Content-Language download header
+was observed). Capture source, full headers, hashes and synthetic bytes are
+retained; dynamic IDs are compared by consistency, never by literal equality.
+
+The cache JSON readiness probe must use `curl --compressed` on both raw Storage
+and the registered Portless alias, in the application readiness group. HTTP 200
+alone is insufficient: an undecodable/non-JSON body is a definitive diagnostic
+failure. This restores a missing prerequisite without changing the protected
+browser runner, workload, readiness deadlines, durations or soak criteria.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.
