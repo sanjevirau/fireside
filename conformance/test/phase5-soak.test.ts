@@ -1,9 +1,66 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { stripTypeScriptTypes } from "node:module";
+import path from "node:path";
+import vm from "node:vm";
 import { preparePhase5SmokeCatalog, type SmokeCatalogClient } from "../src/suite/phase5-smoke-catalog.ts";
+import { phase5SoakSampleOffsets } from "../src/suite/phase5-soak-schedule.ts";
 
 const runnerUrl = new URL("../src/suite/run-phase5-soak.ts", import.meta.url);
+
+test("all Phase 5 entry-point bindings initialize before top-level execution", async () => {
+  for (const file of ["run-phase5-soak.ts", "run-phase5-gate.ts", "run-phase5-browser-journeys.ts"]) {
+    const source = await readFile(new URL(`../src/suite/${file}`, import.meta.url), "utf8");
+    const boundary = source.indexOf(file === "run-phase5-browser-journeys.ts" ? "\ntry {" : "\nawait main();");
+    assert.ok(boundary > 0, `${file} execution boundary is missing`);
+    const late = [...source.matchAll(/^(?:export )?(?:let|const|class)\s+([\w]+)/gmu)]
+      .filter((match) => match.index > boundary).map((match) => match[1]);
+    assert.deepEqual(late, [], `${file} has uninitialized module bindings`);
+  }
+});
+
+test("the actual soak dispatch loader reads and caches the frozen v2 body", async () => {
+  const source = await readFile(runnerUrl, "utf8");
+  const declaration = source.match(/^let frozenDispatchBody[^\n]+/mu)?.[0];
+  assert.ok(declaration);
+  const loader = source.slice(source.indexOf("async function frozenV2DispatchBody"), source.indexOf("async function sampleMemory"));
+  const fixtureText = await readFile(new URL("../fixtures/firebase-suite-v1/firestore-trigger-registration-and-v1-v2-dispatch/fixture.json", import.meta.url), "utf8");
+  const fixture = JSON.parse(fixtureText);
+  const expected = fixture.dispatches.find((entry: { headers: Record<string, string> }) => entry.headers["ce-type"]?.startsWith("google.cloud.firestore")).body;
+  let reads = 0;
+  const program = stripTypeScriptTypes(`${declaration}\n${loader}\n(async () => [await frozenV2DispatchBody(), await frozenV2DispatchBody()])()`);
+  const result = await vm.runInNewContext(program, {
+    conformanceDirectory: "/synthetic/conformance", path,
+    async readFile(file: string) {
+      assert.ok(file.endsWith("firestore-trigger-registration-and-v1-v2-dispatch/fixture.json"));
+      reads += 1;
+      return fixtureText;
+    },
+  });
+  assert.equal(JSON.stringify(result), JSON.stringify([expected, expected]));
+  assert.equal(reads, 1);
+});
+
+test("soak samples include the entire final interval without changing duration", () => {
+  assert.deepEqual(phase5SoakSampleOffsets(60, 30), [0, 30_000, 60_000]);
+  const full = phase5SoakSampleOffsets(7200, 30);
+  assert.equal(full.length, 241);
+  assert.equal(full[0], 0);
+  assert.equal(full.at(-1), 7_200_000);
+  assert.deepEqual(phase5SoakSampleOffsets(65, 30), [0, 30_000, 60_000, 65_000]);
+  assert.throws(() => phase5SoakSampleOffsets(0, 30), /positive finite/u);
+  assert.throws(() => phase5SoakSampleOffsets(60, -1), /positive finite/u);
+});
+
+test("swap counters bracket all workers and final sampling before cleanup", async () => {
+  const source = await readFile(runnerUrl, "utf8");
+  assert.ok(source.indexOf("swapWindowStart = await hostMemory()") < source.indexOf("const scheduleStartedAt"));
+  assert.ok(source.indexOf("swapWindowEnd = await hostMemory()") > source.indexOf("await Promise.allSettled(workers)"));
+  assert.ok(source.indexOf("swapWindowEnd = await hostMemory()") < source.indexOf("for (const cleanup of smokeCatalogCleanups)"));
+  assert.match(source, /const first = swapWindowStart;/u);
+  assert.match(source, /const last = swapWindowEnd;/u);
+});
 
 function fakeCatalog(existing = false) {
   const operations: string[] = [];

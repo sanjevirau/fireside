@@ -2011,6 +2011,17 @@ catalogue data. The final browser runner, schedules, queries, and zero-swap rule
 are unchanged. Soak errors now retain readable text alongside their legacy
 hashes, including primary and cleanup failures.
 
+The next cheap attempt exposed a second soak-only boundary: `frozenDispatchBody`
+was in the temporal dead zone below top-level `await main()`. The soak entry call
+now follows all declarations, with a binding-order check across all three Phase 5
+entry points and an executable test of the actual frozen dispatch loader. The
+same audit found that samples at 0..duration-minus-interval omitted the final
+interval endpoint. Sampling now includes the endpoint (3 samples for 60 seconds;
+241 for 7,200 seconds), and independent swap counters bracket all workers and
+final sampling before cleanup. The minimum 240 full-run samples, 30-second
+interval, duration, workload, and zero-swap thresholds remain unchanged. These
+boundaries were frozen before correction in `soak-runtime-boundaries.json`.
+
 ### Phase 5 Mac-verified journey corrections (2026-09-03)
 
 The source pin at Twodart `6bda5bf29` includes stable form ids after MobX

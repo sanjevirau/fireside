@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 
 import { Firestore } from "@google-cloud/firestore";
 import { preparePhase5SmokeCatalog } from "./phase5-smoke-catalog.ts";
+import { phase5SoakSampleOffsets } from "./phase5-soak-schedule.ts";
 
 import {
   assertPhase5Manifest,
@@ -146,8 +147,8 @@ const manifestPath = path.join(
 const sessionCount = 2;
 const tokenSlots = 20;
 const memorySamples: MemorySample[] = [];
-
-await main();
+let swapWindowStart: MemorySample["host"] | undefined;
+let swapWindowEnd: MemorySample["host"] | undefined;
 
 async function main(): Promise<void> {
   const args = parseArguments(process.argv.slice(2));
@@ -184,6 +185,7 @@ async function main(): Promise<void> {
       "Phase 5 listeners did not become ready",
     );
 
+    swapWindowStart = await hostMemory();
     const scheduleStartedAt = Date.now() + 2_000;
     const workers = runtimes.flatMap((runtime) =>
       runtime.sessions.flatMap((session) =>
@@ -216,6 +218,7 @@ async function main(): Promise<void> {
   }
 
   const cleanupFailures: string[] = [];
+  swapWindowEnd = await hostMemory();
   const cleanupErrorTexts: string[] = [];
   for (const cleanup of smokeCatalogCleanups) {
     try {
@@ -271,6 +274,7 @@ async function main(): Promise<void> {
     privateContentStored: false,
     projectId: args.projectId,
     raw: {
+      swapWindow: { start: swapWindowStart ?? null, end: swapWindowEnd },
       memorySamples,
       stacks: Object.fromEntries(
         runtimes.map((runtime) => [runtime.definition.name, rawRuntime(runtime)]),
@@ -680,10 +684,9 @@ async function sampleMemory(
   startedAt: number,
   signals: readonly AbortSignal[],
 ): Promise<void> {
-  const intervalMilliseconds = manifest.soak.memorySampleIntervalSeconds * 1_000;
-  const sampleCount = Math.ceil(durationSeconds / manifest.soak.memorySampleIntervalSeconds);
-  for (let index = 0; index < sampleCount; index += 1) {
-    await sleepUntilAnyAbort(startedAt + index * intervalMilliseconds, signals);
+  const offsets = phase5SoakSampleOffsets(durationSeconds, manifest.soak.memorySampleIntervalSeconds);
+  for (const offset of offsets) {
+    await sleepUntilAnyAbort(startedAt + offset, signals);
     const stacks = Object.fromEntries(
       await Promise.all(
         definitions.map(async (definition) => {
@@ -999,8 +1002,8 @@ function summarizeSwapActivity(): {
   readonly swapInPagesDelta: number | null;
   readonly swapOutPagesDelta: number | null;
 } {
-  const first = memorySamples[0]?.host;
-  const last = memorySamples.at(-1)?.host;
+  const first = swapWindowStart;
+  const last = swapWindowEnd;
   return {
     residualSwapBytesAtEnd:
       last === undefined ? null : last.swapTotalBytes - last.swapFreeBytes,
@@ -1295,3 +1298,6 @@ function sum(values: readonly number[]): number {
 function maximum(values: readonly number[]): number | null {
   return values.length === 0 ? null : Math.max(...values);
 }
+
+// Initialize every module binding (including the dispatch fixture cache) first.
+await main();
