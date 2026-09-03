@@ -13,7 +13,7 @@ candidate.
 | --- | --- | --- | --- | --- | --- | --- |
 | [r25](phase-5-smoke-20260903-r25.md) (incoming boundary) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard query failed | Fireside product: query-rules authorization; previous Auth error did not recur | `99a7cf0` (Auth refresh) | `710bfb7` | [33745161787](https://github.com/sanjevirau/fireside/actions/runs/33745161787), 7/7 green | Failed; export-first cleanup complete; full gate not started |
 | [r26](phase-5-smoke-20260903-r26.md) (attempt 1/8) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard timeout | Unresolved application path; no r25 rules error; diagnostic evidence gap | `34c8aed` | `a6c66b4` | [33752732445](https://github.com/sanjevirau/fireside/actions/runs/33752732445), 7/7 green | Failed; export-first cleanup complete, no full-data launch; diagnostic amendment published in `4d6cf2f` |
-| [r27](phase-5-smoke-20260903-r27.md) (attempt 2/8) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard timeout | Fireside product: unbound child wildcard in invited-users query path raises before independent OR grant | Query-path corpus captured before repair; commit pending | `4d6cf2f` | [33755740999](https://github.com/sanjevirau/fireside/actions/runs/33755740999), 7/7 green | Failed; export-first cleanup complete; no full-data launch |
+| [r27](phase-5-smoke-20260903-r27.md) (attempt 2/8) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard timeout | Fireside product: unbound child wildcard in invited-users query path raises before independent OR grant | `2c7ca67` (captured and committed before repair) | `4d6cf2f` | [33755740999](https://github.com/sanjevirau/fireside/actions/runs/33755740999), 7/7 green | Failed; export-first cleanup complete; no full-data launch |
 
 R25 failure evidence is published in `b79750636e1666e1d097b341b7cc9f85ba74d28c`;
 [evidence CI 33748445917](https://github.com/sanjevirau/fireside/actions/runs/33748445917)
@@ -77,8 +77,19 @@ trace identifies `licenses/{uid}/invitedUsers`, not r25's owner-filter query:
 official delivers the self-invite while Fireside denies an unbound child-path
 expression before evaluating the independent parent-owner OR branch. Both JARs'
 new reduced query-path captures agree through native and both browser variants.
-Oracle corpus and r27 failure evidence will be committed before the product
-repair. R28 will be attempt 3/8 and is not launched. Same-cause recurrence after
+Oracle corpus and r27 failure evidence were committed before product edits in
+`2c7ca67e3985a67a344c2d068b44e2f2024e41d1`. The 37-case query-path corpus
+contains 119 native and 150 browser observations per JAR. The new crate regression
+first failed with r27's exact interpolation error, then passed after the generic
+symbolic-path/boolean-proof correction. No child/result rows are available to the
+crate proof; access limits remain ten per operation. Both old and new full-client
+corpora replayed successfully in memory and disk/WAL (292 native and 368 browser
+observations per mode). These are regression checks, not Phase 5 acceptance.
+Local validation also passed all workspace Rust tests, formatting, Clippy with
+warnings denied, TypeScript checking, 222 harness tests, and seven query-fixture
+checks. Neither the protected runner nor the frozen manifest was changed.
+The repair still requires its exact seven-job CI and fresh Linux release before
+r28. R28 will be attempt 3/8 and is not launched. Same-cause recurrence after
 this new repair must stop; the r25 owner-filter regression remains green.
 Private raw r27 backup: `/tmp/fireside-phase5-r27-raw.qQFThS`; do not publish it.
 Private raw r26 backup: `/tmp/fireside-phase5-r26-raw.4973IM`; never publish its

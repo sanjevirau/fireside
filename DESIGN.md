@@ -2333,7 +2333,16 @@ branch is unknown or raises a missing-resource error. The explicit eleven-call
 exists conjunction followed by `|| true` also allows, without changing the
 document-access budget. This is an observed query proof contract, not a license
 to authorize rows individually or bypass a failed gate. R27's protected runner
-and Twodart remain unchanged. No product repair is included in this oracle step.
+and Twodart remain unchanged. Oracle/evidence commit `2c7ca67` precedes the repair.
+
+The shared evaluator now carries symbolic paths and their get/exists results as
+unknown, without accessing an invented child or enumerating result rows. During
+list proofs, a terminal boolean on either side of AND/OR can dominate an unknown
+or runtime error; otherwise the original error is retained. Concrete-request
+evaluation is unchanged. Budgets and caches are not reset between operands or
+proof branches: the eleven-call control performs at most ten document reads.
+Crate replay consumes both committed JAR verdicts with no child rows available;
+native and real-browser replay covers both corpora in memory and disk/WAL.
 
 ## 13. Engineering rules
 

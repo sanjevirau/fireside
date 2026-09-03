@@ -13,15 +13,17 @@ import { compareNativeCapture, verifyBrowserCapture, type BrowserCapture, type N
 
 const execute = promisify(execFile);
 const root = fileURLToPath(new URL("../../", import.meta.url));
-const fixture = new URL("../fixtures/rules-v2/query-authorization/java-1.21.0/", import.meta.url);
 
 test("query authorization matches native and real browser oracles in memory and disk/WAL", { timeout: 600_000 }, async (context) => {
   await execute("cargo", ["build", "--locked", "-p", "fireside"], { cwd: root });
   const metadata = JSON.parse((await execute("cargo", ["metadata", "--no-deps", "--format-version", "1"], { cwd: root })).stdout) as { target_directory: string };
-  const expected = JSON.parse(await readFile(new URL("grpc.json", fixture), "utf8")) as NativeCapture;
-  for (const mode of ["memory", "disk-wal"]) {
-    const output = await mkdtemp(join(tmpdir(), `fireside-query-replay-${mode}-`));
-    context.diagnostic(`${mode} evidence: ${output}`);
+  const scenarios = ([["constraints", "query-authorization"], ["paths", "query-paths"]] as const)
+    .flatMap(([caseSet, corpus]) => ["memory", "disk-wal"].map(mode => ({ caseSet, corpus, mode })));
+  for (const { caseSet, corpus, mode } of scenarios) {
+    const fixture = new URL(`../fixtures/rules-v2/${corpus}/java-1.21.0/`, import.meta.url);
+    const expected = JSON.parse(await readFile(new URL("grpc.json", fixture), "utf8")) as NativeCapture;
+    const output = await mkdtemp(join(tmpdir(), `fireside-query-replay-${caseSet}-${mode}-`));
+    context.diagnostic(`${caseSet} ${mode} evidence: ${output}`);
     const reservation = createServer();
     await new Promise<void>((done) => reservation.listen(0, "127.0.0.1", done));
     const address = reservation.address(); assert.ok(address && typeof address !== "string");
@@ -43,7 +45,7 @@ test("query authorization matches native and real browser oracles in memory and 
         assert.ok(Date.now() < deadline, log.join(""));
         await new Promise((done) => setTimeout(done, 50));
       }
-      await execute(process.execPath, ["--import", "tsx", "src/rules/capture-query-rules.ts", "--origin", origin, "--output", join(output, "capture")], { cwd: join(root, "conformance"), env: { ...process.env, FIRESIDE_CAPTURE_BINARY: binary }, timeout: 180_000, maxBuffer: 4 * 1024 * 1024 });
+      await execute(process.execPath, ["--import", "tsx", "src/rules/capture-query-rules.ts", "--case-set", caseSet, "--origin", origin, "--output", join(output, "capture")], { cwd: join(root, "conformance"), env: { ...process.env, FIRESIDE_CAPTURE_BINARY: binary }, timeout: 180_000, maxBuffer: 4 * 1024 * 1024 });
       const actual = JSON.parse(await readFile(join(output, "capture/grpc.json"), "utf8")) as NativeCapture;
       compareNativeCapture(actual, expected);
       for (const variant of ["long-poll", "streaming"]) {

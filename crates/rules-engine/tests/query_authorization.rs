@@ -203,3 +203,74 @@ fn alternatives_do_not_multiply_document_access_budgets() {
             .contains("access calls")
     );
 }
+
+#[test]
+fn replays_query_path_oracles_without_resolving_child_wildcards_to_rows() {
+    struct Parents;
+    impl DocumentAccess for Parents {
+        fn get(&self, path: &str) -> Result<Option<Resource>, DocumentAccessError> {
+            let uid = match path {
+                "/databases/(default)/documents/queryParents/granted"
+                | "/databases/(default)/documents/queryParents/emptyGranted" => "query-owner",
+                "/databases/(default)/documents/queryParents/denied" => "other-owner",
+                path if path.starts_with("/databases/(default)/documents/queryBudget/p") => {
+                    return Ok(Some(Resource::new(path, BTreeMap::new())));
+                }
+                _ => return Licenses.get(path),
+            };
+            Ok(Some(Resource::new(
+                path,
+                BTreeMap::from([("uid".to_owned(), Value::from(uid))]),
+            )))
+        }
+        fn get_after(&self, path: &str) -> Result<Option<Resource>, DocumentAccessError> {
+            self.get(path)
+        }
+    }
+    let rules = compile(include_str!(
+        "../../../conformance/fixtures/rules-v2/query-paths/java-1.21.0/firestore.rules"
+    ))
+    .expect("oracle source");
+    for source in [
+        include_str!("../../../conformance/fixtures/rules-v2/query-paths/java-1.21.0/grpc.json"),
+        include_str!("../../../conformance/fixtures/rules-v2/query-paths/java-1.22.0/grpc.json"),
+    ] {
+        let oracle: Json = serde_json::from_str(source).expect("oracle JSON");
+        for case in oracle["cases"].as_array().expect("cases") {
+            let actual = rules.evaluate(&request(case), &Parents);
+            let expected = oracle["observations"]
+                .as_array()
+                .expect("observations")
+                .iter()
+                .find(|observation| {
+                    observation["id"] == case["id"] && observation["operation"] == "RunQuery"
+                })
+                .expect("native verdict");
+            assert_eq!(
+                actual.allowed,
+                expected["code"] == 0,
+                "{}: {actual:?}",
+                case["id"]
+            );
+            let id = case["id"].as_str().expect("id");
+            if id.starts_with("path-unknownOnly-") || id.starts_with("path-literalOr-") {
+                assert_eq!(
+                    actual.document_accesses, 0,
+                    "unknown paths must not be read"
+                );
+            }
+            if id.starts_with("path-budgetErrorOr-") {
+                assert_eq!(
+                    actual.document_accesses, 10,
+                    "the eleventh read must not run"
+                );
+            }
+            if id == "path-members-granted" || id == "path-members-empty-granted" {
+                assert_eq!(
+                    actual.document_accesses, 1,
+                    "only the concrete parent is read"
+                );
+            }
+        }
+    }
+}

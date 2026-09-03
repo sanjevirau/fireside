@@ -406,6 +406,11 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
                 PathPart::Literal(value) => path.push_str(value),
                 PathPart::Interpolation(expression) => {
                     let value = self.eval_expr(expression, environment, functions)?;
+                    // A list proof has no concrete child document wildcard.
+                    // Do not manufacture a path or look up a current result row.
+                    if value.is_symbolic() {
+                        return Ok(EvalValue::Unknown);
+                    }
                     path.push_str(&path_interpolation(value)?);
                 }
             }
@@ -583,7 +588,11 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
                 Ok(EvalValue::data(string_coercion(value)?))
             }
             "get" | "exists" | "getAfter" => {
-                let path = data_path(one_argument(name, arguments)?)?;
+                let argument = one_argument(name, arguments)?;
+                if argument.is_symbolic() {
+                    return Ok(EvalValue::Unknown);
+                }
+                let path = data_path(argument)?;
                 let after = name == "getAfter";
                 let resource = self.document(path, after)?;
                 if name == "exists" {
@@ -644,26 +653,28 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
         if self.query_branch.is_some()
             && matches!(operator, BinaryOperator::And | BinaryOperator::Or)
         {
-            let left = self.eval_expr(left, environment, functions)?;
+            let left = self
+                .eval_expr(left, environment, functions)
+                .and_then(query_boolean);
             let terminal = operator == BinaryOperator::Or;
-            match left {
-                EvalValue::Data(Value::Bool(value)) => {
-                    if value == terminal {
-                        return Ok(EvalValue::data(value));
-                    }
-                    return self.eval_expr(right, environment, functions);
-                }
-                value if value.is_symbolic() => {
-                    let right = self.eval_expr(right, environment, functions)?;
-                    return Ok(match right {
-                        EvalValue::Data(Value::Bool(value)) if value == terminal => {
-                            EvalValue::data(value)
-                        }
-                        _ => EvalValue::Unknown,
-                    });
-                }
-                _ => return Err(RuntimeError::new("logical operand is not a boolean")),
+            if matches!(&left, Ok(EvalValue::Data(Value::Bool(value))) if *value == terminal) {
+                return left;
             }
+            // Official query proofs allow an independent true OR / false AND
+            // branch to dominate unknowns and runtime errors. Keep the failed
+            // branch's error unless the other operand actually proves that
+            // terminal value. Access caches and all budgets remain shared.
+            let right = self
+                .eval_expr(right, environment, functions)
+                .and_then(query_boolean);
+            if matches!(&right, Ok(EvalValue::Data(Value::Bool(value))) if *value == terminal)
+                || matches!(&left, Ok(EvalValue::Data(Value::Bool(_))))
+            {
+                return right;
+            }
+            left?;
+            right?;
+            return Ok(EvalValue::Unknown);
         }
         if operator == BinaryOperator::And {
             let left = self.eval_expr(left, environment, functions)?;
@@ -690,6 +701,14 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
         let left = self.eval_expr(left, environment, functions)?;
         let right = self.eval_expr(right, environment, functions)?;
         eval_binary_values(operator, left, right)
+    }
+}
+
+fn query_boolean(value: EvalValue) -> Result<EvalValue, RuntimeError> {
+    if matches!(value, EvalValue::Data(Value::Bool(_))) || value.is_symbolic() {
+        Ok(value)
+    } else {
+        Err(RuntimeError::new("logical operand is not a boolean"))
     }
 }
 
