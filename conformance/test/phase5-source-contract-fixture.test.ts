@@ -25,6 +25,28 @@ const root = new URL(
   import.meta.url,
 );
 
+test("the first strict nine-journey pass exposes the smoke soak catalog precondition", async () => {
+  const fixture = JSON.parse(await readFile(new URL(
+    "../fixtures/phase5/smoke-soak-catalog-precondition.json", import.meta.url,
+  ), "utf8"));
+  assert.equal(fixture.browser.passed, true);
+  assert.equal(fixture.browser.journeys, 9);
+  assert.equal(fixture.browser.skippedJourneys, 0);
+  assert.equal(fixture.soak.passed, false);
+  assert.equal(fixture.soak.collection, "premade-templates");
+  const file = "/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-20165b0/conformance/src/suite/run-phase5-soak.ts";
+  const stack = `Error: ${fixture.soak.errorMessage}\n` +
+    `    at catalogRead (${file}:529:29)\n` +
+    "    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n" +
+    `    at async scheduledWorker (${file}:458:7)\n` +
+    "    at async Promise.allSettled (index 3)\n" +
+    `    at async main (${file}:193:21)\n` +
+    `    at async <anonymous> (${file}:148:1)`;
+  assert.equal(createHash("sha256").update(stack).digest("hex"), fixture.soak.errorStackSha256);
+  assert.equal(fixture.correctionContract.fullDataCatalogMustNotBeSynthesized, true);
+  assert.equal(fixture.correctionContract.zeroSwapRuleUnchanged, true);
+});
+
 test("the final Mac runner patch freezes strict export and trace contracts", async () => {
   const fixture = JSON.parse(await readFile(new URL(
     "../fixtures/phase5/mac-final-runner-contract.json", import.meta.url,

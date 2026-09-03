@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "oracle": "official-emulator-diagnostic-and-readable-harness",
+  "candidateRevision": "20165b0c4191fa982c49b372a815713c2f731abd",
+  "attempt": "two-tier-smoke-20260903T1125+0800-20165b0-r16",
+  "browser": {
+    "passed": true,
+    "journeys": 9,
+    "skippedJourneys": 0,
+    "pageErrors": 0,
+    "requestFailures": 0,
+    "requiredHttpFailures": 0,
+    "evidenceSha256": "7e299efb340494cb8963b1282dd410e4c0287044fc3b250984a0d44ac6f76cd4"
+  },
+  "soak": {
+    "passed": false,
+    "measuredMemorySamples": 0,
+    "catalogReads": 0,
+    "evidenceSha256": "d9fae4b00eb98b4dd53c85dfacb27afb7cfbdf7235c185a3434640f3f452e045",
+    "errorMessage": "Twodart catalog read returned no premade templates",
+    "errorStackSha256": "6fa25af5ea7819968f2f38b1bcec599034a5c7a8699c4cc3b7fd16418d6a402d",
+    "errorAttribution": "The complete stack reconstructed from the unchanged source and Node 24 async frames matches the recorded error SHA-256 exactly; the original diagnostic stored only hashes.",
+    "collection": "premade-templates",
+    "queryLimit": 1
+  },
+  "correctionContract": {
+    "browserRunnerUnchanged": true,
+    "seedOnlyInDiagnosticSmoke": true,
+    "seedOnlyWhenCatalogEmpty": true,
+    "seedBeforeMeasuredWindow": true,
+    "removeOnlyOwnedSeedAfterSoak": true,
+    "fullDataCatalogMustNotBeSynthesized": true,
+    "queryAndScheduleUnchanged": true,
+    "zeroSwapRuleUnchanged": true,
+    "verbatimSyntheticSoakErrorsRequired": true
+  },
+  "credentialsStored": false,
+  "realUserDataStored": false
+}

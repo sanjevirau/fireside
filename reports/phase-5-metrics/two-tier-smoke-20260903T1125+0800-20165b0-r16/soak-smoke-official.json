@@ -1,0 +1,133 @@
+{
+  "candidateIdentityStored": false,
+  "completedAt": "2026-09-03T03:27:15.133Z",
+  "datasetIdentityStored": false,
+  "durationSeconds": 60,
+  "expected": {
+    "catalogReads": 4,
+    "functionDispatches": 2,
+    "gatewayWrites": 12,
+    "runAndCaseWrites": 8,
+    "storageCycles": 2,
+    "tokenBatches": 24,
+    "tokenWrites": 480
+  },
+  "failureHashes": [
+    "6fa25af5ea7819968f2f38b1bcec599034a5c7a8699c4cc3b7fd16418d6a402d",
+    "9eb78eacd767eb3e2dc2f9e57df9340d4aa012e1f86c5fad585c2ef43898ca22",
+    "aa2b7fbb52c835bb2e7a406a6851a3fc8359436df6935d37e9c1f5c75c2f0c9c",
+    "b59d69180c5dca6f0bd1729c10eac8860003bf6b12ce7bea6bed9b500f6bc44f",
+    "d0c7d871ac64dd068ec4ca27706eb888d54e6164d996156ad1ee427a2650a969",
+    "f48263e92bb38ae609c24a51f8dec205c193e47c37bf91d57737770d93eadf1a"
+  ],
+  "health": {
+    "after": {
+      "failedUnits": 0,
+      "oomOrResourceEvidence": 0
+    },
+    "before": {
+      "failedUnits": 0,
+      "oomOrResourceEvidence": 0
+    }
+  },
+  "manifestSha256": "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa",
+  "memory": {
+    "official": {
+      "peakPssBytes": null,
+      "peakRssBytes": null,
+      "pssSlopeBytesPerHour": null,
+      "rssSlopeBytesPerHour": null,
+      "samples": 0
+    }
+  },
+  "privateContentStored": false,
+  "projectId": "demo-twodart-local",
+  "raw": {
+    "memorySamples": [],
+    "stacks": {
+      "official": {
+        "catalogLatencyMilliseconds": [],
+        "errorHashes": [
+          "6fa25af5ea7819968f2f38b1bcec599034a5c7a8699c4cc3b7fd16418d6a402d",
+          "9eb78eacd767eb3e2dc2f9e57df9340d4aa012e1f86c5fad585c2ef43898ca22"
+        ],
+        "functionLatencyMilliseconds": [],
+        "listenerLatencyMilliseconds": [
+          55,
+          33
+        ],
+        "storageLatencyMilliseconds": [
+          43.37681200000043
+        ],
+        "writeLatencyMilliseconds": [
+          60.33768500000042,
+          38.48279000000002
+        ]
+      }
+    }
+  },
+  "schemaVersion": 1,
+  "smoke": true,
+  "swapActivity": {
+    "residualSwapBytesAtEnd": null,
+    "residualSwapBytesAtStart": null,
+    "sampleCount": 0,
+    "swapInPagesDelta": null,
+    "swapOutPagesDelta": null
+  },
+  "stack": "official",
+  "stacks": {
+    "official": {
+      "acknowledgedStateMismatches": 0,
+      "counts": {
+        "catalogReads": 0,
+        "functionDispatches": 0,
+        "gatewayWrites": 1,
+        "runAndCaseWrites": 1,
+        "storageCycles": 1,
+        "tokenBatches": 0,
+        "tokenWrites": 0
+      },
+      "duplicateObservableEffects": 0,
+      "errors": 2,
+      "listenerDelivery": {
+        "expected": 2,
+        "gaps": 0,
+        "observed": 2
+      },
+      "latencyMilliseconds": {
+        "catalogRead": {
+          "p50": null,
+          "p99": null,
+          "samples": 0
+        },
+        "functionDelivery": {
+          "p50": null,
+          "p99": null,
+          "samples": 0
+        },
+        "listenerDelivery": {
+          "p50": 33,
+          "p99": 55,
+          "samples": 2
+        },
+        "storageCycle": {
+          "p50": 43.37681200000043,
+          "p99": 43.37681200000043,
+          "samples": 1
+        },
+        "writeCommit": {
+          "p50": 38.48279000000002,
+          "p99": 60.33768500000042,
+          "samples": 2
+        }
+      },
+      "sessions": 2,
+      "stalls": 0
+    }
+  },
+  "startedAt": "2026-09-03T03:27:09.382Z",
+  "syntheticIdentifiersStored": false,
+  "userIdentityStored": false,
+  "passed": false
+}
