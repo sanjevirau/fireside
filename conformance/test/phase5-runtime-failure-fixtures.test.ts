@@ -2,6 +2,19 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+test("Mac journey corrections preserve skips and the immutable gate boundary", async () => {
+  const fixture = JSON.parse(await readFile(new URL(
+    "../fixtures/phase5/mac-journey-corrections-contract.json", import.meta.url,
+  ), "utf8"));
+  assert.equal(fixture.suppliedPatchSha256, "b20f5114fda4159f94668cf5ded828678a9385f53935b7231e2c18c50bd80550");
+  assert.equal(fixture.originalTwodartCommits.length, 5);
+  assert.equal(fixture.contracts.diagnosticExportTimeoutIsSkipNotPass, true);
+  assert.equal(fixture.skippedJourneyQualifiesFullDataAttempt, false);
+  assert.equal(fixture.immutableGateCriteriaChanged, false);
+  assert.equal(fixture.r11b.isEvidenceForRoutingOrCacheAliasDefect, false);
+  assert.equal(fixture.diagnostics.allowlist.length, 3);
+});
+
 const singleSigintUrl = new URL(
   "../fixtures/phase5/emulator-single-sigint-contract.json",
   import.meta.url,

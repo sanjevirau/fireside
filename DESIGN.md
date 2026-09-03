@@ -1997,6 +1997,29 @@ batch-get, structured-query, and aggregation-query responses to whole
 microseconds. User document timestamp fields retain nanosecond precision, and
 the existing strict validation of incoming consistency selectors is unchanged.
 
+### Phase 5 Mac-verified journey corrections (2026-09-03)
+
+The source pin at Twodart `6bda5bf29` includes stable form ids after MobX
+bindings, OTP id forwarding, missing-array guards, and general-collection
+cache invalidation. The supplied cumulative runner patch is frozen by SHA-256
+in `mac-journey-corrections-contract.json`; it is applied without additional
+runner edits. The same-account co-editor intentionally does not receive live
+title replacement, so the diagnostic checks persistence through a second-page
+reload. Realtime delivery remains independently required by the soak.
+
+Catalogue gestures must hover the card and close its popover; catalogue data
+requires a category slug, public-bucket chunk JSON, a license self-invite, and
+the free-core-slide list. Image uploads are re-encoded into original and
+derived variants, so their contract is non-empty user-scoped image objects,
+not identity with the uploaded bytes. Storage evidence spans both buckets.
+
+The .NET export is an asynchronous `/start`, `/status`, blob-download flow.
+A diagnostic timeout is explicitly SKIPPED, never a pass or permission for a
+full-data cycle. Synthetic failure text and export responses are preserved
+verbatim except identifiers/OTPs and credentials. Only the three explicitly
+authorized benign error classes are classified separately; no broad exception
+suppression is permitted. All other frozen criteria remain unchanged.
+
 ## 12. Benchmarks
 
 Starting in Phase 1, CI tracks fireside and the official Java emulator on the
