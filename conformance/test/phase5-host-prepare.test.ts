@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import {
   mkdtemp,
   mkdir,
@@ -15,6 +16,7 @@ import test from "node:test";
 import {
   applyPhase5Ports,
   assertDistinctPhase5ApplicationUrls,
+  assertPhase5PortlessPrefix,
   PHASE5_APPLICATION_URL_KEYS,
   phase5PortEnvironment,
   phase5DatasetPaths,
@@ -25,6 +27,41 @@ import {
 } from "../src/suite/phase5-host-prepare.ts";
 
 const hostPrepareUrl = new URL("../src/suite/phase5-host-prepare.ts", import.meta.url);
+
+test("the live Git prefix must agree with every captured Portless URL before launch", async () => {
+  const fixture = JSON.parse(await readFile(new URL(
+    "../fixtures/phase5/detached-worktree-namespace-contract.json", import.meta.url,
+  ), "utf8"));
+  assert.equal(fixture.observed.firesideWorktreeDetached, true);
+  assert.equal(fixture.observed.firesideBrowserStarted, false);
+  assert.equal(fixture.contract.detachedHeadPrefix, "");
+  assert.equal(fixture.contract.browserRunnerChangesAllowed, false);
+  for (const [file, expected] of [
+    ["fireside-templates-after-failure.log", fixture.observed.templatesLogSha256],
+    ["routes-after-failure.json", fixture.observed.routesAfterFailureSha256],
+  ]) {
+    const bytes = await readFile(new URL(
+      `../../reports/phase-5-metrics/${fixture.attempt}/${file}`, import.meta.url,
+    ));
+    assert.equal(createHash("sha256").update(bytes).digest("hex"), expected);
+  }
+  const bases = {
+    CF_WORKER_URL: "ingest-ph", FE_URL: "templates", FIREBASE_STORAGE_EMULATOR_URL: "storage",
+    PAPI_URL: "papi", TWODART_IMAGES_API: "images", TWODARTNET_API_URL: "twodartnet",
+  };
+  const urls = (prefix: string) => Object.fromEntries(Object.entries(bases).map(([key, name]) =>
+    [key, `https://${prefix}${name}.twodart.localhost`]));
+  assert.doesNotThrow(() => assertPhase5PortlessPrefix(urls(""), ""));
+  assert.doesNotThrow(() => assertPhase5PortlessPrefix(urls("phase5-fireside."), "phase5-fireside."));
+  assert.throws(() => assertPhase5PortlessPrefix(urls("phase5-fireside."), ""), /disagrees with live Portless Git prefix/u);
+  for (const key of PHASE5_APPLICATION_URL_KEYS) {
+    const mismatched = { ...urls("phase5-fireside."), [key]: urls("")[key]! };
+    assert.throws(() => assertPhase5PortlessPrefix(mismatched, "phase5-fireside."), new RegExp(key));
+  }
+  const source = await readFile(new URL("../src/suite/run-phase5-gate.ts", import.meta.url), "utf8");
+  assert.match(source, /capture\("bash", \["scripts\/dev\/portless-prefix.sh"\], directory\)/u);
+  assert.match(source, /assertPhase5PortlessPrefix\(stackPortEnvironments\[name\], prefix\)/u);
+});
 
 test("the r13 rejection freezes the exact synthetic asset contamination", async () => {
   const fixture = JSON.parse(await readFile(new URL(

@@ -24,6 +24,7 @@ import {
 } from "./phase5-acceptance-plan.ts";
 import {
   assertDistinctPhase5ApplicationUrls,
+  assertPhase5PortlessPrefix,
   PHASE5_APPLICATION_URL_KEYS,
   PHASE5_STACK_PORTS,
   stageHardlinkedDirectoryTree,
@@ -970,6 +971,14 @@ async function verifyEnvironment(
     official: await readPhase5PortEnvironment(args.officialDirectory),
     fireside: await readPhase5PortEnvironment(args.firesideDirectory),
   };
+  const portlessPrefixes: Record<string, string> = {};
+  for (const [name, directory] of [
+    ["official", args.officialDirectory], ["fireside", args.firesideDirectory],
+  ] as const) {
+    const prefix = await capture("bash", ["scripts/dev/portless-prefix.sh"], directory);
+    assertPhase5PortlessPrefix(stackPortEnvironments[name], prefix);
+    portlessPrefixes[name] = prefix;
+  }
   assertDistinctPhase5ApplicationUrls(
     stackPortEnvironments.official,
     stackPortEnvironments.fireside,
@@ -1087,6 +1096,7 @@ async function verifyEnvironment(
   const { vmSwappiness } = await readPhase5SwapHostState();
   return {
     applicationUrls,
+    portlessPrefixes,
     candidateRevision,
     capturedAt: new Date().toISOString(),
     cpuCount: cpus().length,

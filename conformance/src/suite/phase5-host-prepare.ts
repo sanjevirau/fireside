@@ -97,6 +97,24 @@ export function assertDistinctPhase5ApplicationUrls(
   }
 }
 
+export function assertPhase5PortlessPrefix(
+  environment: Readonly<Record<string, string>>,
+  prefix: string,
+): void {
+  const expectedHosts: Readonly<Record<string, string>> = {
+    CF_WORKER_URL: "ingest-ph", FE_URL: "templates",
+    FIREBASE_STORAGE_EMULATOR_URL: "storage", PAPI_URL: "papi",
+    TWODART_IMAGES_API: "images", TWODARTNET_API_URL: "twodartnet",
+  };
+  for (const [key, name] of Object.entries(expectedHosts)) {
+    const expected = `${prefix}${name}.twodart.localhost`;
+    const value = environment[key];
+    if (value === undefined || new URL(value).hostname !== expected) {
+      throw new Error(`Phase 5 ${key} disagrees with live Portless Git prefix: expected ${expected}, observed ${value ?? "missing"}`);
+    }
+  }
+}
+
 export function phase5DatasetPaths(
   gateRoot: string,
   stack: Phase5StackName,

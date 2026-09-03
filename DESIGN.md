@@ -2090,6 +2090,16 @@ OOM/resource kills, failed units, and leftover synthetic artifacts all remain
 zero-tolerance. The browser runner, source pins, workload, durations, memory
 limits, and swappiness are unchanged.
 
+R21 passed the official v3 smoke soak but exposed detached linked-worktree URL
+drift before Fireside browser startup. The harness had cached a prefixed
+`FE_URL`; the pinned launcher regenerated canonical URLs because live Git HEAD
+was detached. The frontend itself started on the canonical Portless route, so
+the stale prefixed readiness URL returned 404. The harness now checks all six
+captured application hosts against the pinned `portless-prefix.sh` result before
+launch. A namespaced linked worktree must remain on its named branch at the exact
+approved commit. This does not alter login routing, the browser runner, or the
+manifest. The exact failed evidence remains in `phase-5-smoke-20260903-r21.md`.
+
 ## 12. Benchmarks
 
 Phase 5 runtime-asset staging uses independent writable copies for each stack.
