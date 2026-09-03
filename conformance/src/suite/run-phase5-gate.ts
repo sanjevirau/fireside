@@ -30,6 +30,19 @@ import {
   type Phase5StackName,
 } from "./phase5-host-prepare.ts";
 import {
+  phase5ResourceComparison,
+  renderPhase5ResourceComparison,
+  validPhase5SwapMeasurement,
+  type Phase5ResourceEvidence,
+  type Phase5SwapActivity,
+} from "./phase5-resource-evidence.ts";
+import {
+  assertNoPhase5StackProcesses,
+  drainPhase5Swap,
+  readPhase5SwapHostState,
+  runPhase5SwapCommand,
+} from "./phase5-swap-preflight.ts";
+import {
   cacheOutputDigest,
   PHASE5_EXPORT_SHUTDOWN_SECONDS,
   PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS,
@@ -200,10 +213,7 @@ async function main(): Promise<void> {
   let completed = false;
   try {
     for (const stack of stackNames) {
-      await writeJson(
-        path.join(args.outputDirectory, `preflight-${stack}-soak.json`),
-        await captureHostHealth(manifest, args.smoke),
-      );
+      await recordPreflight(args, manifest, environment, `${stack}-soak`);
       const running = await startStack(
         args,
         manifest,
@@ -231,10 +241,7 @@ async function main(): Promise<void> {
 
       if (!args.smoke) {
         const restartDataset = await stageLifecycleExport(args, stack);
-        await writeJson(
-          path.join(args.outputDirectory, `preflight-${stack}-restart.json`),
-          await captureHostHealth(manifest, false),
-        );
+        await recordPreflight(args, manifest, environment, `${stack}-restart`);
         const restarted = await startStack(
           args,
           manifest,
@@ -277,7 +284,7 @@ async function main(): Promise<void> {
       assertCacheParity(restartRunning);
       assertPairState(restartBefore, manifest, false);
       assertPairState(restartAfter, manifest, false);
-      await runFreshColleague(args, manifest, active);
+      await runFreshColleague(args, manifest, active, environment);
       await runRegressions(args);
     }
 
@@ -409,21 +416,13 @@ async function validateSmokePrerequisite(
     ["official", soakOfficial],
     ["fireside", soakFireside],
   ] as const) {
-    const swap = soak.swapActivity as
-      | {
-          readonly sampleCount?: number;
-          readonly swapInPagesDelta?: number;
-          readonly swapOutPagesDelta?: number;
-        }
-      | undefined;
+    const swap = soak.swapActivity as Partial<Phase5SwapActivity> | undefined;
     if (
       soak.passed !== true ||
       soak.smoke !== true ||
       soak.stack !== stack ||
       soak.durationSeconds !== manifest.diagnosticSmoke.shortSoakSecondsPerStack ||
-      (swap?.sampleCount ?? 0) < 2 ||
-      swap?.swapInPagesDelta !== 0 ||
-      swap.swapOutPagesDelta !== 0
+      !validPhase5SwapMeasurement(swap)
     ) {
       throw new Error(`Phase 5 ${stack} smoke soak prerequisite diverged`);
     }
@@ -689,8 +688,27 @@ async function runSoak(
       ? (manifest.diagnosticSmoke.shortSoakSecondsPerStack + 10 * 60) * 1_000
       : 3 * 60 * 60_000,
   );
+  await writeSoakComparison(args, prefix);
   assertCommand(soak);
   await assertJsonPassed(output, `${stack} ${args.smoke ? "smoke " : ""}soak`);
+}
+
+async function writeSoakComparison(args: Arguments, prefix: string): Promise<void> {
+  const soaks: Partial<Record<Phase5StackName, Phase5ResourceEvidence>> = {};
+  for (const stack of stackNames) {
+    try {
+      soaks[stack] = JSON.parse(await readFile(
+        path.join(args.outputDirectory, `${prefix}-${stack}.json`), "utf8",
+      )) as Phase5ResourceEvidence;
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+  }
+  // Update after each stack, including a failed soak; an unrun stack remains null.
+  await writeFile(path.join(args.outputDirectory, "soak-comparison.json"),
+    `${JSON.stringify(phase5ResourceComparison(soaks), null, 2)}\n`);
+  await writeFile(path.join(args.outputDirectory, "soak-comparison.md"),
+    renderPhase5ResourceComparison(soaks));
 }
 
 async function captureStackState(
@@ -822,6 +840,7 @@ async function runFreshColleague(
   args: Arguments,
   manifest: Phase5Manifest,
   active: Map<Phase5StackName, RunningPhase5Stack>,
+  environment: Record<string, unknown>,
 ): Promise<void> {
   await stageHardlinkedDirectoryTree(
     args.fullData,
@@ -849,6 +868,7 @@ async function runFreshColleague(
       label,
     );
     await mkdir(exportPath, { recursive: true });
+    await recordPreflight(args, manifest, environment, label);
     const running = await startPhase5Stack(
       {
         backendOverride: backend,
@@ -1064,7 +1084,7 @@ async function verifyEnvironment(
   ]) {
     await access(emulatorArtifact);
   }
-  const hostHealth = await captureHostHealth(manifest, args.smoke);
+  const { vmSwappiness } = await readPhase5SwapHostState();
   return {
     applicationUrls,
     candidateRevision,
@@ -1088,7 +1108,8 @@ async function verifyEnvironment(
     stagedDatasets,
     totalMemoryBytes: totalmem(),
     toolchain,
-    hostHealth,
+    preflights: {},
+    vmSwappiness,
     twodartRevision: args.twodartRevision,
     twodartRevisions: revisions,
   };
@@ -1126,10 +1147,47 @@ async function hashFile(file: string): Promise<string> {
   return hash.digest("hex");
 }
 
-async function captureHostHealth(
+async function recordPreflight(
+  args: Arguments,
   manifest: Phase5Manifest,
-  smoke: boolean,
-): Promise<Record<string, unknown>> {
+  environment: Record<string, unknown>,
+  label: string,
+): Promise<void> {
+  const record: Record<string, unknown> = { label, startedAt: new Date().toISOString(), passed: false };
+  try {
+    const swapDrain = await drainPhase5Swap({
+      assertQuiescent: async () => {
+        await assertNoPhase5StackProcesses([
+          args.officialDirectory, args.firesideDirectory, args.freshDirectory,
+        ]);
+        const listeners = await capture("ss", ["-ltnH"], repositoryRoot);
+        const gatePorts = Object.values(PHASE5_STACK_PORTS).flatMap((ports) => Object.values(ports));
+        if (listeners.split("\n").some((line) => gatePorts.some((port) => line.includes(`:${port} `)))) {
+          throw new Error("Refusing swap drain while gate listeners are active");
+        }
+      },
+      readState: readPhase5SwapHostState,
+      run: runPhase5SwapCommand,
+    });
+    record.swapDrain = swapDrain;
+    if (!swapDrain.passed || swapDrain.after.vmSwappiness !== environment.vmSwappiness) {
+      throw new Error("Phase 5 swap drain failed or vm.swappiness changed");
+    }
+    record.hostHealth = await captureHostHealth(manifest);
+    record.passed = true;
+  } catch (error: unknown) {
+    record.errorText = errorText(error);
+    throw error;
+  } finally {
+    record.completedAt = new Date().toISOString();
+    const preflights = environment.preflights as Record<string, unknown>;
+    preflights[label] = record;
+    await writeJson(path.join(args.outputDirectory, `preflight-${label}.json`), record);
+    await writeFile(path.join(args.outputDirectory, "environment.json"), `${JSON.stringify(environment, null, 2)}\n`);
+  }
+}
+
+async function captureHostHealth(manifest: Phase5Manifest): Promise<Record<string, unknown>> {
   const [systemState, sshState, failed, journal, vmstat, listeners, filesystem] =
     await Promise.all([
       capture("systemctl", ["is-system-running"], repositoryRoot),
@@ -1164,6 +1222,7 @@ async function captureHostHealth(
     steadyVmstatSamples: steady.length,
     swapInPagesPerSecond,
     swapOutPagesPerSecond,
+    vmstatActivityUnit: "KiB/second (legacy field names retained; required value is zero)",
     systemState,
   };
   const violations: string[] = [];
@@ -1173,7 +1232,6 @@ async function captureHostHealth(
     violations.push(`failedUnits=${String(failedUnits)}`);
   }
   if (
-    !smoke &&
     oomOrResourceEvidence !== manifest.host.preflight.currentBootOomOrResourceKills
   ) {
     violations.push(`oomOrResourceEvidence=${String(oomOrResourceEvidence)}`);
@@ -1183,14 +1241,14 @@ async function captureHostHealth(
   }
   if (
     swapInPagesPerSecond.some(
-      (value) => value > manifest.host.preflight.maximumSwapInPagesPerSecond,
+      (value) => value !== manifest.host.preflight.maximumSwapInPagesPerSecond,
     )
   ) {
     violations.push(`swapInPagesPerSecond=${swapInPagesPerSecond.join(",")}`);
   }
   if (
     swapOutPagesPerSecond.some(
-      (value) => value > manifest.host.preflight.maximumSwapOutPagesPerSecond,
+      (value) => value !== manifest.host.preflight.maximumSwapOutPagesPerSecond,
     )
   ) {
     violations.push(`swapOutPagesPerSecond=${swapOutPagesPerSecond.join(",")}`);
@@ -1236,7 +1294,7 @@ async function writeReport(
         stack,
         JSON.parse(
           await readFile(path.join(args.outputDirectory, `soak-${stack}.json`), "utf8"),
-        ) as Record<string, unknown>,
+        ) as Phase5ResourceEvidence,
       ] as const),
     ),
   );
@@ -1252,6 +1310,7 @@ async function writeReport(
     `- Phase 4 baseline: \`${manifest.phase4Baseline.tag}\` at \`${manifest.phase4Baseline.taggedRevision}\`\n` +
     `- Evidence directory: [${relativeEvidence}](${relativeEvidence})\n` +
     `- Host: \`${String(environment.host)}\`, ${String((environment.os as Record<string, unknown>).platform)} ${String((environment.os as Record<string, unknown>).release)} ${String((environment.os as Record<string, unknown>).arch)}\n\n` +
+    `Schema v3 was amended before measurement from \`${manifest.amendment.previousManifestSha256}\`; \`criteriaWeakened: true\` explicitly records the authorized removal of soak swap zero assertions. Workload and durations are unchanged. The reason is preserved verbatim in the manifest. Each quiescent stack preflight recorded \`swapoff -a\`, \`swapon -a\`, and three steady zero-activity samples in \`environment.json\`. \`vm.swappiness\` remained ${String(environment.vmSwappiness)}.\n\n` +
     `## Official Java comparison boundary\n\n` +
     `The exact Java 26 untuned-default attempt exhausted the official Firestore emulator heap while importing the 211,202-document corpus; that failed attempt is preserved by \`conformance/fixtures/phase5/official-java-default-heap-import.json\`. The completed official comparison used the existing explicit \`${PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS}\` HotSpot heap option. This retry is reported separately and did not change any functional, lifecycle, soak, or Fireside threshold.\n\n` +
     `## Results\n\n` +
@@ -1262,6 +1321,7 @@ async function writeReport(
     `- A fresh checkout started Fireside with \`bun dev:mprocs\` and the documented official fallback also started successfully.\n` +
     `- Existing Fireside and Twodart regression/build gates passed.\n\n` +
     `Machine-readable lifecycle evidence: \`${digest(JSON.stringify(lifecycle))}\`. Machine-readable soak evidence: \`${digest(JSON.stringify(soak))}\`.\n\n` +
+    renderPhase5ResourceComparison(soak) +
     `## Reproduction\n\n` +
     `Use the frozen manifest, exact Twodart revision, isolated Linux port blocks, transferred dataset/assets with their recorded SHA-256 identities, and run \`npm run test:suite:phase5-gate --prefix conformance -- [the recorded environment arguments]\`. On macOS, the ordinary developer command remains \`bun dev:mprocs\`; use \`TWODART_FIREBASE_BACKEND=official bun dev:mprocs\` only for the explicit fallback.\n\n` +
     `No private dataset content, credentials, OTPs, user identifiers, or deck identifiers are included in this report or durable evidence.\n`;

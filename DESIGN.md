@@ -1949,9 +1949,10 @@ The 16 GiB acceptance host cannot keep both full Twodart process trees in
 steady state without swap activity. The two unchanged 7,200-second workloads
 therefore run sequentially, official first and Fireside second. Each stack is
 started only after a fresh quiescent host preflight, under the same workload,
-toolchain, dataset, and sampling conditions. The zero-swap-activity criterion
-and every correctness, health, workload, and duration threshold remain
-unchanged; only concurrency is removed. Phase 5 harness-only commits may
+toolchain, dataset, and sampling conditions. Schema v2 initially retained the
+zero-swap-activity criterion; the explicitly authorized schema-v3 correction
+below supersedes that soak rule, while retaining zero activity in preflight.
+Phase 5 harness-only commits may
 advance to the cheap smoke after the dedicated Phase 5 harness job and the Rust
 quality job are green. Product changes under `crates/`, WebChannel or Firebase
 JS SDK harness changes, and the final immutable candidate still require the
@@ -2007,8 +2008,8 @@ catalogue. The exact recorded error hash and browser/soak evidence are frozen in
 `smoke-soak-catalog-precondition.json`. A smoke-only helper creates one temporary
 owned catalogue row before measurement, only when the catalogue is empty, and
 verifies ownership before deleting it afterward. Full-data runs never synthesize
-catalogue data. The final browser runner, schedules, queries, and zero-swap rule
-are unchanged. Soak errors now retain readable text alongside their legacy
+catalogue data. That correction left the final browser runner, schedules,
+queries, and then-current schema-v2 swap rule unchanged. Soak errors retain readable text alongside their legacy
 hashes, including primary and cleanup failures.
 
 The next cheap attempt exposed a second soak-only boundary: `frozenDispatchBody`
@@ -2019,7 +2020,7 @@ same audit found that samples at 0..duration-minus-interval omitted the final
 interval endpoint. Sampling now includes the endpoint (3 samples for 60 seconds;
 241 for 7,200 seconds), and independent swap counters bracket all workers and
 final sampling before cleanup. The minimum 240 full-run samples, 30-second
-interval, duration, workload, and zero-swap thresholds remain unchanged. These
+interval, duration, workload, and then-current schema-v2 thresholds remained unchanged. These
 boundaries were frozen before correction in `soak-runtime-boundaries.json`.
 
 ### Phase 5 Mac-verified journey corrections (2026-09-03)
@@ -2054,6 +2055,40 @@ are not gating failures; other required-request errors still gate. Synthetic
 failure text and export start/status responses are preserved verbatim except
 identifiers/OTPs and credentials. The narrow Next HMR diagnostic classification
 is retained. All other frozen criteria remain unchanged.
+
+### Phase 5 schema-v3 swap measurement boundary (2026-09-03)
+
+The maintainer explicitly authorized a threshold relaxation before the next
+measurement. The manifest records `previousManifestSha256`,
+`amendedBeforeMeasurement: true`, `criteriaWeakened: true`, and the full reason
+verbatim. R20 remains a preserved schema-v2 failure, not a retroactive pass.
+The observed swap-in during its short soak followed stack startup and browser
+journeys; a full official stack can exceed this host's physical memory. Swap
+volume is therefore a comparative measurement, not an emulator correctness
+threshold or a required Fireside victory.
+
+Before every initial, restart, and fresh-colleague stack launch, the harness
+checks that no current or historical gate stack processes or isolated listeners
+are active. Only then does the authorized quiescent preflight execute
+`sudo -n swapoff -a` followed by `sudo -n swapon -a`, restoring configured swap
+even if swapoff reports failure. The drain, command outcomes, residual bytes,
+and unchanged `vm.swappiness` are persisted in `environment.json` and the
+per-stack preflight. Three steady vmstat samples must still show zero swap-in
+and swap-out. The legacy preflight field names are retained with an explicit
+KiB/second unit annotation. No swap drain or other intervention occurs during
+an active stack or measured window.
+
+Both 60-second smoke and 7,200-second full soaks collect complete `/proc/vmstat`
+page deltas, start/end residual swap bytes, and per-process RSS/PSS samples.
+Missing or invalid measurements still fail evidence validation; nonzero swap
+activity does not. Each stack's peak-PSS process table and swap counters are
+written side by side after each completed or failed soak and in the final
+report. Missing stacks remain `null`/not measured, not zero; independent
+per-PID peaks are not simultaneous totals or matched process identities.
+Errors, stalls, listener gaps, acknowledged-state mismatches, duplicate effects,
+OOM/resource kills, failed units, and leftover synthetic artifacts all remain
+zero-tolerance. The browser runner, source pins, workload, durations, memory
+limits, and swappiness are unchanged.
 
 ## 12. Benchmarks
 

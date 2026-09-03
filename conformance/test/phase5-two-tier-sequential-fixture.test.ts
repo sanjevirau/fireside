@@ -7,7 +7,7 @@ const fixtureUrl = new URL(
   import.meta.url,
 );
 
-test("Phase 5 two-tier sequential gate correction is frozen without weaker criteria", async () => {
+test("Phase 5 two-tier sequential gate records the authorized v3 swap relaxation", async () => {
   const fixture = JSON.parse(await readFile(fixtureUrl, "utf8")) as {
     readonly schemaVersion: number;
     readonly contract: {
@@ -31,7 +31,9 @@ test("Phase 5 two-tier sequential gate correction is frozen without weaker crite
         readonly freshQuiescentPreflightBeforeEachStack: boolean;
         readonly immutableGateInterventionAllowed: boolean;
         readonly soakDurationSecondsPerStack: number;
-        readonly zeroSwapActivity: boolean;
+        readonly zeroSwapActivityDuringPreflight: boolean;
+        readonly swapDrainBeforeEachStack: readonly string[];
+        readonly soakSwapActivityIsMeasurementOnly: boolean;
       };
       readonly ci: {
         readonly fullSixJobMatrixRequiredFor: readonly string[];
@@ -49,9 +51,9 @@ test("Phase 5 two-tier sequential gate correction is frozen without weaker crite
     };
   };
 
-  assert.equal(fixture.schemaVersion, 1);
-  assert.equal(fixture.contract.criteriaWeakened, false);
-  assert.equal(fixture.contract.thresholdsChanged, false);
+  assert.equal(fixture.schemaVersion, 2);
+  assert.equal(fixture.contract.criteriaWeakened, true);
+  assert.equal(fixture.contract.thresholdsChanged, true);
   assert.equal(fixture.contract.workloadChanged, false);
   assert.deepEqual(fixture.contract.diagnosticSmoke.executionOrder, ["official", "fireside"]);
   assert.equal(fixture.contract.diagnosticSmoke.mustPassBeforeFullData, true);
@@ -66,7 +68,9 @@ test("Phase 5 two-tier sequential gate correction is frozen without weaker crite
   assert.deepEqual(fixture.contract.fullGate.executionOrder, ["official", "fireside"]);
   assert.equal(fixture.contract.fullGate.soakDurationSecondsPerStack, 7_200);
   assert.equal(fixture.contract.fullGate.freshQuiescentPreflightBeforeEachStack, true);
-  assert.equal(fixture.contract.fullGate.zeroSwapActivity, true);
+  assert.equal(fixture.contract.fullGate.zeroSwapActivityDuringPreflight, true);
+  assert.deepEqual(fixture.contract.fullGate.swapDrainBeforeEachStack, ["swapoff -a", "swapon -a"]);
+  assert.equal(fixture.contract.fullGate.soakSwapActivityIsMeasurementOnly, true);
   assert.equal(fixture.contract.fullGate.immutableGateInterventionAllowed, false);
   assert.deepEqual(fixture.contract.ci.harnessOnlyPreSmokeJobs, [
     "Phase 5 harness",

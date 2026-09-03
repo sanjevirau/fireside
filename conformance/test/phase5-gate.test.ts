@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import {
+  drainPhase5Swap, phase5StackDirectoryMatches, type SwapHostState, type SwapDrainDependencies,
+} from "../src/suite/phase5-swap-preflight.ts";
 
 const runnerUrl = new URL("../src/suite/run-phase5-gate.ts", import.meta.url);
 const outputDrainFixtureUrl = new URL(
@@ -144,7 +147,7 @@ test("Phase 5 gate runs the frozen lifecycle in order", async () => {
   );
   const ordered = [
     "for (const stack of stackNames)",
-    "await captureHostHealth(manifest, args.smoke)",
+    "await recordPreflight(args, manifest, environment, `${stack}-soak`)",
     "const running = await startStack(",
     "const initial = await exerciseStack(",
     "await runSoak(args, manifest, stack)",
@@ -152,7 +155,7 @@ test("Phase 5 gate runs the frozen lifecycle in order", async () => {
     "stageLifecycleExport(args, stack)",
     "const restarted = await startStack(",
     "const restart = await exerciseStack(",
-    "runFreshColleague(args, manifest, active)",
+    "runFreshColleague(args, manifest, active, environment)",
     "runRegressions(args)",
   ];
   let previous = -1;
@@ -206,7 +209,7 @@ test("Phase 5 gate includes smoke, fresh colleague, regression, and checksum pat
   }
   assert.match(
     source,
-    /!smoke &&\s+oomOrResourceEvidence !== manifest\.host\.preflight\.currentBootOomOrResourceKills/u,
+    /oomOrResourceEvidence !== manifest\.host\.preflight\.currentBootOomOrResourceKills/u,
   );
   assert.match(source, /violations\.push\(`swapInPagesPerSecond=/u);
   assert.match(source, /JSON\.stringify\(\{ \.\.\.snapshot, violations \}\)/u);
@@ -227,4 +230,76 @@ test("Phase 5 gate includes smoke, fresh colleague, regression, and checksum pat
   assert.match(source, /function gateRuntimeDirectory/u);
   assert.match(source, /path\.join\(\s*"\/tmp",\s*`fireside-p5-\$\{digest\(outputDirectory\)\.slice\(0, 16\)\}`/u);
   assert.doesNotMatch(source, /`runtime-\$\{path\.basename\(args\.outputDirectory\)\}`/u);
+});
+
+function fakeSwapDrain(options: { active?: boolean; failed?: "swapoff" | "swapon"; drift?: boolean } = {}) {
+  const operations: string[] = [];
+  let readCount = 0;
+  const state: SwapHostState = { residualSwapBytes: 123_456, vmSwappiness: 60, configuredSwap: "Filename Type Size Used Priority" };
+  const dependencies: SwapDrainDependencies = {
+    async assertQuiescent() {
+      operations.push("assert-quiescent");
+      if (options.active) throw new Error("stack active");
+    },
+    async readState() {
+      operations.push("read-state");
+      return readCount++ === 0 ? state : { ...state, residualSwapBytes: 0, vmSwappiness: options.drift ? 10 : 60 };
+    },
+    async run(command) {
+      operations.push(command);
+      return { command, args: ["-a"], exitCode: options.failed === command ? 1 : 0, stdout: "", stderr: "" };
+    },
+  };
+  return { operations, dependencies };
+}
+
+test("authorized preflight drains then restores swap and records unchanged swappiness", async () => {
+  const fake = fakeSwapDrain();
+  const evidence = await drainPhase5Swap(fake.dependencies);
+  assert.deepEqual(fake.operations, ["assert-quiescent", "read-state", "swapoff", "swapon", "read-state"]);
+  assert.equal(evidence.passed, true);
+  assert.equal(evidence.before.residualSwapBytes, 123_456);
+  assert.equal(evidence.after.residualSwapBytes, 0);
+  assert.equal(evidence.swappinessChanged, false);
+  assert.deepEqual(evidence.commands.map(({ command, args }) => [command, ...args]), [["swapoff", "-a"], ["swapon", "-a"]]);
+});
+
+test("swap drain refuses an active stack before any command or state mutation", async () => {
+  const fake = fakeSwapDrain({ active: true });
+  await assert.rejects(drainPhase5Swap(fake.dependencies), /stack active/u);
+  assert.deepEqual(fake.operations, ["assert-quiescent"]);
+  assert.equal(phase5StackDirectoryMatches("/isolated/official/apps/templates", ["/isolated/official"]), true);
+  assert.equal(phase5StackDirectoryMatches("/isolated/official-other", ["/isolated/official"]), false);
+  assert.equal(phase5StackDirectoryMatches("/srv/dev-fast/runtime-data/fireside-phase5-old/stack-fireside/apps/papi", []), true);
+  assert.equal(phase5StackDirectoryMatches("/srv/dev-fast/runtime-data/fireside-phase5-current/harness", []), false);
+});
+
+test("a failed drain still restores swap and failures or swappiness drift cannot pass", async () => {
+  for (const options of [{ failed: "swapoff" }, { failed: "swapon" }, { drift: true }] as const) {
+    const fake = fakeSwapDrain(options);
+    const evidence = await drainPhase5Swap(fake.dependencies);
+    assert.equal(evidence.passed, false);
+    assert.ok(fake.operations.includes("swapon"));
+  }
+  const fake = fakeSwapDrain();
+  const run = fake.dependencies.run;
+  await assert.rejects(drainPhase5Swap({ ...fake.dependencies, run: async (command) => {
+    if (command === "swapoff") throw new Error("transport failure");
+    return run(command);
+  } }), /transport failure/u);
+  assert.ok(fake.operations.includes("swapon"));
+});
+
+test("every stack launch records a drained zero-activity preflight; soak swap is not a prerequisite threshold", async () => {
+  const source = await readFile(runnerUrl, "utf8");
+  assert.match(source, /await recordPreflight\(args, manifest, environment, `\$\{stack\}-restart`\)/u);
+  assert.match(source, /await recordPreflight\(args, manifest, environment, label\)/u);
+  assert.match(source, /record\.swapDrain = swapDrain/u);
+  assert.match(source, /record\.hostHealth = await captureHostHealth\(manifest\)/u);
+  assert.match(source, /preflights\[label\] = record/u);
+  assert.match(source, /swapDrain\.after\.vmSwappiness !== environment\.vmSwappiness/u);
+  assert.match(source, /!validPhase5SwapMeasurement\(swap\)/u);
+  assert.doesNotMatch(source, /swap\??\.swap(?:In|Out)PagesDelta !== 0/u);
+  assert.ok(source.indexOf("await writeSoakComparison(args, prefix)") < source.indexOf("assertCommand(soak)"));
+  assert.match(source, /renderPhase5ResourceComparison\(soak\)/u);
 });

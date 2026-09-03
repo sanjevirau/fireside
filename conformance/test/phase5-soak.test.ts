@@ -6,8 +6,88 @@ import path from "node:path";
 import vm from "node:vm";
 import { preparePhase5SmokeCatalog, type SmokeCatalogClient } from "../src/suite/phase5-smoke-catalog.ts";
 import { phase5SoakSampleOffsets } from "../src/suite/phase5-soak-schedule.ts";
+import { validPhase5SwapMeasurement, topPhase5ProcessesByPss, phase5ResourceComparison, renderPhase5ResourceComparison, type Phase5ResourceEvidence } from "../src/suite/phase5-resource-evidence.ts";
 
 const runnerUrl = new URL("../src/suite/run-phase5-soak.ts", import.meta.url);
+
+const measuredSwap = {
+  sampleCount: 3, swapInPagesDelta: 16_562, swapOutPagesDelta: 42,
+  residualSwapBytesAtStart: 1_193_906_176, residualSwapBytesAtEnd: 1_125_023_744,
+};
+
+test("v3 swap measurements accept activity in either direction but never missing or invalid counters", () => {
+  assert.equal(validPhase5SwapMeasurement(measuredSwap), true);
+  assert.equal(validPhase5SwapMeasurement({ ...measuredSwap, swapInPagesDelta: 0, swapOutPagesDelta: 0 }), true);
+  assert.equal(validPhase5SwapMeasurement(undefined), false);
+  for (const field of Object.keys(measuredSwap)) {
+    for (const invalid of [undefined, null, -1, NaN, Infinity, 0.5]) {
+      assert.equal(validPhase5SwapMeasurement({ ...measuredSwap, [field]: invalid }), false, `${field}: ${invalid}`);
+    }
+  }
+  assert.equal(validPhase5SwapMeasurement({ ...measuredSwap, sampleCount: 1 }), false);
+});
+
+test("the actual soak validator ignores swap volume and retains every correctness and health gate", async () => {
+  const source = await readFile(runnerUrl, "utf8");
+  const validator = stripTypeScriptTypes(source.slice(source.indexOf("function validateGate("), source.indexOf("function summarizeSwapActivity(")));
+  const manifest = JSON.parse(await readFile(new URL("../../benchmarks/phase-5-twodart-acceptance.json", import.meta.url), "utf8"));
+  const validate = vm.runInNewContext(`${validator}\nvalidateGate`, {
+    validPhase5SwapMeasurement, summarizeSwapActivity: () => measuredSwap,
+    memorySamples: Array.from({ length: 241 }), digest: (value: string) => value,
+    summarizeRuntime: (runtime: { gaps: number }) => ({ listenerDelivery: { gaps: runtime.gaps } }),
+  });
+  const runtime = () => ({
+    definition: { name: "official" }, gaps: 0, sessions: [{ tracker: { duplicates: 0 } }],
+    metrics: { counts: {}, errorHashes: new Set<string>(), stalls: 0, acknowledgedStateMismatches: 0 },
+  });
+  const healthy = { failedUnits: 0, oomOrResourceEvidence: 0 };
+  for (const smoke of [true, false]) {
+    assert.equal(validate([runtime()], {}, healthy, [], manifest, smoke).length, 0);
+    for (const key of ["failedUnits", "oomOrResourceEvidence"]) {
+      assert.equal(validate([runtime()], {}, { ...healthy, [key]: 1 }, [], manifest, smoke).length, 1);
+    }
+    assert.equal(validate([runtime()], {}, healthy, ["synthetic-artifacts-remain"], manifest, smoke).length, 1);
+    for (const defect of ["counts", "errors", "stalls", "acknowledged", "gaps", "duplicates"]) {
+      const broken = runtime();
+      if (defect === "counts") broken.metrics.counts = { unexpected: 1 };
+      if (defect === "errors") broken.metrics.errorHashes.add("error-text");
+      if (defect === "stalls") broken.metrics.stalls = 1;
+      if (defect === "acknowledged") broken.metrics.acknowledgedStateMismatches = 1;
+      if (defect === "gaps") broken.gaps = 1;
+      if (defect === "duplicates") broken.sessions[0]!.tracker.duplicates = 1;
+      assert.equal(validate([broken], {}, healthy, [], manifest, smoke).length, 1, defect);
+    }
+  }
+});
+
+test("PSS evidence ranks independent PIDs by measured peaks and preserves missing values", () => {
+  const top = topPhase5ProcessesByPss([
+    { stacks: { official: { processes: [
+      { command: "next-server", pid: 10, pssBytes: 800, rssBytes: 900 },
+      { command: "java", pid: 20, pssBytes: null, rssBytes: 600 },
+      { command: "java", pid: 30, pssBytes: null, rssBytes: 700 },
+    ] } } },
+    { stacks: { official: { processes: [
+      { command: "next-server", pid: 10, pssBytes: 700, rssBytes: 950 },
+      { command: "java", pid: 20, pssBytes: 850, rssBytes: 1000 },
+    ] } } },
+  ], "official");
+  assert.deepEqual(top.map(({ pid }) => pid), [20, 10, 30]);
+  assert.equal(top[1]?.peakPssBytes, 800);
+  assert.equal(top[1]?.peakRssBytes, 950);
+  assert.equal(top[1]?.samples, 2);
+  assert.equal(top[2]?.peakPssBytes, null);
+  const official: Phase5ResourceEvidence = { durationSeconds: 60, passed: true, swapActivity: measuredSwap, topProcessesByPss: { official: top } };
+  const partial = phase5ResourceComparison({ official });
+  assert.equal(partial.stacks.fireside, null);
+  assert.equal(partial.winnerRequired, false);
+  assert.match(renderPhase5ResourceComparison({ official }), /Swap-in pages \| 16562 \| not measured/u);
+  const fireside: Phase5ResourceEvidence = { ...official, swapActivity: { ...measuredSwap, swapInPagesDelta: 5 }, topProcessesByPss: { fireside: top.slice(0, 1) } };
+  const table = renderPhase5ResourceComparison({ official, fireside });
+  assert.match(table, /Swap-in pages \| 16562 \| 5/u);
+  assert.match(table, /java \(PID 20\) \| 850 \| java \(PID 20\) \| 850/u);
+  assert.match(table, /next-server \(PID 10\) \| 800 \| not measured \| not measured/u);
+});
 
 test("all Phase 5 entry-point bindings initialize before top-level execution", async () => {
   for (const file of ["run-phase5-soak.ts", "run-phase5-gate.ts", "run-phase5-browser-journeys.ts"]) {
@@ -171,12 +251,10 @@ test("the Phase 5 soak measures full stack memory and host health", async () => 
   ]) {
     assert.ok(source.includes(boundary), `${boundary} is missing`);
   }
-  assert.match(source, /!smoke && health\.failedUnits !== manifest\.soak\.thresholds\.failedUnits/u);
-  assert.match(source, /smoke && health\.failedUnits !== healthBefore\.failedUnits/u);
-  assert.match(source, /!smoke &&\s+health\.oomOrResourceEvidence !== manifest\.soak\.thresholds\.oomOrResourceKills/u);
-  assert.match(source, /smoke && health\.oomOrResourceEvidence !== healthBefore\.oomOrResourceEvidence/u);
-  assert.match(source, /swapActivity\.swapInPagesDelta !== 0/u);
-  assert.match(source, /swapActivity\.swapOutPagesDelta !== 0/u);
+  assert.match(source, /health\.failedUnits !== manifest\.soak\.thresholds\.failedUnits/u);
+  assert.match(source, /health\.oomOrResourceEvidence !== manifest\.soak\.thresholds\.oomOrResourceKills/u);
+  assert.match(source, /!validPhase5SwapMeasurement\(swapActivity\)/u);
+  assert.doesNotMatch(source, /swapActivity\.swap(?:In|Out)PagesDelta !== 0/u);
 });
 
 test("the Phase 5 soak verifies Storage bytes, safe functions, cleanup, and evidence privacy", async () => {

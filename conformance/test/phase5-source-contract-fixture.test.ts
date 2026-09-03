@@ -33,7 +33,9 @@ test("the cheap soak freezes its initialization failure and complete-window requ
   assert.equal(fixture.observed.soakPassed, false);
   assert.equal(fixture.observed.primaryError, "ReferenceError: Cannot access 'frozenDispatchBody' before initialization");
   assert.equal(fixture.sourceAudit.includeFinalWindowEndpoint, true);
-  assert.equal(fixture.sourceAudit.zeroSwapThresholdUnchanged, true);
+  assert.deepEqual(fixture.sourceAudit.swapRule, {
+    manifestSchemaVersion: 3, zeroActivityPreflight: true, soakActivityIsMeasurementOnly: true,
+  });
   assert.equal(fixture.sourceAudit.fullSecondsUnchanged, 7200);
 });
 
@@ -56,7 +58,9 @@ test("the first strict nine-journey pass exposes the smoke soak catalog precondi
     `    at async <anonymous> (${file}:148:1)`;
   assert.equal(createHash("sha256").update(stack).digest("hex"), fixture.soak.errorStackSha256);
   assert.equal(fixture.correctionContract.fullDataCatalogMustNotBeSynthesized, true);
-  assert.equal(fixture.correctionContract.zeroSwapRuleUnchanged, true);
+  assert.deepEqual(fixture.correctionContract.swapRule, {
+    manifestSchemaVersion: 3, zeroActivityPreflight: true, soakActivityIsMeasurementOnly: true,
+  });
 });
 
 test("the final Mac runner patch freezes strict export and trace contracts", async () => {

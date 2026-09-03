@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 export const PHASE5_MANIFEST_SHA256 =
-  "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa";
+  "e5d43e4f41f7d2276754468e04b4131f76076e37aeb5afd536b6ce9c8d5b77ca";
 
 export const PHASE5_TWODART_REVISION =
   "90881bf9611c9de09bcfc326943494bc28fcd1bd";
@@ -14,6 +14,7 @@ export interface Phase5Manifest {
     readonly amendedBeforeMeasurement: boolean;
     readonly criteriaWeakened: boolean;
     readonly previousManifestSha256: string;
+    readonly reason: string;
     readonly thresholdsChanged: boolean;
     readonly workloadChanged: boolean;
   };
@@ -75,6 +76,14 @@ export interface Phase5Manifest {
       readonly maximumSwapInPagesPerSecond: number;
       readonly maximumSwapOutPagesPerSecond: number;
       readonly steadyVmstatSamples: number;
+      readonly swapDrain: {
+        readonly requiredBeforeEachStack: boolean;
+        readonly commands: readonly string[];
+        readonly onlyWhenNoGateStackIsRunning: boolean;
+        readonly recordInEnvironment: boolean;
+        readonly recordVmSwappiness: boolean;
+        readonly changeVmSwappinessAllowed: boolean;
+      };
     };
     readonly sshAlias: string;
   };
@@ -115,6 +124,13 @@ export interface Phase5Manifest {
     readonly executionOrder: readonly string[];
     readonly freshQuiescentPreflightBeforeEachBackend: boolean;
     readonly identicalConditions: boolean;
+    readonly swapActivityPolicy: {
+      readonly gating: boolean;
+      readonly requiredMeasurement: boolean;
+      readonly reportSideBySide: boolean;
+      readonly winnerRequired: boolean;
+      readonly fields: readonly string[];
+    };
     readonly thresholds: {
       readonly acknowledgedStateMismatches: number;
       readonly duplicateObservableEffects: number;
@@ -190,11 +206,11 @@ export function assertPhase5Manifest(
   manifestBytes: Uint8Array,
 ): void {
   if (
-    manifest.schemaVersion !== 2 ||
+    manifest.schemaVersion !== 3 ||
     manifest.name !== "phase-5-twodart-acceptance" ||
     !manifest.frozen
   ) {
-    throw new Error("Phase 5 manifest is not the frozen schema-v2 manifest");
+    throw new Error("Phase 5 manifest is not the frozen schema-v3 manifest");
   }
 
   const digest = createHash("sha256").update(manifestBytes).digest("hex");
@@ -215,6 +231,7 @@ export function assertPhase5Manifest(
   assertRuntimeAssets(manifest);
   assertSafetyContract(manifest);
   assertEfficiencyCorrection(manifest);
+  assertSwapBoundary(manifest);
 }
 
 function assertJourneyContract(manifest: Phase5Manifest): void {
@@ -299,10 +316,10 @@ function assertEfficiencyCorrection(manifest: Phase5Manifest): void {
   const smoke = manifest.diagnosticSmoke;
   if (
     correction.previousManifestSha256 !==
-      "a0e58c98e1b6962c6de04de0809b625948b126968903f4ca1c41de6ffcb433b0" ||
+      "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa" ||
     !correction.amendedBeforeMeasurement ||
-    correction.criteriaWeakened ||
-    correction.thresholdsChanged ||
+    !correction.criteriaWeakened ||
+    !correction.thresholdsChanged ||
     correction.workloadChanged ||
     !smoke.requiredBeforeEveryFullDataAttempt ||
     smoke.maximumReadySeconds !== 60 ||
@@ -328,6 +345,29 @@ function assertEfficiencyCorrection(manifest: Phase5Manifest): void {
     !manifest.ciGating.finalCandidateRequiresFullMatrix
   ) {
     throw new Error("Phase 5 tiered CI contract diverged");
+  }
+}
+
+function assertSwapBoundary(manifest: Phase5Manifest): void {
+  const { swapDrain, ...preflight } = manifest.host.preflight;
+  const policy = manifest.soak.swapActivityPolicy;
+  if (
+    !swapDrain.requiredBeforeEachStack ||
+    JSON.stringify(swapDrain.commands) !== JSON.stringify(["swapoff -a", "swapon -a"]) ||
+    !swapDrain.onlyWhenNoGateStackIsRunning ||
+    !swapDrain.recordInEnvironment ||
+    !swapDrain.recordVmSwappiness ||
+    swapDrain.changeVmSwappinessAllowed ||
+    preflight.steadyVmstatSamples !== 3 ||
+    preflight.maximumSwapInPagesPerSecond !== 0 ||
+    preflight.maximumSwapOutPagesPerSecond !== 0 ||
+    policy.gating || !policy.requiredMeasurement || !policy.reportSideBySide ||
+    policy.winnerRequired ||
+    JSON.stringify(policy.fields) !== JSON.stringify([
+      "swapInPagesDelta", "swapOutPagesDelta", "residualSwapBytesAtStart", "residualSwapBytesAtEnd",
+    ])
+  ) {
+    throw new Error("Phase 5 schema-v3 preflight/soak swap boundary diverged");
   }
 }
 

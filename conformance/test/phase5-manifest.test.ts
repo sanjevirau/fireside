@@ -33,9 +33,9 @@ test("the immutable Phase 5 manifest freezes the full Twodart differential gate"
   });
   assert.equal(manifest.host.sshAlias, "sanjevi-linux");
   assert.equal(manifest.host.minimumAvailableDiskBytes, 80_000_000_000);
-  assert.equal(manifest.schemaVersion, 2);
-  assert.equal(manifest.amendment.criteriaWeakened, false);
-  assert.equal(manifest.amendment.thresholdsChanged, false);
+  assert.equal(manifest.schemaVersion, 3);
+  assert.equal(manifest.amendment.criteriaWeakened, true);
+  assert.equal(manifest.amendment.thresholdsChanged, true);
   assert.equal(manifest.amendment.workloadChanged, false);
   assert.equal(manifest.diagnosticSmoke.requiredBeforeEveryFullDataAttempt, true);
   assert.equal(manifest.diagnosticSmoke.maximumReadySeconds, 60);
@@ -55,6 +55,30 @@ test("the immutable Phase 5 manifest freezes the full Twodart differential gate"
     ),
     10_967,
   );
+});
+
+test("schema v3 records the authorized relaxation without reclassifying r20", async () => {
+  const manifest = JSON.parse(await readFile(manifestUrl, "utf8")) as Phase5Manifest;
+  const fixture = JSON.parse(await readFile(new URL(
+    "../fixtures/phase5/schema-v3-swap-measurement-contract.json", import.meta.url,
+  ), "utf8"));
+  assert.equal(manifest.amendment.previousManifestSha256, fixture.previousManifestSha256);
+  assert.equal(manifest.amendment.reason, fixture.reason);
+  assert.equal(manifest.amendment.amendedBeforeMeasurement, true);
+  assert.equal(manifest.soak.swapActivityPolicy.gating, false);
+  assert.equal(manifest.soak.swapActivityPolicy.winnerRequired, false);
+  assert.equal(manifest.host.preflight.steadyVmstatSamples, 3);
+  assert.equal(manifest.host.preflight.maximumSwapInPagesPerSecond, 0);
+  assert.equal(manifest.host.preflight.maximumSwapOutPagesPerSecond, 0);
+  assert.deepEqual(manifest.host.preflight.swapDrain.commands, ["swapoff -a", "swapon -a"]);
+  assert.equal(manifest.host.preflight.swapDrain.changeVmSwappinessAllowed, false);
+  assert.ok(Object.values(manifest.soak.thresholds).every((threshold) => threshold === 0));
+  assert.equal(fixture.observation.soakPassedUnderSchema2, false);
+  assert.equal(fixture.observation.historicalResultMustNotBeReclassified, true);
+  const { createHash } = await import("node:crypto");
+  assert.equal(createHash("sha256").update(await readFile(new URL(
+    "../src/suite/run-phase5-browser-journeys.ts", import.meta.url,
+  ))).digest("hex"), fixture.contract.browserRunnerSha256);
 });
 
 test("the Phase 5 manifest rejects byte drift before any measurement", async () => {

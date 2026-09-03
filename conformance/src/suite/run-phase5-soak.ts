@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { Firestore } from "@google-cloud/firestore";
 import { preparePhase5SmokeCatalog } from "./phase5-smoke-catalog.ts";
 import { phase5SoakSampleOffsets } from "./phase5-soak-schedule.ts";
+import { topPhase5ProcessesByPss, validPhase5SwapMeasurement } from "./phase5-resource-evidence.ts";
 
 import {
   assertPhase5Manifest,
@@ -251,7 +252,6 @@ async function main(): Promise<void> {
   const gateFailures = validateGate(
     runtimes,
     expected,
-    healthBefore,
     healthAfter,
     cleanupFailures,
     manifest,
@@ -271,6 +271,8 @@ async function main(): Promise<void> {
     health: { after: healthAfter, before: healthBefore },
     manifestSha256: PHASE5_MANIFEST_SHA256,
     memory: summarizeMemory(definitions),
+    topProcessesByPss: Object.fromEntries(definitions.map(({ name }) =>
+      [name, topPhase5ProcessesByPss(memorySamples, name)])),
     privateContentStored: false,
     projectId: args.projectId,
     raw: {
@@ -925,7 +927,6 @@ function expectedCounts(
 function validateGate(
   runtimes: readonly StackRuntime[],
   expected: WorkloadCounts,
-  healthBefore: HealthEvidence,
   health: HealthEvidence,
   cleanupFailures: readonly string[],
   manifest: Phase5Manifest,
@@ -933,25 +934,16 @@ function validateGate(
 ): string[] {
   const failures: string[] = [...cleanupFailures];
   const swapActivity = summarizeSwapActivity();
-  if (swapActivity.sampleCount < 2) {
-    failures.push(digest(`swap-samples:${String(swapActivity.sampleCount)}`));
-  }
-  if (swapActivity.swapInPagesDelta !== 0) {
-    failures.push(digest(`swap-in-pages:${String(swapActivity.swapInPagesDelta)}`));
-  }
-  if (swapActivity.swapOutPagesDelta !== 0) {
-    failures.push(digest(`swap-out-pages:${String(swapActivity.swapOutPagesDelta)}`));
+  if (!validPhase5SwapMeasurement(swapActivity)) {
+    failures.push(digest(`incomplete-swap-measurement:${JSON.stringify(swapActivity)}`));
   }
   if (
-    (!smoke && health.failedUnits !== manifest.soak.thresholds.failedUnits) ||
-    (smoke && health.failedUnits !== healthBefore.failedUnits)
+    health.failedUnits !== manifest.soak.thresholds.failedUnits
   ) {
     failures.push(digest(`failed-units:${String(health.failedUnits)}`));
   }
   if (
-    (!smoke &&
-      health.oomOrResourceEvidence !== manifest.soak.thresholds.oomOrResourceKills) ||
-    (smoke && health.oomOrResourceEvidence !== healthBefore.oomOrResourceEvidence)
+    health.oomOrResourceEvidence !== manifest.soak.thresholds.oomOrResourceKills
   ) {
     failures.push(digest(`oom-resource:${String(health.oomOrResourceEvidence)}`));
   }
