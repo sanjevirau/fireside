@@ -785,27 +785,27 @@ async fn refresh_token(
         ));
     }
     let refresh = required(&request, "refresh_token")?;
-    let mut data = lock(&state.inner);
+    let data = lock(&state.inner);
     let project = data
         .projects
-        .get_mut(&state.project)
+        .get(&state.project)
         .ok_or_else(invalid_refresh)?;
     let grant = project
         .refresh_tokens
-        .remove(refresh)
+        .get(refresh)
         .ok_or_else(invalid_refresh)?;
-    let user = project
-        .users
-        .get(&grant.uid)
-        .cloned()
-        .ok_or_else(invalid_refresh)?;
-    let uid = grant.uid.clone();
-    let auth = issue_auth(project, &state.project, &user, grant);
-    state.persist(&data).map_err(internal)?;
+    let user = project.users.get(&grant.uid).ok_or_else(invalid_refresh)?;
+    if user.get("disabled").and_then(JsonValue::as_bool) == Some(true) {
+        return Err(ApiError::message(StatusCode::BAD_REQUEST, "USER_DISABLED"));
+    }
+    // The official emulator reuses the grant, including overlapping requests
+    // from tabs sharing persisted Auth state. Refresh is not a new sign-in and
+    // must neither consume this grant nor grow the durable refresh-token map.
+    let id_token = make_id_token(&state.project, user, grant);
     Ok(Json(json!({
-        "id_token": auth.id_token, "access_token": auth.id_token,
-        "expires_in": "3600", "refresh_token": auth.refresh_token,
-        "token_type": "Bearer", "user_id": uid, "project_id": "12345"
+        "id_token": id_token, "access_token": id_token,
+        "expires_in": "3600", "refresh_token": refresh,
+        "token_type": "Bearer", "user_id": grant.uid, "project_id": "12345"
     })))
 }
 
@@ -880,6 +880,10 @@ async fn admin_update(
         .ok_or_else(user_not_found)?;
     let user = project.users.get_mut(&uid).ok_or_else(user_not_found)?;
     apply_user_update(user, &request);
+    // Admin SDK updateUser({ disabled }) sends the wire field disableUser.
+    if let Some(disabled) = request.get("disableUser").and_then(JsonValue::as_bool) {
+        user["disabled"] = json!(disabled);
+    }
     let response = update_response(user);
     state.persist(&data).map_err(internal)?;
     Ok(Json(response))
@@ -1490,6 +1494,8 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 
 #[cfg(test)]
 mod tests {
+    mod refresh_reuse;
+
     use axum::body::{Body, to_bytes};
     use axum::http::{Request, header};
     use fireside_functions_bridge::TriggerObserver;

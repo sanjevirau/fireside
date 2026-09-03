@@ -2212,6 +2212,11 @@ grant on every request. The compatibility target here is the local emulator, not
 production token storage or signing. Original r24 failure evidence remains banked;
 its rejected credential bodies were not recorded and are not reconstructed.
 
+Repair coverage is the existing password/custom-token surface plus real browser
+SDK refresh; anonymous sign-up is not implemented by the Phase 4 Auth router.
+Anonymous observations remain in the official fixture as reference-only evidence,
+not an advertised Fireside capability or a changed Phase 5 requirement.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.

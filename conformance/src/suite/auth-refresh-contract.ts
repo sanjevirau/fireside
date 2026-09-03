@@ -48,7 +48,7 @@ export function observeRefresh(id: string, status: number, headers: Headers, bod
   };
 }
 
-export async function captureRefreshContract(origin: string): Promise<RefreshObservation[]> {
+export async function captureRefreshContract(origin: string, providers: readonly ("anonymous" | "password" | "custom")[] = ["anonymous", "password", "custom"]): Promise<RefreshObservation[]> {
   const observations: RefreshObservation[] = [];
   async function json(path: string, value: unknown): Promise<Record<string, any>> {
     const response = await fetch(origin + path, {
@@ -67,7 +67,7 @@ export async function captureRefreshContract(origin: string): Promise<RefreshObs
     });
     return observeRefresh(id, response.status, response.headers, await response.json() as Record<string, any>, token, uid);
   }
-  for (const provider of ["anonymous", "password", "custom"] as const) {
+  for (const provider of providers) {
     const signIn = provider === "custom"
       ? await json(clientPrefix + "signInWithCustomToken?key=synthetic-api-key", { token: customRefreshToken("refresh-custom-user"), returnSecureToken: true })
       : await json(clientPrefix + "signUp?key=synthetic-api-key", {
