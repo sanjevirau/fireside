@@ -2,10 +2,11 @@
 
 Phase 5 is **incomplete**. The current authorization is the bounded fix/cheap-smoke
 loop supplied after r25, followed immediately by the immutable full-data gate
-only when both complete cheap-smoke stacks pass. There have been **five further
-cheap-smoke attempts** under this authorization (maximum eight): r26 through r30 failed. Oracle probes
-are not acceptance smokes. No full-data gate has launched for the current
-candidate.
+only when both complete cheap-smoke stacks pass. R26 through r30 remain preserved
+failed attempts under the previous allowance. R30 is now classified as the first
+infrastructure stall, and the user-authorized attempt budget resets to **eight at
+r31**. Oracle probes are not acceptance smokes. No full-data gate has launched
+for the current candidate.
 
 ## Current loop
 
@@ -16,7 +17,7 @@ candidate.
 | [r27](phase-5-smoke-20260903-r27.md) (attempt 2/8) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard timeout | Fireside product: unbound child wildcard in invited-users query path raises before independent OR grant | `2c7ca67` (captured and committed before repair) | `4d6cf2f` | [33755740999](https://github.com/sanjevirau/fireside/actions/runs/33755740999), 7/7 green | Failed; export-first cleanup complete; no full-data launch |
 | [r28](phase-5-smoke-20260903-r28.md) (attempt 3/8) | Official 9/9 + 60 s soak; Fireside 6/9, export comparison failed | Serialization compatibility: repeated reads change map order, not canonical values, in isolation; original before/after values unavailable | `ff6fff7` (map oracle and r28 evidence) | `b1ef52b` | [33760383375](https://github.com/sanjevirau/fireside/actions/runs/33760383375), 7/7 green | Failed; both export-first exits zero; full-data gate absent |
 | [r29](phase-5-smoke-20260904-r29.md) (attempt 4/8) | Both stacks 9/9; official 60 s soak; Fireside final browser health failed | Fireside product: `/v0` missing object is JSON and Chrome ORB-blocks it as an image; official returns a normal plain-text 404 | `87ad833` | `75f7e4a` | [33785390892](https://github.com/sanjevirau/fireside/actions/runs/33785390892), 7/7 green on repair candidate | Failed; both export-first exits zero; Fireside soak and full-data gate absent |
-| [r30](phase-5-smoke-20260904-r30.md) (attempt 5/8) | Official 4/9; journey 5 image visibility timed out after 180 s; Fireside not started | Twodart application/protected-runner boundary: uploaded image item remained a hidden `<img>` on the official stack | `87ad833` | `75f7e4a` | [33785390892](https://github.com/sanjevirau/fireside/actions/runs/33785390892), 7/7 green | Failed; official exit zero; Fireside, both soaks, and full-data gate absent; stop condition reached |
+| [r30](phase-5-smoke-20260904-r30.md) (previous attempt 5/8) | Official 4/9; journey 5 image visibility timed out after 180 s; Fireside not started | Infrastructure, first occurrence: official Storage-alias downloads stalled after upload, all five object commits, and Firestore write succeeded | `87ad833` | `75f7e4a` | [33785390892](https://github.com/sanjevirau/fireside/actions/runs/33785390892), 7/7 green | Failed; official exit zero; single fresh-preflight retry authorized as r31 after read-only attribution diagnostics; new budget starts at 1/8 |
 
 R25 failure evidence is published in `b79750636e1666e1d097b341b7cc9f85ba74d28c`;
 [evidence CI 33748445917](https://github.com/sanjevirau/fireside/actions/runs/33748445917)
@@ -165,10 +166,28 @@ fresh Linux binary SHA-256 was
 `e9529de0ceb08c09f076c8687fa2d6be14a470a9af5d461b4b3654f965c5aee3`.
 Both export-first shutdowns exited zero and no full-data directory was created.
 The generic Storage repair then passed all seven jobs and a fresh guarded Linux
-release build before r30. R30 failed on the official stack because Twodart kept
-the uploaded image-library `<img>` hidden for the protected 180-second journey-5
-assertion. The loop's Twodart/protected-runner stop condition is now active; no
-r31 is authorized without review.
+release build before r30. R30 failed on the official stack because two
+independent reads through the Storage alias stalled after the upload had already
+succeeded. The official export contains all five variants written between
+`2026-09-03T17:52:36.619Z` and `2026-09-03T17:52:36.628Z`, and the Firestore
+image document exists. Twodart's fire-and-forget warm-up reported four completed
+HEADs and one 15-second timeout for `regular.webp`; the browser's separate
+`high.webp` GET then produced neither a response nor a request-failed event
+during the 180-second assertion. The official emulator, Portless, and browser
+diagnostics recorded no corresponding error. Journey 5 passed on this exact
+Twodart revision in every earlier official run since r16. This is therefore the
+first infrastructure stall in the official Storage download path, attributable
+to either the emulator or Portless, rather than a reproducible Twodart defect.
+
+Before r31, the observer outside the protected runner records every request that
+has neither a response nor a request-failed event when a journey fails, including
+its verbatim URL, resource type, and age. Any Storage-alias image GET still
+pending after 30 seconds triggers concurrent read-only raw-port and alias probes,
+each with a 10-second budget, and records both outcomes. Official
+`templates.log` upload and cache-warm lines are copied into the same diagnostic
+evidence. These observations add no assertion and change no workload. R31 is
+the authorized single fresh-preflight retry and starts a reset allowance of
+eight attempts.
 
 Private raw backup:
 `/tmp/fireside-phase5-r28-raw.6RFDYH`; never publish the whole directory.
@@ -219,3 +238,9 @@ original evidence and verdicts remain unchanged.
   is evidence-and-stop, not another fix cycle.
 - No Phase 6. Do not tag before every Phase 5 requirement passes. Preserve all
   prior failures and private raw backups without exposing credentials.
+- An official-stack failure with zero page errors and zero request failures on a
+  journey that passed the same Twodart revision in an earlier attempt is an
+  infrastructure failure and receives one fresh-preflight retry. A second
+  Storage stall at the same step stops the loop and uses the raw-versus-alias
+  attribution probes above. A Twodart application defect requires reproducible
+  wrong behavior, not one response-less request.

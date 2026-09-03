@@ -5,7 +5,16 @@ import test from "node:test";
 import vm from "node:vm";
 import "./phase5-listen-diagnostics.test.ts";
 import "./phase5-document-diagnostics.test.ts";
-import { phase5BenignDiagnostic, readPhase5DiagnosticIdentities, redactPhase5Identifiers } from "../src/suite/phase5-browser-diagnostics.ts";
+import {
+  PHASE5_STORAGE_ATTRIBUTION_PROBE_BUDGET_MS,
+  PHASE5_STORAGE_PENDING_PROBE_DELAY_MS,
+  phase5BenignDiagnostic,
+  phase5PendingRequestEvidence,
+  phase5StorageImageProbeTargets,
+  phase5TemplateWarmupLines,
+  readPhase5DiagnosticIdentities,
+  redactPhase5Identifiers,
+} from "../src/suite/phase5-browser-diagnostics.ts";
 
 test("diagnostic redaction uses the exact working Auth query and response field", async () => {
   const users = await readPhase5DiagnosticIdentities("http://127.0.0.1/accounts:query", async (url, options) => {
@@ -39,6 +48,60 @@ test("diagnostics preserve failure details while hashing identifiers and OTPs", 
   assert.match(result, /HTTP 500 \/users\/\[identity-sha256:/u);
   assert.match(result, /export\?alt=media OTP: \[otp-sha256:/u);
   assert.doesNotMatch(result, /test-user|123456/u);
+});
+
+test("failure diagnostics retain every response-less request with a stable age", () => {
+  assert.deepEqual(phase5PendingRequestEvidence([
+    { method: "GET", resourceType: "image", startedAt: 1_000, url: "https://storage.twodart.localhost/v0/b/b/o/a?alt=media" },
+    { method: "POST", resourceType: "fetch", startedAt: 2_000, url: "https://templates.twodart.localhost/api/example" },
+  ], 32_500), [
+    { ageMs: 31_500, method: "GET", resourceType: "image", url: "https://storage.twodart.localhost/v0/b/b/o/a?alt=media" },
+    { ageMs: 30_500, method: "POST", resourceType: "fetch", url: "https://templates.twodart.localhost/api/example" },
+  ]);
+});
+
+test("stalled Storage alias images map to raw and alias attribution probes", () => {
+  assert.equal(PHASE5_STORAGE_PENDING_PROBE_DELAY_MS, 30_000);
+  assert.equal(PHASE5_STORAGE_ATTRIBUTION_PROBE_BUDGET_MS, 10_000);
+  assert.deepEqual(phase5StorageImageProbeTargets(
+    "https://phase5-fireside.storage.twodart.localhost/v0/b/assets-local.twodart.com/o/users%2Fu%2Fhigh.webp?alt=media",
+    "image",
+    "https://phase5-fireside.templates.twodart.localhost",
+    24420,
+  ), {
+    alias: "https://phase5-fireside.storage.twodart.localhost/v0/b/assets-local.twodart.com/o/users%2Fu%2Fhigh.webp?alt=media",
+    raw: "http://127.0.0.1:24420/v0/b/assets-local.twodart.com/o/users%2Fu%2Fhigh.webp?alt=media",
+  });
+  assert.equal(phase5StorageImageProbeTargets(
+    "https://storage.twodart.localhost/v0/b/assets-local.twodart.com/o/cache.json?alt=media",
+    "fetch",
+    "https://templates.twodart.localhost",
+    24020,
+  ), null);
+});
+
+test("official templates evidence preserves the upload and warm-up sequence", () => {
+  const lines = phase5TemplateWarmupLines([
+    "unrelated startup line",
+    "[UserImage] Variants uploaded successfully (Original + High + Regular)",
+    "[API Upload Order] Document created in Firestore: image-id",
+    "[CDN Warming] Starting parallel cache warming for 5 URLs...",
+    " POST /api/user/uploadUserImage 200 in 494ms",
+    "  ✓ Warmed: users%2Fu%2Fhigh.webp?alt=media",
+    "[WARN] Error warming users%2Fu%2Fregular.webp?alt=media: The operation was aborted due to timeout",
+    "[CDN Warming] Completed in 15006ms",
+  ].join("\n"));
+  assert.equal(lines.length, 7);
+  assert.match(lines[0] ?? "", /Variants uploaded successfully/u);
+  assert.match(lines.at(-1) ?? "", /Completed in 15006ms/u);
+});
+
+test("observer records pending requests, raw-versus-alias probes, and official warm-up lines", async () => {
+  const source = await readFile(new URL("../src/suite/phase5-browser-diagnostics.ts", import.meta.url), "utf8");
+  assert.match(source, /pending-requests-at-journey-failure/u);
+  assert.match(source, /storage-image-pending-probes/u);
+  assert.match(source, /official-templates-warmup/u);
+  assert.match(source, /additionalStorageRequests/u);
 });
 
 test("skipped export cannot satisfy the Phase 5 gate", async () => {

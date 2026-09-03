@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { chromium, type Page } from "playwright";
+import { chromium, type Page, type Request } from "playwright";
 import { installPhase5DocumentSnapshotDiagnostics } from "./phase5-document-diagnostics.ts";
 import { phase5ListenRequestSummary, phase5ListenResponseSummary, phase5SmokeDomEvidence } from "./phase5-listen-diagnostics.ts";
 
@@ -11,6 +11,78 @@ interface DiagnosticFailure {
   readonly text: string;
   readonly url?: string;
   readonly syntheticGoogleClientId?: boolean;
+}
+
+export interface Phase5PendingRequest {
+  readonly method: string;
+  readonly resourceType: string;
+  readonly startedAt: number;
+  readonly url: string;
+}
+
+export interface Phase5PendingRequestEvidence {
+  readonly ageMs: number;
+  readonly method: string;
+  readonly resourceType: string;
+  readonly url: string;
+}
+
+export interface Phase5StorageProbeTargets {
+  readonly alias: string;
+  readonly raw: string;
+}
+
+export const PHASE5_STORAGE_PENDING_PROBE_DELAY_MS = 30_000;
+export const PHASE5_STORAGE_ATTRIBUTION_PROBE_BUDGET_MS = 10_000;
+
+export function phase5PendingRequestEvidence(
+  requests: Iterable<Phase5PendingRequest>,
+  observedAt: number = Date.now(),
+): Phase5PendingRequestEvidence[] {
+  return [...requests]
+    .sort((left, right) =>
+      left.startedAt === right.startedAt
+        ? left.url.localeCompare(right.url)
+        : left.startedAt - right.startedAt,
+    )
+    .map((request) => ({
+      ageMs: Math.max(0, observedAt - request.startedAt),
+      method: request.method,
+      resourceType: request.resourceType,
+      url: request.url,
+    }));
+}
+
+export function phase5StorageImageProbeTargets(
+  requestUrl: string,
+  resourceType: string,
+  baseUrl: string,
+  storagePort: number,
+): Phase5StorageProbeTargets | null {
+  if (resourceType !== "image") return null;
+  const requested = new URL(requestUrl);
+  const alias = new URL(baseUrl);
+  alias.hostname = alias.hostname.replace("templates.", "storage.");
+  if (
+    requested.origin !== alias.origin ||
+    !requested.pathname.startsWith("/v0/b/") ||
+    requested.searchParams.get("alt") !== "media"
+  ) {
+    return null;
+  }
+  const raw = new URL(requested.href);
+  raw.protocol = "http:";
+  raw.hostname = "127.0.0.1";
+  raw.port = String(storagePort);
+  return { alias: requested.href, raw: raw.href };
+}
+
+export function phase5TemplateWarmupLines(log: string): string[] {
+  return log
+    .split(/\r?\n/u)
+    .filter((line) =>
+      /\[UserImage\]|\[API Upload Order\]|\[CDN Warming\]|Warmed:|Error warming|POST \/api\/user\/uploadUserImage/u.test(line),
+    );
 }
 
 // Classification only: observers never suppress or replace runner events.
@@ -72,6 +144,9 @@ if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
   const output = `${argument("output")}.diagnostics.jsonl`;
   const identities = new Set<string>();
   const pending = new Set<Promise<unknown>>();
+  const pendingRequests = new Map<Request, Phase5PendingRequest & {
+    probeTimer?: ReturnType<typeof setTimeout>;
+  }>();
   let writes = Promise.resolve();
   let syntheticGoogleClientId = false;
   const record = (kind: string, data: Record<string, unknown>): void => {
@@ -86,6 +161,45 @@ if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
   const isCache = (url: string): boolean => /\/o\/cache%2Fmain-cache-local\.json(?:\?|$)/iu.test(url);
   const isListen = (url: string): boolean => new URL(url).pathname === "/google.firestore.v1.Firestore/Listen/channel";
   const exportPath = "/api/user/editor/ExportEditorPresentationJob/start";
+  const settleRequest = (request: Request): void => {
+    const observed = pendingRequests.get(request);
+    if (observed?.probeTimer !== undefined) clearTimeout(observed.probeTimer);
+    pendingRequests.delete(request);
+  };
+  const probeStorageTarget = async (
+    page: Page,
+    target: "alias" | "raw",
+    url: string,
+  ): Promise<Record<string, unknown>> => {
+    const startedAt = Date.now();
+    try {
+      const response = await page.context().request.get(url, {
+        failOnStatusCode: false,
+        timeout: PHASE5_STORAGE_ATTRIBUTION_PROBE_BUDGET_MS,
+      });
+      const result = {
+        budgetMs: PHASE5_STORAGE_ATTRIBUTION_PROBE_BUDGET_MS,
+        elapsedMs: Date.now() - startedAt,
+        outcome: "response",
+        status: response.status(),
+        statusText: response.statusText(),
+        target,
+        url,
+      };
+      await response.dispose();
+      return result;
+    } catch (error: unknown) {
+      return {
+        budgetMs: PHASE5_STORAGE_ATTRIBUTION_PROBE_BUDGET_MS,
+        elapsedMs: Date.now() - startedAt,
+        error: String(error),
+        outcome: "error",
+        status: null,
+        target,
+        url,
+      };
+    }
+  };
   const observePage = (page: Page): void => {
     page.on("pageerror", (error) => {
       const text = `${error.name}: ${error.message}\n${error.stack ?? ""}`;
@@ -97,6 +211,39 @@ if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
       }
     });
     page.on("request", (request) => {
+      const observed = {
+        method: request.method(),
+        resourceType: request.resourceType(),
+        startedAt: Date.now(),
+        url: request.url(),
+      } as Phase5PendingRequest & { probeTimer?: ReturnType<typeof setTimeout> };
+      pendingRequests.set(request, observed);
+      const probeTargets = request.method() === "GET"
+        ? phase5StorageImageProbeTargets(
+            request.url(),
+            request.resourceType(),
+            argument("base-url"),
+            Number(argument("storage-port")),
+          )
+        : null;
+      if (probeTargets !== null) {
+        observed.probeTimer = setTimeout(() => {
+          if (pendingRequests.get(request) !== observed) return;
+          observeTask((async () => {
+            const triggerAgeMs = Date.now() - observed.startedAt;
+            const probes = await Promise.all([
+              probeStorageTarget(page, "raw", probeTargets.raw),
+              probeStorageTarget(page, "alias", probeTargets.alias),
+            ]);
+            record("storage-image-pending-probes", {
+              pendingAgeMs: Date.now() - observed.startedAt,
+              request: phase5PendingRequestEvidence([observed], Date.now())[0],
+              probes,
+              triggerAgeMs,
+            });
+          })());
+        }, PHASE5_STORAGE_PENDING_PROBE_DELAY_MS);
+      }
       // Only extract identifier/OTP values; no auth request or credential bodies are stored.
       if (new URL(request.url()).pathname === "/api/login/verificationCode") {
         try {
@@ -129,6 +276,7 @@ if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
       })());
     });
     page.on("requestfailed", (request) => {
+      settleRequest(request);
       const text = request.failure()?.errorText ?? "unknown transport failure";
       record("request-failed", {
         method: request.method(), url: request.url(), resourceType: request.resourceType(),
@@ -137,6 +285,7 @@ if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
       });
     });
     page.on("response", (response) => {
+      settleRequest(response.request());
       const url = response.url();
       const isExportStart = new URL(url).pathname === exportPath;
       const isExportStatus = new URL(url).pathname.startsWith("/api/user/editor/ExportEditorPresentationJob/status/");
@@ -182,6 +331,12 @@ if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
       listenShapeObservations: true, completeDomSyntheticSmokeOnly: true,
       syntheticDeckSnapshotValues: true, fullDataDocumentValues: false,
       additionalFirestoreRequests: 0,
+      additionalStorageRequests: {
+        maximumPerStalledImage: 2,
+        pendingDelayMs: PHASE5_STORAGE_PENDING_PROBE_DELAY_MS,
+        probeBudgetMs: PHASE5_STORAGE_ATTRIBUTION_PROBE_BUDGET_MS,
+        readOnly: true,
+      },
     });
     const browser = await originalLaunch(options);
     const originalContext = browser.newContext.bind(browser);
@@ -192,6 +347,31 @@ if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
     };
     const originalClose = browser.close.bind(browser);
     browser.close = async (closeOptions) => {
+      try {
+        const runnerEvidence = JSON.parse(await readFile(argument("output"), "utf8")) as {
+          readonly passed?: unknown;
+        };
+        if (runnerEvidence.passed === false) {
+          record("pending-requests-at-journey-failure", {
+            requests: phase5PendingRequestEvidence(pendingRequests.values()),
+          });
+        }
+      } catch (error: unknown) {
+        record("pending-request-snapshot-error", { text: String(error) });
+      }
+      if (argument("stack") === "official") {
+        try {
+          const log = await readFile(
+            path.join(argument("twodart-dir"), ".logs", "templates.log"),
+            "utf8",
+          );
+          record("official-templates-warmup", {
+            lines: phase5TemplateWarmupLines(log),
+          });
+        } catch (error: unknown) {
+          record("official-templates-warmup-error", { text: String(error) });
+        }
+      }
       for (const context of browser.contexts()) for (const page of context.pages()) {
         try {
           const text = await page.locator("body").innerText({ timeout: 2_000 });
@@ -204,6 +384,9 @@ if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
         } catch (error: unknown) { record("loader-dom-error", { text: String(error) }); }
       }
       await Promise.allSettled([...pending]);
+      for (const request of pendingRequests.values()) {
+        if (request.probeTimer !== undefined) clearTimeout(request.probeTimer);
+      }
       await writes;
       await originalClose(closeOptions);
       await writes;
