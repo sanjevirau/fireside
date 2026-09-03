@@ -12,11 +12,6 @@ interface DiagnosticFailure {
 
 // Classification only: observers never suppress or replace runner events.
 export function phase5BenignDiagnostic(input: DiagnosticFailure): string | null {
-  if (input.kind === "page-error" && input.syntheticGoogleClientId === true &&
-      /ReferenceError/u.test(input.text) &&
-      /useGoogleOneTap|accounts\.google\.com\/gsi|Google One Tap/iu.test(input.text)) {
-    return "synthetic-google-one-tap-reference-error";
-  }
   if (input.kind === "page-error" && /TypeError/u.test(input.text) &&
       /handleStaticIndicator/u.test(input.text) && /_next\/|next[\\/]|hot-reloader|dev-bundler/iu.test(input.text)) {
     return "next-dev-hmr-handleStaticIndicator-type-error";
@@ -26,6 +21,9 @@ export function phase5BenignDiagnostic(input: DiagnosticFailure): string | null 
     if ((url.hostname === "127.0.0.1" || url.hostname === "localhost") &&
         /^\/google\.firestore\.v1\.Firestore\/(?:Listen|Write)\/channel$/u.test(url.pathname)) {
       return "firestore-long-poll-net-ERR_ABORTED";
+    }
+    if (url.hostname === "127.0.0.1" || url.hostname === "localhost" || url.hostname.endsWith(".twodart.localhost")) {
+      return "harness-navigation-net-ERR_ABORTED";
     }
   }
   return null;
@@ -119,10 +117,11 @@ if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
     page.on("response", (response) => {
       const url = response.url();
       const isExportStart = new URL(url).pathname === exportPath;
-      if (response.status() >= 400 || isCache(url) || isExportStart) {
+      const isExportStatus = new URL(url).pathname.startsWith("/api/user/editor/ExportEditorPresentationJob/status/");
+      if (response.status() >= 400 || isCache(url) || isExportStart || isExportStatus) {
         observeTask((async () => record("response", {
           url, method: response.request().method(), status: response.status(), statusText: response.statusText(),
-          ...(isExportStart ? { body: await response.text(), exportStart: true } : {}),
+          ...(isExportStart || isExportStatus ? { body: await response.text(), exportStart: isExportStart, exportStatus: isExportStatus } : {}),
           ...(isCache(url) ? { requiredCache: true } : {}),
         }))());
       }

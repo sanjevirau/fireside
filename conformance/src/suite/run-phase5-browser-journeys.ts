@@ -529,24 +529,45 @@ try {
     // Export posts an async job to the .NET service
     // ({TWODARTNET_API_URL}/api/user/editor/ExportEditorPresentationJob/start,
     // then /status/{id} polling, then /download/{id}) and the client turns the
-    // returned Blob into a browser download. If that artifact does not arrive,
-    // record the journey as SKIPPED rather than aborting the whole suite, so
-    // the remaining journeys still produce evidence. This is explicitly NOT a
-    // pass: skippedJourneys is reported separately in the evidence file.
+    // returned Blob into a browser download, so the download event is the
+    // real completion signal.
+    //
+    // The job reports its own terminal failure in the /status payload as
+    // `{"status":"failed","stage":"failed","error":"..."}` while every HTTP
+    // response stays 200, so a broken export otherwise looks like nothing but
+    // a silent 120s timeout. Watch the status poll and surface that server
+    // error verbatim instead: it is the difference between "the click never
+    // dispatched" and "the exporter rejected this payload".
+    let jobFailure: string | null = null;
+    const onExportStatus = (response: Response): void => {
+      if (!response.url().includes("ExportEditorPresentationJob/status/")) return;
+      void response
+        .json()
+        .then((body: { status?: string; stage?: string; error?: string }) => {
+          if (body.status === "failed") {
+            jobFailure = `${body.error ?? "unknown error"} (stage ${body.stage ?? "unknown"})`;
+          }
+        })
+        .catch(() => undefined);
+    };
+    page.on("response", onExportStatus);
     let download: Download | null = null;
-    const downloadPromise = page.waitForEvent("download", { timeout: 120_000 });
-    await page.locator("#export-presentation-button").click();
     try {
-      download = await downloadPromise;
-    } catch {
-      download = null;
+      const downloadPromise = page.waitForEvent("download", { timeout: 120_000 });
+      await page.locator("#export-presentation-button").click();
+      try {
+        download = await downloadPromise;
+      } catch {
+        download = null;
+      }
+    } finally {
+      page.off("response", onExportStatus);
+    }
+    if (jobFailure !== null) {
+      throw new Error(`.NET export job reported failure: ${String(jobFailure)}`);
     }
     if (download === null) {
-      skippedJourneys.push({
-        id: "dotnet-deck-export",
-        reason: "no browser download artifact within 120s of the export click",
-      });
-      return { backend: 0, network: 0, rendered: 0 };
+      throw new Error("No browser download artifact within 120s of the export click");
     }
     const downloadPath = await download.path();
     if (downloadPath === null || (await stat(downloadPath)).size === 0) {
@@ -808,15 +829,26 @@ async function installObservation(page: Page): Promise<void> {
     }
   });
   page.on("requestfailed", (request) => {
-    if (isRequiredOrigin(request.url())) {
-      requestFailureClasses.add(
-        `${request.method()}:${request.resourceType()}:${classifyUrl(request.url())}`,
-      );
-      recordFailure(
-        requestFailures,
-        `${request.method()} ${classifyUrl(request.url())} ${request.failure()?.errorText ?? "failed"}`,
-      );
-    }
+    if (!isRequiredOrigin(request.url())) return;
+    const errorText = request.failure()?.errorText ?? "failed";
+    // The failure REASON is part of the evidence class. Without it every
+    // entry looked like a broken endpoint, when in practice these are
+    // cancellations.
+    requestFailureClasses.add(
+      `${request.method()}:${request.resourceType()}:${classifyUrl(request.url())}:${errorText}`,
+    );
+    // A cancelled request is not a failed one, and every abort observed here
+    // is one the test itself causes. Firestore holds long-poll Listen/Write
+    // streams open, and the SDK aborts them whenever the page navigates or
+    // tears down, so each `page.goto` between journeys cancels the streams the
+    // previous route opened. The `/login/overview` document abort is the same
+    // shape: journey 9 signs out, and the client-side auth redirect supersedes
+    // the in-flight navigation. In a full run these accounted for all 45
+    // "required request failures" and nothing else, so gating on them made a
+    // clean suite unpassable for a reason no user could ever see. They stay in
+    // requestFailureClasses as evidence; they just no longer count as failures.
+    if (errorText === "net::ERR_ABORTED") return;
+    recordFailure(requestFailures, `${request.method()} ${classifyUrl(request.url())} ${errorText}`);
   });
   page.on("request", (request) => recordUndefinedLoginRequest(request));
   page.on("response", (response) => {
@@ -839,51 +871,66 @@ async function installObservation(page: Page): Promise<void> {
   });
 }
 
+// The navigation trace is injected as SOURCE TEXT, not as a function.
+//
+// `page.addInitScript(fn)` serialises `fn.toString()` and evaluates that in
+// the page. This file is executed through `tsx`, and esbuild's `keepNames`
+// transform rewrites every nested function/arrow into `__name(function ..., "x")`
+// so stack traces keep their names. That helper is defined in the MODULE
+// scope here, never in the browser, so the serialised body referenced a free
+// variable and every single page load threw
+//   ReferenceError: __name is not defined
+// before it ever patched history.pushState. Two consequences, both silent:
+// the suite counted one page error per navigation (31 in a full run) against
+// the browser-failure gate, and `clientRouteState.history` was always `[]`
+// because the patch never ran — the evidence looked clean because it was
+// empty, not because nothing navigated.
+//
+// Keeping this as a string means no transpiler ever rewrites it. It must stay
+// plain browser-executable JavaScript: no TypeScript syntax, and no reliance
+// on anything from this module's scope. It lives INSIDE the function rather
+// than in a module-level `const` because `installObservation` runs during
+// setup, above the top-level `await journey(...)` calls — a `const` declared
+// down here would still be in its temporal dead zone at that point.
 async function installSafeClientNavigationTrace(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    type TraceEntry = {
-      readonly kind: string;
-      readonly path: string;
-      readonly queryKeys: readonly string[];
-    };
-    type TraceWindow = Window & {
-      __phase5NavigationTrace?: TraceEntry[];
-    };
-    const traceWindow = window as TraceWindow;
-    traceWindow.__phase5NavigationTrace = [];
-    const record = (kind: string, value: string | URL | null | undefined): void => {
-      if (value === null || value === undefined) return;
-      try {
-        const url = new URL(String(value), window.location.href);
-        traceWindow.__phase5NavigationTrace?.push({
-          kind,
-          path: url.pathname,
-          queryKeys: [...url.searchParams.keys()].sort(),
-        });
-      } catch {
-        traceWindow.__phase5NavigationTrace?.push({
-          kind: `${kind}:unparseable`,
-          path: "",
-          queryKeys: [],
-        });
-      }
-    };
-    const pushState = window.history.pushState.bind(window.history);
-    window.history.pushState = (data, unused, url) => {
-      record("history.pushState", url);
-      pushState(data, unused, url);
-    };
-    const replaceState = window.history.replaceState.bind(window.history);
-    window.history.replaceState = (data, unused, url) => {
-      record("history.replaceState", url);
-      replaceState(data, unused, url);
-    };
-    const open = window.open.bind(window);
-    window.open = (url, target, features) => {
-      record("window.open", url);
-      return open(url, target, features);
-    };
-  });
+  const source = `
+(function () {
+  window.__phase5NavigationTrace = [];
+  function record(kind, value) {
+    if (value === null || value === undefined) return;
+    try {
+      var url = new URL(String(value), window.location.href);
+      window.__phase5NavigationTrace.push({
+        kind: kind,
+        path: url.pathname,
+        queryKeys: Array.from(url.searchParams.keys()).sort()
+      });
+    } catch (error) {
+      window.__phase5NavigationTrace.push({
+        kind: kind + ":unparseable",
+        path: "",
+        queryKeys: []
+      });
+    }
+  }
+  var pushState = window.history.pushState.bind(window.history);
+  window.history.pushState = function (data, unused, url) {
+    record("history.pushState", url);
+    return pushState(data, unused, url);
+  };
+  var replaceState = window.history.replaceState.bind(window.history);
+  window.history.replaceState = function (data, unused, url) {
+    record("history.replaceState", url);
+    return replaceState(data, unused, url);
+  };
+  var open = window.open.bind(window);
+  window.open = function (url, target, features) {
+    record("window.open", url);
+    return open(url, target, features);
+  };
+})();
+`;
+  await page.addInitScript({ content: source });
 }
 
 function installCdpObservation(cdp: CDPSession): void {
@@ -1283,8 +1330,36 @@ async function seedSmokeApplication(): Promise<void> {
     isCustom: false,
     variant: "400",
   };
+  // A real branding carries the full theme palette, not just the four
+  // background/text colours. `callExportPresentationApi` forwards
+  // `primaryBrandingData.brandColor` verbatim as the export payload's
+  // `themeColor`, and the .NET exporter indexes it by fixed position in
+  // PresentationAsposeHelper.ChangeThemeColors:
+  //   [0] Light1  [1] Dark1  [2] Light2  [3] Dark2
+  //   [4]..[9]    Accent1..Accent6
+  //   [10]        Hyperlink (FollowedHyperlink is derived from it)
+  // so the array must have at least 11 entries. A four-entry array threw
+  // `System.IndexOutOfRangeException: Index was outside the bounds of the
+  // array.` at PresentationAsposeHelper.cs:627 (`themeColor[4]`), the job
+  // reported `status: "failed"` at stage `applying_theme`, and no download
+  // ever reached the browser. Indices 0-9 are DEFAULT_THEME_COLORS from
+  // apps/templates/utils/themeColors.ts (--theme-color-1..10); index 10 is
+  // the link colour the app exposes as --theme-color-url
+  // (slideLibraryStore reads brandColor[10] for exactly that).
   const branding = {
-    brandColor: ["#ffffff", "#111111", "#ffffff", "#111111"],
+    brandColor: [
+      "#FFFFFF", // theme-color-1  / Light1  (shape colour)
+      "#2B2B2B", // theme-color-2  / Dark1   (text colour 1)
+      "#FFFFFF", // theme-color-3  / Light2  (background colour)
+      "#FFFFFF", // theme-color-4  / Dark2   (text colour 2)
+      "#de3535", // theme-color-5  / Accent1
+      "#aabbcc", // theme-color-6  / Accent2
+      "#48e9d0", // theme-color-7  / Accent3
+      "#9271b6", // theme-color-8  / Accent4
+      "#b2310d", // theme-color-9  / Accent5
+      "#d94308", // theme-color-10 / Accent6
+      "#3366ff", // theme-color-url / Hyperlink
+    ],
     colorHex: "#3366ff",
     id: "phase5-smoke-branding",
     name: "Phase 5 Smoke Branding",

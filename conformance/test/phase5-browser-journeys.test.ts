@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import vm from "node:vm";
 import { phase5BenignDiagnostic, readPhase5DiagnosticIdentities, redactPhase5Identifiers } from "../src/suite/phase5-browser-diagnostics.ts";
 
 test("diagnostic redaction uses the exact working Auth query and response field", async () => {
@@ -19,13 +20,15 @@ test("diagnostic redaction uses the exact working Auth query and response field"
 });
 
 test("synthetic diagnostic allowlist excludes unrelated errors", () => {
-  assert.equal(phase5BenignDiagnostic({ kind: "page-error", text: "ReferenceError: target is not defined at useGoogleOneTap", syntheticGoogleClientId: true }), "synthetic-google-one-tap-reference-error");
+  assert.equal(phase5BenignDiagnostic({ kind: "page-error", text: "ReferenceError: target is not defined at useGoogleOneTap", syntheticGoogleClientId: true }), null);
+  assert.equal(phase5BenignDiagnostic({ kind: "page-error", text: "ReferenceError: __name is not defined" }), null);
   assert.equal(phase5BenignDiagnostic({ kind: "page-error", text: "ReferenceError: target is not defined at useGoogleOneTap", syntheticGoogleClientId: false }), null);
   assert.equal(phase5BenignDiagnostic({ kind: "page-error", text: "TypeError: broken at handleStaticIndicator (_next/static/dev.js)" }), "next-dev-hmr-handleStaticIndicator-type-error");
   const url = "http://127.0.0.1:23000/google.firestore.v1.Firestore/Listen/channel?RID=rpc";
   assert.equal(phase5BenignDiagnostic({ kind: "request-failed", text: "net::ERR_ABORTED", url }), "firestore-long-poll-net-ERR_ABORTED");
   assert.equal(phase5BenignDiagnostic({ kind: "request-failed", text: "net::ERR_CONNECTION_RESET", url }), null);
-  assert.equal(phase5BenignDiagnostic({ kind: "request-failed", text: "net::ERR_ABORTED", url: "http://127.0.0.1:23002/v0/b/assets/o/cache.json" }), null);
+  assert.equal(phase5BenignDiagnostic({ kind: "request-failed", text: "net::ERR_ABORTED", url: "https://templates.twodart.localhost/login/overview" }), "harness-navigation-net-ERR_ABORTED");
+  assert.equal(phase5BenignDiagnostic({ kind: "request-failed", text: "net::ERR_ABORTED", url: "https://example.invalid/resource" }), null);
   assert.equal(phase5BenignDiagnostic({ kind: "page-error", text: "TypeError: missing data" }), null);
 });
 
@@ -65,32 +68,69 @@ test("the Phase 5 browser runner implements the frozen ordered journeys", async 
   }
 });
 
-test("every passing journey has assertions and the export diagnostic skip is explicit", async () => {
+test("every journey requires positive assertions and export can no longer skip", async () => {
   const source = await readFile(runnerUrl, "utf8");
   const assertions = [...source.matchAll(/return \{ backend: (?<backend>\d+), network: (?<network>\d+), rendered: (?<rendered>\d+) \};/gu)];
-  assert.equal(assertions.length, 9);
+  assert.equal(assertions.length, 8);
   assert.match(source, /backend: 2,\s+network: adminPageIds\.length,\s+rendered: adminPageIds\.length,/u);
   for (const match of assertions) {
-    if (Number(match.groups?.backend) === 0) {
-      assert.equal(Number(match.groups?.network), 0);
-      assert.equal(Number(match.groups?.rendered), 0);
-      continue;
-    }
     assert.ok(Number(match.groups?.backend) > 0);
     assert.ok(Number(match.groups?.network) > 0);
     assert.ok(Number(match.groups?.rendered) > 0);
   }
-  assert.equal(assertions.filter((match) => Number(match.groups?.backend) === 0).length, 1);
-  assert.match(source, /skippedJourneys\.push\(\{\s+id: "dotnet-deck-export"/u);
+  assert.doesNotMatch(source, /skippedJourneys\.push/u);
+  assert.match(source, /body\.status === "failed"/u);
+  assert.match(source, /throw new Error\(`\.NET export job reported failure:/u);
+  assert.match(source, /throw new Error\("No browser download artifact within 120s/u);
+  assert.match(source, /exportedBytes\.subarray\(0, 2\)\.toString\("latin1"\) !== "PK"/u);
 });
 
 test("the supplied cumulative runner remains byte-for-byte unchanged", async () => {
   const source = await readFile(runnerUrl);
   assert.equal(createHash("sha256").update(source).digest("hex"),
-    "5996794c87061ddec51564b81e1d916b95dea77a5190ee74f644d0ba7aff3c62");
+    "ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc");
   const text = source.toString();
   assert.ok(text.indexOf("const adminPageIds") < text.indexOf('await journey("'));
   assert.ok(text.indexOf("const skippedJourneys") < text.indexOf('await journey("'));
+});
+
+test("the literal navigation trace executes without module helpers", async () => {
+  const source = await readFile(runnerUrl, "utf8");
+  const trace = source.slice(source.indexOf("async function installSafeClientNavigationTrace"));
+  const content = /const source = `([\s\S]*?)`;/u.exec(trace)?.[1];
+  assert.ok(content);
+  assert.doesNotMatch(content, /__name|\$\{/u);
+  const calls: unknown[][] = [];
+  const window = {
+    location: { href: "https://templates.twodart.localhost/home/recent" },
+    history: {
+      pushState(...args: unknown[]) { calls.push(args); return "push-result"; },
+      replaceState(...args: unknown[]) { calls.push(args); return "replace-result"; },
+    },
+    open(...args: unknown[]) { calls.push(args); return "open-result"; },
+    __phase5NavigationTrace: [] as unknown[],
+  };
+  vm.runInNewContext(content, { window, URL });
+  assert.equal(window.history.pushState(null, "", "/admin/tag?probe=hidden"), "push-result");
+  assert.equal(window.history.replaceState(null, "", "/home/recent"), "replace-result");
+  assert.equal(window.open("/slide-library", "_blank"), "open-result");
+  assert.equal(calls.length, 3);
+  assert.deepEqual(JSON.parse(JSON.stringify(window.__phase5NavigationTrace)), [
+    { kind: "history.pushState", path: "/admin/tag", queryKeys: ["probe"] },
+    { kind: "history.replaceState", path: "/home/recent", queryKeys: [] },
+    { kind: "window.open", path: "/slide-library", queryKeys: [] },
+  ]);
+  assert.doesNotMatch(JSON.stringify(window.__phase5NavigationTrace), /hidden/u);
+});
+
+test("the export palette spans all eleven fixed .NET indices and aborts retain reasons", async () => {
+  const source = await readFile(runnerUrl, "utf8");
+  const palette = /brandColor: \[([\s\S]*?)\],/u.exec(source)?.[1];
+  assert.ok(palette);
+  assert.equal([...palette.matchAll(/"#[0-9a-f]{6}"/giu)].length, 11);
+  assert.match(source, /request\.failure\(\)\?\.errorText/u);
+  assert.match(source, /classifyUrl\(request\.url\(\)\)\}:\$\{errorText\}/u);
+  assert.match(source, /if \(errorText === "net::ERR_ABORTED"\) return;\s+recordFailure\(requestFailures/u);
 });
 
 test("durable browser evidence explicitly excludes private identities and content", async () => {

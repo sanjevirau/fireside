@@ -2014,11 +2014,21 @@ derived variants, so their contract is non-empty user-scoped image objects,
 not identity with the uploaded bytes. Storage evidence spans both buckets.
 
 The .NET export is an asynchronous `/start`, `/status`, blob-download flow.
-A diagnostic timeout is explicitly SKIPPED, never a pass or permission for a
-full-data cycle. Synthetic failure text and export responses are preserved
-verbatim except identifiers/OTPs and credentials. Only the three explicitly
-authorized benign error classes are classified separately; no broad exception
-suppression is permitted. All other frozen criteria remain unchanged.
+The first diagnostic patch recorded a timeout as SKIPPED, never a pass. The final
+Mac-verified patch, frozen in `mac-final-runner-contract.json`, removes that skip:
+export must yield a non-empty PK-magic browser download, and a terminal failure
+inside an HTTP 200 status body is an explicit failure. The seed supplies all
+eleven theme colors indexed by the exporter; an app-side palette guard is deferred.
+
+The client navigation trace is literal JavaScript passed to `addInitScript` as
+content. Passing a tsx-transformed callback serialized a module-local `__name`
+reference into the browser and caused every r14 ReferenceError. ReferenceErrors
+are therefore never allowlisted. Harness navigation cancellations with exact
+reason `net::ERR_ABORTED` remain in request classes and verbatim diagnostics but
+are not gating failures; other required-request errors still gate. Synthetic
+failure text and export start/status responses are preserved verbatim except
+identifiers/OTPs and credentials. The narrow Next HMR diagnostic classification
+is retained. All other frozen criteria remain unchanged.
 
 ## 12. Benchmarks
 
