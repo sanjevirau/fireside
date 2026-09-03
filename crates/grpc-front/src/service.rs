@@ -722,24 +722,34 @@ impl Firestore for FirestoreService {
             &request,
             &orders,
         )?;
-        let candidate = documents.first().map_or_else(
-            || list_candidate_key(&database, parent.as_deref(), &request.collection_id),
-            |document| Ok(document.key.clone()),
-        )?;
+        let candidate = list_candidate_key(&database, parent.as_deref(), &request.collection_id)?;
         self.authorize_query(
             &authorization,
             &candidate,
             &snapshot,
             RulesQuery {
                 limit: (request.page_size > 0).then_some(i64::from(request.page_size)),
-                offset: None,
+                offset: Some(0),
                 order_by: request
                     .order_by
                     .split(',')
                     .map(str::trim)
                     .filter(|order| !order.is_empty())
-                    .map(ToOwned::to_owned)
+                    .map(|order| {
+                        let mut parts = order.split_whitespace();
+                        let field = parts.next().unwrap_or_default().to_owned();
+                        let direction = if parts
+                            .next()
+                            .is_some_and(|value| value.eq_ignore_ascii_case("desc"))
+                        {
+                            "DESC"
+                        } else {
+                            "ASC"
+                        };
+                        (field, direction.to_owned())
+                    })
                     .collect(),
+                ..RulesQuery::default()
             },
         )?;
         for document in &documents {
@@ -1029,9 +1039,10 @@ impl Firestore for FirestoreService {
             .as_ref()
             .map(|_| query_plan_summary(&structured));
         let skipped_results = structured.offset;
-        let rules_query = rules_query_from_structured(&structured);
-        let rules_candidate = query_candidate_key(&database, parent.as_deref(), &structured)?;
         let query = decode_query(parent.as_deref(), structured)?;
+        let rules_query = fireside_rules_runtime::query_policy(&query);
+        let rules_candidate = fireside_rules_runtime::query_candidate(&database, &query)
+            .map_err(Status::invalid_argument)?;
         self.query_policy
             .validate(&query)
             .map_err(|error| index_status(&error))?;
@@ -1189,9 +1200,10 @@ impl Firestore for FirestoreService {
         let explain_plan = explain_options
             .as_ref()
             .map(|_| query_plan_summary(&structured));
-        let rules_query = rules_query_from_structured(&structured);
-        let rules_candidate = query_candidate_key(&database, parent.as_deref(), &structured)?;
         let query = decode_query(parent.as_deref(), structured)?;
+        let rules_query = fireside_rules_runtime::query_policy(&query);
+        let rules_candidate = fireside_rules_runtime::query_candidate(&database, &query)
+            .map_err(Status::invalid_argument)?;
         self.query_policy
             .validate(&query)
             .map_err(|error| index_status(&error))?;
@@ -1536,40 +1548,6 @@ impl Firestore for FirestoreService {
             request.mask.as_ref(),
         )?))
     }
-}
-
-pub(crate) fn rules_query_from_structured(structured: &proto::StructuredQuery) -> RulesQuery {
-    RulesQuery {
-        limit: structured.limit.map(|limit| i64::from(limit.value)),
-        offset: Some(i64::from(structured.offset)),
-        order_by: structured
-            .order_by
-            .iter()
-            .map(|order| {
-                let field = order
-                    .field
-                    .as_ref()
-                    .map(|field| field.field_path.as_str())
-                    .unwrap_or_default();
-                let direction = proto::structured_query::Direction::try_from(order.direction)
-                    .map_or("DIRECTION_UNSPECIFIED", |direction| direction.as_str_name());
-                format!("{field} {direction}")
-            })
-            .collect(),
-    }
-}
-
-pub(crate) fn query_candidate_key(
-    database: &DatabaseName,
-    parent: Option<&str>,
-    structured: &proto::StructuredQuery,
-) -> Result<DocumentKey, Status> {
-    let [selector] = structured.from.as_slice() else {
-        return Err(Status::invalid_argument(
-            "structured query requires exactly one collection selector",
-        ));
-    };
-    list_candidate_key(database, parent, &selector.collection_id)
 }
 
 fn list_candidate_key(

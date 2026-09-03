@@ -844,17 +844,7 @@ fn run_query(
     let snapshot = state.store.snapshot();
     let documents = execute(&snapshot, database, &query, state.query_policy.edition())
         .map_err(|error| RestError::invalid(error.to_string()))?;
-    authorize_query(
-        state,
-        database,
-        parent,
-        structured,
-        documents
-            .first()
-            .map(fireside_query_engine::QueryDocument::key),
-        authorization,
-        &snapshot,
-    )?;
+    authorize_query(state, database, &query, authorization, &snapshot)?;
     let read_time = format_timestamp(now_timestamp())?;
     let mut responses = documents
         .iter()
@@ -900,17 +890,7 @@ fn run_aggregation_query(
     let snapshot = state.store.snapshot();
     let documents = execute(&snapshot, database, &query, state.query_policy.edition())
         .map_err(|error| RestError::invalid(error.to_string()))?;
-    authorize_query(
-        state,
-        database,
-        parent,
-        structured,
-        documents
-            .first()
-            .map(fireside_query_engine::QueryDocument::key),
-        authorization,
-        &snapshot,
-    )?;
+    authorize_query(state, database, &query, authorization, &snapshot)?;
     let mut fields = aggregate(&documents, &operations);
     for (alias, bound) in count_bounds {
         if let Some(Value::Integer(count)) = fields.get_mut(&alias) {
@@ -926,43 +906,13 @@ fn run_aggregation_query(
 fn authorize_query(
     state: &RestState,
     database: &DatabaseName,
-    parent: Option<&str>,
-    structured: &Map<String, JsonValue>,
-    first_result: Option<&DocumentKey>,
+    query: &StructuredQuery,
     authorization: &Authorization,
     snapshot: &fireside_core_store::Snapshot,
 ) -> Result<(), RestError> {
-    let candidate = first_result
-        .cloned()
-        .map_or_else(|| query_candidate_key(database, parent, structured), Ok)?;
-    let query = RulesQuery {
-        limit: structured
-            .get("limit")
-            .and_then(JsonValue::as_u64)
-            .and_then(|value| i64::try_from(value).ok()),
-        offset: structured
-            .get("offset")
-            .and_then(JsonValue::as_u64)
-            .and_then(|value| i64::try_from(value).ok()),
-        order_by: structured
-            .get("orderBy")
-            .and_then(JsonValue::as_array)
-            .into_iter()
-            .flatten()
-            .filter_map(|order| {
-                let field = order
-                    .get("field")?
-                    .get("fieldPath")?
-                    .as_str()
-                    .unwrap_or_default();
-                let direction = order
-                    .get("direction")
-                    .and_then(JsonValue::as_str)
-                    .unwrap_or("ASCENDING");
-                Some(format!("{field} {direction}"))
-            })
-            .collect(),
-    };
+    let candidate =
+        fireside_rules_runtime::query_candidate(database, query).map_err(RestError::invalid)?;
+    let query = fireside_rules_runtime::query_policy(query);
     let request = evaluation_request(
         RequestOperation::List,
         &candidate,
@@ -977,27 +927,6 @@ fn authorize_query(
         &request,
         &SnapshotAccess::current(snapshot.clone(), database.project_id()),
     ))
-}
-
-fn query_candidate_key(
-    database: &DatabaseName,
-    parent: Option<&str>,
-    structured: &Map<String, JsonValue>,
-) -> Result<DocumentKey, RestError> {
-    let selector = structured
-        .get("from")
-        .and_then(JsonValue::as_array)
-        .and_then(|selectors| selectors.first())
-        .ok_or_else(|| RestError::invalid("query collection selector is required"))?;
-    let collection = selector
-        .get("collectionId")
-        .and_then(JsonValue::as_str)
-        .ok_or_else(|| RestError::invalid("collectionId is required"))?;
-    let path = parent.map_or_else(
-        || format!("{collection}/rules-candidate"),
-        |parent| format!("{parent}/{collection}/rules-candidate"),
-    );
-    DocumentKey::new(database.clone(), path).map_err(|error| RestError::invalid(error.to_string()))
 }
 
 fn request_authorization(headers: &HeaderMap, project: &str) -> Result<Authorization, RestError> {
@@ -1262,6 +1191,25 @@ fn decode_nearest(query: StructuredQuery, value: &JsonValue) -> Result<Structure
 }
 
 fn decode_filter(value: &JsonValue) -> Result<Filter, RestError> {
+    if let Some(unary) = value.get("unaryFilter") {
+        let path = unary
+            .get("field")
+            .and_then(|field| field.get("fieldPath"))
+            .and_then(JsonValue::as_str)
+            .ok_or_else(|| RestError::invalid("unary-filter field is required"))?;
+        let (operator, value) = match unary.get("op").and_then(JsonValue::as_str) {
+            Some("IS_NULL") => (FieldOperator::Equal, Value::Null),
+            Some("IS_NOT_NULL") => (FieldOperator::NotEqual, Value::Null),
+            Some("IS_NAN") => (FieldOperator::Equal, Value::Double(f64::NAN)),
+            Some("IS_NOT_NAN") => (FieldOperator::NotEqual, Value::Double(f64::NAN)),
+            _ => return Err(RestError::invalid("invalid unary-filter operator")),
+        };
+        return Ok(Filter::Field(FieldFilter {
+            path: decode_query_field(path)?,
+            operator,
+            value,
+        }));
+    }
     if let Some(filter) = value.get("fieldFilter").and_then(JsonValue::as_object) {
         return decode_field_filter(filter);
     }
@@ -2016,6 +1964,47 @@ mod tests {
     const FIRESTORE_TRIGGER_ORACLE: &str = include_str!(
         "../../../conformance/fixtures/firebase-suite-v1/firestore-trigger-registration-and-v1-v2-dispatch/fixture.json"
     );
+
+    #[test]
+    fn aggregation_decodes_the_sdk_unary_filter_from_both_java_oracles() {
+        for source in [
+            include_str!(
+                "../../../conformance/fixtures/rules-v2/query-authorization/java-1.21.0/long-poll-aggregation-wire.json"
+            ),
+            include_str!(
+                "../../../conformance/fixtures/rules-v2/query-authorization/java-1.22.0/streaming-aggregation-wire.json"
+            ),
+        ] {
+            let oracle: JsonValue = serde_json::from_str(source).expect("wire oracle");
+            let mut found = false;
+            for exchange in oracle["exchanges"].as_array().expect("exchanges") {
+                let Some(body) = exchange["request"]["bodyBase64"].as_str() else {
+                    continue;
+                };
+                let bytes = base64::engine::general_purpose::STANDARD
+                    .decode(body)
+                    .expect("captured request bytes");
+                let body: JsonValue = serde_json::from_slice(&bytes).expect("captured JSON");
+                let filter = &body["structuredAggregationQuery"]["structuredQuery"]["where"];
+                if filter["unaryFilter"]["op"] != "IS_NOT_NULL" {
+                    continue;
+                }
+                assert_eq!(exchange["response"]["status"], 200);
+                let Filter::Field(decoded) = decode_filter(filter).expect("SDK unary filter")
+                else {
+                    panic!("unary filter must decode to a typed field constraint");
+                };
+                assert_eq!(
+                    decoded.path,
+                    QueryFieldPath::Field(vec!["value".to_owned()])
+                );
+                assert_eq!(decoded.operator, FieldOperator::NotEqual);
+                assert_eq!(decoded.value, Value::Null);
+                found = true;
+            }
+            assert!(found, "the frozen SDK request must be present");
+        }
+    }
 
     #[test]
     fn control_and_document_routes_can_share_one_router() {

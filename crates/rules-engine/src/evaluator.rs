@@ -17,6 +17,9 @@ use crate::model::{
     Query, RequestOperation, Resource, RulesDuration, RuntimeError, Timestamp, Value,
 };
 
+#[path = "query_constraints.rs"]
+mod query_constraints;
+
 const MAXIMUM_EVALUATED_EXPRESSIONS: usize = 1_000;
 const MAXIMUM_FUNCTION_CALL_DEPTH: usize = 20;
 const SINGLE_REQUEST_ACCESS_LIMIT: usize = 10;
@@ -63,9 +66,30 @@ fn evaluate_with_state<A: DocumentAccess + ?Sized>(
         .iter()
         .map(|(name, function)| (name.clone(), function))
         .collect();
-    for block in &program.matches {
-        evaluator.walk(block, &[], &functions);
-        if evaluator.allowed {
+    let branches = if request.operation == RequestOperation::List && request.query.scope.is_some() {
+        match query_constraints::branches(request.query.filter.as_ref()) {
+            Ok(branches) => branches.into_iter().map(Some).collect(),
+            Err(error) => {
+                evaluator.record_error(error);
+                Vec::new()
+            }
+        }
+    } else {
+        vec![None]
+    };
+    for branch in branches {
+        evaluator.allowed = false;
+        evaluator.query_branch = branch;
+        for block in &program.matches {
+            evaluator.walk(block, &[], &functions);
+            if evaluator.allowed {
+                break;
+            }
+        }
+        // Every alternative is a possible result, even if the store is empty.
+        // Budgets/caches and expression accounting remain shared across proof
+        // branches, rather than multiplying the allowed resource usage.
+        if !evaluator.allowed {
             break;
         }
     }
@@ -129,9 +153,20 @@ enum EvalValue {
     Set(Vec<Value>),
     MapDiff(MapDiff),
     Bytes { value: Vec<u8>, uppercase_hex: bool },
+    QueryResource,
+    QueryData,
+    Constraint(query_constraints::Constraint),
+    Unknown,
 }
 
 impl EvalValue {
+    fn is_symbolic(&self) -> bool {
+        matches!(
+            self,
+            Self::QueryResource | Self::QueryData | Self::Constraint(_) | Self::Unknown
+        )
+    }
+
     fn data(value: impl Into<Value>) -> Self {
         Self::Data(value.into())
     }
@@ -156,6 +191,7 @@ struct Evaluator<'a, A: DocumentAccess + ?Sized> {
     operation_document_accesses: usize,
     matching_allows: usize,
     call_depth: usize,
+    query_branch: Option<Vec<crate::FieldConstraint>>,
 }
 
 impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
@@ -170,6 +206,7 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
             operation_document_accesses: 0,
             matching_allows: 0,
             call_depth: 0,
+            query_branch: None,
         }
     }
 
@@ -189,18 +226,34 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
                 .map(|(name, function)| (name.clone(), function)),
         );
 
-        if let Some(bindings) = match_pattern(&pattern, &self.request.path) {
-            let mut environment = bindings
-                .into_iter()
-                .map(|(name, value)| (name, EvalValue::Data(value)))
-                .collect::<BTreeMap<_, _>>();
+        let bindings = if let Some(scope) = self
+            .request
+            .query
+            .scope
+            .as_ref()
+            .filter(|_| self.query_branch.is_some())
+        {
+            query_constraints::bindings(&pattern, &self.request.path, scope)
+        } else {
+            match_pattern(&pattern, &self.request.path).map(|bindings| {
+                bindings
+                    .into_iter()
+                    .map(|(name, value)| (name, EvalValue::Data(value)))
+                    .collect()
+            })
+        };
+        if let Some(mut environment) = bindings {
             environment.insert("request".to_owned(), EvalValue::Request);
             environment.insert(
                 "resource".to_owned(),
-                self.request
-                    .resource
-                    .clone()
-                    .map_or(EvalValue::Data(Value::Null), EvalValue::Resource),
+                if self.query_branch.is_some() {
+                    EvalValue::QueryResource
+                } else {
+                    self.request
+                        .resource
+                        .clone()
+                        .map_or(EvalValue::Data(Value::Null), EvalValue::Resource)
+                },
             );
             for allow in &block.allows {
                 if !allow
@@ -281,6 +334,12 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
             Expr::Index { base, index } => {
                 let base = self.eval_expr(base, environment, functions)?;
                 let index = self.eval_expr(index, environment, functions)?;
+                if matches!(base, EvalValue::QueryData | EvalValue::Constraint(_)) {
+                    let EvalValue::Data(Value::String(name)) = index else {
+                        return Ok(EvalValue::Unknown);
+                    };
+                    return self.field(base, &name);
+                }
                 index_value(base, index)
             }
             Expr::Slice { base, start, end } => {
@@ -309,6 +368,9 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
             } => self.eval_binary(*operator, left, right, environment, functions),
             Expr::Is { value, expected } => {
                 let value = self.eval_expr(value, environment, functions)?;
+                if value.is_symbolic() {
+                    return Ok(EvalValue::Unknown);
+                }
                 Ok(EvalValue::Data(Value::Bool(is_type(&value, *expected))))
             }
         }
@@ -353,6 +415,22 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
 
     fn field(&self, base: EvalValue, name: &str) -> Result<EvalValue, RuntimeError> {
         match base {
+            EvalValue::QueryResource => Ok(match name {
+                "data" => EvalValue::QueryData,
+                _ => EvalValue::Unknown,
+            }),
+            EvalValue::QueryData => Ok(query_constraints::field_value(
+                vec![name.to_owned()],
+                self.query_branch.as_deref().unwrap_or_default(),
+            )),
+            EvalValue::Constraint(mut constraint) => {
+                constraint.field.push(name.to_owned());
+                Ok(query_constraints::field_value(
+                    constraint.field,
+                    &constraint.predicates,
+                ))
+            }
+            EvalValue::Unknown => Ok(EvalValue::Unknown),
             EvalValue::Data(Value::Map(map)) => map
                 .get(name)
                 .cloned()
@@ -387,11 +465,13 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
                 "limit" => Ok(EvalValue::Data(
                     query.limit.map_or(Value::Null, Value::Integer),
                 )),
-                "offset" => Ok(EvalValue::Data(
-                    query.offset.map_or(Value::Null, Value::Integer),
-                )),
-                "orderBy" => Ok(EvalValue::Data(Value::List(
-                    query.order_by.into_iter().map(Value::String).collect(),
+                "offset" => Ok(EvalValue::Data(Value::Integer(query.offset.unwrap_or(0)))),
+                "orderBy" => Ok(EvalValue::Data(Value::Map(
+                    query
+                        .order_by
+                        .into_iter()
+                        .map(|(field, direction)| (field, Value::String(direction)))
+                        .collect(),
                 ))),
                 _ => Err(RuntimeError::new(format!(
                     "query field {name:?} does not exist"
@@ -561,6 +641,30 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
         environment: &mut BTreeMap<String, EvalValue>,
         functions: &BTreeMap<String, &'program Function>,
     ) -> Result<EvalValue, RuntimeError> {
+        if self.query_branch.is_some()
+            && matches!(operator, BinaryOperator::And | BinaryOperator::Or)
+        {
+            let left = self.eval_expr(left, environment, functions)?;
+            let terminal = operator == BinaryOperator::Or;
+            match left {
+                EvalValue::Data(Value::Bool(value)) => {
+                    if value == terminal {
+                        return Ok(EvalValue::data(value));
+                    }
+                    return self.eval_expr(right, environment, functions);
+                }
+                value if value.is_symbolic() => {
+                    let right = self.eval_expr(right, environment, functions)?;
+                    return Ok(match right {
+                        EvalValue::Data(Value::Bool(value)) if value == terminal => {
+                            EvalValue::data(value)
+                        }
+                        _ => EvalValue::Unknown,
+                    });
+                }
+                _ => return Err(RuntimeError::new("logical operand is not a boolean")),
+            }
+        }
         if operator == BinaryOperator::And {
             let left = self.eval_expr(left, environment, functions)?;
             let left = data_bool(left)?;
@@ -765,6 +869,9 @@ fn string_coercion(value: EvalValue) -> Result<String, RuntimeError> {
 }
 
 fn eval_unary(operator: UnaryOperator, value: EvalValue) -> Result<EvalValue, RuntimeError> {
+    if value.is_symbolic() {
+        return Ok(EvalValue::Unknown);
+    }
     match operator {
         UnaryOperator::Not => Ok(EvalValue::Data(Value::Bool(!data_bool(value)?))),
         UnaryOperator::Negate => match data_number(value)? {
@@ -782,6 +889,9 @@ fn eval_binary_values(
     left: EvalValue,
     right: EvalValue,
 ) -> Result<EvalValue, RuntimeError> {
+    if let Some(proof) = query_constraints::binary(operator, &left, &right) {
+        return Ok(proof);
+    }
     match operator {
         BinaryOperator::Equal => Ok(EvalValue::Data(Value::Bool(eval_equal(&left, &right)))),
         BinaryOperator::NotEqual => Ok(EvalValue::Data(Value::Bool(!eval_equal(&left, &right)))),

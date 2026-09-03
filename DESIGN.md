@@ -1455,7 +1455,7 @@ RunQuery, aggregation count, and Listen. The corpus also records ListDocuments,
 listener updates/leaving queries, and real firebase-js-sdk 12.18.0 Listen in
 CI=1 and CI=0 plus its REST aggregation requests.
 
-Observed contract, not a claim that the corrective implementation has shipped:
+Observed contract (Phase 5 acceptance remains pending):
 
 - Rules authorize the **potential result set**, not just stored rows. Owner
   equality is sufficient; absent/wrong-owner constraints are denied even on an
@@ -1490,6 +1490,35 @@ native-only because the public browser SDK has no offset query API. The next
 write is gated on observing the preceding listener update, avoiding a race that
 could coalesce the update and leave into one snapshot. Wire credentials are
 redacted by the existing capture proxy; all documents are synthetic.
+
+The corrective implementation carries the decoded query's filter tree, scope,
+limit, offset, and order map through one typed `rules-runtime::query_policy`
+adapter shared by gRPC, REST, and WebChannel. `ListDocuments` also authorizes
+the collection domain, never its first stored row. The evaluator uses symbolic
+resource fields: equality binds a value; inequalities and exclusions prove
+only supported comparisons; array membership is distinct from scalar equality.
+IN/OR branches must all authorize. An unproved value remains indeterminate
+under boolean operations, negation, and type tests; it cannot become a grant
+by being treated as false. Query alternatives share the existing expression
+and document-access budgets and document cache. Path matching covers the entire
+collection or collection-group domain, without exposing a fake candidate ID.
+No query result rows are passed to this proof. This is coverage of the recorded
+contract, not a claim of exhaustive equivalence for every possible rules program.
+
+The raw browser aggregation oracle also records `unaryFilter: IS_NOT_NULL`.
+REST now decodes unary filters into the same typed predicates used by the native
+query path; the crate regression reads the original request bytes from both JAR
+fixtures. End-to-end replay exercises the full native matrix and both browser
+variants in memory and disk/WAL, including later listener update/leave events.
+
+Replay uses a current synthetic JWT window, as the native probe already did.
+The initial Java browser recording accepted the SDK's default epoch timestamp;
+Fireside's existing live-token validation rejects that expired token. A fresh
+Java 1.21.0 capture with the current window reproduces every original semantic
+observation. No Auth policy was changed. Unexpected transport/auth errors now
+fail immediately with saved raw exchanges, rather than being mistaken for rule
+denials or retried indefinitely. Replay metadata identifies Fireside separately
+from the official JAR version.
 
 ### Targets and scope
 

@@ -6,6 +6,7 @@ import {
   type QuerySnapshot, type WhereFilterOp,
 } from "firebase/firestore";
 import { queryRulesProject, queryRulesUid, type Filter, type QueryRuleCase } from "./query-rules-cases.ts";
+import { emulatorJwtWindow } from "./emulator-jwt.ts";
 
 function condition(filter: Filter): QueryFilterConstraint {
   if ("filters" in filter) return (filter.op === "AND" ? and : or)(...filter.filters.map(condition));
@@ -18,15 +19,16 @@ export async function observe(host: string, variant: string, testCase: QueryRule
   const app = initializeApp({ projectId: queryRulesProject, apiKey: "synthetic-query-key" }, `${testCase.id}-${variant}-${operation}`);
   const db = initializeFirestore(app, { experimentalForceLongPolling: variant === "long-poll", experimentalAutoDetectLongPolling: false });
   const [hostname, port] = host.split(":");
-  connectFirestoreEmulator(db, hostname!, Number(port), { mockUserToken: { sub: queryRulesUid, user_id: queryRulesUid, email_verified: !testCase.unverified, firebase: { sign_in_provider: "custom", identities: {} } } });
+  const window = emulatorJwtWindow();
+  connectFirestoreEmulator(db, hostname!, Number(port), { mockUserToken: { sub: queryRulesUid, user_id: queryRulesUid, email_verified: !testCase.unverified, iat: window.issuedAt, exp: window.expiresAt, auth_time: window.authTime, firebase: { sign_in_provider: "custom", identities: {} } } });
   const constraints: QueryNonFilterConstraint[] = [];
   if (testCase.limit !== undefined) constraints.push(limit(testCase.limit));
   for (const [name, direction] of testCase.orderBy ?? []) constraints.push(orderBy(name, direction));
   const base = testCase.group ? collectionGroup(db, testCase.collection) : collection(db, `${testCase.parent ? `${testCase.parent}/` : ""}${testCase.collection}`);
   const target = testCase.filter ? query(base, and(condition(testCase.filter)), ...constraints) : query(base, ...constraints);
   try {
-    if (operation === "RunAggregationQuery") return { code: 0, count: String((await getCountFromServer(target)).data().count) };
-    if (!mutationUrl) return { code: 0, ...snapshot(await getDocsFromServer(target)) as object };
+    if (operation === "RunAggregationQuery") return { code: 0, count: String((await deadline(getCountFromServer(target))).data().count) };
+    if (!mutationUrl) return { code: 0, ...snapshot(await deadline(getDocsFromServer(target))) as object };
     const snapshots: unknown[] = [];
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => { unsubscribe(); reject(new Error("browser ListenChanges timeout")); }, 15_000);
@@ -49,4 +51,11 @@ export async function observe(host: string, variant: string, testCase: QueryRule
     await terminate(db);
     await deleteApp(app);
   }
+}
+
+async function deadline<T>(promise: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([promise, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("browser query capture timeout")), 15_000); })]);
+  } finally { clearTimeout(timer); }
 }

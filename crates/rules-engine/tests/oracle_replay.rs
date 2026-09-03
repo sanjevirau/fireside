@@ -281,7 +281,7 @@ fn evaluation_request(request: &JsonValue, existing: Option<&JsonValue>) -> Eval
         evaluation.query = Query {
             limit: query.get("limit").and_then(JsonValue::as_i64),
             offset: query.get("offset").and_then(JsonValue::as_i64),
-            order_by: Vec::new(),
+            ..Query::default()
         };
     }
     evaluation

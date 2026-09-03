@@ -205,7 +205,72 @@ pub struct Query {
     /// Requested offset.
     pub offset: Option<i64>,
     /// Requested sort directions.
-    pub order_by: Vec<String>,
+    pub order_by: BTreeMap<String, String>,
+    /// Potential result predicates; these are not a materialized document.
+    pub filter: Option<QueryFilter>,
+    /// Query path domain, independent of whether any document exists.
+    pub scope: Option<QueryScope>,
+}
+
+/// Domain of document paths whose access a list request must prove.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum QueryScope {
+    /// Direct children of a relative collection path.
+    Collection(String),
+    /// Any matching collection below the optional relative ancestor document.
+    CollectionGroup {
+        /// Collection ID at any descendant depth.
+        collection_id: String,
+        /// Optional ancestor document, relative to the database.
+        ancestor: Option<String>,
+    },
+}
+
+/// A constraint operator, kept separate from executable row filtering.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ConstraintOperator {
+    /// Exact equality.
+    Equal,
+    /// Strict lower bound.
+    Greater,
+    /// Inclusive lower bound.
+    GreaterEqual,
+    /// Strict upper bound.
+    Less,
+    /// Inclusive upper bound.
+    LessEqual,
+    /// Excluded scalar value.
+    NotEqual,
+    /// Every possible element must be authorized.
+    In,
+    /// Excluded scalar values.
+    NotIn,
+    /// A guaranteed member of an otherwise unknown array.
+    ArrayContains,
+    /// A disjunction of array membership guarantees.
+    ArrayContainsAny,
+}
+
+/// A field predicate supplied by the client query.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FieldConstraint {
+    /// Decoded field path, preserving quoted segments.
+    pub field: Vec<String>,
+    /// Predicate operator.
+    pub operator: ConstraintOperator,
+    /// Typed operand, not a sample from a stored row.
+    pub value: Value,
+}
+
+/// Boolean structure of a query's potential result set.
+#[derive(Clone, Debug, PartialEq)]
+pub enum QueryFilter {
+    /// One field constraint.
+    Field(FieldConstraint),
+    /// All operands apply within a proof branch.
+    And(Vec<Self>),
+    /// Every alternative must be authorized.
+    Or(Vec<Self>),
 }
 
 /// The concrete operation checked by an allow declaration.

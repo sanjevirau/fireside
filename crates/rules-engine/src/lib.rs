@@ -12,9 +12,10 @@ mod model;
 mod parser;
 
 pub use model::{
-    AtomicEvaluationResult, Auth, DocumentAccess, DocumentAccessError, EmptyDocumentAccess,
-    EvaluationRequest, EvaluationResult, LatLng, Query, RequestOperation, Resource, RulesDuration,
-    RuntimeError, Timestamp, TimestampParseError, Value,
+    AtomicEvaluationResult, Auth, ConstraintOperator, DocumentAccess, DocumentAccessError,
+    EmptyDocumentAccess, EvaluationRequest, EvaluationResult, FieldConstraint, LatLng, Query,
+    QueryFilter, QueryScope, RequestOperation, Resource, RulesDuration, RuntimeError, Timestamp,
+    TimestampParseError, Value,
 };
 
 use std::collections::{BTreeMap, BTreeSet};

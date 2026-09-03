@@ -27,9 +27,23 @@ the Phase 5 JAR 1.21.0 and previous conformance JAR 1.22.0, through native
 query/count/Listen and both browser variants. All comparable verdicts agree.
 The [query fixture](../conformance/fixtures/rules-v2/query-authorization/README.md)
 also preserves empty-result denial, get/exists, group scope, and observable
-listener update/leave behavior. Local fixture tests and TypeScript validation
-are required before committing it. Corrective implementation and its seven-job
-candidate CI, Linux release build, and r26 smoke are still pending.
+listener update/leave behavior. Oracle-only commit
+`34c8aeda8bcecb4ace06bf35aca408e782bd5baf` passed all seven jobs in
+[CI 33751408244](https://github.com/sanjevirau/fireside/actions/runs/33751408244).
+
+The following corrective commit implements typed constraint-based query
+authorization in the shared rules path, collection-domain authorization, and
+the SDK REST unary-filter decoding exposed by the same raw fixture. Crate
+regressions have no query-result rows available to authorize against. Full
+real-client replay passed locally in both memory and disk/WAL (173 native and
+218 browser observations per mode); this is not an acceptance-smoke pass.
+The standalone replay harness now supplies a current synthetic JWT window,
+rechecked against Java 1.21.0 without changing the frozen observations or Auth
+policy, and records unexpected errors before failing. The protected Phase 5
+runner was not involved or changed. Candidate seven-job CI, a fresh Linux
+release build/hash, and r26 smoke are still pending. R26 will be attempt 1/8
+under the current authorization; both complete smoke stacks passing will
+automatically launch the sequential full-data gate.
 
 ## Historical diagnostic context
 

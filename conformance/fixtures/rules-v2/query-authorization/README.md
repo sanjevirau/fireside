@@ -1,7 +1,8 @@
 # Query rules: potential results, not current rows
 
-Oracle-first response to the r25 Fireside rules failure. No product correction
-is included in this fixture commit. All input documents and identities are
+Oracle-first response to the r25 Fireside rules failure. The original fixture
+commit `34c8aeda8bcecb4ace06bf35aca408e782bd5baf` contains no product correction.
+All input documents and identities are
 synthetic. Existing Phase 3 production fixtures remain unchanged.
 
 Two separate, checksum-verified official oracles were captured on macOS with
@@ -52,6 +53,19 @@ already configured local Fireside with these exact rules and seeds; it does
 not install rules or bypass authorization for the measured queries. Seed writes
 alone use the explicit owner credential. `--grpc-only` is available for focused
 diagnosis, not a substitute for both browser variants.
+
+`npm run test:rules:query-replay --prefix conformance` starts owned Fireside
+instances in memory and disk/WAL and compares the complete native and browser
+observations with the frozen corpus. Its captures are retained in the printed
+temporary directories. Replay metadata uses `working-tree` (or an explicit
+`--candidate-version`) for Fireside, never a Java version. Browser probes now
+use the same current synthetic JWT window as the native probes; this avoids the
+SDK mock-token default epoch expiry without changing Fireside's Auth policy.
+A separate complete Java 1.21.0 recapture at
+`/tmp/query-rules-java121-live-window` reproduced all 173 native and 218 browser
+semantic observations with that window. Original fixture files and checksums
+remain untouched. A 15-second query deadline and fail-first persistence of
+non-permission errors bound diagnostic replay without retrying denied verdicts.
 
 Capture development evidence is retained locally rather than confused with
 these validated fixtures: old incomplete Listen probes are under

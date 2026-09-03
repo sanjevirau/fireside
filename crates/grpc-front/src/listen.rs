@@ -36,8 +36,7 @@ use crate::google::firestore::v1::{
 use crate::google::rpc;
 use crate::query_codec::{decode_query, query_status};
 use crate::service::{
-    AuthorizationSource, ResponseStream, query_candidate_key, require_atomic_rules_allowed,
-    require_rules_allowed, rules_query_from_structured,
+    AuthorizationSource, ResponseStream, require_atomic_rules_allowed, require_rules_allowed,
 };
 
 const POLL_INTERVAL: Duration = Duration::from_millis(10);
@@ -496,12 +495,13 @@ fn decode_target_spec(
                     "listen target requires a structured query",
                 ));
             };
+            let query = decode_query(parent.as_deref(), query)?;
             let policy = TargetPolicy::Query {
-                candidate: query_candidate_key(database, parent.as_deref(), &query)?,
-                query: rules_query_from_structured(&query),
+                candidate: fireside_rules_runtime::query_candidate(database, &query)
+                    .map_err(Status::invalid_argument)?,
+                query: fireside_rules_runtime::query_policy(&query),
             };
-            decode_query(parent.as_deref(), query)
-                .map(|query| (TargetSpec::Query(Box::new(query)), policy))
+            Ok((TargetSpec::Query(Box::new(query)), policy))
         }
         Some(TargetType::Documents(target)) => {
             let documents = target

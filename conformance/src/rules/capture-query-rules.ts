@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn, type ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -19,6 +19,7 @@ const jarSha = jarHashes[version];
 assert.ok(jarSha, "only the two pinned local emulator versions may be captured");
 const jar = process.env.FIRESTORE_EMULATOR_JAR ?? join(process.env.HOME!, `.cache/firebase/emulators/cloud-firestore-emulator-v${version}.jar`);
 const external = argument("--origin");
+const targetVersion = external ? (argument("--candidate-version") ?? "working-tree") : version;
 if (external) {
   const endpoint = new URL(external);
   assert.ok(endpoint.protocol === "http:" && ["127.0.0.1", "localhost", "[::1]"].includes(endpoint.hostname), "query fixture replay is loopback-only");
@@ -82,19 +83,19 @@ try {
     const address = staticServer.address();
     assert.ok(address && typeof address !== "string");
     const staticOrigin = `http://127.0.0.1:${address.port}`;
-    const browser = await chromium.launch({ headless: true, ...(process.env.PHASE4_BROWSER_EXECUTABLE ? { executablePath: process.env.PHASE4_BROWSER_EXECUTABLE } : {}) });
+    const browser = await chromium.launch({ headless: true, executablePath: await browserExecutable() });
     try {
       for (const variant of ["long-poll", "streaming"]) {
         const proxyPort = await reservePort();
         const proxyOrigin = `http://127.0.0.1:${proxyPort}`;
-        const proxy = start(process.env.FIRESIDE_CAPTURE_BINARY ?? join(root, "target/debug/fireside"), ["capture-proxy", "--host", "127.0.0.1", "--port", String(proxyPort), "--upstream", origin, "--hypothesis", "Query authorization is over potential results, independent of stored rows", "--target", external ? "fireside" : "java", "--target-version", version, "--sdk", "firebase@12.18.0", "--recorded-at", startedAt, "--transport", "web-channel"]);
+        const proxy = start(process.env.FIRESIDE_CAPTURE_BINARY ?? join(root, "target/debug/fireside"), ["capture-proxy", "--host", "127.0.0.1", "--port", String(proxyPort), "--upstream", origin, "--hypothesis", "Query authorization is over potential results, independent of stored rows", "--target", external ? "fireside" : "java", "--target-version", targetVersion, "--sdk", "firebase@12.18.0", "--recorded-at", startedAt, "--transport", "web-channel"]);
         await ready(`${proxyOrigin}/__fireside_capture/fixture`);
         // A separate proxy pool keeps cancelled WebChannel backchannels from
         // sharing upstream HTTP/1 connections with the SDK's unary REST count.
         // Neither rules, requests, nor responses are altered by this isolation.
         const countPort = await reservePort();
         const countOrigin = `http://127.0.0.1:${countPort}`;
-        const countProxy = start(process.env.FIRESIDE_CAPTURE_BINARY ?? join(root, "target/debug/fireside"), ["capture-proxy", "--host", "127.0.0.1", "--port", String(countPort), "--upstream", origin, "--hypothesis", "Aggregation uses the same potential-result rules as Listen", "--target", external ? "fireside" : "java", "--target-version", version, "--sdk", "firebase@12.18.0", "--recorded-at", startedAt, "--transport", "http1"]);
+        const countProxy = start(process.env.FIRESIDE_CAPTURE_BINARY ?? join(root, "target/debug/fireside"), ["capture-proxy", "--host", "127.0.0.1", "--port", String(countPort), "--upstream", origin, "--hypothesis", "Aggregation uses the same potential-result rules as Listen", "--target", external ? "fireside" : "java", "--target-version", targetVersion, "--sdk", "firebase@12.18.0", "--recorded-at", startedAt, "--transport", "http1"]);
         await ready(`${countOrigin}/__fireside_capture/fixture`);
         const page = await browser.newPage();
         const pageErrors: string[] = [];
@@ -115,6 +116,12 @@ try {
             const endpoint = operation === "RunAggregationQuery" ? countOrigin : proxyOrigin;
             const value: unknown = await page.evaluate(`QueryRules.observe(${JSON.stringify(new URL(endpoint).host)}, ${JSON.stringify(variant)}, ${JSON.stringify(testCase)}, ${JSON.stringify(operation)})`);
             values.push({ id: testCase.id, operation, result: value });
+            if (![0, "permission-denied"].includes((value as { code: number | string }).code)) {
+              await save(`${variant}-browser-failure.json`, { variant, pageErrors, consoleErrors, requestFailures, httpFailures, observations: values });
+              await save(`${variant}-wire.json`, await (await fetch(`${proxyOrigin}/__fireside_capture/fixture`)).json());
+              await save(`${variant}-aggregation-wire.json`, await (await fetch(`${countOrigin}/__fireside_capture/fixture`)).json());
+              throw new Error(`non-rules browser failure: ${testCase.id} ${operation}: ${JSON.stringify(value)}`);
+            }
           }
           console.log(`browser ${variant}: ${testCase.id}`);
         }
@@ -137,7 +144,7 @@ try {
       await new Promise<void>((done) => staticServer.close(() => done()));
     }
   }
-  await save("metadata.json", { schemaVersion: 1, target: external ? "fireside" : "official-java-emulator", version, javaJarSha256: external ? null : jarSha, capturedAt: startedAt, rulesSourceSha256: sha(queryRulesSource), syntheticOnly: true, authorizationHeadersStored: false, cases: queryRuleCases.length, temporaryDirectory: temporary, nodeVersion: process.version, platform: process.platform, sdk: "firebase@12.18.0", nativeClient: "@google-cloud/firestore@9.0.0", separateListenAndAggregationProxyPools: true });
+  await save("metadata.json", { schemaVersion: 1, target: external ? "fireside" : "official-java-emulator", version: targetVersion, javaJarSha256: external ? null : jarSha, capturedAt: startedAt, rulesSourceSha256: sha(queryRulesSource), syntheticOnly: true, authorizationHeadersStored: false, cases: queryRuleCases.length, temporaryDirectory: temporary, nodeVersion: process.version, platform: process.platform, sdk: "firebase@12.18.0", nativeClient: "@google-cloud/firestore@9.0.0", separateListenAndAggregationProxyPools: true });
   await writeFile(join(output, "firestore.rules"), queryRulesSource);
   generated.push("firestore.rules");
 } finally {
@@ -173,6 +180,13 @@ async function reservePort(): Promise<number> {
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   const address = server.address(); assert.ok(address && typeof address !== "string");
   await new Promise<void>((done) => server.close(() => done())); return address.port;
+}
+async function browserExecutable(): Promise<string> {
+  for (const path of [process.env.PHASE4_BROWSER_EXECUTABLE, "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/usr/bin/google-chrome", "/usr/bin/chromium", chromium.executablePath()]) {
+    if (!path) continue;
+    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
+  }
+  throw new Error("no Chromium browser available for query fixture replay");
 }
 async function stop(child: ChildProcess): Promise<void> {
   if (child.exitCode !== null || child.signalCode !== null) return;

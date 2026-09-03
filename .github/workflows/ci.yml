@@ -82,6 +82,8 @@ jobs:
         run: npm test --prefix conformance
       - name: Verify query rules oracle fixtures
         run: npm run test:rules:query-fixtures --prefix conformance
+      - name: Replay query rules through native and browser transports
+        run: npm run test:rules:query-replay --prefix conformance
       - name: Run WebChannel browser demo
         run: npm run test:webchannel:browser --prefix conformance
       - name: Run WebChannel browser demo in disk/WAL mode

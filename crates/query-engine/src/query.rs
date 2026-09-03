@@ -374,20 +374,44 @@ impl Query {
         Ok(self)
     }
 
-    pub(crate) const fn scope_ref(&self) -> &QueryScope {
+    /// Returns the declared document path domain, before row filtering.
+    #[must_use]
+    pub const fn scope_ref(&self) -> &QueryScope {
         &self.scope
     }
 
-    pub(crate) const fn filter_ref(&self) -> Option<&Filter> {
+    /// Returns the client-supplied predicate tree.
+    #[must_use]
+    pub const fn filter_ref(&self) -> Option<&Filter> {
         self.filter.as_ref()
     }
 
-    pub(crate) fn orders_ref(&self) -> &[Order] {
+    /// Returns explicit client sort keys.
+    #[must_use]
+    pub fn orders_ref(&self) -> &[Order] {
         &self.orders
     }
 
     pub(crate) const fn nearest_ref(&self) -> Option<&Nearest> {
         self.nearest.as_ref()
+    }
+
+    /// Returns the optional ancestor restriction for collection-group queries.
+    #[must_use]
+    pub fn ancestor_ref(&self) -> Option<&str> {
+        self.ancestor.as_deref()
+    }
+
+    /// Returns the requested offset, including its zero default.
+    #[must_use]
+    pub const fn offset_value(&self) -> usize {
+        self.offset
+    }
+
+    /// Returns the requested limit rather than a count of currently stored rows.
+    #[must_use]
+    pub const fn limit_ref(&self) -> Option<&Limit> {
+        self.limit.as_ref()
     }
 }
 

@@ -3,6 +3,9 @@
 #![forbid(unsafe_code)]
 
 use std::collections::BTreeMap;
+
+mod query;
+pub use query::{query_candidate, query_policy};
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::sync::{Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
@@ -458,6 +461,11 @@ pub fn evaluation_request(
     request.resource = current.map(|document| resource(key, document));
     request.request_resource = proposed.map(|document| resource(key, document));
     request.query = query;
+    if operation == RequestOperation::List && current.is_none() && request.query.scope.is_none() {
+        request.query.scope = key.path().rsplit_once('/').map(|(collection, _)| {
+            fireside_rules_engine::QueryScope::Collection(collection.to_owned())
+        });
+    }
     request
 }
 

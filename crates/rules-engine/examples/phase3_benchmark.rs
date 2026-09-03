@@ -29,7 +29,7 @@ fn main() {
     request.query = Query {
         limit: Some(10),
         offset: Some(0),
-        order_by: Vec::new(),
+        ..Query::default()
     };
     for _ in 0..1_000 {
         assert!(
