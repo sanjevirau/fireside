@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import "./auth-refresh-reuse.test.ts";
 
 interface Observation {
   readonly id: string;

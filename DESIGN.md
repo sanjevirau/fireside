@@ -2192,6 +2192,26 @@ alone is insufficient: an undecodable/non-JSON body is a definitive diagnostic
 failure. This restores a missing prerequisite without changing the protected
 browser runner, workload, readiness deadlines, durations or soak criteria.
 
+### Auth refresh grant reuse (r24 follow-up oracle)
+
+`auth-refresh-reuse` freezes 28 direct HTTP observations against firebase-tools
+15.22.0 plus four real Firebase JS SDK 12.18.0 browser refresh responses. Anonymous,
+password and custom-token refresh grants remain valid after successful use and
+are returned unchanged. Concurrent requests with the same grant all succeed;
+two tabs sharing persisted authentication and reload-plus-forced-refresh also
+succeed. Successful responses preserve identity/provider/custom claims and return
+equal `id_token`/`access_token`, `expires_in: "3600"`, `token_type: "Bearer"` and
+the emulator's `project_id: "12345"`.
+
+Admin `disableUser: true` causes refresh to return HTTP 400 `USER_DISABLED` without
+consuming the grant. Re-enabling permits the original grant; deleting the user or
+using an unknown grant returns HTTP 400 `INVALID_REFRESH_TOKEN`. The official
+implementation encodes reusable stateless refresh records. Fireside may keep its
+durable grant map, but refresh must neither consume the grant nor allocate a new
+grant on every request. The compatibility target here is the local emulator, not
+production token storage or signing. Original r24 failure evidence remains banked;
+its rejected credential bodies were not recorded and are not reconstructed.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.
