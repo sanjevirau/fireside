@@ -1997,6 +1997,20 @@ batch-get, structured-query, and aggregation-query responses to whole
 microseconds. User document timestamp fields retain nanosecond precision, and
 the existing strict validation of incoming consistency selectors is unchanged.
 
+### Phase 5 cheap-soak catalogue input (2026-09-03)
+
+The strict v2 browser runner completed all nine journeys on the official Linux
+stack with zero page errors, gating request failures, or skips. The following
+short soak exposed a separate input precondition: its unchanged
+`premade-templates.limit(1)` read cannot operate on the tiny fixture's empty
+catalogue. The exact recorded error hash and browser/soak evidence are frozen in
+`smoke-soak-catalog-precondition.json`. A smoke-only helper creates one temporary
+owned catalogue row before measurement, only when the catalogue is empty, and
+verifies ownership before deleting it afterward. Full-data runs never synthesize
+catalogue data. The final browser runner, schedules, queries, and zero-swap rule
+are unchanged. Soak errors now retain readable text alongside their legacy
+hashes, including primary and cleanup failures.
+
 ### Phase 5 Mac-verified journey corrections (2026-09-03)
 
 The source pin at Twodart `6bda5bf29` includes stable form ids after MobX

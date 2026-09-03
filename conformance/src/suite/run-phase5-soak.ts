@@ -12,6 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { Firestore } from "@google-cloud/firestore";
+import { preparePhase5SmokeCatalog } from "./phase5-smoke-catalog.ts";
 
 import {
   assertPhase5Manifest,
@@ -84,6 +85,7 @@ interface RuntimeMetrics {
   readonly catalogLatencyMilliseconds: number[];
   readonly counts: WorkloadCounts;
   readonly errorHashes: Set<string>;
+  readonly errorTexts: Set<string>;
   readonly functionLatencyMilliseconds: number[];
   readonly storageLatencyMilliseconds: number[];
   stalls: number;
@@ -163,11 +165,18 @@ async function main(): Promise<void> {
   const healthBefore = await captureHealth();
   const runtimes: StackRuntime[] = [];
   const sharedAbort = new AbortController();
+  const smokeCatalogCleanups: (() => Promise<void>)[] = [];
   let primaryError: unknown;
 
   try {
     for (const definition of definitions) {
       runtimes.push(await prepareStack(definition, args.projectId, sharedAbort));
+    }
+    for (const runtime of runtimes) {
+      const client = runtime.sessions[0]?.client;
+      if (client === undefined) throw new Error("Phase 5 soak omitted its first session");
+      const cleanup = await preparePhase5SmokeCatalog(client, args.smoke, runtime.marker);
+      if (cleanup !== null) smokeCatalogCleanups.push(cleanup);
     }
     await withTimeout(
       Promise.all(runtimes.flatMap((runtime) => runtime.sessions.map(({ ready }) => ready))),
@@ -207,12 +216,22 @@ async function main(): Promise<void> {
   }
 
   const cleanupFailures: string[] = [];
+  const cleanupErrorTexts: string[] = [];
+  for (const cleanup of smokeCatalogCleanups) {
+    try {
+      await cleanup();
+    } catch (error: unknown) {
+      cleanupFailures.push(digest(errorText(error)));
+      cleanupErrorTexts.push(errorText(error));
+    }
+  }
   for (const runtime of runtimes) {
     for (const session of runtime.sessions) session.unsubscribe();
     try {
       await cleanupRuntime(runtime, args.projectId);
     } catch (error: unknown) {
       cleanupFailures.push(digest(errorText(error)));
+      cleanupErrorTexts.push(errorText(error));
     }
     await Promise.all(
       runtime.sessions.map(async ({ client }) => {
@@ -238,6 +257,8 @@ async function main(): Promise<void> {
   if (primaryError !== undefined) gateFailures.unshift(digest(errorText(primaryError)));
   const passed = gateFailures.length === 0;
   const evidence = {
+    primaryErrorText: primaryError === undefined ? null : errorText(primaryError),
+    cleanupErrorTexts,
     candidateIdentityStored: false,
     completedAt: new Date().toISOString(),
     datasetIdentityStored: false,
@@ -299,6 +320,7 @@ async function prepareStack(
     catalogLatencyMilliseconds: [],
     counts: emptyCounts(),
     errorHashes: new Set<string>(),
+    errorTexts: new Set<string>(),
     functionLatencyMilliseconds: [],
     stalls: 0,
     storageLatencyMilliseconds: [],
@@ -368,6 +390,7 @@ function createSession(
     },
     (error) => {
       metrics.errorHashes.add(digest(errorText(error)));
+      metrics.errorTexts.add(errorText(error));
       if (!ready) rejectReady(error);
       abort.abort();
     },
@@ -458,6 +481,7 @@ async function scheduledWorker(
       await operation(cycle);
     } catch (error: unknown) {
       runtime.metrics.errorHashes.add(digest(errorText(error)));
+      runtime.metrics.errorTexts.add(errorText(error));
       runtime.abort.abort();
       throw error;
     }
@@ -866,6 +890,7 @@ function rawRuntime(runtime: StackRuntime): Record<string, unknown> {
   return {
     catalogLatencyMilliseconds: runtime.metrics.catalogLatencyMilliseconds,
     errorHashes: [...runtime.metrics.errorHashes].sort(),
+    errorTexts: [...runtime.metrics.errorTexts].sort(),
     functionLatencyMilliseconds: runtime.metrics.functionLatencyMilliseconds,
     listenerLatencyMilliseconds: runtime.sessions.flatMap(
       ({ tracker }) => tracker.listenerLatencyMilliseconds,
