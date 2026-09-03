@@ -1440,6 +1440,59 @@ gate.
 
 ## 10. Differential harness and fixtures
 
+### Query authorization oracle correction (Phase 5 r25)
+
+The earlier resource-free `list` adapter above is incomplete: it drops filter
+constraints and therefore cannot prove owner-filtered access. R25 exposed this
+as `field "data" is not available on this value`. The corrective oracle corpus
+is `conformance/fixtures/rules-v2/query-authorization/`, captured **before** its
+product implementation. Phase 5's firebase-tools 15.22.0 uses Firestore JAR
+1.21.0 (`c3d3680a89d946a90a027365ea14c26c6472a162bcf37f099bbb1ebd66d25e8e`);
+the earlier conformance pin is JAR 1.22.0
+(`9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c`).
+Both captured versions agree on the 56 native query shapes, each sent as
+RunQuery, aggregation count, and Listen. The corpus also records ListDocuments,
+listener updates/leaving queries, and real firebase-js-sdk 12.18.0 Listen in
+CI=1 and CI=0 plus its REST aggregation requests.
+
+Observed contract, not a claim that the corrective implementation has shipped:
+
+- Rules authorize the **potential result set**, not just stored rows. Owner
+  equality is sufficient; absent/wrong-owner constraints are denied even on an
+  empty collection. An extra filter that yields no rows does not change the
+  authorization decision. This matches the documented
+  [rules/query contract](https://firebase.google.com/docs/firestore/security/rules-query).
+- Every `in`/OR alternative must be safe. `array-contains` guarantees membership,
+  not scalar equality; mixed-owner `array-contains-any` is denied. Inequality
+  constraints can prove a stricter rules bound, but the two emulators do **not**
+  treat `field >= uid && field <= uid` as owner equality.
+- An owner-proved first `||` operand avoids an otherwise missing `get()`. A
+  constrained license ID can authorize through `get()`/`exists()` even when the
+  unconstrained owner operand is indeterminate. Fixed-path accesses also work;
+  an unconstrained dynamic path does not authorize a query.
+- `request.query.limit` is null when absent; default offset is zero. Ordering
+  is a map of field paths to `ASC`/`DESC`, not a list of formatted strings.
+- Collection-group authorization needs scope-wide coverage: the recursive
+  group match allows the owner query, while a root-only collection match does
+  not authorize the corresponding group query. Empty groups obey the same rule.
+- Native query/count and browser Listen/count share the allow/deny decisions.
+  Both Java versions can deliver a query update/leave as RESET plus CURRENT;
+  the stock browser SDK observes added, modified, then removed. Tests preserve
+  raw frames and those observable transitions separately. This does not require
+  replacing Fireside's already-oracled incremental listener representation.
+
+Capture tooling uses separate proxy connection pools for Listen and unary REST
+aggregation. Shared pools intermittently yielded a browser CORS/network failure
+with no completed aggregation exchange; those failed probes were not accepted
+as rules evidence. Every published result must be success or PERMISSION_DENIED,
+with no page error or non-cancelled request failure. Explicit-offset probes are
+native-only because the public browser SDK has no offset query API. The next
+write is gated on observing the preceding listener update, avoiding a race that
+could coalesce the update and leave into one snapshot. Wire credentials are
+redacted by the existing capture proxy; all documents are synthetic.
+
+### Targets and scope
+
 Identical TypeScript cases use real Google SDKs against:
 
 1. a dedicated production Cloud Firestore project;

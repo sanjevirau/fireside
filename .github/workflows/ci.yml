@@ -80,6 +80,8 @@ jobs:
         run: npm run check --prefix conformance
       - name: Run harness unit tests
         run: npm test --prefix conformance
+      - name: Verify query rules oracle fixtures
+        run: npm run test:rules:query-fixtures --prefix conformance
       - name: Run WebChannel browser demo
         run: npm run test:webchannel:browser --prefix conformance
       - name: Run WebChannel browser demo in disk/WAL mode

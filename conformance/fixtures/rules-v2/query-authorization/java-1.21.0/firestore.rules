@@ -1,0 +1,24 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function verified() { return request.auth != null && request.auth.token.email_verified == true; }
+    function owner() { return request.auth.uid == resource.data.createdBy; }
+    function licenseAccess(id) { return get(/databases/$(database)/documents/licenses/$(id)).data.uid == request.auth.uid; }
+    function presentationRead() { return verified() && (owner() || (resource.data.licenseId != null && licenseAccess(resource.data.licenseId))); }
+    match /presentations/{id} { allow read: if presentationRead(); }
+    match /emptyPresentations/{id} { allow read: if presentationRead(); }
+    match /shortCircuit/{id} { allow list: if owner() || get(/databases/$(database)/documents/licenses/missing).data.uid == request.auth.uid; }
+    match /shared/{id} { allow list: if request.auth.uid in resource.data.members; }
+    match /ratings/{id} { allow list: if resource.data.score > 4; }
+    match /nonnull/{id} { allow list: if resource.data.value != null; }
+    match /notblocked/{id} { allow list: if resource.data.value != 'blocked'; }
+    match /limited/{id} { allow list: if request.query.limit <= 12; }
+    match /offsets/{id} { allow list: if request.query.offset <= 2; }
+    match /ordering/{id} { allow list: if request.query.orderBy.updatedAt == 'DESC'; }
+    match /fixedGet/{id} { allow list: if get(/databases/$(database)/documents/licenses/granted).data.uid == request.auth.uid; }
+    match /fixedExists/{id} { allow list: if exists(/databases/$(database)/documents/licenses/granted); }
+    match /dynamicExists/{id} { allow list: if exists(/databases/$(database)/documents/licenses/$(resource.data.licenseId)); }
+    match /{prefix=**}/groupDocs/{id} { allow list: if owner(); }
+    match /{prefix=**}/emptyGroup/{id} { allow list: if owner(); }
+  }
+}
