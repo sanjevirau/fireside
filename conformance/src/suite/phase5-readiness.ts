@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { appendFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 
 export const PHASE5_DIAGNOSTIC_DEFINITIVE_ERROR_SAMPLES = 3;
 export const PHASE5_FRONTEND_PROBE_SECONDS = 30;
@@ -11,6 +12,10 @@ export interface ReadinessObservation {
   readonly outcome: "ready" | "not-ready" | "http" | "timeout" | "error";
   readonly status?: number | null;
   readonly error?: string | null;
+  readonly definitive?: boolean;
+  readonly decodedByteLength?: number;
+  readonly decodedSha256?: string;
+  readonly jsonValid?: boolean;
 }
 
 export interface ReadinessCondition {
@@ -119,9 +124,9 @@ export class Phase5ReadinessTracker {
     }
     const healthy = this.states.filter(({ kind }) => kind !== "probe").every(({ result }) => result?.ready === true);
     const definitive = healthy ? this.states.find(({ kind, result }) => kind === "probe" &&
-      result?.status !== null && result?.status !== undefined && result.status >= 400) : undefined;
+      (result?.definitive === true || (result?.status !== null && result?.status !== undefined && result.status >= 400))) : undefined;
     if (diagnosticFailFast && definitive !== undefined) {
-      const fingerprint = `${definitive.id} returned ${String(definitive.result?.status)}`;
+      const fingerprint = `${definitive.id} returned ${String(definitive.result?.status)}${definitive.result?.error ? `: ${definitive.result.error}` : ""}`;
       const observation = `${definitive.id}:${definitive.observedAt}`;
       if (observation !== this.previousErrorObservation) {
         this.consecutiveDefinitiveErrors = fingerprint === this.previousDefinitiveError
@@ -246,6 +251,38 @@ export async function phase5FetchProbe(url: string, signal: AbortSignal): Promis
     return { ready: false, outcome: error instanceof Error && error.name === "TimeoutError" ? "timeout" : "error",
       status: null, error: String(error) };
   }
+}
+
+/** Browser-equivalent object download: decode Content-Encoding, then require JSON. */
+export async function phase5CacheJsonProbe(url: string, signal: AbortSignal): Promise<ReadinessObservation> {
+  return await new Promise((resolve, reject) => {
+    const child = spawn("curl", ["--compressed", "--connect-timeout", "3", "--max-time", "30", "-k", "-sS", "-w", "\n%{http_code}", url], {
+      stdio: ["ignore", "pipe", "pipe"], signal,
+    });
+    const chunks: Buffer[] = [];
+    let stderr = "";
+    child.stdout.on("data", (chunk: Buffer) => chunks.push(chunk));
+    child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
+    child.once("error", reject);
+    child.once("close", (exitCode) => {
+      if (exitCode !== 0) {
+        resolve({ ready: false, outcome: exitCode === 28 ? "timeout" : "error", status: null,
+          error: stderr.trim(), definitive: exitCode === 61, jsonValid: false });
+        return;
+      }
+      const output = Buffer.concat(chunks);
+      const separator = output.lastIndexOf(10);
+      const status = Number(output.subarray(separator + 1).toString());
+      const body = output.subarray(0, separator);
+      const evidence = { status, decodedByteLength: body.length, decodedSha256: createHash("sha256").update(body).digest("hex") };
+      try {
+        JSON.parse(body.toString("utf8"));
+        resolve({ ...evidence, ready: status === 200, outcome: "http", jsonValid: true });
+      } catch (error) {
+        resolve({ ...evidence, ready: false, outcome: "error", jsonValid: false, error: String(error), definitive: status === 200 });
+      }
+    });
+  });
 }
 
 function httpObservation(status: number): ReadinessObservation {

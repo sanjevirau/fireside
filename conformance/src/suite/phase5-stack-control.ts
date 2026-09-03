@@ -14,6 +14,7 @@ import type { Phase5StackPorts } from "./phase5-host-prepare.ts";
 import {
   PHASE5_FRONTEND_PROBE_SECONDS,
   phase5CurlProbe,
+  phase5CacheJsonProbe,
   phase5FetchProbe,
   waitForPhase5Readiness,
   type ReadinessAllowance,
@@ -787,6 +788,10 @@ export function phase5ReadinessConditions(
   baseUrl: string,
   twodartNetUrl: string,
 ): ReadinessCondition[] {
+  const cachePath = "/v0/b/assets-local.twodart.com/o/cache%2Fmain-cache-local.json?alt=media";
+  const storageAlias = new URL(baseUrl);
+  storageAlias.hostname = storageAlias.hostname.replace("templates.", "storage.");
+  const aliasCacheUrl = new URL(cachePath, storageAlias).href;
   const markers = [
     ["emulator", "firebase-emulator.log", "All emulators ready"],
     ["application", "firebase-cache-watch.log", "Smart watcher started successfully"],
@@ -834,7 +839,28 @@ export function phase5ReadinessConditions(
       target: new URL(PHASE5_TWODARTNET_HEALTH_ROUTE, twodartNetUrl).href,
       check: async (signal) => phase5CurlProbe(new URL(PHASE5_TWODARTNET_HEALTH_ROUTE, twodartNetUrl).href, 8, signal),
     },
+    ...[
+      ["raw", `http://127.0.0.1:${String(input.ports.storage)}${cachePath}`],
+      ["alias", aliasCacheUrl],
+    ].map(([name, url]): ReadinessCondition => ({
+      id: `probe:cache-json-${name}`, group: "application", kind: "probe", target: url!,
+      check: async (signal) => phase5CacheJsonProbe(url!, signal),
+    })),
+    {
+      id: "probe:storage-alias-registration", group: "application", kind: "probe",
+      target: path.join(PHASE5_PORTLESS_STATE_DIRECTORY, "routes.json"),
+      check: async () => {
+        const routes: unknown = JSON.parse(await readFile(path.join(PHASE5_PORTLESS_STATE_DIRECTORY, "routes.json"), "utf8"));
+        const ready = phase5StorageAliasRegistered(routes, storageAlias.hostname, input.ports.storage);
+        return { ready, outcome: ready ? "ready" : "not-ready", error: ready ? null : `Missing Storage alias ${storageAlias.hostname} -> ${String(input.ports.storage)}` };
+      },
+    },
   ];
+}
+
+export function phase5StorageAliasRegistered(routes: unknown, hostname: string, port: number): boolean {
+  return Array.isArray(routes) && routes.some((route: { hostname?: unknown; port?: unknown }) =>
+    route.hostname === hostname && route.port === port);
 }
 
 export async function waitForPhase5FrontendReady(

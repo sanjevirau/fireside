@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { createServer } from "node:http";
 import test from "node:test";
+import { gzipSync } from "node:zlib";
 
 import {
   cacheOutputDigest,
@@ -20,6 +21,7 @@ import {
   phase5EmulatorProcessMatches,
   phase5ProcessIdentityFromStat,
   phase5ReadinessConditions,
+  phase5StorageAliasRegistered,
   renderPhase5MprocsControlCommand,
   renderPhase5StackCommand,
   type StackLaunchInput,
@@ -29,12 +31,60 @@ import {
   PHASE5_FRONTEND_PROBE_SECONDS,
   phase5CurlArguments,
   phase5CurlProbe,
+  phase5CacheJsonProbe,
   phase5FetchProbe,
   waitForPhase5Readiness,
   type ReadinessCondition,
 } from "../src/suite/phase5-readiness.ts";
 
 const controlUrl = new URL("../src/suite/phase5-stack-control.ts", import.meta.url);
+
+test("cache readiness requires browser-decoded JSON, not an HTTP 200 gzip body", async () => {
+  const payload = gzipSync(Buffer.from('{"synthetic":"火🔥"}'));
+  const server = createServer((request, response) => {
+    assert.match(request.headers["accept-encoding"] ?? "", /gzip/u);
+    if (request.url === "/good") response.setHeader("content-encoding", "gzip");
+    response.setHeader("content-type", "application/json");
+    response.end(payload);
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const address = server.address();
+    assert.ok(address && typeof address !== "string");
+    const origin = `http://127.0.0.1:${String(address.port)}`;
+    const signal = new AbortController().signal;
+    const good = await phase5CacheJsonProbe(`${origin}/good`, signal);
+    assert.equal(good.ready, true);
+    assert.equal(good.status, 200);
+    assert.equal(good.jsonValid, true);
+    assert.match(good.decodedSha256 ?? "", /^[0-9a-f]{64}$/u);
+    const bad = await phase5CacheJsonProbe(`${origin}/r23`, signal);
+    assert.equal(bad.ready, false);
+    assert.equal(bad.status, 200);
+    assert.equal(bad.definitive, true);
+    assert.equal(bad.jsonValid, false);
+    assert.match(bad.error ?? "", /SyntaxError/u);
+  } finally { await new Promise<void>((resolve) => server.close(() => resolve())); }
+});
+
+test("Storage alias must be registered for this exact stack port", () => {
+  const routes = [{ hostname: "phase5-fireside.storage.twodart.localhost", port: 23102, pid: 0 }];
+  assert.equal(phase5StorageAliasRegistered(routes, "phase5-fireside.storage.twodart.localhost", 23102), true);
+  assert.equal(phase5StorageAliasRegistered(routes, "phase5-fireside.storage.twodart.localhost", 23002), false);
+  assert.equal(phase5StorageAliasRegistered([], "phase5-fireside.storage.twodart.localhost", 23102), false);
+});
+
+test("three identical malformed-JSON observations fail diagnostic readiness with verbatim attribution", () => {
+  const conditions: ReadinessCondition[] = [{ id: "cache", group: "application", kind: "probe", target: "cache",
+    check: async () => ({ ready: false, outcome: "error" }) }];
+  const tracker = new Phase5ReadinessTracker(conditions, 0, { emulator: 60, application: 1200 });
+  for (let index = 1; index <= 3; index++) {
+    tracker.observe("cache", { ready: false, outcome: "error", status: 200, definitive: true, error: "SyntaxError: Unexpected gzip bytes" }, index * 1000);
+    const result = tracker.sample(index * 1000, true);
+    if (index < 3) assert.equal(result.failure, null);
+    else assert.match(result.failure ?? "", /cache returned 200: SyntaxError: Unexpected gzip bytes/u);
+  }
+});
 
 const launch: StackLaunchInput = {
   datasetName: "full-data",
@@ -346,14 +396,15 @@ function testConditions(): ReadinessCondition[] {
 test("all readiness conditions are inventoried and classified identically for both stacks", () => {
   for (const stack of ["official", "fireside"] as const) {
     const conditions = phase5ReadinessConditions({ ...launch, stack }, "https://templates.localhost", "https://net.localhost");
-    assert.equal(conditions.length, 21);
+    assert.equal(conditions.length, 24);
     assert.equal(conditions.filter(({ kind }) => kind === "marker").length, 4);
     assert.equal(conditions.filter(({ kind }) => kind === "port").length, 13);
-    assert.equal(conditions.filter(({ kind }) => kind === "probe").length, 4);
+    assert.equal(conditions.filter(({ kind }) => kind === "probe").length, 7);
     assert.equal(conditions.filter(({ group }) => group === "emulator").length, 14);
     assert.deepEqual(conditions.filter(({ group }) => group === "application").map(({ id }) => id), [
       "marker:firebase-cache-watch.log", "marker:templates.log", "marker:dotnet.log",
       "port:cacheWebsocket", "port:mprocsControl", "probe:frontend-login", "probe:twodartnet-health",
+      "probe:cache-json-raw", "probe:cache-json-alias", "probe:storage-alias-registration",
     ]);
   }
 });
