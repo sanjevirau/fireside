@@ -1,0 +1,64 @@
+{
+  "label": "fireside-soak",
+  "startedAt": "2026-09-03T10:56:31.577Z",
+  "passed": true,
+  "swapDrain": {
+    "startedAt": "2026-09-03T10:56:31.621Z",
+    "completedAt": "2026-09-03T10:56:34.748Z",
+    "authorization": "phase-5-schema-v3-quiescent-preflight",
+    "invocationPrefix": "sudo -n",
+    "before": {
+      "residualSwapBytes": 379289600,
+      "vmSwappiness": 30,
+      "configuredSwap": "Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n/swap.img                               file\t\t4194300\t\t184912\t\t-1\n/srv/dev-fast/.swap/devhost.swap        file\t\t16777212\t185488\t\t-1\n"
+    },
+    "after": {
+      "residualSwapBytes": 0,
+      "vmSwappiness": 30,
+      "configuredSwap": "Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n/swap.img                               file\t\t4194300\t\t0\t\t-1\n/srv/dev-fast/.swap/devhost.swap        file\t\t16777212\t0\t\t-1\n"
+    },
+    "commands": [
+      {
+        "command": "swapoff",
+        "args": [
+          "-a"
+        ],
+        "exitCode": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "command": "swapon",
+        "args": [
+          "-a"
+        ],
+        "exitCode": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "swappinessChanged": false,
+    "passed": true
+  },
+  "hostHealth": {
+    "availableDiskBytes": 244286066688,
+    "conflictingListeners": 0,
+    "failedUnits": 0,
+    "oomOrResourceEvidence": 0,
+    "sshState": "active",
+    "steadyVmstatSamples": 3,
+    "swapInPagesPerSecond": [
+      0,
+      0,
+      0
+    ],
+    "swapOutPagesPerSecond": [
+      0,
+      0,
+      0
+    ],
+    "vmstatActivityUnit": "KiB/second (legacy field names retained; required value is zero)",
+    "systemState": "running"
+  },
+  "completedAt": "2026-09-03T10:56:37.852Z"
+}
