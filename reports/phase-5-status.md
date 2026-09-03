@@ -2,8 +2,8 @@
 
 Phase 5 is **incomplete**. The current authorization is the bounded fix/cheap-smoke
 loop supplied after r25, followed immediately by the immutable full-data gate
-only when both complete cheap-smoke stacks pass. There has been **one further
-cheap-smoke attempt** under this authorization (maximum eight): r26 failed. Oracle probes
+only when both complete cheap-smoke stacks pass. There have been **two further
+cheap-smoke attempts** under this authorization (maximum eight): r26 and r27 failed. Oracle probes
 are not acceptance smokes. No full-data gate has launched for the current
 candidate.
 
@@ -12,7 +12,8 @@ candidate.
 | Attempt | Journey reached | Classification | Fixture commit | Fix/candidate commit | Candidate CI | Outcome |
 | --- | --- | --- | --- | --- | --- | --- |
 | [r25](phase-5-smoke-20260903-r25.md) (incoming boundary) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard query failed | Fireside product: query-rules authorization; previous Auth error did not recur | `99a7cf0` (Auth refresh) | `710bfb7` | [33745161787](https://github.com/sanjevirau/fireside/actions/runs/33745161787), 7/7 green | Failed; export-first cleanup complete; full gate not started |
-| [r26](phase-5-smoke-20260903-r26.md) (attempt 1/8) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard timeout | Unresolved application path; no r25 rules error; diagnostic evidence gap | `34c8aed` | `a6c66b4` | [33752732445](https://github.com/sanjevirau/fireside/actions/runs/33752732445), 7/7 green | Failed; export-first cleanup complete, no full-data launch; diagnostic amendment awaiting CI before r27 |
+| [r26](phase-5-smoke-20260903-r26.md) (attempt 1/8) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard timeout | Unresolved application path; no r25 rules error; diagnostic evidence gap | `34c8aed` | `a6c66b4` | [33752732445](https://github.com/sanjevirau/fireside/actions/runs/33752732445), 7/7 green | Failed; export-first cleanup complete, no full-data launch; diagnostic amendment published in `4d6cf2f` |
+| [r27](phase-5-smoke-20260903-r27.md) (attempt 2/8) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard timeout | Fireside product: unbound child wildcard in invited-users query path raises before independent OR grant | Query-path corpus captured before repair; commit pending | `4d6cf2f` | [33755740999](https://github.com/sanjevirau/fireside/actions/runs/33755740999), 7/7 green | Failed; export-first cleanup complete; no full-data launch |
 
 R25 failure evidence is published in `b79750636e1666e1d097b341b7cc9f85ba74d28c`;
 [evidence CI 33748445917](https://github.com/sanjevirau/fireside/actions/runs/33748445917)
@@ -61,7 +62,25 @@ to read-only Phase 5 observation: Listen shapes/completed-response summaries and
 synthetic-smoke-only final DOM/overlay text. Its contract records the evidence
 gap before another measurement. No product or Twodart change, verdict change,
 protected-runner change, or gate amendment is included. All 101 Phase 5 harness
-tests and type-check passed locally; CI is required before r27 (attempt 2/8).
+tests and type-check passed locally. Diagnostic/evidence candidate
+`4d6cf2ff90cdb33ec076c23067807303e304e255` passed all seven jobs in
+[CI 33755740999](https://github.com/sanjevirau/fireside/actions/runs/33755740999).
+The fresh Linux release build exited zero at `2026-09-03T20:45:35+08:00`
+(release compilation 1m15s), binary SHA-256
+`e2657373453384e450375ee19d8240f0383b02082e654af112c0178ed9a68fc6`.
+R27 (attempt 2/8) launched at `2026-09-03T20:46:37+08:00` in tmux
+`fireside-phase5-4d6cf2f-r27-controller`, output
+`diagnostics/two-tier-smoke-v3-20260903-4d6cf2f-r27` under the same runtime root.
+The guarded r27 controller exited 1 at `2026-09-03T20:55:26+08:00`, after both
+export-first shutdowns exited zero; no full-data gate launched. The new diagnostic
+trace identifies `licenses/{uid}/invitedUsers`, not r25's owner-filter query:
+official delivers the self-invite while Fireside denies an unbound child-path
+expression before evaluating the independent parent-owner OR branch. Both JARs'
+new reduced query-path captures agree through native and both browser variants.
+Oracle corpus and r27 failure evidence will be committed before the product
+repair. R28 will be attempt 3/8 and is not launched. Same-cause recurrence after
+this new repair must stop; the r25 owner-filter regression remains green.
+Private raw r27 backup: `/tmp/fireside-phase5-r27-raw.qQFThS`; do not publish it.
 Private raw r26 backup: `/tmp/fireside-phase5-r26-raw.4973IM`; never publish its
 credentials, complete exports, or raw service/runtime state.
 

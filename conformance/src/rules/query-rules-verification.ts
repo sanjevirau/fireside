@@ -74,7 +74,7 @@ export function verifyBrowserCapture(browser: BrowserCapture, native: NativeCapt
   assert.deepEqual(browser.httpFailures, [], browser.variant);
   assert.deepEqual(browser.requestFailures.filter(({ url, reason }) => !(reason === "net::ERR_ABORTED" && url.includes("/Listen/channel"))), [], "only our own closed Listen channels may be aborted");
   assert.equal(browser.consoleErrors.some((message) => message.includes("CORS")), false);
-  const cases = queryRuleCases.filter((value) => value.offset === undefined);
+  const cases = native.cases.filter((value) => value.offset === undefined);
   assert.equal(browser.observations.length, cases.length * 2 + 1);
   for (const testCase of cases) {
     for (const operation of ["Listen", "RunAggregationQuery"]) {

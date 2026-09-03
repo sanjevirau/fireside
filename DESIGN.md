@@ -2319,6 +2319,22 @@ events. The protected runner, source pin, manifest, workload and verdicts remain
 unchanged. See `conformance/fixtures/phase5/r26-observability-gap-contract.json`
 and `reports/phase-5-smoke-20260903-r26.md`.
 
+### Phase 5 r27 query-path oracle (before repair)
+
+The new `conformance/fixtures/rules-v2/query-paths/` corpus captures a different
+list-policy case from r25's field-filter proof. A concrete parent wildcard may
+be interpolated into get(), but the collection's child wildcard remains unknown.
+Both pinned JARs allow `!exists(childPath) || parentOwner()` when the fixed
+parent lookup proves ownership; they deny the unknown-path expression alone,
+an unauthorized/missing parent, and an empty-result query without a grant.
+Helper calls, get(), reversed OR, and both browser variants agree. A boolean
+true OR branch or false AND branch determines the result even when the other
+branch is unknown or raises a missing-resource error. The explicit eleven-call
+exists conjunction followed by `|| true` also allows, without changing the
+document-access budget. This is an observed query proof contract, not a license
+to authorize rows individually or bypass a failed gate. R27's protected runner
+and Twodart remain unchanged. No product repair is included in this oracle step.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.

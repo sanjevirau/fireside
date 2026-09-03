@@ -9,10 +9,16 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { chromium } from "playwright";
-import { queryRuleCases, queryRuleSeeds, queryRulesProject, queryRulesSource } from "./query-rules-cases.ts";
+import { queryRuleCases as baseCases, queryRuleSeeds as baseSeeds, queryRulesProject, queryRulesSource as baseRules } from "./query-rules-cases.ts";
+import { queryPathCases, queryPathRulesSource, queryPathSeeds } from "./query-path-cases.ts";
 import { clientFor, grpcList, grpcListen, grpcQuery, seedDocument } from "./query-rules-transport.ts";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
+const caseSet = argument("--case-set") ?? "constraints";
+assert.ok(["constraints", "paths"].includes(caseSet), "unknown query case set");
+const queryRuleCases = caseSet === "paths" ? queryPathCases : baseCases;
+const queryRuleSeeds = caseSet === "paths" ? queryPathSeeds : baseSeeds;
+const queryRulesSource = caseSet === "paths" ? queryPathRulesSource : baseRules;
 const version = argument("--java-version") ?? "1.22.0";
 const jarHashes: Record<string, string> = { "1.22.0": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c", "1.21.0": "c3d3680a89d946a90a027365ea14c26c6472a162bcf37f099bbb1ebd66d25e8e" };
 const jarSha = jarHashes[version];
@@ -58,6 +64,11 @@ try {
   }
   for (const id of ["owner-absent", "owner-empty-unconstrained", "get-fixed-path", "limit-allowed"]) {
     observations.push(await grpcList(client, queryRuleCases.find((value) => value.id === id)!));
+  }
+  if (caseSet === "paths") {
+    for (const id of ["path-members-granted", "path-members-denied", "path-members-empty-granted"]) {
+      observations.push(await grpcList(client, queryRuleCases.find(value => value.id === id)!));
+    }
   }
   const owner = queryRuleCases[0]!;
   const [ownedPath, ownedFields] = queryRuleSeeds.find(([path]) => path === "presentations/owned")!;
@@ -144,7 +155,7 @@ try {
       await new Promise<void>((done) => staticServer.close(() => done()));
     }
   }
-  await save("metadata.json", { schemaVersion: 1, target: external ? "fireside" : "official-java-emulator", version: targetVersion, javaJarSha256: external ? null : jarSha, capturedAt: startedAt, rulesSourceSha256: sha(queryRulesSource), syntheticOnly: true, authorizationHeadersStored: false, cases: queryRuleCases.length, temporaryDirectory: temporary, nodeVersion: process.version, platform: process.platform, sdk: "firebase@12.18.0", nativeClient: "@google-cloud/firestore@9.0.0", separateListenAndAggregationProxyPools: true });
+  await save("metadata.json", { schemaVersion: 1, caseSet, target: external ? "fireside" : "official-java-emulator", version: targetVersion, javaJarSha256: external ? null : jarSha, capturedAt: startedAt, rulesSourceSha256: sha(queryRulesSource), syntheticOnly: true, authorizationHeadersStored: false, cases: queryRuleCases.length, temporaryDirectory: temporary, nodeVersion: process.version, platform: process.platform, sdk: "firebase@12.18.0", nativeClient: "@google-cloud/firestore@9.0.0", separateListenAndAggregationProxyPools: true });
   await writeFile(join(output, "firestore.rules"), queryRulesSource);
   generated.push("firestore.rules");
 } finally {

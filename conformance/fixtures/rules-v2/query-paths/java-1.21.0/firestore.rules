@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function verified() { return request.auth != null && request.auth.token.email_verified == true; }
+    function owner() { return request.auth.uid == resource.data.createdBy; }
+    function licenseAccess(id) { return get(/databases/$(database)/documents/licenses/$(id)).data.uid == request.auth.uid; }
+    function presentationRead() { return verified() && (owner() || (resource.data.licenseId != null && licenseAccess(resource.data.licenseId))); }
+    match /presentations/{id} { allow read: if presentationRead(); }
+    match /emptyPresentations/{id} { allow read: if presentationRead(); }
+    match /shortCircuit/{id} { allow list: if owner() || get(/databases/$(database)/documents/licenses/missing).data.uid == request.auth.uid; }
+    match /shared/{id} { allow list: if request.auth.uid in resource.data.members; }
+    match /ratings/{id} { allow list: if resource.data.score > 4; }
+    match /nonnull/{id} { allow list: if resource.data.value != null; }
+    match /notblocked/{id} { allow list: if resource.data.value != 'blocked'; }
+    match /limited/{id} { allow list: if request.query.limit <= 12; }
+    match /offsets/{id} { allow list: if request.query.offset <= 2; }
+    match /ordering/{id} { allow list: if request.query.orderBy.updatedAt == 'DESC'; }
+    match /fixedGet/{id} { allow list: if get(/databases/$(database)/documents/licenses/granted).data.uid == request.auth.uid; }
+    match /fixedExists/{id} { allow list: if exists(/databases/$(database)/documents/licenses/granted); }
+    match /dynamicExists/{id} { allow list: if exists(/databases/$(database)/documents/licenses/$(resource.data.licenseId)); }
+    match /{prefix=**}/groupDocs/{id} { allow list: if owner(); }
+    match /{prefix=**}/emptyGroup/{id} { allow list: if owner(); }
+
+    match /queryParents/{parentId} {
+      function parentOwner() { return get(/databases/$(database)/documents/queryParents/$(parentId)).data.uid == request.auth.uid; }
+      function absent(id) { return !exists(/databases/$(database)/documents/queryParents/$(parentId)/functionMembers/$(id)); }
+      match /members/{memberId} {
+        allow read: if !exists(/databases/$(database)/documents/queryParents/$(parentId)/members/$(memberId)) || parentOwner();
+      }
+      match /getMembers/{memberId} {
+        allow read: if get(/databases/$(database)/documents/queryParents/$(parentId)/getMembers/$(memberId)).data.uid == request.auth.uid || parentOwner();
+      }
+      match /functionMembers/{memberId} { allow read: if absent(memberId) || parentOwner(); }
+      match /reversedMembers/{memberId} {
+        allow read: if parentOwner() || !exists(/databases/$(database)/documents/queryParents/$(parentId)/reversedMembers/$(memberId));
+      }
+      match /unknownOnly/{memberId} { allow read: if !exists(/databases/$(database)/documents/queryParents/$(parentId)/unknownOnly/$(memberId)); }
+      match /negatedAnd/{memberId} { allow read: if !(exists(/databases/$(database)/documents/queryParents/$(parentId)/negatedAnd/$(memberId)) && false); }
+      match /literalOr/{memberId} { allow read: if exists(/databases/$(database)/documents/queryParents/$(parentId)/literalOr/$(memberId)) || true; }
+      match /concreteErrorOr/{memberId} { allow read: if get(/databases/$(database)/documents/queryParents/missing).data.uid == request.auth.uid || true; }
+      match /concreteErrorAnd/{memberId} { allow read: if !(get(/databases/$(database)/documents/queryParents/missing).data.uid == request.auth.uid && false); }
+      match /budgetErrorOr/{memberId} { allow read: if (exists(/databases/$(database)/documents/queryBudget/p0) && exists(/databases/$(database)/documents/queryBudget/p1) && exists(/databases/$(database)/documents/queryBudget/p2) && exists(/databases/$(database)/documents/queryBudget/p3) && exists(/databases/$(database)/documents/queryBudget/p4) && exists(/databases/$(database)/documents/queryBudget/p5) && exists(/databases/$(database)/documents/queryBudget/p6) && exists(/databases/$(database)/documents/queryBudget/p7) && exists(/databases/$(database)/documents/queryBudget/p8) && exists(/databases/$(database)/documents/queryBudget/p9) && exists(/databases/$(database)/documents/queryBudget/p10)) || true; }
+    }
+  }
+}

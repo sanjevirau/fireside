@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 import { queryRulesSource } from "../src/rules/query-rules-cases.ts";
+import { queryPathCases, queryPathRulesSource } from "../src/rules/query-path-cases.ts";
 import { compareNativeCapture, verifyBrowserCapture, verifyNativeCapture, type BrowserCapture, type NativeCapture } from "../src/rules/query-rules-verification.ts";
 
 const root = new URL("../fixtures/rules-v2/query-authorization/", import.meta.url);
@@ -82,4 +83,72 @@ test("a transport failure cannot masquerade as an oracle denial", async () => {
   assert.throws(() => verifyBrowserCapture(browser, native));
   native.observations.find((value) => value.id === "owner-absent")!.code = -1;
   assert.throws(() => verifyNativeCapture(native));
+});
+
+for (const [version, jarHash] of Object.entries(jars)) {
+  test(`official Java ${version} query-path oracle freezes wildcard and boolean-error semantics`, async () => {
+    const directory = new URL(`../fixtures/rules-v2/query-paths/java-${version}/`, import.meta.url);
+    const manifest = await readFile(new URL("SHA256SUMS", directory), "utf8");
+    assert.equal(sha(manifest), version === "1.21.0"
+      ? "53d5094de52b94d3278ecd02fb36292d018aae1fc454906d32879399383d005d"
+      : "afd05d0968064240fc7e06e4830dcd7bb2385c0f67cf28db2e5493a769cad215");
+    const entries = manifest.trim().split("\n");
+    assert.equal(entries.length, 10);
+    const files: string[] = [];
+    for (const line of entries) {
+      const match = /^([0-9a-f]{64})  ([a-zA-Z0-9.-]+)$/.exec(line);
+      assert.ok(match, line);
+      files.push(match[2]!);
+      assert.equal(sha(await readFile(new URL(match[2]!, directory))), match[1], match[2]!);
+    }
+    assert.deepEqual((await readdir(directory)).sort(), [...files, "SHA256SUMS"].sort());
+    const metadata = await json<Record<string, unknown>>(directory, "metadata.json");
+    assert.equal(metadata.caseSet, "paths");
+    assert.equal(metadata.version, version);
+    assert.equal(metadata.javaJarSha256, jarHash);
+    assert.equal(metadata.authorizationHeadersStored, false);
+    assert.equal(metadata.syntheticOnly, true);
+    assert.equal(metadata.rulesSourceSha256, sha(queryPathRulesSource));
+    assert.equal(await readFile(new URL("firestore.rules", directory), "utf8"), queryPathRulesSource);
+    const native = await json<NativeCapture>(directory, "grpc.json");
+    assert.deepEqual(native.cases, queryPathCases);
+    assert.equal(native.observations.length, queryPathCases.length * 3 + 8);
+    const unconditional = /path-(?:negatedAnd|literalOr|concreteErrorOr|concreteErrorAnd|budgetErrorOr)-/;
+    const granted = /^path-(?:members|getMembers|functionMembers|reversedMembers)-granted$/;
+    const baseline = new Set(["owner-equality", "get-fixed-path", "limit-allowed"]);
+    for (const testCase of queryPathCases) {
+      const expected = baseline.has(testCase.id) || granted.test(testCase.id) || unconditional.test(testCase.id) || testCase.id === "path-members-empty-granted" ? 0 : 7;
+      const values = native.observations.filter(value => value.id === testCase.id && ["RunQuery", "RunAggregationQuery", "Listen"].includes(value.operation));
+      assert.deepEqual(values.map(value => value.operation), ["RunQuery", "RunAggregationQuery", "Listen"]);
+      for (const value of values) assert.equal(value.code, expected, `${testCase.id} ${value.operation}`);
+      if (expected === 0) {
+        assert.deepEqual([...new Set(values[0]!.documents)].sort(), [...new Set(values[2]!.documents)].sort());
+        assert.equal(values[1]!.count, String(new Set(values[0]!.documents).size));
+      }
+    }
+    assert.deepEqual(native.observations.filter(value => value.operation === "ListDocuments").map(({ id, code }) => [id, code]), [
+      ["owner-absent", 7], ["owner-empty-unconstrained", 7], ["get-fixed-path", 0], ["limit-allowed", 0],
+      ["path-members-granted", 0], ["path-members-denied", 7], ["path-members-empty-granted", 0],
+    ]);
+    for (const variant of ["long-poll", "streaming"]) {
+      verifyBrowserCapture(await json<BrowserCapture>(directory, `${variant}-browser.json`), native);
+      const wire = await json<Wire>(directory, `${variant}-wire.json`);
+      assert.ok(wire.exchanges.some(({ request }) => new URL(request.uri, "http://localhost").searchParams.get("CI") === (variant === "long-poll" ? "1" : "0")));
+      const aggregation = await json<Wire>(directory, `${variant}-aggregation-wire.json`);
+      assert.equal(aggregation.exchanges.filter(({ request }) => request.uri.includes(":runAggregationQuery") && request.bodyBase64).length, queryPathCases.length);
+      for (const capture of [wire, aggregation]) for (const { request, response } of capture.exchanges) {
+        for (const header of request.headers) if (["authorization", "x-goog-api-key", "cookie"].includes(header.name.toLowerCase())) assert.equal(header.value, "[REDACTED]");
+        const body = Buffer.from(request.bodyBase64 ?? "", "base64").toString();
+        assert.doesNotMatch(body, /eyJhbGciOiJub25lI/);
+        const embeddedHeaders = new URLSearchParams(body).get("headers");
+        if (embeddedHeaders) assert.match(embeddedHeaders, /Authorization:\[REDACTED\]/i);
+        assert.ok([200, 204, 400, 403].includes(response.status));
+      }
+    }
+  });
+}
+
+test("both pinned official JARs agree on every query-path observation", async () => {
+  const root = new URL("../fixtures/rules-v2/query-paths/", import.meta.url);
+  compareNativeCapture(await json<NativeCapture>(new URL("java-1.21.0/", root), "grpc.json"), await json<NativeCapture>(new URL("java-1.22.0/", root), "grpc.json"));
 });
