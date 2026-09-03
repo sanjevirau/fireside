@@ -25,6 +25,18 @@ const root = new URL(
   import.meta.url,
 );
 
+test("the cheap soak freezes its initialization failure and complete-window requirement", async () => {
+  const fixture = JSON.parse(await readFile(new URL(
+    "../fixtures/phase5/soak-runtime-boundaries.json", import.meta.url,
+  ), "utf8"));
+  assert.equal(fixture.observed.browserJourneysPassed, 9);
+  assert.equal(fixture.observed.soakPassed, false);
+  assert.equal(fixture.observed.primaryError, "ReferenceError: Cannot access 'frozenDispatchBody' before initialization");
+  assert.equal(fixture.sourceAudit.includeFinalWindowEndpoint, true);
+  assert.equal(fixture.sourceAudit.zeroSwapThresholdUnchanged, true);
+  assert.equal(fixture.sourceAudit.fullSecondsUnchanged, 7200);
+});
+
 test("the first strict nine-journey pass exposes the smoke soak catalog precondition", async () => {
   const fixture = JSON.parse(await readFile(new URL(
     "../fixtures/phase5/smoke-soak-catalog-precondition.json", import.meta.url,

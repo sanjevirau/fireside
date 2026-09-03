@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "oracle": "official-stack-diagnostic-and-readable-harness",
+  "candidateRevision": "0854237fbfd3364ae778123f07b41328a2f16166",
+  "attempt": "two-tier-smoke-20260903T1138+0800-0854237-r17",
+  "observed": {
+    "browserJourneysPassed": 9,
+    "pageErrors": 0,
+    "gatingRequestFailures": 0,
+    "catalogReads": 1,
+    "tokenWrites": 20,
+    "soakPassed": false,
+    "primaryError": "ReferenceError: Cannot access 'frozenDispatchBody' before initialization",
+    "primaryErrorSha256": "e87057e0e4fbc6ac0deb2b5b3ab811089aa9f6816e464ec9c7fbc4d1b0e92fa9",
+    "cleanupErrors": []
+  },
+  "sourceAudit": {
+    "lateSoakBinding": "frozenDispatchBody",
+    "bindingMustPrecedeTopLevelMainAwait": true,
+    "browserRunnerMustRemainUnchanged": true,
+    "measurementGap": "ceil(duration / interval) samples starting at zero omitted the final interval endpoint; a 60-second smoke sampled only at 0 and 30 seconds.",
+    "includeFinalWindowEndpoint": true,
+    "intervalSecondsUnchanged": 30,
+    "smokeSecondsUnchanged": 60,
+    "fullSecondsUnchanged": 7200,
+    "minimumFullSamplesUnchanged": 240,
+    "zeroSwapThresholdUnchanged": true
+  },
+  "credentialsStored": false,
+  "realUserDataStored": false
+}

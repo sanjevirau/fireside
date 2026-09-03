@@ -1,0 +1,159 @@
+{
+  "primaryErrorText": "ReferenceError: Cannot access 'frozenDispatchBody' before initialization\n    at frozenV2DispatchBody (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-0854237/conformance/src/suite/run-phase5-soak.ts:648:3)\n    at functionDispatch (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-0854237/conformance/src/suite/run-phase5-soak.ts:615:22)\n    at <anonymous> (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-0854237/conformance/src/suite/run-phase5-soak.ts:461:24)\n    at scheduledWorker (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-0854237/conformance/src/suite/run-phase5-soak.ts:481:13)\n    at runNextTicks (node:internal/process/task_queues:65:5)\n    at listOnTimeout (node:internal/timers:644:9)\n    at process.processTimers (node:internal/timers:618:7)\n    at async Promise.allSettled (index 5)\n    at async main (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-0854237/conformance/src/suite/run-phase5-soak.ts:202:21)\n    at async <anonymous> (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-0854237/conformance/src/suite/run-phase5-soak.ts:150:1)",
+  "cleanupErrorTexts": [],
+  "candidateIdentityStored": false,
+  "completedAt": "2026-09-03T03:41:59.338Z",
+  "datasetIdentityStored": false,
+  "durationSeconds": 60,
+  "expected": {
+    "catalogReads": 4,
+    "functionDispatches": 2,
+    "gatewayWrites": 12,
+    "runAndCaseWrites": 8,
+    "storageCycles": 2,
+    "tokenBatches": 24,
+    "tokenWrites": 480
+  },
+  "failureHashes": [
+    "aa2b7fbb52c835bb2e7a406a6851a3fc8359436df6935d37e9c1f5c75c2f0c9c",
+    "b59d69180c5dca6f0bd1729c10eac8860003bf6b12ce7bea6bed9b500f6bc44f",
+    "d0c7d871ac64dd068ec4ca27706eb888d54e6164d996156ad1ee427a2650a969",
+    "e87057e0e4fbc6ac0deb2b5b3ab811089aa9f6816e464ec9c7fbc4d1b0e92fa9",
+    "f48263e92bb38ae609c24a51f8dec205c193e47c37bf91d57737770d93eadf1a"
+  ],
+  "health": {
+    "after": {
+      "failedUnits": 0,
+      "oomOrResourceEvidence": 0
+    },
+    "before": {
+      "failedUnits": 0,
+      "oomOrResourceEvidence": 0
+    }
+  },
+  "manifestSha256": "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa",
+  "memory": {
+    "official": {
+      "peakPssBytes": null,
+      "peakRssBytes": null,
+      "pssSlopeBytesPerHour": null,
+      "rssSlopeBytesPerHour": null,
+      "samples": 0
+    }
+  },
+  "privateContentStored": false,
+  "projectId": "demo-twodart-local",
+  "raw": {
+    "memorySamples": [],
+    "stacks": {
+      "official": {
+        "catalogLatencyMilliseconds": [
+          37.49054700000033
+        ],
+        "errorHashes": [
+          "e87057e0e4fbc6ac0deb2b5b3ab811089aa9f6816e464ec9c7fbc4d1b0e92fa9"
+        ],
+        "errorTexts": [
+          "ReferenceError: Cannot access 'frozenDispatchBody' before initialization\n    at frozenV2DispatchBody (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-0854237/conformance/src/suite/run-phase5-soak.ts:648:3)\n    at functionDispatch (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-0854237/conformance/src/suite/run-phase5-soak.ts:615:22)\n    at <anonymous> (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-0854237/conformance/src/suite/run-phase5-soak.ts:461:24)\n    at scheduledWorker (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-0854237/conformance/src/suite/run-phase5-soak.ts:481:13)\n    at runNextTicks (node:internal/process/task_queues:65:5)\n    at listOnTimeout (node:internal/timers:644:9)\n    at process.processTimers (node:internal/timers:618:7)\n    at async Promise.allSettled (index 5)\n    at async main (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-0854237/conformance/src/suite/run-phase5-soak.ts:202:21)\n    at async <anonymous> (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-0854237/conformance/src/suite/run-phase5-soak.ts:150:1)"
+        ],
+        "functionLatencyMilliseconds": [],
+        "listenerLatencyMilliseconds": [
+          43,
+          40,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83
+        ],
+        "storageLatencyMilliseconds": [
+          171.7476370000004
+        ],
+        "writeLatencyMilliseconds": [
+          41.79141100000015,
+          47.25798299999951,
+          79.16770899999938
+        ]
+      }
+    }
+  },
+  "schemaVersion": 1,
+  "smoke": true,
+  "swapActivity": {
+    "residualSwapBytesAtEnd": null,
+    "residualSwapBytesAtStart": null,
+    "sampleCount": 0,
+    "swapInPagesDelta": null,
+    "swapOutPagesDelta": null
+  },
+  "stack": "official",
+  "stacks": {
+    "official": {
+      "acknowledgedStateMismatches": 0,
+      "counts": {
+        "catalogReads": 1,
+        "functionDispatches": 0,
+        "gatewayWrites": 1,
+        "runAndCaseWrites": 1,
+        "storageCycles": 1,
+        "tokenBatches": 1,
+        "tokenWrites": 20
+      },
+      "duplicateObservableEffects": 0,
+      "errors": 1,
+      "listenerDelivery": {
+        "expected": 22,
+        "gaps": 0,
+        "observed": 22
+      },
+      "latencyMilliseconds": {
+        "catalogRead": {
+          "p50": 37.49054700000033,
+          "p99": 37.49054700000033,
+          "samples": 1
+        },
+        "functionDelivery": {
+          "p50": null,
+          "p99": null,
+          "samples": 0
+        },
+        "listenerDelivery": {
+          "p50": 83,
+          "p99": 83,
+          "samples": 22
+        },
+        "storageCycle": {
+          "p50": 171.7476370000004,
+          "p99": 171.7476370000004,
+          "samples": 1
+        },
+        "writeCommit": {
+          "p50": 47.25798299999951,
+          "p99": 79.16770899999938,
+          "samples": 3
+        }
+      },
+      "sessions": 2,
+      "stalls": 0
+    }
+  },
+  "startedAt": "2026-09-03T03:41:53.348Z",
+  "syntheticIdentifiersStored": false,
+  "userIdentityStored": false,
+  "passed": false
+}
