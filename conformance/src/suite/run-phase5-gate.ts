@@ -312,7 +312,6 @@ async function main(): Promise<void> {
           }
         : null,
     });
-    await writeChecksums(args.outputDirectory);
     if (!args.smoke) await writeReport(args, manifest, environment);
     await writeJson(path.join(args.outputDirectory, "result.json"), {
       cleanupFailureHashes,
@@ -357,6 +356,9 @@ async function main(): Promise<void> {
         });
       }
     }
+    // Readiness failures also need a complete ledger checksum, after cleanup has
+    // stopped log writers. A failed smoke must never depend on a manual harvest.
+    await writeChecksums(args.outputDirectory);
   }
 }
 
@@ -571,9 +573,12 @@ async function startStack(
       stack,
       tmuxSession: `fireside-phase5-${stack}-${label}-${process.pid.toString(36)}`,
     },
-    args.smoke
-      ? manifest.diagnosticSmoke.maximumReadySeconds
-      : manifest.cacheWatcher.maximumReadySeconds,
+    {
+      emulator: args.smoke
+        ? manifest.diagnosticSmoke.maximumReadySeconds
+        : manifest.cacheWatcher.maximumReadySeconds,
+      application: manifest.cacheWatcher.maximumReadySeconds,
+    },
     args.smoke
       ? manifest.diagnosticSmoke.dataset.baseFirestoreDocuments
       : manifest.dataset.logicalCounts.firestoreDocuments,
@@ -596,9 +601,11 @@ async function exerciseStack(
   const before = await captureStackState(running, args.projectId);
   await waitForPhase5FrontendReady(
     running.baseUrl,
-    args.smoke
-      ? manifest.diagnosticSmoke.maximumReadySeconds
-      : manifest.cacheWatcher.maximumReadySeconds,
+    manifest.cacheWatcher.maximumReadySeconds,
+    {
+      ledgerPath: path.join(args.outputDirectory, `${stack}-${iteration}-frontend-recheck.jsonl`),
+      summaryPath: path.join(args.outputDirectory, `${stack}-${iteration}-frontend-recheck.json`),
+    },
   );
   const output = path.join(args.outputDirectory, `browser-${stack}-${iteration}.json`);
   const command = await runCommand(

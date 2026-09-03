@@ -335,6 +335,24 @@ function assertSoakContract(manifest: Phase5Manifest): void {
 }
 
 function assertEfficiencyCorrection(manifest: Phase5Manifest): void {
+  const readiness = manifest.readinessEvidence;
+  const amendment = manifest.diagnosticReadinessAmendment;
+  if (
+    amendment.previousManifestSha256 !== "e5d43e4f41f7d2276754468e04b4131f76076e37aeb5afd536b6ce9c8d5b77ca" ||
+    !amendment.amendedBeforeMeasurement || amendment.browserRunnerChanged ||
+    amendment.workloadChanged || amendment.durationsChanged || amendment.soakThresholdsChanged ||
+    amendment.fullGateReadinessAllowanceChanged ||
+    manifest.cacheWatcher.maximumReadySeconds !== 1_200 ||
+    manifest.diagnosticSmoke.maximumReadySecondsScope !== "emulator-suite" ||
+    manifest.diagnosticSmoke.applicationMaximumReadySecondsFrom !== "cacheWatcher.maximumReadySeconds" ||
+    !readiness.ledgerRequired || !readiness.checksumsRequiredOnPassAndFailure ||
+    !readiness.perConditionReadyTimesRequired || readiness.deadlineOrigin !== "stack launch" ||
+    readiness.frontendCurlMaximumSeconds !== 30 || readiness.frontendCurlConnectTimeoutSeconds !== 3 ||
+    readiness.twodartNetCurlMaximumSeconds !== 8 || readiness.hubProbeMaximumSeconds !== 5 ||
+    readiness.functionsProbeMaximumSeconds !== 5 || readiness.definitiveErrorSamples !== 3
+  ) {
+    throw new Error("Phase 5 diagnostic readiness amendment diverged");
+  }
   const correction = manifest.amendment;
   const smoke = manifest.diagnosticSmoke;
   if (

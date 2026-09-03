@@ -232,6 +232,23 @@ test("Phase 5 gate includes smoke, fresh colleague, regression, and checksum pat
   assert.doesNotMatch(source, /`runtime-\$\{path\.basename\(args\.outputDirectory\)\}`/u);
 });
 
+test("readiness uses split launch budgets and finalizes checksums after failure cleanup", async () => {
+  const source = await readFile(runnerUrl, "utf8");
+  const start = source.slice(source.indexOf("async function startStack("), source.indexOf("async function exerciseStack("));
+  assert.match(start, /emulator: args\.smoke\s*\? manifest\.diagnosticSmoke\.maximumReadySeconds\s*: manifest\.cacheWatcher\.maximumReadySeconds/u);
+  assert.match(start, /application: manifest\.cacheWatcher\.maximumReadySeconds/u);
+  const exercise = source.slice(source.indexOf("async function exerciseStack("), source.indexOf("async function runSoak("));
+  assert.match(exercise, /waitForPhase5FrontendReady\(\s*running\.baseUrl,\s*manifest\.cacheWatcher\.maximumReadySeconds/u);
+  assert.match(exercise, /frontend-recheck\.jsonl/u);
+  const main = source.slice(source.indexOf("async function main("), source.indexOf("async function validateSmokePrerequisite("));
+  const finalization = main.slice(main.indexOf("} finally {"));
+  assert.ok(finalization.indexOf("await writeChecksums(args.outputDirectory)") >
+    finalization.indexOf("await stopPhase5Stack"));
+  const checksums = source.slice(source.indexOf("async function writeChecksums("), source.indexOf("async function runCommand("));
+  assert.match(checksums, /await listFiles\(directory\)/u);
+  assert.doesNotMatch(checksums, /readiness|jsonl/u, "ledger files must not be filtered out of the checksum inventory");
+});
+
 function fakeSwapDrain(options: { active?: boolean; failed?: "swapoff" | "swapon"; drift?: boolean } = {}) {
   const operations: string[] = [];
   let readCount = 0;

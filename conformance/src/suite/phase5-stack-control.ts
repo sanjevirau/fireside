@@ -11,13 +11,22 @@ import net from "node:net";
 import path from "node:path";
 
 import type { Phase5StackPorts } from "./phase5-host-prepare.ts";
+import {
+  PHASE5_FRONTEND_PROBE_SECONDS,
+  phase5CurlProbe,
+  phase5FetchProbe,
+  waitForPhase5Readiness,
+  type ReadinessAllowance,
+  type ReadinessCondition,
+} from "./phase5-readiness.ts";
+
+export { PHASE5_DIAGNOSTIC_DEFINITIVE_ERROR_SAMPLES } from "./phase5-readiness.ts";
 
 export type Phase5StackName = "official" | "fireside";
 
 export const PHASE5_EXPORT_SHUTDOWN_SECONDS = 600;
 export const PHASE5_DIRECTORY_REAP_SECONDS = 60;
 export const PHASE5_DIRECTORY_EMPTY_SCANS = 2;
-export const PHASE5_DIAGNOSTIC_DEFINITIVE_ERROR_SAMPLES = 3;
 export const PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS = "-Xmx8g";
 export const PHASE5_LOGIN_ROUTE = "/login/overview";
 export const PHASE5_PORTLESS_STATE_DIRECTORY = "/home/sanjevi/.portless";
@@ -181,7 +190,7 @@ export function renderPhase5StackCommand(input: StackLaunchInput): string {
 
 export async function startPhase5Stack(
   input: StackLaunchInput,
-  maximumReadySeconds: number,
+  maximumReadySeconds: number | ReadinessAllowance,
   inputDocumentCount: number,
 ): Promise<RunningPhase5Stack> {
   await assertAbsent(input.runtimeDirectory);
@@ -214,6 +223,7 @@ export async function startPhase5Stack(
     ["send-keys", "-t", input.tmuxSession, "-l", command],
     "send Phase 5 launch command",
   );
+  const startedAt = Date.now();
   await requireCommand(
     "tmux",
     ["send-keys", "-t", input.tmuxSession, "Enter"],
@@ -224,63 +234,44 @@ export async function startPhase5Stack(
     const env = await readPhase5PortEnvironment(input.directory);
     const baseUrl = requiredEnvironment(env, "FE_URL");
     const twodartNetUrl = requiredEnvironment(env, "TWODARTNET_API_URL");
-    const started = performance.now();
     let peakRssBytes = 0;
     let peakPssBytes: number | null = 0;
     let emulatorProcessObserved = false;
-    let consecutiveDefinitiveErrors = 0;
-    let previousDefinitiveError: string | null = null;
-    const deadline = Date.now() + maximumReadySeconds * 1_000;
-    while (true) {
-      const emulatorProcesses = await phase5EmulatorProcesses(
-        input.directory,
-        input.stack,
-        input.firesideBinary,
-      );
-      if (emulatorProcesses.length > 0) emulatorProcessObserved = true;
-      else if (emulatorProcessObserved) {
-        throw new Error(`${input.stack} emulator process exited before readiness`);
-      }
-      const watcher = await processMetricsContaining(
-        input.directory,
-        "watch-firestore-cache.ts",
-      );
-      peakRssBytes = Math.max(peakRssBytes, watcher.rssBytes);
-      if (watcher.pssBytes === null) peakPssBytes = null;
-      else if (peakPssBytes !== null) {
-        peakPssBytes = Math.max(peakPssBytes, watcher.pssBytes);
-      }
+    await waitForPhase5Readiness({
+      conditions: phase5ReadinessConditions(input, baseUrl, twodartNetUrl),
+      startedAt,
+      allowances: typeof maximumReadySeconds === "number"
+        ? { emulator: maximumReadySeconds, application: maximumReadySeconds }
+        : maximumReadySeconds,
+      ledgerPath: path.join(input.evidenceDirectory, `${input.stack}-${input.label}-readiness.jsonl`),
+      summaryPath: path.join(input.evidenceDirectory, `${input.stack}-${input.label}-readiness.json`),
+      diagnosticFailFast: input.diagnosticFailFast === true,
+      checkHealth: async () => {
+        const emulatorProcesses = await phase5EmulatorProcesses(
+          input.directory,
+          input.stack,
+          input.firesideBinary,
+        );
+        if (emulatorProcesses.length > 0) emulatorProcessObserved = true;
+        else if (emulatorProcessObserved) {
+          throw new Error(`${input.stack} emulator process exited before readiness`);
+        }
+        const watcher = await processMetricsContaining(
+          input.directory,
+          "watch-firestore-cache.ts",
+        );
+        peakRssBytes = Math.max(peakRssBytes, watcher.rssBytes);
+        if (watcher.pssBytes === null) peakPssBytes = null;
+        else if (peakPssBytes !== null) {
+          peakPssBytes = Math.max(peakPssBytes, watcher.pssBytes);
+        }
 
-      const readiness = await stackReadiness(input, baseUrl, twodartNetUrl);
-      if (readiness.ready) break;
-      if (input.diagnosticFailFast === true && readiness.definitiveError !== null) {
-        if (readiness.definitiveError === previousDefinitiveError) {
-          consecutiveDefinitiveErrors += 1;
-        } else {
-          previousDefinitiveError = readiness.definitiveError;
-          consecutiveDefinitiveErrors = 1;
+        if (await exists(exitMarker)) {
+          const status = (await readFile(exitMarker, "utf8")).trim();
+          throw new Error(`${input.stack} exited before readiness with status ${status}`);
         }
-        if (
-          consecutiveDefinitiveErrors >=
-          PHASE5_DIAGNOSTIC_DEFINITIVE_ERROR_SAMPLES
-        ) {
-          throw new Error(
-            `${input.stack} definitive readiness failure after ${String(consecutiveDefinitiveErrors)} identical samples: ${readiness.definitiveError}`,
-          );
-        }
-      } else {
-        previousDefinitiveError = null;
-        consecutiveDefinitiveErrors = 0;
-      }
-      if (await exists(exitMarker)) {
-        const status = (await readFile(exitMarker, "utf8")).trim();
-        throw new Error(`${input.stack} exited before readiness with status ${status}`);
-      }
-      if (Date.now() >= deadline) {
-        throw new Error(`${input.stack} exceeded ${String(maximumReadySeconds)} seconds to ready`);
-      }
-      await delay(1_000);
-    }
+      },
+    });
     const cacheLog = await readFile(
       path.join(input.directory, ".logs", "firebase-cache-watch.log"),
       "utf8",
@@ -302,7 +293,7 @@ export async function startPhase5Stack(
       outputCounts: parseCacheOutputCounts(cacheLog),
       peakPssBytes,
       peakRssBytes,
-      readyMilliseconds: performance.now() - started,
+      readyMilliseconds: Date.now() - startedAt,
     };
     if (cacheBuild.errors !== 0) {
       throw new Error(`${input.stack} cache watcher reported ${String(cacheBuild.errors)} errors`);
@@ -791,111 +782,81 @@ export function cacheOutputDigest(counts: Readonly<Record<string, number | boole
   return createHash("sha256").update(JSON.stringify(counts)).digest("hex");
 }
 
-interface StackReadiness {
-  readonly definitiveError: string | null;
-  readonly ready: boolean;
-}
-
-async function stackReadiness(
+export function phase5ReadinessConditions(
   input: StackLaunchInput,
   baseUrl: string,
   twodartNetUrl: string,
-): Promise<StackReadiness> {
-  const logs = await Promise.all(
-    [
-      ["firebase-emulator.log", "All emulators ready"],
-      ["firebase-cache-watch.log", "Smart watcher started successfully"],
-      ["templates.log", "Ready in"],
-      ["dotnet.log", "Now listening on:"],
-    ].map(async ([name, pattern]) => {
-      if (name === undefined || pattern === undefined) return false;
-      try {
-        return (await readFile(path.join(input.directory, ".logs", name), "utf8")).includes(pattern);
-      } catch {
-        return false;
-      }
-    }),
-  );
-  if (!logs.every(Boolean)) return { definitiveError: null, ready: false };
-  const portsReady = await Promise.all(
-    Object.entries(input.ports).map(async ([name, port]) =>
-      name === "mprocsControl" ? listenerOpen(port) : portOpen(port),
-    ),
-  );
-  if (!portsReady.every(Boolean)) return { definitiveError: null, ready: false };
-  const probes = await Promise.all([
-    fetchStatus(`http://127.0.0.1:${String(input.ports.functions)}/backends`),
-    fetchStatus(`http://127.0.0.1:${String(input.ports.hub)}/emulators`),
-    curlStatus(new URL(PHASE5_LOGIN_ROUTE, baseUrl).href),
-    curlStatus(new URL(PHASE5_TWODARTNET_HEALTH_ROUTE, twodartNetUrl).href),
-  ]);
-  const labels = ["functions inventory", "emulator hub", "frontend login", "TwodartNet health"];
-  const failed = probes.findIndex((status) => status !== null && (status < 200 || status >= 400));
-  if (failed >= 0) {
-    return {
-      definitiveError: `${labels[failed] ?? "probe"} returned ${String(probes[failed])}`,
-      ready: false,
-    };
-  }
-  return { definitiveError: null, ready: probes.every(isSuccessfulStatus) };
-}
-
-function isSuccessfulStatus(status: number | null): boolean {
-  return status !== null && status >= 200 && status < 400;
-}
-
-async function curlStatus(url: string): Promise<number | null> {
-  const result = await run("curl", [
-    "--connect-timeout",
-    "3",
-    "--max-time",
-    "8",
-    "-k",
-    "-sS",
-    "-o",
-    "/dev/null",
-    "-w",
-    "%{http_code}",
-    url,
-  ]);
-  if (result.exitCode !== 0) return null;
-  const status = Number(result.stdout.trim());
-  return Number.isInteger(status) ? status : null;
-}
-
-async function fetchStatus(url: string): Promise<number | null> {
-  try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(5_000) });
-    await response.body?.cancel();
-    return response.status;
-  } catch {
-    return null;
-  }
+): ReadinessCondition[] {
+  const markers = [
+    ["emulator", "firebase-emulator.log", "All emulators ready"],
+    ["application", "firebase-cache-watch.log", "Smart watcher started successfully"],
+    ["application", "templates.log", "Ready in"],
+    ["application", "dotnet.log", "Now listening on:"],
+  ] as const;
+  return [
+    ...markers.map(([group, name, pattern]): ReadinessCondition => ({
+      id: `marker:${name}`, group, kind: "marker", target: pattern,
+      check: async () => {
+        try {
+          const ready = (await readFile(path.join(input.directory, ".logs", name), "utf8")).includes(pattern);
+          return { ready, outcome: ready ? "ready" : "not-ready" };
+        } catch (error: unknown) {
+          return { ready: false, outcome: "error", error: String(error) };
+        }
+      },
+    })),
+    ...Object.entries(input.ports).map(([name, port]): ReadinessCondition => ({
+      id: `port:${name}`,
+      group: name === "cacheWebsocket" || name === "mprocsControl" ? "application" : "emulator",
+      kind: "port", target: `127.0.0.1:${String(port)}`,
+      check: async () => {
+        const ready = name === "mprocsControl" ? await listenerOpen(port) : await portOpen(port);
+        return { ready, outcome: ready ? "ready" : "not-ready" };
+      },
+    })),
+    {
+      id: "probe:functions-inventory", group: "emulator", kind: "probe",
+      target: `http://127.0.0.1:${String(input.ports.functions)}/backends`,
+      check: async (signal) => phase5FetchProbe(`http://127.0.0.1:${String(input.ports.functions)}/backends`, signal),
+    },
+    {
+      id: "probe:emulator-hub", group: "emulator", kind: "probe",
+      target: `http://127.0.0.1:${String(input.ports.hub)}/emulators`,
+      check: async (signal) => phase5FetchProbe(`http://127.0.0.1:${String(input.ports.hub)}/emulators`, signal),
+    },
+    {
+      id: "probe:frontend-login", group: "application", kind: "probe",
+      target: new URL(PHASE5_LOGIN_ROUTE, baseUrl).href,
+      check: async (signal) => phase5CurlProbe(new URL(PHASE5_LOGIN_ROUTE, baseUrl).href, PHASE5_FRONTEND_PROBE_SECONDS, signal),
+    },
+    {
+      id: "probe:twodartnet-health", group: "application", kind: "probe",
+      target: new URL(PHASE5_TWODARTNET_HEALTH_ROUTE, twodartNetUrl).href,
+      check: async (signal) => phase5CurlProbe(new URL(PHASE5_TWODARTNET_HEALTH_ROUTE, twodartNetUrl).href, 8, signal),
+    },
+  ];
 }
 
 export async function waitForPhase5FrontendReady(
   baseUrl: string,
   maximumReadySeconds: number,
+  evidence: { readonly ledgerPath: string; readonly summaryPath: string },
 ): Promise<Phase5FrontendReadiness> {
-  const started = performance.now();
-  const deadline = Date.now() + maximumReadySeconds * 1_000;
   const loginUrl = new URL(PHASE5_LOGIN_ROUTE, baseUrl).href;
-  let lastStatus: number | null = null;
-  while (true) {
-    lastStatus = await curlStatus(loginUrl);
-    if (lastStatus !== null && lastStatus >= 200 && lastStatus < 400) {
-      return {
-        readyMilliseconds: performance.now() - started,
-        status: lastStatus,
-      };
-    }
-    if (Date.now() >= deadline) {
-      throw new Error(
-        `Phase 5 frontend ${PHASE5_LOGIN_ROUTE} did not become ready; last status ${lastStatus === null ? "unavailable" : String(lastStatus)}`,
-      );
-    }
-    await delay(1_000);
-  }
+  const result = await waitForPhase5Readiness({
+    conditions: [{
+      id: "probe:frontend-login", group: "application", kind: "probe", target: loginUrl,
+      check: async (signal) => phase5CurlProbe(loginUrl, PHASE5_FRONTEND_PROBE_SECONDS, signal),
+    }],
+    startedAt: Date.now(),
+    allowances: { emulator: maximumReadySeconds, application: maximumReadySeconds },
+    diagnosticFailFast: false,
+    checkHealth: async () => {},
+    ...evidence,
+  });
+  const status = result.conditions[0]?.result?.status;
+  if (status === undefined || status === null) throw new Error("ready frontend omitted HTTP status");
+  return { readyMilliseconds: result.elapsedMilliseconds, status };
 }
 
 export async function readPhase5PortEnvironment(

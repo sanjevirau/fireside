@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { createServer } from "node:http";
 import test from "node:test";
 
 import {
@@ -16,10 +19,20 @@ import {
   phase5CommandLaunchPathMatches,
   phase5EmulatorProcessMatches,
   phase5ProcessIdentityFromStat,
+  phase5ReadinessConditions,
   renderPhase5MprocsControlCommand,
   renderPhase5StackCommand,
   type StackLaunchInput,
 } from "../src/suite/phase5-stack-control.ts";
+import {
+  Phase5ReadinessTracker,
+  PHASE5_FRONTEND_PROBE_SECONDS,
+  phase5CurlArguments,
+  phase5CurlProbe,
+  phase5FetchProbe,
+  waitForPhase5Readiness,
+  type ReadinessCondition,
+} from "../src/suite/phase5-readiness.ts";
 
 const controlUrl = new URL("../src/suite/phase5-stack-control.ts", import.meta.url);
 
@@ -225,7 +238,7 @@ test("mprocs control readiness never opens a protocol-less TCP connection", asyn
   const source = await readFile(controlUrl, "utf8");
   assert.match(
     source,
-    /name === "mprocsControl" \? listenerOpen\(port\) : portOpen\(port\)/u,
+    /name === "mprocsControl" \? await listenerOpen\(port\) : await portOpen\(port\)/u,
   );
   assert.match(
     source,
@@ -302,13 +315,180 @@ test("directory cleanup converges across reparenting and revalidates every signa
 });
 
 test("diagnostic readiness fails fast only after healthy process and listener gates", async () => {
-  const source = await readFile(controlUrl, "utf8");
-  assert.match(source, /input\.diagnosticFailFast === true && readiness\.definitiveError !== null/u);
-  assert.match(source, /readiness\.definitiveError === previousDefinitiveError/u);
-  assert.match(source, /PHASE5_DIAGNOSTIC_DEFINITIVE_ERROR_SAMPLES/u);
-  assert.match(source, /previousDefinitiveError = null/u);
-  assert.match(source, /consecutiveDefinitiveErrors = 0/u);
-  assert.match(source, /if \(!logs\.every\(Boolean\)\) return \{ definitiveError: null, ready: false \}/u);
-  assert.match(source, /if \(!portsReady\.every\(Boolean\)\) return \{ definitiveError: null, ready: false \}/u);
-  assert.match(source, /definitive readiness failure/u);
+  const tracker = new Phase5ReadinessTracker(testConditions(), 0, { emulator: 60, application: 1200 });
+  for (const at of [1, 2, 3]) {
+    tracker.observe("login", { ready: false, outcome: "http", status: 404 }, at);
+    assert.equal(tracker.sample(at, true).consecutiveDefinitiveErrors, 0);
+  }
+  tracker.observe("marker", { ready: true, outcome: "ready" }, 4);
+  assert.equal(tracker.sample(4, true).consecutiveDefinitiveErrors, 1);
+  assert.equal(tracker.sample(5, true).consecutiveDefinitiveErrors, 1, "cached response is not a new sample");
+  tracker.observe("login", { ready: false, outcome: "timeout", status: null }, 6);
+  assert.equal(tracker.sample(6, true).consecutiveDefinitiveErrors, 0);
+  for (const at of [7, 8, 9]) {
+    tracker.observe("login", { ready: false, outcome: "http", status: 404 }, at);
+    const sample = tracker.sample(at, true);
+    assert.equal(sample.consecutiveDefinitiveErrors, at - 6);
+    if (at === 9) assert.match(sample.failure ?? "", /3 identical samples: login returned 404/u);
+    else assert.equal(sample.failure, null);
+  }
+});
+
+function testConditions(): ReadinessCondition[] {
+  return [
+    { id: "marker", group: "emulator", kind: "marker", target: "All emulators ready",
+      check: async () => ({ ready: true, outcome: "ready" }) },
+    { id: "login", group: "application", kind: "probe", target: "http://localhost/login/overview",
+      check: async () => ({ ready: true, outcome: "http", status: 200 }) },
+  ];
+}
+
+test("all readiness conditions are inventoried and classified identically for both stacks", () => {
+  for (const stack of ["official", "fireside"] as const) {
+    const conditions = phase5ReadinessConditions({ ...launch, stack }, "https://templates.localhost", "https://net.localhost");
+    assert.equal(conditions.length, 21);
+    assert.equal(conditions.filter(({ kind }) => kind === "marker").length, 4);
+    assert.equal(conditions.filter(({ kind }) => kind === "port").length, 13);
+    assert.equal(conditions.filter(({ kind }) => kind === "probe").length, 4);
+    assert.equal(conditions.filter(({ group }) => group === "emulator").length, 14);
+    assert.deepEqual(conditions.filter(({ group }) => group === "application").map(({ id }) => id), [
+      "marker:firebase-cache-watch.log", "marker:templates.log", "marker:dotnet.log",
+      "port:cacheWebsocket", "port:mprocsControl", "probe:frontend-login", "probe:twodartnet-health",
+    ]);
+  }
+});
+
+test("r22 cold-render replay keeps 60 seconds for the emulator, 1200 for applications", () => {
+  const conditions = phase5ReadinessConditions(launch, "https://templates.localhost", "https://net.localhost");
+  const tracker = new Phase5ReadinessTracker(conditions, 0, { emulator: 60, application: 1200 });
+  for (const condition of conditions.filter(({ id }) => id !== "probe:frontend-login")) {
+    const time = condition.group === "emulator" ? 17_000 : 21_000;
+    tracker.observe(condition.id, { ready: true, outcome: "ready" }, time);
+  }
+  tracker.observe("probe:frontend-login", { ready: false, outcome: "timeout", status: null }, 59_000);
+  const waiting = tracker.sample(60_000, true);
+  assert.equal(waiting.failure, null);
+  assert.deepEqual(waiting.unmetConditions, ["probe:frontend-login"]);
+  assert.equal(waiting.deadlines.emulator?.readyMilliseconds, 17_000);
+  assert.equal(waiting.deadlines.application?.maximumSeconds, 1200);
+  tracker.observe("probe:frontend-login", { ready: true, outcome: "http", status: 200 }, 79_000);
+  const ready = tracker.sample(79_001, true);
+  assert.equal(ready.ready, true);
+  assert.equal(ready.conditions.find(({ id }) => id === "probe:frontend-login")?.firstReadyMilliseconds, 79_000);
+});
+
+test("a late emulator success cannot rescue the 60-second deadline", () => {
+  const tracker = new Phase5ReadinessTracker(testConditions(), 0, { emulator: 60, application: 1200 });
+  tracker.observe("login", { ready: true, outcome: "http", status: 200 }, 5_000);
+  assert.match(tracker.sample(60_000, true).failure ?? "", /emulator: 60 seconds.*marker/u);
+  tracker.observe("marker", { ready: true, outcome: "ready" }, 60_001);
+  assert.equal(tracker.sample(60_001, true).ready, false);
+  assert.match(tracker.sample(60_001, true).failure ?? "", /late conditions: marker/u);
+});
+
+test("full-gate allowances stay 1200 seconds and a regressed condition cannot wait forever", () => {
+  const tracker = new Phase5ReadinessTracker(testConditions(), 0, { emulator: 1200, application: 1200 });
+  assert.equal(tracker.sample(60_000, false).failure, null);
+  assert.match(tracker.sample(1_200_000, false).failure ?? "", /emulator: 1200 seconds/u);
+  const regressed = new Phase5ReadinessTracker(testConditions(), 0, { emulator: 60, application: 1200 });
+  regressed.observe("marker", { ready: true, outcome: "ready" }, 10_000);
+  regressed.observe("marker", { ready: false, outcome: "not-ready" }, 70_000);
+  regressed.observe("login", { ready: true, outcome: "http", status: 200 }, 80_000);
+  assert.equal(regressed.sample(80_000, false).ready, false);
+  assert.match(regressed.sample(1_200_000, false).failure ?? "", /marker/u);
+});
+
+test("frontend command keeps connect=3, increases total to 30, and .NET stays at 8", () => {
+  assert.equal(PHASE5_FRONTEND_PROBE_SECONDS, 30);
+  assert.deepEqual(phase5CurlArguments("https://templates.localhost/login/overview", 30).slice(0, 4),
+    ["--connect-timeout", "3", "--max-time", "30"]);
+  assert.equal(phase5CurlArguments("https://net.localhost/api/HealthCheck", 8)[3], "8");
+});
+
+test("a pending frontend probe cannot delay the emulator deadline or its persisted ledger", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "phase5-readiness-test-"));
+  try {
+    let aborted = false;
+    let healthSamples = 0;
+    const conditions = testConditions();
+    conditions[0] = { ...conditions[0]!, check: async () => ({ ready: false, outcome: "not-ready" }) };
+    conditions[1] = { ...conditions[1]!, check: async (signal) => await new Promise((resolve) => {
+      signal.addEventListener("abort", () => {
+        aborted = true;
+        resolve({ ready: false, outcome: "error", error: "probe cancelled after deadline" });
+      }, { once: true });
+    }) };
+    const ledgerPath = path.join(directory, "readiness.jsonl");
+    const summaryPath = path.join(directory, "readiness.json");
+    const startedAt = Date.now();
+    await assert.rejects(waitForPhase5Readiness({ conditions, startedAt,
+      allowances: { emulator: 0.08, application: 1200 }, ledgerPath, summaryPath,
+      diagnosticFailFast: true, checkHealth: async () => { healthSamples += 1; }, sampleMilliseconds: 5,
+    }), /emulator: 0.08 seconds.*marker/u);
+    assert.ok(Date.now() - startedAt < 2000, "must not await the frontend's 30-second budget");
+    assert.equal(aborted, true);
+    assert.ok(healthSamples > 1);
+    const ledger = (await readFile(ledgerPath, "utf8")).trim().split("\n").map((line) => JSON.parse(line));
+    assert.ok(ledger.length > 1);
+    for (const sample of ledger) {
+      assert.equal(sample.conditions.length, 2);
+      assert.equal(sample.deadlines.application.maximumSeconds, 1200);
+      assert.ok(sample.timestamp);
+    }
+    const final = JSON.parse(await readFile(summaryPath, "utf8"));
+    assert.equal(final.passed, false);
+    assert.match(final.failure, /marker/u);
+    assert.equal(final.conditions[1].pending, true);
+    assert.equal(final.conditions[1].firstReadyAt, null);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("passing readiness persists per-condition ready times and health failures persist the exact error", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "phase5-readiness-test-"));
+  try {
+    const result = await waitForPhase5Readiness({ conditions: testConditions(), startedAt: Date.now(),
+      allowances: { emulator: 60, application: 1200 }, ledgerPath: path.join(directory, "pass.jsonl"),
+      summaryPath: path.join(directory, "pass.json"), diagnosticFailFast: true,
+      checkHealth: async () => {}, sampleMilliseconds: 1,
+    });
+    assert.equal(result.ready, true);
+    assert.ok(result.conditions.every(({ firstReadyAt }) => firstReadyAt !== null));
+    assert.equal(JSON.parse(await readFile(path.join(directory, "pass.json"), "utf8")).passed, true);
+    await assert.rejects(waitForPhase5Readiness({ conditions: testConditions(), startedAt: Date.now(),
+      allowances: { emulator: 60, application: 1200 }, ledgerPath: path.join(directory, "fail.jsonl"),
+      summaryPath: path.join(directory, "fail.json"), diagnosticFailFast: true,
+      checkHealth: async () => { throw new Error("fireside exited before readiness with status 1"); },
+    }), /exited before readiness/u);
+    const final = JSON.parse(await readFile(path.join(directory, "fail.json"), "utf8"));
+    assert.equal(final.failure, "fireside exited before readiness with status 1");
+    assert.equal(final.passed, false);
+    assert.equal(final.conditions.length, 2);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("real loopback probes preserve HTTP errors and curl timeout text", async () => {
+  const server = createServer((request, response) => {
+    if (request.url === "/hang") return;
+    response.writeHead(request.url === "/missing" ? 404 : 200).end("synthetic");
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const address = server.address();
+    assert.ok(address !== null && typeof address !== "string");
+    const base = `http://127.0.0.1:${String(address.port)}`;
+    const signal = new AbortController().signal;
+    assert.equal((await phase5CurlProbe(`${base}/ready`, 30, signal)).status, 200);
+    assert.deepEqual(await phase5FetchProbe(`${base}/missing`, signal), { ready: false, outcome: "http", status: 404 });
+    const timeout = await phase5CurlProbe(`${base}/hang`, 0.03, signal);
+    assert.equal(timeout.outcome, "timeout");
+    assert.equal(timeout.status, null);
+    assert.match(timeout.error ?? "", /timed out/u);
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
 });
