@@ -1,0 +1,11 @@
+Source: stack-official/.logs/dotnet.log on sanjevi-linux, r14.
+Original log SHA-256: f5fb56899e616120f221089d07a6d993aa1c97a50a81e6dd104bf6f9cfc1bc54
+Excerpt retains exception text and frames; ANSI formatting and unrelated user-authentication lines omitted.
+
+      Export failed: Index was outside the bounds of the array.
+      System.IndexOutOfRangeException: Index was outside the bounds of the array.
+         at TwodartNet.Helpers.PresentationAsposeHelper.ChangeThemeColors(Presentation presentation, String[] themeColor) in /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/stack-official/engines/twodartnet/TwodartNet/Helpers/PresentationAsposeHelper/PresentationAsposeHelper.cs:line 627
+         at TwodartNet.Services.ExportPresentation.ExportPresentationService.BuildPresentationAsync(ExportEditorPresentationParams data, UserRecord user, HashSet`1 coreFreeSlideIds, IProgress`1 progress, CancellationToken cancellationToken) in /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/stack-official/engines/twodartnet/TwodartNet/Services/ExportPresentation/ExportPresentationService.cs:line 191
+         at TwodartNet.Services.ExportPresentation.ExportPresentationService.ProcessExportAsync(ExportEditorPresentationParams data, UserRecord user, HashSet`1 coreFreeSlideIds, IProgress`1 progress, CancellationToken cancellationToken) in /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/stack-official/engines/twodartnet/TwodartNet/Services/ExportPresentation/ExportPresentationService.cs:line 112
+      [ExportPresentationJobService] Job dee2e1002bf3 failed: Index was outside the bounds of the array.
+      Export job dee2e1002bf3 failed: Index was outside the bounds of the array.
