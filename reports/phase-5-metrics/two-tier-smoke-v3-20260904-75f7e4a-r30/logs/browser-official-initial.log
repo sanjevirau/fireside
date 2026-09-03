@@ -1,0 +1,20 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+locator.waitFor: Timeout 180000ms exceeded.
+Call log:
+  - waiting for getByRole('img', { name: 'fireside-phase5-ca58315c-f5ef-46a1-829b-7f9ed286d1ac' }).first() to be visible
+    359 × locator resolved to hidden <img decoding="async" draggable="false" alt="fireside-phase5-ca58315c-f5ef-46a1-829b-7f9ed286d1ac" class="transition pointer-events-none select-none w-full object-cover" src="https://storage.twodart.localhost/v0/b/assets-local.twodart.com/o/users%2Fsha256%3A19046f73acab2eeb6368a2130729b9f71a10596262471657f6d59cc050030fea%2Fimages%2FPT9qbrBjgvVLlR5Oc6B6%2Fhigh.webp?alt=media"/>
+
+    at <anonymous> (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-75f7e4a/conformance/src/suite/run-phase5-browser-journeys.ts:437:66)
+    at async journey (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-75f7e4a/conformance/src/suite/run-phase5-browser-journeys.ts:671:22)
+    at async <anonymous> (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-75f7e4a/conformance/src/suite/run-phase5-browser-journeys.ts:404:3) {
+  log: [
+    "  - waiting for getByRole('img', { name: 'fireside-phase5-ca58315c-f5ef-46a1-829b-7f9ed286d1ac' }).first() to be visible",
+    '    359 × locator resolved to hidden <img decoding="async" draggable="false" alt="fireside-phase5-ca58315c-f5ef-46a1-829b-7f9ed286d1ac" class="transition pointer-events-none select-none w-full object-cover" src="https://storage.twodart.localhost/v0/b/assets-local.twodart.com/o/users%2Fsha256%3A19046f73acab2eeb6368a2130729b9f71a10596262471657f6d59cc050030fea%2Fimages%2FPT9qbrBjgvVLlR5Oc6B6%2Fhigh.webp?alt=media"/>'
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v24.20.0

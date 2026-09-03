@@ -1,0 +1,166 @@
+{
+  "browser": {
+    "pageErrors": 0,
+    "pageErrorHashes": [],
+    "pageErrorCallsiteClasses": [],
+    "pageErrorNames": [],
+    "consoleErrors": 3,
+    "consoleErrorHashes": [
+      "15ea2a1d68fa50626d2dca10f464f1f7228ac722f9046baf8b991f6ea270ab7e",
+      "21a970b08153ca8a62f97dd8e821779845624f8fc50c168c1e05c43dfe64909f",
+      "6e02c12b0362db5db78a7a024c4bcfcce864310d99a5c1e6064d2f50abb2f77e"
+    ],
+    "consoleErrorOrigins": [
+      "first-party:https://templates.twodart.localhost:443/_next/static",
+      "first-party:https://templates.twodart.localhost:443/login/overview"
+    ],
+    "requestFailures": 0,
+    "requestFailureClasses": [
+      "GET:fetch:http://127.0.0.1:23000/google.firestore.v1.Firestore/Listen:net::ERR_ABORTED",
+      "GET:fetch:http://127.0.0.1:23000/google.firestore.v1.Firestore/Write:net::ERR_ABORTED",
+      "POST:fetch:http://127.0.0.1:23000/google.firestore.v1.Firestore/Listen:net::ERR_ABORTED"
+    ],
+    "requestFailureHashes": []
+  },
+  "candidateIdentityStored": false,
+  "errorHash": "b397a60239735d4a5f0918361af33834e2d97d1f388e429b82916852c9aa5e89",
+  "iteration": "initial",
+  "journeys": [
+    {
+      "backendAssertions": 2,
+      "durationMs": 6411,
+      "id": "otp-auth-login",
+      "networkAssertions": 2,
+      "renderedAssertions": 4
+    },
+    {
+      "backendAssertions": 2,
+      "durationMs": 1482,
+      "id": "dashboard-and-deck-list",
+      "networkAssertions": 1,
+      "renderedAssertions": 2
+    },
+    {
+      "backendAssertions": 3,
+      "durationMs": 15908,
+      "id": "existing-deck-and-listener-edit",
+      "networkAssertions": 1,
+      "renderedAssertions": 4
+    },
+    {
+      "backendAssertions": 3,
+      "durationMs": 16851,
+      "id": "catalog-slide-add",
+      "networkAssertions": 2,
+      "renderedAssertions": 3
+    }
+  ],
+  "navigations": [
+    {
+      "label": "login",
+      "status": 200
+    },
+    {
+      "label": "otp-request",
+      "status": 200
+    },
+    {
+      "label": "otp-verify",
+      "status": 200
+    }
+  ],
+  "clientRouteState": {
+    "dom": {
+      "bodyChildCount": 10,
+      "documentReadyState": "complete",
+      "emailInputCount": 0,
+      "inputCount": 4,
+      "loginFormCount": 0,
+      "loadingSpinnerCount": 0,
+      "nextErrorOverlayCount": 1,
+      "rootDivCount": 1
+    },
+    "finalDocumentPath": "/presentation/:id",
+    "finalDocumentQueryKeys": [],
+    "history": [
+      {
+        "kind": "history.replaceState",
+        "path": "/home/recent",
+        "queryKeys": []
+      },
+      {
+        "kind": "history.replaceState",
+        "path": "/home/recent",
+        "queryKeys": []
+      },
+      {
+        "kind": "history.pushState",
+        "path": "/presentation/:id",
+        "queryKeys": []
+      }
+    ],
+    "nextRouter": {
+      "asPath": "/presentation/:id",
+      "pathname": "/presentation/[...slug]",
+      "queryKeys": [
+        "slug"
+      ],
+      "route": "/presentation/[...slug]"
+    }
+  },
+  "network": {
+    "firstPartyResponses": 1307,
+    "requiredFailures": 0,
+    "requiredRequests": 1290,
+    "routeClasses": [
+      "blob://:80/https:/templates.twodart.localhost",
+      "http://127.0.0.1:23000/google.firestore.v1.Firestore/Listen",
+      "http://127.0.0.1:23000/google.firestore.v1.Firestore/Write",
+      "http://127.0.0.1:23001/identitytoolkit.googleapis.com/v1",
+      "http://127.0.0.1:23001/securetoken.googleapis.com/v1",
+      "https://storage.twodart.localhost:443/v0/b",
+      "https://templates.twodart.localhost:443/__nextjs_font/geist-latin.woff2",
+      "https://templates.twodart.localhost:443/_next/static",
+      "https://templates.twodart.localhost:443/api/login",
+      "https://templates.twodart.localhost:443/api/user",
+      "https://templates.twodart.localhost:443/assets/video-announcement.jpg",
+      "https://templates.twodart.localhost:443/choladeck-app-screenshot.jpg",
+      "https://templates.twodart.localhost:443/favicon.svg",
+      "https://templates.twodart.localhost:443/home/recent",
+      "https://templates.twodart.localhost:443/home/undefined",
+      "https://templates.twodart.localhost:443/login/overview",
+      "https://templates.twodart.localhost:443/login/undefined",
+      "https://templates.twodart.localhost:443/presentation/:id",
+      "https://templates.twodart.localhost:443/presentation/undefined"
+    ],
+    "websocketConnections": 5,
+    "websocketFramesReceived": 7
+  },
+  "undefinedLoginRequests": {
+    "count": 1,
+    "initiatorCallsiteClasses": [
+      "other:no-stack"
+    ],
+    "initiatorCallsiteHashes": [],
+    "initiatorTypes": [
+      "other"
+    ],
+    "navigationRequests": 0,
+    "resourceTypes": [
+      "font"
+    ]
+  },
+  "passed": false,
+  "privacy": {
+    "credentialsStored": false,
+    "datasetIdentityStored": false,
+    "deckContentStored": false,
+    "otpStored": false,
+    "queryValuesStored": false,
+    "requestInitiatorPayloadStored": false,
+    "userIdentityStored": false
+  },
+  "schemaVersion": 1,
+  "skippedJourneys": [],
+  "stack": "official"
+}
