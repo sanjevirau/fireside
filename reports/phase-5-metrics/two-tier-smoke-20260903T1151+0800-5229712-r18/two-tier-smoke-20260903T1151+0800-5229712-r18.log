@@ -1,0 +1,13 @@
+npm notice run fireside-conformance@0.0.1 test:suite:phase5-gate
+npm notice run node --import tsx src/suite/run-phase5-gate.ts --smoke --fireside-binary /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/target-67ce1c0/release/fireside --fireside-dir /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/stack-fireside --fresh-dir /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/fresh-colleague --full-data /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/inputs/full-data --java-home /home/sanjevi/.local/share/mise/installs/java/26.0.2.1 --node-binary /home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node --official-dir /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/stack-official --output-dir /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/diagnostics/two-tier-smoke-20260903T1151+0800-5229712-r18 --project-id demo-twodart-local --report-path /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/diagnostics/two-tier-smoke-20260903T1151+0800-5229712-r18-report.md --runtime-assets-root /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/inputs/Assets --twodart-revision 6bda5bf29b2399017d2a872e8f3fc1a15d073a54
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+Error: Phase 5 controlled-host preflight failed: {"availableDiskBytes":253153390592,"conflictingListeners":0,"failedUnits":0,"oomOrResourceEvidence":0,"sshState":"active","steadyVmstatSamples":3,"swapInPagesPerSecond":[4,0,0],"swapOutPagesPerSecond":[0,0,0],"systemState":"running","violations":["swapInPagesPerSecond=4,0,0"]}
+    at captureHostHealth (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-5229712/conformance/src/suite/run-phase5-gate.ts:1205:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async main (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-5229712/conformance/src/suite/run-phase5-gate.ts:205:9)
+    at async <anonymous> (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-5229712/conformance/src/suite/run-phase5-gate.ts:1439:1)
+
+Node.js v24.20.0
