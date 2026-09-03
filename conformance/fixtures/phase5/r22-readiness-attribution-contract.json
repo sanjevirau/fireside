@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "source": "User attribution on 2026-09-03 from preserved r22 logs plus read-only checkout timestamps; timestamps below are user-supplied, not new harness observations.",
+  "evidenceCommit": "4a0519ff52e25ef58799efeadd873fe7a8642d8c",
+  "evidenceDirectory": "reports/phase-5-metrics/two-tier-smoke-v3-20260903T1245+0800-f7b6438-r22",
+  "historicalResult": "failed readiness; not reclassified as a pass",
+  "attribution": "Attribution from the preserved r22 evidence plus read-only file timestamps in the Fireside checkout on the host: the Fireside stack launched at about 12:49:00. All four log markers were satisfied by 12:49:21: Next \"Ready in 522ms\" at about 12:49:05, \"All emulators ready\" at about 12:49:17 (the mprocs UP transition, between the images and cache-watcher anchors), cache watcher started at 12:49:18, .NET \"Now listening\" at 12:49:21 after a 5-second incremental build. The unmet condition was the frontend login probe. The Fireside checkout had never compiled /login/[loginType]: apps/templates/.next/dev/build was created at 12:49:29 and build-manifest.json was written at 12:50:05, so the Turbopack cold compile took about 40 seconds, and the first completed request then took 14.7 seconds of cold SSR, logged at 12:50:19. Every earlier probe was cut off by curl --max-time 8 while that compile ran, and the deadline expired at about 12:50:00. The official checkout is warm, its .next/dev is 2.4 GB from seven prior boots, and its first login response in r22 was 7.7 seconds, within 0.3 seconds of the 8-second cap. This is checkout warmth and probe budget, not a Fireside defect: Fireside's own readiness marker came 17 seconds after launch. Do not rerun blindly. The Fireside checkout is now warm, so an unchanged r23 would probably pass for the wrong reason.",
+  "contract": {
+    "emulatorSeconds": 60,
+    "applicationSecondsFrom": "cacheWatcher.maximumReadySeconds",
+    "fullGateSeconds": 1200,
+    "frontendCurlMaximumSeconds": 30,
+    "frontendCurlConnectTimeoutSeconds": 3,
+    "hubAndFunctionsSeconds": 5,
+    "identicalDefinitiveErrors": 3,
+    "frontendMustNotBlockEmulatorDeadline": true,
+    "lateSuccessMustNotRescueExpiredDeadline": true,
+    "recordEveryConditionOnEverySample": true,
+    "checksumLedgerOnFailure": true,
+    "browserRunnerSha256": "ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc",
+    "workloadChanged": false,
+    "durationsChanged": false,
+    "soakThresholdsChanged": false
+  }
+}

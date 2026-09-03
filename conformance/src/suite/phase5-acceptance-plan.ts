@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 export const PHASE5_MANIFEST_SHA256 =
-  "e5d43e4f41f7d2276754468e04b4131f76076e37aeb5afd536b6ce9c8d5b77ca";
+  "fe9d44c1edb6105d6edc9f0ab3b3251cb34929b7b6113e559ff9a2558ad7b957";
 
 export const PHASE5_TWODART_REVISION =
   "90881bf9611c9de09bcfc326943494bc28fcd1bd";
@@ -10,6 +10,27 @@ export const PHASE5_DATASET_TREE_SHA256 =
   "3505b5fd24dc4e8fb1f9925b5201c6e28dbb993c7a0a2bebb34cb70d13d91fc7";
 
 export interface Phase5Manifest {
+  readonly diagnosticReadinessAmendment: {
+    readonly previousManifestSha256: string;
+    readonly amendedBeforeMeasurement: boolean;
+    readonly browserRunnerChanged: boolean;
+    readonly workloadChanged: boolean;
+    readonly durationsChanged: boolean;
+    readonly soakThresholdsChanged: boolean;
+    readonly fullGateReadinessAllowanceChanged: boolean;
+  };
+  readonly readinessEvidence: {
+    readonly ledgerRequired: boolean;
+    readonly checksumsRequiredOnPassAndFailure: boolean;
+    readonly perConditionReadyTimesRequired: boolean;
+    readonly deadlineOrigin: string;
+    readonly frontendCurlMaximumSeconds: number;
+    readonly frontendCurlConnectTimeoutSeconds: number;
+    readonly twodartNetCurlMaximumSeconds: number;
+    readonly hubProbeMaximumSeconds: number;
+    readonly functionsProbeMaximumSeconds: number;
+    readonly definitiveErrorSamples: number;
+  };
   readonly amendment: {
     readonly amendedBeforeMeasurement: boolean;
     readonly criteriaWeakened: boolean;
@@ -55,6 +76,8 @@ export interface Phase5Manifest {
       readonly fullDataForbiddenUntilPass: boolean;
       readonly orphanCheck: boolean;
     };
+    readonly maximumReadySecondsScope: string;
+    readonly applicationMaximumReadySecondsFrom: string;
     readonly requiredBeforeEveryFullDataAttempt: boolean;
     readonly shortSoakSecondsPerStack: number;
   };

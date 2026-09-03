@@ -81,6 +81,35 @@ test("schema v3 records the authorized relaxation without reclassifying r20", as
   ))).digest("hex"), fixture.contract.browserRunnerSha256);
 });
 
+test("r22 diagnostic amendment splits readiness without touching workload or soak", async () => {
+  const manifest = JSON.parse(await readFile(manifestUrl, "utf8")) as Phase5Manifest;
+  const fixture = JSON.parse(await readFile(new URL(
+    "../fixtures/phase5/r22-readiness-attribution-contract.json", import.meta.url,
+  ), "utf8"));
+  assert.equal(fixture.historicalResult, "failed readiness; not reclassified as a pass");
+  assert.match(fixture.source, /user-supplied/u);
+  assert.equal(manifest.diagnosticReadinessAmendment.previousManifestSha256,
+    "e5d43e4f41f7d2276754468e04b4131f76076e37aeb5afd536b6ce9c8d5b77ca");
+  assert.equal(manifest.diagnosticReadinessAmendment.amendedBeforeMeasurement, true);
+  for (const key of ["browserRunnerChanged", "workloadChanged", "durationsChanged",
+    "soakThresholdsChanged", "fullGateReadinessAllowanceChanged"] as const) {
+    assert.equal(manifest.diagnosticReadinessAmendment[key], false);
+  }
+  assert.equal(manifest.diagnosticSmoke.maximumReadySecondsScope, "emulator-suite");
+  assert.equal(manifest.diagnosticSmoke.applicationMaximumReadySecondsFrom,
+    fixture.contract.applicationSecondsFrom);
+  assert.equal(manifest.diagnosticSmoke.maximumReadySeconds, fixture.contract.emulatorSeconds);
+  assert.equal(manifest.cacheWatcher.maximumReadySeconds, fixture.contract.fullGateSeconds);
+  assert.equal(manifest.readinessEvidence.frontendCurlMaximumSeconds, 30);
+  assert.equal(manifest.readinessEvidence.frontendCurlConnectTimeoutSeconds, 3);
+  assert.equal(manifest.readinessEvidence.hubProbeMaximumSeconds, 5);
+  assert.equal(manifest.readinessEvidence.functionsProbeMaximumSeconds, 5);
+  assert.equal(manifest.readinessEvidence.definitiveErrorSamples, 3);
+  assert.equal(manifest.readinessEvidence.ledgerRequired, true);
+  assert.equal(manifest.readinessEvidence.checksumsRequiredOnPassAndFailure, true);
+  assert.equal(manifest.readinessEvidence.perConditionReadyTimesRequired, true);
+});
+
 test("the Phase 5 manifest rejects byte drift before any measurement", async () => {
   const bytes = await readFile(manifestUrl);
   const manifest = JSON.parse(bytes.toString("utf8")) as Phase5Manifest;

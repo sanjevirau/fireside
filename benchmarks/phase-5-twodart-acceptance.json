@@ -2,7 +2,20 @@
   "schemaVersion": 3,
   "name": "phase-5-twodart-acceptance",
   "frozen": true,
-  "frozenAt": "2026-09-03T12:20:00+08:00",
+  "frozenAt": "2026-09-03T13:40:00+08:00",
+  "diagnosticReadinessAmendment": {
+    "previousManifestSha256": "e5d43e4f41f7d2276754468e04b4131f76076e37aeb5afd536b6ce9c8d5b77ca",
+    "amendedBeforeMeasurement": true,
+    "scope": "diagnostic-tier readiness attribution and probe budgets, identical for both stacks",
+    "reason": "R22's emulator suite became ready about 17 seconds after launch. The frontend login probe missed the shared 60-second deadline while a cold Turbopack compile and first SSR were repeatedly cut off by curl --max-time 8. The official checkout was warm. An unchanged retry on the now-warm Fireside checkout would not verify the correction.",
+    "attributionFixture": "conformance/fixtures/phase5/r22-readiness-attribution-contract.json",
+    "smokeApplicationReadinessAllowanceChanged": true,
+    "fullGateReadinessAllowanceChanged": false,
+    "browserRunnerChanged": false,
+    "workloadChanged": false,
+    "durationsChanged": false,
+    "soakThresholdsChanged": false
+  },
   "amendment": {
     "previousManifestSha256": "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa",
     "reason": "Evidence from r20: preflight showed 374 MiB residual swap with 11.7 GB free. During stack boot and the nine journeys, before the soak window opened, the kernel swapped out about 765 MiB while free memory never approached zero and no OOM occurred. The 64.7 MiB swapped in during the 60-second window was those pages returning; swap-out in the window was 0 and residual swap fell from 1139 MiB to 1073 MiB. The dominant consumer was the Next.js dev server at 7.24 GiB PSS. The official Java emulator was 0.59 GiB on the tiny dataset and reaches about 6.9 GB on the full dataset, so the official full-data stack is about 16 GiB PSS on a 15 GiB host. A zero-swap soak gate is therefore unpassable for the official baseline by physics, and a gate the baseline cannot pass proves nothing about Fireside. My earlier instruction not to weaken the zero-swap rule was wrong for the soak; the rule stays only for the quiescent preflight.",
@@ -84,6 +97,8 @@
       "applicationSeed": "deterministic synthetic Auth, Firestore, and Storage state sufficient for all nine browser journeys"
     },
     "maximumReadySeconds": 60,
+    "maximumReadySecondsScope": "emulator-suite",
+    "applicationMaximumReadySecondsFrom": "cacheWatcher.maximumReadySeconds",
     "shortSoakSecondsPerStack": 60,
     "executionOrder": [
       "official",
@@ -97,8 +112,22 @@
       "orphanCheck": true,
       "fullDataForbiddenUntilPass": true
     },
-    "readinessFailurePolicy": "A diagnostic smoke may fail fast before the 60-second allowance when a probe returns a definitive non-transient error while every required process remains healthy; unavailable or transient responses continue polling.",
+    "readinessFailurePolicy": "Fail fast on three identical definitive probe errors while all required log markers and ports are healthy. Emulator-suite conditions retain 60 seconds; frontend, TwodartNet, cache-watcher and mprocs control use cacheWatcher.maximumReadySeconds. Unavailable or transient responses continue polling within the applicable deadline.",
     "immutableGateInterventionAllowed": false
+  },
+  "readinessEvidence": {
+    "ledgerRequired": true,
+    "checksumsRequiredOnPassAndFailure": true,
+    "perConditionReadyTimesRequired": true,
+    "deadlineOrigin": "stack launch",
+    "emulatorConditions": ["All emulators ready", "emulator ports", "hub probe", "functions inventory probe"],
+    "applicationConditions": ["frontend", "TwodartNet", "cache-watcher", "mprocs control"],
+    "frontendCurlMaximumSeconds": 30,
+    "frontendCurlConnectTimeoutSeconds": 3,
+    "twodartNetCurlMaximumSeconds": 8,
+    "hubProbeMaximumSeconds": 5,
+    "functionsProbeMaximumSeconds": 5,
+    "definitiveErrorSamples": 3
   },
   "twodartRuntimeAssets": {
     "sourceEnvironmentVariable": "TWODART_PHASE5_RUNTIME_ASSETS_SOURCE",

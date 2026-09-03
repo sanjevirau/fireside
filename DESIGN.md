@@ -2127,6 +2127,35 @@ confidence intervals are published with the README summary. The expected design
 goal is graceful degradation or paging for fireside rather than an out-of-memory
 crash, but the README states measured outcomes only.
 
+### Phase 5 r22 diagnostic readiness attribution and amendment
+
+The preserved r22 attempt remains a failed cheap smoke, not a product failure
+or a retroactive pass. The user's follow-up correlates its logs with read-only
+checkout timestamps: emulator readiness at approximately launch +17 seconds,
+all four log markers by +21 seconds, but the cold `/login/[loginType]` compile
+and first SSR outlasted the shared 60-second budget and repeated 8-second curl
+limits. The official checkout was warm. Those supplied timestamps and the
+attribution are preserved in `r22-readiness-attribution-contract.json`; they
+are not represented as newly captured harness observations.
+
+Before another measurement, the diagnostic-tier amendment links the prior
+schema-v3 manifest SHA-256 and splits readiness equally for both backends.
+The emulator marker, emulator ports, hub and functions inventory retain the
+60-second smoke budget. Frontend, TwodartNet, cache watcher and mprocs control
+use `cacheWatcher.maximumReadySeconds` (1,200 seconds), as in the full gate.
+Both deadlines start at stack launch. Frontend curl uses 30 seconds total and
+3 seconds to connect; hub/functions retain 5 seconds and .NET retains 8.
+
+Every readiness sample must persist all marker, port and probe states, including
+pending, timeout, status and error text, with observation timestamps, separate
+deadlines and per-condition first-ready times. A slow frontend probe must not
+block the emulator deadline. Late successes cannot rescue an expired deadline.
+Three identical definitive probe results still fail fast only with healthy
+required markers and ports; a cached result is not three separate responses.
+The ledger and final readiness summary are checksummed on success and failure.
+The browser runner, app code, workload, soak durations and thresholds do not
+change. A warmed checkout alone is not evidence that this correction works.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.
