@@ -32,7 +32,11 @@ use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _, BufReader};
 use tokio::process::{Child, ChildStdin, ChildStdout, Command};
-use tokio_util::io::ReaderStream;
+
+mod download;
+use download::file_response;
+#[cfg(test)]
+mod encoding_tests;
 
 /// One rules source bound to a Storage bucket.
 #[derive(Debug, Clone)]
@@ -222,6 +226,8 @@ struct UploadSession {
     name: String,
     content_type: String,
     metadata: BTreeMap<String, String>,
+    #[serde(default)]
+    object_metadata: JsonValue,
     received: u64,
     staging_file: String,
 }
@@ -342,8 +348,11 @@ async fn v0_upload(
     RawQuery(query): RawQuery,
     headers: HeaderMap,
     body: Body,
-) -> Result<Json<JsonValue>, StorageApiError> {
+) -> Result<Response, StorageApiError> {
     let query = query_fields(query.as_deref());
+    if headers.contains_key("x-goog-upload-command") {
+        return firebase_resumable(&state, &bucket, &query, &headers, body).await;
+    }
     let name = query
         .get("name")
         .filter(|value| !value.is_empty())
@@ -357,13 +366,14 @@ async fn v0_upload(
             name: &name,
             content_type: &upload.content_type,
             metadata: upload.metadata,
+            object_metadata: &upload.object_metadata,
             headers: &headers,
             firebase: true,
         },
         upload.uploaded,
     )
     .await?;
-    Ok(Json(firebase_metadata(&object)))
+    Ok(Json(firebase_metadata(&object)).into_response())
 }
 
 async fn v0_object(
@@ -378,11 +388,133 @@ async fn v0_object(
     if query.get("alt").map(String::as_str) == Some("media") {
         let token = query.get("token").map(String::as_str);
         authorize_read(&state, &stored, &headers, token).await?;
-        file_response(&state, &stored, false).await
+        file_response(&state, &stored, &headers).await
     } else {
         authorize_read(&state, &stored, &headers, None).await?;
         Ok(Json(firebase_metadata(&stored)).into_response())
     }
+}
+
+async fn firebase_resumable(
+    state: &StorageState,
+    bucket: &str,
+    query: &BTreeMap<String, String>,
+    headers: &HeaderMap,
+    body: Body,
+) -> Result<Response, StorageApiError> {
+    let command = headers
+        .get("x-goog-upload-command")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    if command == "start" {
+        let response = gcs_resumable_start(state, bucket, query, headers, body).await?;
+        return firebase_upload_start_response(&response, bucket);
+    }
+    let id = query
+        .get("upload_id")
+        .ok_or_else(|| bad_request("Missing upload_id"))?;
+    let mut session = lock(&state.inner)
+        .uploads
+        .get(id)
+        .filter(|session| session.bucket == bucket)
+        .cloned()
+        .ok_or_else(|| StorageApiError::plain(StatusCode::NOT_FOUND, "Not Found"))?;
+    if command == "query" {
+        return Ok((
+            [
+                ("x-goog-upload-size-received", session.received.to_string()),
+                ("x-goog-upload-status", "active".to_owned()),
+            ],
+            "OK",
+        )
+            .into_response());
+    }
+    if command == "cancel" {
+        {
+            let mut data = lock(&state.inner);
+            data.uploads.remove(id);
+            persist_state(state, &data)?;
+        }
+        tokio::fs::remove_file(state.config.data_dir.join(&session.staging_file))
+            .await
+            .map_err(io_error)?;
+        return Ok("OK".into_response());
+    }
+    if command.contains("upload") {
+        session.received = session.received.saturating_add(
+            append_body(state.config.data_dir.join(&session.staging_file), body).await?,
+        );
+        let mut data = lock(&state.inner);
+        data.uploads.insert(id.clone(), session.clone());
+        persist_state(state, &data)?;
+    }
+    if !command.contains("finalize") {
+        return Ok((
+            [
+                ("x-goog-upload-status", "active"),
+                ("x-gupload-uploadid", id.as_str()),
+            ],
+            "OK",
+        )
+            .into_response());
+    }
+    let object = commit_staging(
+        state,
+        CommitSpec {
+            bucket,
+            name: &session.name,
+            content_type: &session.content_type,
+            metadata: session.metadata,
+            object_metadata: &session.object_metadata,
+            headers,
+            firebase: true,
+        },
+        summarize_file(state.config.data_dir.join(&session.staging_file)).await?,
+    )
+    .await?;
+    {
+        let mut data = lock(&state.inner);
+        data.uploads.remove(id);
+        persist_state(state, &data)?;
+    }
+    Ok((
+        [("x-goog-upload-status", "final")],
+        Json(firebase_metadata(&object)),
+    )
+        .into_response())
+}
+
+fn firebase_upload_start_response(
+    response: &Response,
+    bucket: &str,
+) -> Result<Response, StorageApiError> {
+    let location = response
+        .headers()
+        .get(header::LOCATION)
+        .and_then(|value| value.to_str().ok())
+        .ok_or_else(|| bad_request("Missing upload URL"))?;
+    let mut url = url::Url::parse(location).map_err(|_| bad_request("Invalid upload URL"))?;
+    let fields = query_fields(url.query());
+    let id = fields
+        .get("upload_id")
+        .ok_or_else(|| bad_request("Missing upload id"))?;
+    url.set_path(&format!("/v0/b/{}/o", percent_encode(bucket)));
+    url.query_pairs_mut()
+        .clear()
+        .append_pair("name", fields.get("name").map_or("", String::as_str))
+        .append_pair("upload_id", id)
+        .append_pair("upload_protocol", "resumable");
+    Ok((
+        [
+            ("x-goog-upload-url", url.to_string()),
+            ("x-goog-upload-status", "active".to_owned()),
+            ("x-goog-upload-chunk-granularity", "10000".to_owned()),
+            ("x-goog-upload-control-url", String::new()),
+            ("x-gupload-uploadid", id.clone()),
+        ],
+        "OK",
+    )
+        .into_response())
 }
 
 async fn v0_list(
@@ -534,6 +666,7 @@ async fn gcs_multipart_upload(
                 .or(multipart.data_content_type)
                 .unwrap_or("application/octet-stream"),
             metadata: string_metadata(multipart.metadata.get("metadata")),
+            object_metadata: &multipart.metadata,
             headers,
             firebase: false,
         },
@@ -569,6 +702,11 @@ async fn gcs_resumable_start(
     let object_content_type = request
         .get("contentType")
         .and_then(JsonValue::as_str)
+        .or_else(|| {
+            headers
+                .get("x-upload-content-type")
+                .and_then(|value| value.to_str().ok())
+        })
         .unwrap_or_else(|| content_type(headers))
         .to_owned();
     let (id, staging_file) = {
@@ -590,6 +728,7 @@ async fn gcs_resumable_start(
                 name: name.clone(),
                 content_type: object_content_type,
                 metadata,
+                object_metadata: request.clone(),
                 received: 0,
                 staging_file: staging_file.clone(),
             },
@@ -629,6 +768,7 @@ async fn gcs_media_upload(
             name,
             content_type: content_type(headers),
             metadata: BTreeMap::new(),
+            object_metadata: &JsonValue::Null,
             headers,
             firebase: false,
         },
@@ -695,6 +835,7 @@ async fn gcs_resumable_chunk(
             name: &session.name,
             content_type: &session.content_type,
             metadata: session.metadata,
+            object_metadata: &session.object_metadata,
             headers: &headers,
             firebase: false,
         },
@@ -731,7 +872,7 @@ async fn gcs_metadata_or_copy(
     State(state): State<StorageState>,
     Path((bucket, object)): Path<(String, String)>,
     RawQuery(query): RawQuery,
-    _headers: HeaderMap,
+    headers: HeaderMap,
 ) -> Result<Response, StorageApiError> {
     if object.contains("/copyTo/b/") {
         return Err(StorageApiError::plain(
@@ -745,7 +886,7 @@ async fn gcs_metadata_or_copy(
         .map(String::as_str)
         == Some("media")
     {
-        file_response(&state, &object, true).await
+        file_response(&state, &object, &headers).await
     } else {
         Ok(Json(gcs_metadata(&state, &object)).into_response())
     }
@@ -755,10 +896,10 @@ async fn gcs_download(
     State(state): State<StorageState>,
     Path((bucket, object)): Path<(String, String)>,
     RawQuery(_query): RawQuery,
-    _headers: HeaderMap,
+    headers: HeaderMap,
 ) -> Result<Response, StorageApiError> {
     let object = get_object(&state, &bucket, &decoded_object(&object))?;
-    file_response(&state, &object, true).await
+    file_response(&state, &object, &headers).await
 }
 
 async fn gcs_patch(
@@ -823,7 +964,14 @@ async fn gcs_alias_copy(
         md5_hash: source.md5_hash.clone(),
         crc32c: source.crc32c,
     };
-    let metadata = string_metadata(request.get("metadata"));
+    let mut copy_metadata = base_metadata(&source, false);
+    copy_metadata["metadata"] = json!(source.custom_metadata);
+    if let Some(fields) = request.as_object() {
+        for (key, value) in fields {
+            copy_metadata[key] = value.clone();
+        }
+    }
+    let metadata = string_metadata(copy_metadata.get("metadata"));
     let object = commit_staging(
         &state,
         CommitSpec {
@@ -831,6 +979,7 @@ async fn gcs_alias_copy(
             name: &destination_name,
             content_type: &source.content_type,
             metadata,
+            object_metadata: &copy_metadata,
             headers: &headers,
             firebase: false,
         },
@@ -943,6 +1092,7 @@ struct FirebaseUpload {
     uploaded: Uploaded,
     content_type: String,
     metadata: BTreeMap<String, String>,
+    object_metadata: JsonValue,
 }
 
 async fn firebase_upload(
@@ -956,6 +1106,7 @@ async fn firebase_upload(
             uploaded: stream_to_staging(state, body).await?,
             content_type: request_content_type.to_owned(),
             metadata: BTreeMap::new(),
+            object_metadata: JsonValue::Null,
         });
     };
     let bytes = collect_limited(body, 64 * 1024 * 1024).await?;
@@ -975,6 +1126,7 @@ async fn firebase_upload(
         uploaded: summarize_file(path).await?,
         content_type,
         metadata: string_metadata(multipart.metadata.get("metadata")),
+        object_metadata: multipart.metadata,
     })
 }
 
@@ -1159,6 +1311,7 @@ struct CommitSpec<'a> {
     name: &'a str,
     content_type: &'a str,
     metadata: BTreeMap<String, String>,
+    object_metadata: &'a JsonValue,
     headers: &'a HeaderMap,
     firebase: bool,
 }
@@ -1211,6 +1364,7 @@ async fn commit_staging(
         etag: etag(generation, 1),
         data_file: data_file.clone(),
     };
+    apply_metadata(&mut object, spec.object_metadata);
     if let Some(previous) = &before {
         object.time_created.clone_from(&previous.time_created);
     }
@@ -1240,44 +1394,6 @@ async fn commit_staging(
     }
     state.dispatch(StorageEvent::Finalize, &object);
     Ok(object)
-}
-
-async fn file_response(
-    state: &StorageState,
-    object: &StoredObject,
-    attachment: bool,
-) -> Result<Response, StorageApiError> {
-    let file = tokio::fs::File::open(state.config.data_dir.join(&object.data_file))
-        .await
-        .map_err(io_error)?;
-    let disposition = format!(
-        "{}; filename*={}",
-        if attachment { "attachment" } else { "inline" },
-        percent_encode(file_name(&object.name))
-    );
-    let mut response = Response::new(Body::from_stream(ReaderStream::new(file)));
-    *response.status_mut() = StatusCode::OK;
-    let headers = response.headers_mut();
-    headers.insert(
-        header::CONTENT_TYPE,
-        HeaderValue::from_str(&object.content_type)
-            .unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream")),
-    );
-    headers.insert(
-        header::CONTENT_LENGTH,
-        HeaderValue::from_str(&object.size.to_string()).expect("u64 header"),
-    );
-    headers.insert(
-        header::CONTENT_DISPOSITION,
-        HeaderValue::from_str(&disposition)
-            .unwrap_or_else(|_| HeaderValue::from_static("attachment")),
-    );
-    headers.insert(
-        header::CACHE_CONTROL,
-        HeaderValue::from_str(object.cache_control.as_deref().unwrap_or(""))
-            .unwrap_or_else(|_| HeaderValue::from_static("")),
-    );
-    Ok(response)
 }
 
 fn get_object(
