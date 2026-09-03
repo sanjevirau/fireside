@@ -25,6 +25,20 @@ const root = new URL(
   import.meta.url,
 );
 
+test("the final Mac runner patch freezes strict export and trace contracts", async () => {
+  const fixture = JSON.parse(await readFile(new URL(
+    "../fixtures/phase5/mac-final-runner-contract.json", import.meta.url,
+  ), "utf8"));
+  assert.equal(fixture.reportedMacJourneysPassed, 9);
+  assert.equal(fixture.contracts.exportPaletteLength, 11);
+  assert.equal(fixture.contracts.exportTimeoutIsFailureNotSkip, true);
+  assert.equal(fixture.contracts.exportStatusHttp200MayContainTerminalFailure, true);
+  assert.equal(fixture.contracts.referenceErrorsAreNeverAllowlisted, true);
+  assert.equal(fixture.contracts.navigationTraceIsLiteralBrowserJavaScript, true);
+  assert.equal(fixture.fullDataRequiresCompleteBothStackSmoke, true);
+  assert.equal(fixture.thresholdsChanged, false);
+});
+
 test("the Twodart source oracle freezes the exact Phase 5 browser contract", async () => {
   const fixture = JSON.parse(
     await readFile(new URL("fixture.json", root), "utf8"),
