@@ -1,0 +1,18 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.waitForSelector: Timeout 180000ms exceeded.
+Call log:
+[2m  - waiting for locator('a[href^="/presentation/"]') to be visible[22m
+
+    at <anonymous> (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-f788668/conformance/src/suite/run-phase5-browser-journeys.ts:271:16)
+    at async journey (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-f788668/conformance/src/suite/run-phase5-browser-journeys.ts:671:22)
+    at async <anonymous> (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-f788668/conformance/src/suite/run-phase5-browser-journeys.ts:267:3) {
+  log: [
+    `  - waiting for locator('a[href^="/presentation/"]') to be visible`
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v24.20.0
