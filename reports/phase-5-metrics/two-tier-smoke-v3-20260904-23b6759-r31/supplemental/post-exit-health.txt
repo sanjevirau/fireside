@@ -1,0 +1,29 @@
+2026-09-04T07:16:19+08:00
+SYSTEM
+running
+OOM
+MEMORY
+               total        used        free      shared  buff/cache   available
+Mem:     16146870272  1611878400 13510795264    58400768  1465917440 14534991872
+Swap:    21474828288   439324672 21035503616
+VMSTAT
+procs -----------memory---------- ---swap-- -----io---- -system-- -------cpu-------
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st gu
+ 0  0 429028 13194136  27056 1404504  646 1071  3555  3002 17303   26  2  1 97  0  0  0
+ 0  0 429028 13193636  27056 1404508    0    0     0     0 16163 30837  0  2 98  0  0  0
+ 0  0 429028 13193636  27056 1404508    0    0     0     0 16141 30860  0  2 98  0  0  0
+LISTENERS
+State  Recv-Q Send-Q               Local Address:Port  Peer Address:PortProcess
+LISTEN 0      4096                     127.0.0.1:631        0.0.0.0:*          
+LISTEN 0      4096                    127.0.0.54:53         0.0.0.0:*          
+LISTEN 0      4096                       0.0.0.0:22         0.0.0.0:*          
+LISTEN 0      4096                 127.0.0.53%lo:53         0.0.0.0:*          
+LISTEN 0      4096                100.87.253.106:63121      0.0.0.0:*          
+LISTEN 0      4096   [fd7a:115c:a1e0::3c38:fd6b]:51738         [::]:*          
+LISTEN 0      5                                *:3389             *:*          
+LISTEN 0      511                              *:443              *:*          
+LISTEN 0      4096                          [::]:22            [::]:*          
+LISTEN 0      511                              *:80               *:*          
+LISTEN 0      4096                         [::1]:631           [::]:*          
+PROCESSES
+315150 bash -c set -e; root=/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d; smoke=diagnostics/two-tier-smoke-v3-20260904-23b6759-r31; health=post-exit-health-23b6759-r31.txt; { date -Is; echo SYSTEM; systemctl is-system-running || true; systemctl --failed --no-legend || true; echo OOM; journalctl -b --no-pager -q -g "Out of memory|oom-kill|Killed process|Memory cgroup out of memory|resource.*kill" 2>/dev/null | tail -n 50 || true; echo MEMORY; free -b; echo VMSTAT; vmstat 1 3; echo LISTENERS; ss -ltnp; echo PROCESSES; pgrep -af "run-phase5-gate|run-phase5-browser-journeys|phase5-23b6759-r31" || true; } > "$root/$health"; cd "$root"; tar -cf - "$smoke" "diagnostics/two-tier-smoke-v3-20260904-23b6759-r31.log" "diagnostics/two-tier-smoke-v3-20260904-23b6759-r31.exit" "controller-23b6759-r31.log" "controller-23b6759-r31.exit" "build-23b6759.log" "build-23b6759.exit" "build-23b6759.SHA256SUMS" "ci-23b6759-seven-jobs.json" "$health"

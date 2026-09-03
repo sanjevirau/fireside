@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-09-03T22:53:06.395Z",
+  "timestamp": "2026-09-03T22:53:07.408Z",
+  "elapsedMilliseconds": 1013,
+  "deadlines": {
+    "emulator": {
+      "maximumSeconds": 1200,
+      "deadlineAt": "2026-09-03T23:13:06.395Z",
+      "readyMilliseconds": null
+    },
+    "application": {
+      "maximumSeconds": 1200,
+      "deadlineAt": "2026-09-03T23:13:06.395Z",
+      "readyMilliseconds": 516
+    }
+  },
+  "conditions": [
+    {
+      "id": "probe:frontend-login",
+      "group": "application",
+      "kind": "probe",
+      "target": "https://templates.twodart.localhost/login/overview",
+      "attempts": 2,
+      "pending": true,
+      "attemptStartedAt": "2026-09-03T22:53:07.408Z",
+      "observedAt": "2026-09-03T22:53:06.911Z",
+      "elapsedMilliseconds": 516,
+      "firstReadyAt": "2026-09-03T22:53:06.911Z",
+      "firstReadyMilliseconds": 516,
+      "result": {
+        "ready": true,
+        "outcome": "http",
+        "status": 200
+      }
+    }
+  ],
+  "unmetConditions": [],
+  "expiredGroups": [],
+  "failure": null,
+  "ready": true,
+  "consecutiveDefinitiveErrors": 0,
+  "passed": true
+}
