@@ -59,7 +59,7 @@ fn encode_response(response: &impl serde::Serialize) -> Result<JsonValue, Backen
 }
 
 fn normalize_field_special_doubles(
-    fields: &std::collections::HashMap<String, fireside_grpc_front::google::firestore::v1::Value>,
+    fields: &std::collections::BTreeMap<String, fireside_grpc_front::google::firestore::v1::Value>,
     encoded: &mut JsonValue,
 ) {
     let Some(encoded) = encoded.as_object_mut() else {
@@ -162,7 +162,7 @@ fn internal_json(error: &serde_json::Error) -> BackendError {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
     use fireside_grpc_front::google::firestore::v1::listen_request::TargetChange as RequestedTargetChange;
     use fireside_grpc_front::google::firestore::v1::listen_response::ResponseType;
@@ -342,7 +342,7 @@ mod tests {
             response_type: Some(ResponseType::DocumentChange(DocumentChange {
                 document: Some(Document {
                     name: DOCUMENT.to_owned(),
-                    fields: HashMap::from([("embedding".to_owned(), embedding)]),
+                    fields: BTreeMap::from([("embedding".to_owned(), embedding)]),
                     ..Document::default()
                 }),
                 target_ids: vec![1002],
@@ -381,7 +381,7 @@ mod tests {
 
         let document = Document {
             name: DOCUMENT.to_owned(),
-            fields: HashMap::from([
+            fields: BTreeMap::from([
                 (
                     "counter".to_owned(),
                     Value {

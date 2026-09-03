@@ -1,7 +1,7 @@
 # fireside design and compatibility contract
 
 Status: Phase 2 living specification
-Last updated: 2026-09-02
+Last updated: 2026-09-04
 
 This document is normative for project process and architecture, but not for
 Google Cloud behavior. Every behavioral assertion must be promoted from a
@@ -417,6 +417,32 @@ write-buffer exclusion evidence is published in the Phase 1 diagnostic reports;
 the complete immutable gate remains the release qualification.
 
 ## 5. Firestore behavior surfaces
+
+### Repeated document-map serialization (Phase 5 r28)
+
+The pre-implementation oracle at
+`conformance/fixtures/document-map-serialization/` records four synthetic
+documents, eight repeated reads and seven native/REST/browser operations:
+224 reads on each pinned Java JAR 1.21.0 and 1.22.0. Both versions return stable
+decoded field JSON within every group and their observation files match exactly.
+Inputs cover nested maps, arrays of maps, empty containers, CJK/emoji and
+numeric-looking map keys. No writes occur during each repeated-read group.
+
+R28's protected browser runner compared exact JSON strings around a successful
+.NET export. A reduced read-only diagnostic showed fresh randomized protobuf
+field maps producing different strings for the same values/update timestamp.
+This is a serialization compatibility issue; it is not evidence of data loss.
+The original r28 before/after values were not recorded, so the next unchanged
+smoke must still validate the entire application sequence.
+
+Document and nested MapValue fields use ordered maps at the generated protobuf
+boundary, shared by reads, queries, watches and event payloads. Deterministic
+encoding must retain all field values, core-store/disk representation, masks,
+rule checks and query semantics. Tests assert stable binary/JSON output within
+Fireside and canonical value parity with Java, not Java's incidental permutation.
+No cross-server key ordering or production-cloud ordering guarantee is claimed;
+the observed stability contract is from the local emulator oracle. REST/browser
+regressions cover both storage modes without changing the protected runner.
 
 ### 5.1 Values and queries
 

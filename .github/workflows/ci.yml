@@ -84,6 +84,8 @@ jobs:
         run: npm run test:rules:query-fixtures --prefix conformance
       - name: Verify document-map serialization oracle fixtures
         run: npm run test:serialization:fixtures --prefix conformance
+      - name: Replay document-map serialization in memory and disk/WAL
+        run: npm run test:serialization:replay --prefix conformance
       - name: Replay query rules through native and browser transports
         run: npm run test:rules:query-replay --prefix conformance
       - name: Run WebChannel browser demo

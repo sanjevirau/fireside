@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
-import { compareSerializationCapture, verifySerializationCapture, type SerializationCapture } from "../src/serialization/verify.ts";
+import { compareSerializationCapture, normalizeFirestoreValueJson, verifySerializationCapture, type SerializationCapture } from "../src/serialization/verify.ts";
 
 const root = new URL("../fixtures/document-map-serialization/", import.meta.url);
 const pins = {
@@ -41,4 +41,17 @@ test("a reordered map fails stability without being mistaken for changed values"
   const group = changed.observations[0]!;
   (group.reads as string[])[1] = JSON.stringify(Object.fromEntries(Object.entries(JSON.parse(group.reads[0]!)).reverse()));
   assert.throws(() => verifySerializationCapture(changed), /unstable response field order/u);
+});
+test("cross-server comparison accepts only omitted proto3 empty container defaults", () => {
+  const omitted = { emptyArray: { arrayValue: {} }, emptyMap: { mapValue: {} } };
+  const explicit = { emptyArray: { arrayValue: { values: [] } }, emptyMap: { mapValue: { fields: {} } } };
+  assert.deepEqual(normalizeFirestoreValueJson(omitted), explicit);
+  assert.notDeepEqual(
+    normalizeFirestoreValueJson({ value: { arrayValue: { values: [{ stringValue: "kept" }] } } }),
+    normalizeFirestoreValueJson({ value: { arrayValue: {} } }),
+  );
+  assert.notDeepEqual(
+    normalizeFirestoreValueJson({ value: { mapValue: { fields: { kept: { booleanValue: true } } } } }),
+    normalizeFirestoreValueJson({ value: { mapValue: {} } }),
+  );
 });

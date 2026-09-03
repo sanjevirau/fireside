@@ -14,7 +14,7 @@ candidate.
 | [r25](phase-5-smoke-20260903-r25.md) (incoming boundary) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard query failed | Fireside product: query-rules authorization; previous Auth error did not recur | `99a7cf0` (Auth refresh) | `710bfb7` | [33745161787](https://github.com/sanjevirau/fireside/actions/runs/33745161787), 7/7 green | Failed; export-first cleanup complete; full gate not started |
 | [r26](phase-5-smoke-20260903-r26.md) (attempt 1/8) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard timeout | Unresolved application path; no r25 rules error; diagnostic evidence gap | `34c8aed` | `a6c66b4` | [33752732445](https://github.com/sanjevirau/fireside/actions/runs/33752732445), 7/7 green | Failed; export-first cleanup complete, no full-data launch; diagnostic amendment published in `4d6cf2f` |
 | [r27](phase-5-smoke-20260903-r27.md) (attempt 2/8) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard timeout | Fireside product: unbound child wildcard in invited-users query path raises before independent OR grant | `2c7ca67` (captured and committed before repair) | `4d6cf2f` | [33755740999](https://github.com/sanjevirau/fireside/actions/runs/33755740999), 7/7 green | Failed; export-first cleanup complete; no full-data launch |
-| [r28](phase-5-smoke-20260903-r28.md) (attempt 3/8) | Official 9/9 + 60 s soak; Fireside 6/9, export comparison failed | Serialization compatibility: repeated reads change map order, not canonical values, in isolation; original before/after values unavailable | `2c7ca67` (previous repair); new map fixture captured before next repair | `b1ef52b` | [33760383375](https://github.com/sanjevirau/fireside/actions/runs/33760383375), 7/7 green | Failed; both export-first exits zero; full-data gate absent |
+| [r28](phase-5-smoke-20260903-r28.md) (attempt 3/8) | Official 9/9 + 60 s soak; Fireside 6/9, export comparison failed | Serialization compatibility: repeated reads change map order, not canonical values, in isolation; original before/after values unavailable | `ff6fff7` (map oracle and r28 evidence) | `b1ef52b` | [33760383375](https://github.com/sanjevirau/fireside/actions/runs/33760383375), 7/7 green | Failed; both export-first exits zero; full-data gate absent |
 
 R25 failure evidence is published in `b79750636e1666e1d097b341b7cc9f85ba74d28c`;
 [evidence CI 33748445917](https://github.com/sanjevirau/fireside/actions/runs/33748445917)
@@ -125,7 +125,35 @@ the original before/after values were not persisted. New synthetic map fixtures
 capture 224 reads on each pinned JAR across seven operations; both JARs agree.
 Commit these before generic deterministic response encoding. Do not change the
 runner; the next complete smoke must still pass its unchanged assertions.
-R28 original 27 checksums verified remotely and locally. Private raw backup:
+R28 original 27 checksums verified remotely and locally. The map oracle and
+failure evidence were committed before product edits in
+`ff6fff7c90e2d0c0fd54fc2c4fc7e8ec8e26c949`; all seven jobs passed in
+[CI 33780342858](https://github.com/sanjevirau/fireside/actions/runs/33780342858).
+The corpus freezes four synthetic documents, eight repeated reads and seven
+native/REST/browser operations for each of Java 1.21.0 and 1.22.0 (224 reads
+per JAR). Both JAR observation files are byte-identical and every group is
+stable. The repair in the next product candidate uses ordered maps only at the
+generated protobuf Document/MapValue boundary, including pbjson, leaving the
+core-store representation and rules/query logic unchanged. Its real-client
+regression repeats all seven operations in memory and disk/WAL, retains exact
+within-server JSON/order checks, and compares decoded values to Java. The only
+cross-server normalization is proto3's equivalent omitted-versus-explicit
+empty repeated/map fields; non-empty changes remain failures. A read-only
+diagnostic amendment records every native SDK top-level synthetic deck value
+around the unchanged smoke. It adds no Firestore request, calls the original
+`data()` exactly once, returns the same object, excludes full-data values, and
+cannot alter a journey result. The protected runner, frozen manifest, Twodart,
+workload, durations and thresholds remain unchanged.
+
+Before candidate publication, local validation passed the full Rust workspace,
+formatting, Clippy with warnings denied, TypeScript checking, all 225 harness
+tests, the map replay in both storage modes, and both prior query-rules corpora
+in both storage modes. These are regression checks, not Phase 5 acceptance.
+The next authorized acceptance action remains r29 only after all seven jobs pass
+on the exact product candidate and a fresh guarded Linux release build records
+its SHA-256.
+
+Private raw backup:
 `/tmp/fireside-phase5-r28-raw.6RFDYH`; never publish the whole directory.
 Private raw r26 backup: `/tmp/fireside-phase5-r26-raw.4973IM`; never publish its
 credentials, complete exports, or raw service/runtime state.

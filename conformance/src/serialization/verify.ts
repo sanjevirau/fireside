@@ -7,6 +7,37 @@ export interface SerializationCapture {
   readonly observations: readonly SerializationObservation[];
 }
 
+// Proto3 JSON may either omit an empty repeated/map field or spell it out.
+// Preserve each server's exact text for the within-server stability assertion,
+// but compare these two representations as the same Firestore Value across
+// servers. This deliberately does not normalize non-empty data.
+export function normalizeFirestoreValueJson(value: unknown): unknown {
+  const normalizeFields = (fields: unknown): unknown => {
+    if (fields === null || typeof fields !== "object" || Array.isArray(fields)) return fields;
+    return Object.fromEntries(Object.entries(fields).map(([key, field]) => [key, normalizeValue(field)]));
+  };
+  const normalizeValue = (input: unknown): unknown => {
+    if (input === null || typeof input !== "object" || Array.isArray(input)) return input;
+    const object = { ...input } as Record<string, unknown>;
+    if (object.arrayValue !== null && typeof object.arrayValue === "object" &&
+        !Array.isArray(object.arrayValue)) {
+      const arrayValue = { ...object.arrayValue } as Record<string, unknown>;
+      arrayValue.values = Array.isArray(arrayValue.values)
+        ? arrayValue.values.map(normalizeValue)
+        : [];
+      object.arrayValue = arrayValue;
+    }
+    if (object.mapValue !== null && typeof object.mapValue === "object" &&
+        !Array.isArray(object.mapValue)) {
+      const mapValue = { ...object.mapValue } as Record<string, unknown>;
+      mapValue.fields = mapValue.fields === undefined ? {} : normalizeFields(mapValue.fields);
+      object.mapValue = mapValue;
+    }
+    return object;
+  };
+  return normalizeFields(value);
+}
+
 export function verifySerializationCapture(capture: SerializationCapture): void {
   assert.deepEqual(capture.cases, serializationCases);
   assert.equal(capture.repeats, serializationRepeats);
@@ -32,6 +63,13 @@ export function compareSerializationCapture(actual: SerializationCapture, oracle
     const expected = oracle.observations.find(item => item.id === observed.id && item.operation === observed.operation)!;
     // Match map values and within-server stability, not Java's incidental key
     // permutation: protobuf maps do not promise a cross-server key order.
-    assert.equal(canonicalJson(JSON.parse(observed.reads[0]!)), canonicalJson(JSON.parse(expected.reads[0]!)), `${observed.id} ${observed.operation}: oracle value mismatch`);
+    const protobufValues = observed.operation.startsWith("grpc-") || observed.operation === "rest-get";
+    const actualValue = JSON.parse(observed.reads[0]!);
+    const expectedValue = JSON.parse(expected.reads[0]!);
+    assert.equal(
+      canonicalJson(protobufValues ? normalizeFirestoreValueJson(actualValue) : actualValue),
+      canonicalJson(protobufValues ? normalizeFirestoreValueJson(expectedValue) : expectedValue),
+      `${observed.id} ${observed.operation}: oracle value mismatch`,
+    );
   }
 }

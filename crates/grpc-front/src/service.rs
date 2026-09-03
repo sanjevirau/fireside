@@ -1792,7 +1792,7 @@ fn aggregate_query_result(
         }
     }
     Ok(proto::AggregationResult {
-        aggregate_fields: encode_fields(&fields)?,
+        aggregate_fields: encode_fields(&fields)?.into_iter().collect(),
     })
 }
 
@@ -1974,7 +1974,7 @@ fn now() -> Timestamp {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
     use super::*;
     use crate::google::firestore::v1::run_aggregation_query_request;
@@ -2222,7 +2222,7 @@ mod tests {
     fn integer_document(name: &str, value: i64) -> proto::Document {
         proto::Document {
             name: name.to_owned(),
-            fields: HashMap::from([(
+            fields: BTreeMap::from([(
                 "value".to_owned(),
                 proto::Value {
                     value_type: Some(proto::value::ValueType::IntegerValue(value)),

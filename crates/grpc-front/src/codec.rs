@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use fireside_core_store::{
@@ -171,14 +171,14 @@ fn set_nested_map_value(map: &mut BTreeMap<String, Value>, segments: &[String], 
     set_nested_map_value(child, rest, value);
 }
 
-pub(crate) fn decode_fields(fields: HashMap<String, proto::Value>) -> Result<Fields, Status> {
+pub(crate) fn decode_fields(fields: BTreeMap<String, proto::Value>) -> Result<Fields, Status> {
     fields
         .into_iter()
         .map(|(field, value)| Ok((field, decode_value(value)?)))
         .collect()
 }
 
-pub(crate) fn encode_fields(fields: &Fields) -> Result<HashMap<String, proto::Value>, Status> {
+pub(crate) fn encode_fields(fields: &Fields) -> Result<BTreeMap<String, proto::Value>, Status> {
     fields
         .iter()
         .map(|(field, value)| Ok((field.clone(), encode_value(value)?)))
@@ -245,7 +245,7 @@ pub(crate) fn encode_value(value: &Value) -> Result<proto::Value, Status> {
             fields: encode_fields(fields)?,
         }),
         Value::Vector(values) => ValueType::MapValue(proto::MapValue {
-            fields: HashMap::from([
+            fields: BTreeMap::from([
                 (
                     RESERVED_TYPE_FIELD.to_owned(),
                     proto::Value {
@@ -273,7 +273,7 @@ pub(crate) fn encode_value(value: &Value) -> Result<proto::Value, Status> {
     })
 }
 
-fn decode_map_value(fields: HashMap<String, proto::Value>) -> Result<Value, Status> {
+fn decode_map_value(fields: BTreeMap<String, proto::Value>) -> Result<Value, Status> {
     let fields = decode_fields(fields)?;
     if !matches!(
         fields.get(RESERVED_TYPE_FIELD),
@@ -546,6 +546,70 @@ fn decode_transforms(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn proto_nulls(value: &mut serde_json::Value) {
+        match value {
+            serde_json::Value::Object(map) => {
+                if map.get("nullValue").is_some_and(serde_json::Value::is_null) {
+                    map.insert("nullValue".to_owned(), serde_json::json!("NULL_VALUE"));
+                }
+                for field in map.values_mut() {
+                    proto_nulls(field);
+                }
+            }
+            serde_json::Value::Array(array) => {
+                for field in array {
+                    proto_nulls(field);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    #[test]
+    fn official_map_fixtures_encode_stably_without_changing_values() {
+        use prost::Message as _;
+
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../conformance/fixtures/document-map-serialization/java-1.21.0/observations.json"
+        ))
+        .unwrap();
+        for observation in fixture["observations"].as_array().unwrap() {
+            if observation["operation"] != "rest-get" {
+                continue;
+            }
+            let mut fields: serde_json::Value =
+                serde_json::from_str(observation["reads"][0].as_str().unwrap()).unwrap();
+            // REST represents the NullValue enum as JSON null. This unit test
+            // enters below the REST adapter, at the generated protobuf type.
+            proto_nulls(&mut fields);
+            let document: proto::Document = serde_json::from_value(serde_json::json!({
+                "name": "projects/demo/databases/(default)/documents/maps/stable",
+                "fields": fields,
+            }))
+            .unwrap();
+            let core = decode_fields(document.fields).unwrap();
+            let encode = || proto::Document {
+                fields: encode_fields(&core).unwrap(),
+                ..proto::Document::default()
+            };
+            let first = encode();
+            for _ in 0..32 {
+                let next = encode();
+                assert_eq!(decode_fields(next.fields.clone()).unwrap(), core);
+                assert_eq!(
+                    next.encode_to_vec(),
+                    first.encode_to_vec(),
+                    "unstable protobuf map serialization for {}",
+                    observation["id"]
+                );
+                assert_eq!(
+                    serde_json::to_string(&next).unwrap(),
+                    serde_json::to_string(&first).unwrap()
+                );
+            }
+        }
+    }
 
     #[test]
     fn parses_named_database_documents_without_losing_the_path() {

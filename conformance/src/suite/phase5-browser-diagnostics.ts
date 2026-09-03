@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { chromium, type Page } from "playwright";
+import { installPhase5DocumentSnapshotDiagnostics } from "./phase5-document-diagnostics.ts";
 import { phase5ListenRequestSummary, phase5ListenResponseSummary, phase5SmokeDomEvidence } from "./phase5-listen-diagnostics.ts";
 
 interface DiagnosticFailure {
@@ -164,7 +166,23 @@ if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
     for (const value of known) identities.add(value);
     const appEnv = await readFile(path.join(argument("twodart-dir"), "apps/templates/.env.local"), "utf8");
     syntheticGoogleClientId = /^NEXT_PUBLIC_FIREBASE_AUTH_GOAUTH=["']?false["']?\s*$/mu.test(appEnv);
-    record("diagnostic-contract", { syntheticGoogleClientId, verbatimSyntheticText: true, userIdentifiersAndOtpsHashed: true, runnerEventsSuppressed: false, listenShapeObservations: true, completeDomSyntheticSmokeOnly: true });
+    const requireFromTwodart = createRequire(path.join(path.resolve(argument("twodart-dir")), "package.json"));
+    const firestoreModule = requireFromTwodart("firebase-admin/firestore") as {
+      readonly DocumentSnapshot: { readonly prototype: { data?: unknown } };
+      readonly QueryDocumentSnapshot: { readonly prototype: { data?: unknown } };
+    };
+    const restoreDocumentDiagnostics = installPhase5DocumentSnapshotDiagnostics(
+      process.argv.includes("--seed-smoke"),
+      [firestoreModule.DocumentSnapshot, firestoreModule.QueryDocumentSnapshot],
+      observation => record("synthetic-deck-snapshot", { observation }),
+    );
+    record("diagnostic-contract", {
+      syntheticGoogleClientId, verbatimSyntheticText: true,
+      userIdentifiersAndOtpsHashed: true, runnerEventsSuppressed: false,
+      listenShapeObservations: true, completeDomSyntheticSmokeOnly: true,
+      syntheticDeckSnapshotValues: true, fullDataDocumentValues: false,
+      additionalFirestoreRequests: 0,
+    });
     const browser = await originalLaunch(options);
     const originalContext = browser.newContext.bind(browser);
     browser.newContext = async (contextOptions) => {
@@ -189,6 +207,7 @@ if (process.argv[1]?.endsWith("run-phase5-browser-journeys.ts") === true) {
       await writes;
       await originalClose(closeOptions);
       await writes;
+      restoreDocumentDiagnostics();
     };
     return browser;
   };

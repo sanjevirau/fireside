@@ -11,6 +11,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     tonic_prost_build::configure()
         .build_client(true)
         .build_server(true)
+        // The official emulator returns stable document field order across
+        // repeated reads. Preserve it deterministically at the wire boundary,
+        // including nested maps, without changing the core-store format.
+        .btree_map(".google.firestore.v1.Document.fields")
+        .btree_map(".google.firestore.v1.MapValue.fields")
         .compile_well_known_types(true)
         .extern_path(".google.protobuf.Any", "::pbjson_types::Any")
         .extern_path(
@@ -30,6 +35,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         .compile_fds(descriptors.clone())?;
     pbjson_build::Builder::new()
         .register_descriptors(&descriptors.encode_to_vec())?
+        .btree_map([
+            ".google.firestore.v1.Document",
+            ".google.firestore.v1.MapValue",
+        ])
         .extern_path(".google.protobuf.Any", "::pbjson_types::Any")
         .extern_path(
             ".google.protobuf.DoubleValue",

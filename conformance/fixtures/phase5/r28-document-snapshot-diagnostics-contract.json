@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "attempt": "r28",
+  "candidate": "b1ef52b77846db7c94ab1c37451d977a629d69ac",
+  "failure": ".NET export mutated the selected deck",
+  "classification": "The protected runner compares exact JSON text before and after export. Preserved r28 evidence did not include those two native SDK values, so the failed application sequence could not distinguish response map-order instability from a semantic write.",
+  "isolatedDiagnostic": "Repeated reads of both preserved stack exports retained one canonical document value and one updateTime. Java returned one exact JSON order while Fireside returned twenty exact JSON orders. This established a general response-serialization defect but did not replay the original before/after application sequence.",
+  "amendment": {
+    "amendedBeforeNextMeasurement": true,
+    "scope": "read-only synthetic-smoke DocumentSnapshot observations outside the protected browser runner",
+    "syntheticSmokeDocumentValuesStored": true,
+    "fullDataDocumentValuesStored": false,
+    "additionalFirestoreRequests": 0,
+    "originalDataCallsExactlyOnce": true,
+    "dataReturnIdentityPreserved": true,
+    "observerFailuresAffectJourney": false,
+    "runnerEventsSuppressed": false,
+    "workloadChanged": false,
+    "durationsChanged": false,
+    "thresholdsChanged": false,
+    "twodartChanged": false,
+    "protectedRunnerChanged": false,
+    "manifestChanged": false,
+    "protectedRunnerSha256": "ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc",
+    "manifestSha256": "fe9d44c1edb6105d6edc9f0ab3b3251cb34929b7b6113e559ff9a2558ad7b957"
+  }
+}
