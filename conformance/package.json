@@ -41,6 +41,8 @@
     "capture:rules:complex": "node --import tsx src/rules/capture-phase3-complex.ts",
     "capture:rules:boundaries": "node --import tsx src/rules/capture-phase3-boundaries.ts",
     "capture:rules:queries": "node --import tsx src/rules/capture-query-rules.ts",
+    "capture:serialization": "node --import tsx src/serialization/capture.ts",
+    "test:serialization:fixtures": "node --import tsx --test test/document-map-serialization-fixture.test.ts",
     "test:rules:query-fixtures": "node --import tsx --test test/query-rules-fixture.test.ts",
     "test:rules:query-replay": "node --import tsx --test test/query-rules-replay.test.ts",
     "capture:suite:firestore-triggers": "node --import tsx src/suite/capture-firestore-triggers.ts",

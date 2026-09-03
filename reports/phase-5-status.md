@@ -2,8 +2,8 @@
 
 Phase 5 is **incomplete**. The current authorization is the bounded fix/cheap-smoke
 loop supplied after r25, followed immediately by the immutable full-data gate
-only when both complete cheap-smoke stacks pass. There have been **two further
-cheap-smoke attempts** under this authorization (maximum eight): r26 and r27 failed. Oracle probes
+only when both complete cheap-smoke stacks pass. There have been **three further
+cheap-smoke attempts** under this authorization (maximum eight): r26, r27 and r28 failed. Oracle probes
 are not acceptance smokes. No full-data gate has launched for the current
 candidate.
 
@@ -14,6 +14,7 @@ candidate.
 | [r25](phase-5-smoke-20260903-r25.md) (incoming boundary) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard query failed | Fireside product: query-rules authorization; previous Auth error did not recur | `99a7cf0` (Auth refresh) | `710bfb7` | [33745161787](https://github.com/sanjevirau/fireside/actions/runs/33745161787), 7/7 green | Failed; export-first cleanup complete; full gate not started |
 | [r26](phase-5-smoke-20260903-r26.md) (attempt 1/8) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard timeout | Unresolved application path; no r25 rules error; diagnostic evidence gap | `34c8aed` | `a6c66b4` | [33752732445](https://github.com/sanjevirau/fireside/actions/runs/33752732445), 7/7 green | Failed; export-first cleanup complete, no full-data launch; diagnostic amendment published in `4d6cf2f` |
 | [r27](phase-5-smoke-20260903-r27.md) (attempt 2/8) | Official 9/9 + 60 s soak; Fireside 1/9, dashboard timeout | Fireside product: unbound child wildcard in invited-users query path raises before independent OR grant | `2c7ca67` (captured and committed before repair) | `4d6cf2f` | [33755740999](https://github.com/sanjevirau/fireside/actions/runs/33755740999), 7/7 green | Failed; export-first cleanup complete; no full-data launch |
+| [r28](phase-5-smoke-20260903-r28.md) (attempt 3/8) | Official 9/9 + 60 s soak; Fireside 6/9, export comparison failed | Serialization compatibility: repeated reads change map order, not canonical values, in isolation; original before/after values unavailable | `2c7ca67` (previous repair); new map fixture captured before next repair | `b1ef52b` | [33760383375](https://github.com/sanjevirau/fireside/actions/runs/33760383375), 7/7 green | Failed; both export-first exits zero; full-data gate absent |
 
 R25 failure evidence is published in `b79750636e1666e1d097b341b7cc9f85ba74d28c`;
 [evidence CI 33748445917](https://github.com/sanjevirau/fireside/actions/runs/33748445917)
@@ -88,10 +89,44 @@ observations per mode). These are regression checks, not Phase 5 acceptance.
 Local validation also passed all workspace Rust tests, formatting, Clippy with
 warnings denied, TypeScript checking, 222 harness tests, and seven query-fixture
 checks. Neither the protected runner nor the frozen manifest was changed.
-The repair still requires its exact seven-job CI and fresh Linux release before
-r28. R28 will be attempt 3/8 and is not launched. Same-cause recurrence after
-this new repair must stop; the r25 owner-filter regression remains green.
+The repair required its exact seven-job CI and fresh Linux release before r28;
+both prerequisites are recorded below. Same-cause recurrence after this new
+repair must stop; the r25 owner-filter regression remains green.
+The oracle/evidence commit passed all seven jobs in
+[CI 33759023792](https://github.com/sanjevirau/fireside/actions/runs/33759023792).
+Repair `b1ef52b77846db7c94ab1c37451d977a629d69ac` is now pushed;
+[its CI 33760383375](https://github.com/sanjevirau/fireside/actions/runs/33760383375)
+passed all seven jobs. An additional isolated check imported r27's saved Fireside export
+with the exact pinned Twodart rules into both Java 1.21.0 and repaired Fireside:
+both delivered one self-invite and one presentation in two-target and five-target
+long-poll sessions, with no listener errors. This diagnostic is not the complete
+application sequence or an acceptance smoke. Its raw inputs remain private.
+Fresh Linux release build started at `2026-09-03T21:32:13+08:00` in tmux
+`fireside-phase5-build-b1ef52b`, using new `harness-b1ef52b` and `target-b1ef52b`
+directories under the existing runtime root. The build launcher verified exact
+green CI, immutable hashes, no conflicting gate listeners/processes, no failed
+units or current-boot OOM/resource/hardware/I/O evidence, and zero swap usage.
+Build exited zero at `2026-09-03T21:33:41+08:00` (release compilation 1m15s).
+Binary SHA-256:
+`c756e6a8bf04ab4b1efea6605a342d335cab64b4bf3fc248002ada75b117189a`.
+R28 launched at `2026-09-03T21:34:03+08:00` in tmux
+`fireside-phase5-b1ef52b-r28-controller`, output
+`diagnostics/two-tier-smoke-v3-20260903-b1ef52b-r28`. The controller verifies
+both complete smoke stacks and checksums before immediately launching
+`full-gates/full-gate-v3-20260903-b1ef52b`. It cannot launch full data on failure.
 Private raw r27 backup: `/tmp/fireside-phase5-r27-raw.qQFThS`; do not publish it.
+R28 exited 1 at `2026-09-03T21:42:37+08:00`. The .NET job completed and a
+nontrivial PPTX arrived; the failing assertion was the protected runner's exact
+JSON before/after deck comparison. Isolated repeated reads of both saved exports
+show Java returns one stable serialization while Fireside produces twenty key
+orders with one canonical value and one update time, without writes. This is
+not a claim of original data loss or proof that r28 had no concurrent mutation;
+the original before/after values were not persisted. New synthetic map fixtures
+capture 224 reads on each pinned JAR across seven operations; both JARs agree.
+Commit these before generic deterministic response encoding. Do not change the
+runner; the next complete smoke must still pass its unchanged assertions.
+R28 original 27 checksums verified remotely and locally. Private raw backup:
+`/tmp/fireside-phase5-r28-raw.6RFDYH`; never publish the whole directory.
 Private raw r26 backup: `/tmp/fireside-phase5-r26-raw.4973IM`; never publish its
 credentials, complete exports, or raw service/runtime state.
 
