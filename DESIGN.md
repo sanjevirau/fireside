@@ -2376,7 +2376,12 @@ filesystem and must be capacity-checked against the manifest minimum before
 launch. Their path must remain short enough for the 107-byte Linux Functions
 Unix-socket boundary. Smoke and full-data attempts use the same placement rule;
 the manifest, protected browser runner, workload, durations, and thresholds do
-not change.
+not change. The harness now requires an explicit absolute `--runtime-root`,
+records that filesystem's total and available bytes in `environment.json`, and
+rejects it before launch unless the existing 80 GB controlled-host minimum is
+available. Attempt and lifecycle directories use a 16-hex digest plus short
+labels; the harness models firebase-tools' exact 16-hex `fire_emu_*.sock`
+suffix and refuses any path above the 107-byte boundary.
 
 ### Auth refresh grant reuse (r24 follow-up oracle)
 

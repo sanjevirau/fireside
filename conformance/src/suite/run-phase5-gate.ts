@@ -53,6 +53,10 @@ import {
   runPhase5SwapCommand,
 } from "./phase5-swap-preflight.ts";
 import {
+  phase5RuntimeDirectory,
+  preparePhase5RuntimeRoot,
+} from "./phase5-runtime-directory.ts";
+import {
   cacheOutputDigest,
   PHASE5_EXPORT_SHUTDOWN_SECONDS,
   PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS,
@@ -76,6 +80,7 @@ interface Arguments {
   readonly projectId: string;
   readonly reportPath: string;
   readonly runtimeAssetsRoot: string;
+  readonly runtimeRoot: string;
   readonly smoke: boolean;
   readonly smokeEvidence: string | null;
   readonly twodartRevision: string;
@@ -575,17 +580,6 @@ function gateDatasetName(args: Arguments): string {
     : "full-data";
 }
 
-function gateRuntimeDirectory(
-  outputDirectory: string,
-  label: string,
-): string {
-  return path.join(
-    "/tmp",
-    `fireside-p5-${digest(outputDirectory).slice(0, 16)}`,
-    label,
-  );
-}
-
 async function startStack(
   args: Arguments,
   manifest: Phase5Manifest,
@@ -622,7 +616,8 @@ async function startStack(
       label,
       nodeBinary: args.nodeBinary,
       ports: PHASE5_STACK_PORTS[stack],
-      runtimeDirectory: gateRuntimeDirectory(
+      runtimeDirectory: phase5RuntimeDirectory(
+        args.runtimeRoot,
         args.outputDirectory,
         `${stack}-${label}`,
       ),
@@ -1050,7 +1045,11 @@ async function runFreshColleague(
         label,
         nodeBinary: args.nodeBinary,
         ports: PHASE5_STACK_PORTS.fireside,
-        runtimeDirectory: gateRuntimeDirectory(args.outputDirectory, label),
+        runtimeDirectory: phase5RuntimeDirectory(
+          args.runtimeRoot,
+          args.outputDirectory,
+          label,
+        ),
         stack: backend ?? "fireside",
         tmuxSession: `fireside-phase5-${label}-${process.pid.toString(36)}`,
       },
@@ -1169,6 +1168,10 @@ async function verifyEnvironment(
   ]) {
     await access(candidate);
   }
+  const runtimeFilesystem = await preparePhase5RuntimeRoot(
+    args.runtimeRoot,
+    manifest.host.minimumAvailableDiskBytes,
+  );
   const dataset = await treeIdentity(datasetSource);
   const expectedDataset = args.smoke ? manifest.diagnosticSmoke.dataset : manifest.dataset;
   if (
@@ -1278,6 +1281,7 @@ async function verifyEnvironment(
       retryReportedSeparately: true,
     },
     runtimeAssets,
+    runtimeFilesystem,
     schemaVersion: 1,
     smoke: args.smoke,
     stagedDatasets,
@@ -1671,6 +1675,7 @@ function parseArguments(values: readonly string[]): Arguments {
     projectId,
     reportPath: required("report-path"),
     runtimeAssetsRoot: required("runtime-assets-root"),
+    runtimeRoot: required("runtime-root"),
     smoke,
     smokeEvidence:
       smokeEvidenceValue === undefined ? null : path.resolve(smokeEvidenceValue),

@@ -240,8 +240,10 @@ test("Phase 5 gate includes smoke, fresh colleague, regression, and checksum pat
   assert.match(source, /environment\.candidateRevision !== currentRevision/u);
   assert.match(source, /await verifyChecksumManifest\(smokeEvidence\)/u);
   assert.match(source, /`phase5-smoke-\$\{digest\(args\.outputDirectory\)\.slice\(0, 16\)\}`/u);
-  assert.match(source, /function gateRuntimeDirectory/u);
-  assert.match(source, /path\.join\(\s*"\/tmp",\s*`fireside-p5-\$\{digest\(outputDirectory\)\.slice\(0, 16\)\}`/u);
+  assert.match(source, /preparePhase5RuntimeRoot\(\s*args\.runtimeRoot,\s*manifest\.host\.minimumAvailableDiskBytes/u);
+  assert.match(source, /runtimeDirectory: phase5RuntimeDirectory\(/u);
+  assert.match(source, /runtimeRoot: required\("runtime-root"\)/u);
+  assert.doesNotMatch(source, /path\.join\(\s*"\/tmp"/u);
   assert.doesNotMatch(source, /`runtime-\$\{path\.basename\(args\.outputDirectory\)\}`/u);
 });
 
