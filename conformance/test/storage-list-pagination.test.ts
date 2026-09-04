@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { execFile, spawn } from "node:child_process";
+import { once } from "node:events";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import test from "node:test";
+import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 
 interface PageObservation {
   readonly id: string;
@@ -63,6 +67,76 @@ test("official Storage pagination crosses the default 1,000-object boundary", as
   assert.equal(fixture.invariants.sdkAutopaginationReturnsAllObjects, true);
 });
 
+test("Fireside HTTP replays the oracle's inclusive continuation contract", { timeout: 600_000 }, async () => {
+  const repository = fileURLToPath(new URL("../../", import.meta.url));
+  await promisify(execFile)(
+    "cargo",
+    ["build", "--locked", "-p", "fireside-storage-front", "--example", "encoding_fixture_server"],
+    { cwd: repository },
+  );
+  const cargoMetadata = await promisify(execFile)(
+    "cargo",
+    ["metadata", "--no-deps", "--format-version", "1"],
+    { cwd: repository },
+  );
+  const targetDirectory = (JSON.parse(cargoMetadata.stdout) as { target_directory: string }).target_directory;
+  const scratch = await mkdtemp("/tmp/fireside-storage-pagination-replay-");
+  const child = spawn(
+    `${targetDirectory}/debug/examples/encoding_fixture_server`,
+    [scratch],
+    { stdio: ["ignore", "pipe", "pipe"] },
+  );
+  const exited = once(child, "exit");
+  try {
+    const origin = await new Promise<string>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("Storage pagination peer readiness timeout")),
+        30_000,
+      );
+      child.stdout.once("data", (chunk: Buffer) => {
+        clearTimeout(timer);
+        resolve(chunk.toString().trim());
+      });
+      child.once("error", reject);
+      child.once("exit", () => {
+        clearTimeout(timer);
+        reject(new Error("Storage pagination peer exited before readiness"));
+      });
+    });
+    const names = Array.from(
+      { length: 5 },
+      (_, index) => `objects/${String(index).padStart(4, "0")}.json`,
+    );
+    for (const name of names) {
+      const response = await fetch(
+        `${origin}/upload/storage/v1/b/assets-local.twodart.com/o?uploadType=media&name=${encodeURIComponent(name)}`,
+        {
+          method: "POST",
+          body: JSON.stringify({ name }),
+          headers: { "content-type": "application/json" },
+        },
+      );
+      assert.equal(response.status, 200);
+    }
+
+    for (const route of ["storage/v1", "v0"]) {
+      const first = await listFireside(origin, route, "");
+      assert.deepEqual(first.itemNames, names.slice(0, 2));
+      assert.equal(first.nextPageToken, names[2]);
+      const second = await listFireside(origin, route, first.nextPageToken ?? "");
+      assert.deepEqual(second.itemNames, names.slice(2, 4));
+      assert.equal(second.nextPageToken, names[4]);
+      const third = await listFireside(origin, route, second.nextPageToken ?? "");
+      assert.deepEqual(third.itemNames, names.slice(4));
+      assert.equal(third.nextPageToken, undefined);
+    }
+  } finally {
+    child.kill("SIGTERM");
+    await exited;
+    await rm(scratch, { recursive: true, force: true });
+  }
+});
+
 function observation(
   observations: readonly PageObservation[],
   id: string,
@@ -70,4 +144,26 @@ function observation(
   const result = observations.find((candidate) => candidate.id === id);
   assert.ok(result, `missing Storage pagination observation ${id}`);
   return result;
+}
+
+async function listFireside(
+  origin: string,
+  route: string,
+  pageToken: string,
+): Promise<{ readonly itemNames: readonly string[]; readonly nextPageToken?: string }> {
+  const query = new URLSearchParams({ prefix: "objects/", maxResults: "2" });
+  if (pageToken.length > 0) query.set("pageToken", pageToken);
+  const response = await fetch(
+    `${origin}/${route}/b/assets-local.twodart.com/o?${query.toString()}`,
+    { headers: { authorization: "Bearer owner" } },
+  );
+  assert.equal(response.status, 200);
+  const body = await response.json() as {
+    readonly items?: readonly { readonly name?: string }[];
+    readonly nextPageToken?: string;
+  };
+  return {
+    itemNames: (body.items ?? []).map((item) => item.name ?? ""),
+    ...(body.nextPageToken ? { nextPageToken: body.nextPageToken } : {}),
+  };
 }

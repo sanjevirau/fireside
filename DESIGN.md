@@ -2635,8 +2635,11 @@ that object is included when the token is resumed. A token which is not an
 existing object name restarts at the first item. Prefix and delimiter grouping
 are computed before item pagination, and both routes share the same page
 contract. An unbounded `bucket.getFiles()` call must therefore follow the token
-and return all 1,002 objects. Fireside must match this contract so SDK callers
-can enumerate any supported dataset without silently truncating at 1,000.
+and return all 1,002 objects. Fireside now applies one shared ordered page
+implementation to both routes: prefixes and delimiters are resolved first,
+valid tokens resume inclusively, unknown tokens restart at the beginning, and
+the next object name is emitted as the continuation token. SDK callers can
+therefore enumerate supported datasets without silently truncating at 1,000.
 
 ## 13. Engineering rules
 

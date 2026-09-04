@@ -6,7 +6,7 @@
 
 #![forbid(unsafe_code)]
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Display, Formatter};
 use std::io::Read as _;
 use std::path::{Path as FilePath, PathBuf};
@@ -39,6 +39,8 @@ use download::file_response;
 mod encoding_tests;
 #[cfg(test)]
 mod missing_object_tests;
+#[cfg(test)]
+mod pagination_tests;
 
 /// One rules source bound to a Storage bucket.
 #[derive(Debug, Clone)]
@@ -574,34 +576,29 @@ async fn v0_list(
     let prefix = query.get("prefix").map_or("", String::as_str);
     authorize_list(&state, &bucket, prefix, &headers).await?;
     let delimiter = query.get("delimiter").map(String::as_str);
+    let page_token = query.get("pageToken").map(String::as_str);
     let maximum = query
         .get("maxResults")
         .and_then(|value| value.parse::<usize>().ok())
         .unwrap_or(1_000);
     let data = lock(&state.inner);
-    let mut prefixes = Vec::new();
-    let mut items = Vec::new();
-    for object in data
-        .objects
-        .values()
-        .filter(|object| object.bucket == bucket && object.name.starts_with(prefix))
-    {
-        if let Some(delimiter) = delimiter {
-            let tail = &object.name[prefix.len()..];
-            if let Some(index) = tail.find(delimiter) {
-                let value = format!("{}{}", prefix, &tail[..=index]);
-                if !prefixes.contains(&value) {
-                    prefixes.push(value);
-                }
-                continue;
-            }
-        }
-        items.push(json!({ "name": object.name, "bucket": object.bucket }));
-        if items.len() >= maximum {
-            break;
-        }
+    let page = list_objects(&data, &bucket, prefix, delimiter, page_token, maximum);
+    let items = page
+        .items
+        .into_iter()
+        .map(|object| json!({ "name": object.name, "bucket": object.bucket }))
+        .collect::<Vec<_>>();
+    let mut response = JsonMap::from_iter([
+        ("prefixes".to_owned(), json!(page.prefixes)),
+        ("items".to_owned(), JsonValue::Array(items)),
+    ]);
+    if let Some(next_page_token) = page.next_page_token {
+        response.insert(
+            "nextPageToken".to_owned(),
+            JsonValue::String(next_page_token),
+        );
     }
-    Ok(Json(json!({ "prefixes": prefixes, "items": items })))
+    Ok(Json(JsonValue::Object(response)))
 }
 
 async fn v0_patch(
@@ -900,19 +897,101 @@ async fn gcs_list(
 ) -> Result<Json<JsonValue>, StorageApiError> {
     let query = query_fields(query.as_deref());
     let prefix = query.get("prefix").map_or("", String::as_str);
+    let delimiter = query.get("delimiter").map(String::as_str);
+    let page_token = query.get("pageToken").map(String::as_str);
     let maximum = query
         .get("maxResults")
         .and_then(|value| value.parse::<usize>().ok())
         .unwrap_or(1_000);
     let data = lock(&state.inner);
-    let items = data
-        .objects
-        .values()
-        .filter(|object| object.bucket == bucket && object.name.starts_with(prefix))
-        .take(maximum)
+    let page = list_objects(&data, &bucket, prefix, delimiter, page_token, maximum);
+    let items = page
+        .items
+        .into_iter()
         .map(|object| gcs_metadata(&state, object))
         .collect::<Vec<_>>();
-    Ok(Json(json!({ "kind": "storage#objects", "items": items })))
+    let mut response = JsonMap::from_iter([(
+        "kind".to_owned(),
+        JsonValue::String("storage#objects".to_owned()),
+    )]);
+    if let Some(next_page_token) = page.next_page_token {
+        response.insert(
+            "nextPageToken".to_owned(),
+            JsonValue::String(next_page_token),
+        );
+    }
+    if !page.prefixes.is_empty() {
+        response.insert("prefixes".to_owned(), json!(page.prefixes));
+    }
+    if !items.is_empty() {
+        response.insert("items".to_owned(), JsonValue::Array(items));
+    }
+    Ok(Json(JsonValue::Object(response)))
+}
+
+struct ObjectListPage<'a> {
+    items: Vec<&'a StoredObject>,
+    prefixes: Vec<String>,
+    next_page_token: Option<String>,
+}
+
+fn list_objects<'a>(
+    data: &'a StorageData,
+    bucket: &str,
+    prefix: &str,
+    delimiter: Option<&str>,
+    page_token: Option<&str>,
+    maximum: usize,
+) -> ObjectListPage<'a> {
+    let first_key = object_key(bucket, prefix);
+    let scoped = || {
+        data.objects
+            .range(first_key.clone()..)
+            .map(|(_, object)| object)
+            .take_while(|object| object.bucket == bucket && object.name.starts_with(prefix))
+    };
+    let item_prefix = |object: &StoredObject| {
+        delimiter.and_then(|delimiter| {
+            object.name[prefix.len()..].find(delimiter).map(|index| {
+                let end = prefix.len() + index + delimiter.len();
+                object.name[..end].to_owned()
+            })
+        })
+    };
+
+    let mut prefixes = BTreeSet::new();
+    let mut token_present = page_token.is_none();
+    for object in scoped() {
+        if let Some(group) = item_prefix(object) {
+            prefixes.insert(group);
+        } else if page_token == Some(object.name.as_str()) {
+            token_present = true;
+        }
+    }
+
+    let mut started = page_token.is_none() || !token_present;
+    let mut items = Vec::with_capacity(maximum.min(1_000));
+    let mut next_page_token = None;
+    for object in scoped().filter(|object| item_prefix(object).is_none()) {
+        if !started {
+            if page_token == Some(object.name.as_str()) {
+                started = true;
+            } else {
+                continue;
+            }
+        }
+        if items.len() == maximum {
+            next_page_token = Some(object.name.clone());
+            break;
+        }
+        items.push(object);
+    }
+
+    ObjectListPage {
+        items,
+        prefixes: prefixes.into_iter().collect(),
+        next_page_token,
+    }
 }
 
 async fn gcs_metadata_or_copy(
