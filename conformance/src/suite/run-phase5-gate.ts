@@ -1495,11 +1495,45 @@ async function writeReport(
     `- A fresh checkout started Fireside with \`bun dev:mprocs\` and the documented official fallback also started successfully.\n` +
     `- Existing Fireside and Twodart regression/build gates passed.\n\n` +
     `Machine-readable lifecycle evidence: \`${digest(JSON.stringify(lifecycle))}\`. Machine-readable soak evidence: \`${digest(JSON.stringify(soak))}\`.\n\n` +
+    renderPhase5GeneratedCacheComparison(lifecycle) +
     renderPhase5ResourceComparison(soak) +
     `## Reproduction\n\n` +
     `Use the frozen manifest, exact Twodart revision, isolated Linux port blocks, transferred dataset/assets with their recorded SHA-256 identities, and run \`npm run test:suite:phase5-gate --prefix conformance -- [the recorded environment arguments]\`. On macOS, the ordinary developer command remains \`bun dev:mprocs\`; use \`TWODART_FIREBASE_BACKEND=official bun dev:mprocs\` only for the explicit fallback.\n\n` +
     `No private dataset content, credentials, OTPs, user identifiers, or deck identifiers are included in this report or durable evidence.\n`;
   await writeFile(args.reportPath, report, { flag: "wx" });
+}
+
+function renderPhase5GeneratedCacheComparison(
+  lifecycle: Record<string, unknown>,
+): string {
+  const records = lifecycle.records as
+    | Partial<Record<Phase5StackName, Partial<LifecycleRecord>>>
+    | undefined;
+  const rows: string[] = [];
+  for (const stack of stackNames) {
+    const record = records?.[stack];
+    for (const iteration of ["initial", "restart"] as const) {
+      const lifecycleIteration = record?.[iteration];
+      if (lifecycleIteration === undefined) continue;
+      for (const [observation, state] of [
+        ["before journeys", lifecycleIteration.stateBeforeJourney],
+        ["after journeys", lifecycleIteration.stateAfterJourney],
+      ] as const) {
+        const cache = state.generatedCache;
+        if (cache === null) {
+          rows.push(`| ${stack} | ${iteration} | ${observation} | missing | missing | missing |`);
+        } else {
+          rows.push(
+            `| ${stack} | ${iteration} | ${observation} | ${String(cache.physicalBytes)} | ${String(cache.decodedBytes)} | \`${cache.normalizedSha256}\` |`,
+          );
+        }
+      }
+    }
+  }
+  return `### Generated cache measurements\n\n` +
+    `Physical gzip bytes are measurements only; normalized logical SHA-256 equality is required.\n\n` +
+    `| Stack | Lifecycle | Observation | Physical gzip bytes | Decoded bytes | Normalized logical SHA-256 |\n` +
+    `|---|---|---|---:|---:|---|\n${rows.join("\n")}\n\n`;
 }
 
 async function writeChecksums(directory: string): Promise<void> {

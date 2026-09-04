@@ -190,6 +190,8 @@ test("Phase 5 gate compares every frozen persistent count without content", asyn
   assert.match(source, /stableStorageCountsExact: true/u);
   assert.match(source, /physicalBytesMeasurementOnly: true/u);
   assert.match(source, /normalizedLogicalValuesMatched: true/u);
+  assert.match(source, /renderPhase5GeneratedCacheComparison\(lifecycle\)/u);
+  assert.match(source, /Physical gzip bytes are measurements only/u);
 });
 
 test("Phase 5 gate preserves the no-private-evidence boundary", async () => {
