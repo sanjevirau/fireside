@@ -63,6 +63,10 @@ const officialStorageRuntimeCapacityR33Url = new URL(
   "../fixtures/phase5/official-storage-runtime-capacity-r33.json",
   import.meta.url,
 );
+const swapPreflightTransientProcessR34Url = new URL(
+  "../fixtures/phase5/swap-preflight-transient-process-r34.json",
+  import.meta.url,
+);
 
 test("the r33 official Storage import freezes the runtime-filesystem capacity failure", async () => {
   const fixture = JSON.parse(
@@ -137,6 +141,72 @@ test("the r33 official Storage import freezes the runtime-filesystem capacity fa
     runtimeMustUseTheControlledLargeCapacityFilesystem: true,
     smokeAndFullDataUseTheSamePlacementRule: true,
   });
+});
+
+test("the r34 single-process observation requires evidenced stable quiescence", async () => {
+  const fixture = JSON.parse(
+    await readFile(swapPreflightTransientProcessR34Url, "utf8"),
+  ) as {
+    readonly schemaVersion: number;
+    readonly observation: {
+      readonly freshBuildPassed: boolean;
+      readonly preflightDurationMilliseconds: number;
+      readonly singleScan: {
+        readonly activeProcesses: readonly { readonly pid: number; readonly directory: string }[];
+        readonly commandIdentityCaptured: boolean;
+      };
+      readonly laterInspections: readonly {
+        readonly matchingProcesses: number;
+        readonly gateListeners: number;
+      }[];
+      readonly officialStackStarted: boolean;
+      readonly firesideStackStarted: boolean;
+      readonly swapDrainStarted: boolean;
+      readonly failedSystemdUnits: number;
+      readonly currentBootOomOrResourceEvidence: number;
+    };
+    readonly contract: {
+      readonly captureProcessFields: readonly string[];
+      readonly requiredConsecutiveEmptySamples: number;
+      readonly sampleIntervalMilliseconds: number;
+      readonly maximumQuiescenceWaitMilliseconds: number;
+      readonly swapDrainOnlyAfterStableEmptySamples: boolean;
+      readonly persistentProcessMustFailBeforeSwapMutation: boolean;
+      readonly transientObservationMayBeWaitedOutButNotIgnored: boolean;
+      readonly quiescenceLedgerRequiredOnPassAndFailure: boolean;
+      readonly phase5ManifestMayChange: boolean;
+      readonly protectedBrowserRunnerMayChange: boolean;
+      readonly phase5WorkloadOrThresholdsMayChange: boolean;
+    };
+  };
+
+  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.observation.freshBuildPassed, true);
+  assert.equal(fixture.observation.preflightDurationMilliseconds, 51);
+  assert.equal(fixture.observation.singleScan.activeProcesses.length, 1);
+  assert.equal(fixture.observation.singleScan.activeProcesses[0]?.pid, 565969);
+  assert.match(fixture.observation.singleScan.activeProcesses[0]?.directory ?? "", /stack-official$/u);
+  assert.equal(fixture.observation.singleScan.commandIdentityCaptured, false);
+  assert.ok(fixture.observation.laterInspections.every(({ matchingProcesses, gateListeners }) =>
+    matchingProcesses === 0 && gateListeners === 0));
+  assert.equal(fixture.observation.officialStackStarted, false);
+  assert.equal(fixture.observation.firesideStackStarted, false);
+  assert.equal(fixture.observation.swapDrainStarted, false);
+  assert.equal(fixture.observation.failedSystemdUnits, 0);
+  assert.equal(fixture.observation.currentBootOomOrResourceEvidence, 0);
+  assert.deepEqual(fixture.contract.captureProcessFields, [
+    "pid", "parentPid", "elapsedMilliseconds", "commandName", "commandLine", "directory",
+  ]);
+  assert.equal(fixture.contract.requiredConsecutiveEmptySamples, 3);
+  assert.equal(fixture.contract.sampleIntervalMilliseconds, 250);
+  assert.equal(fixture.contract.maximumQuiescenceWaitMilliseconds, 30_000);
+  assert.equal(fixture.contract.swapDrainOnlyAfterStableEmptySamples, true);
+  assert.equal(fixture.contract.persistentProcessMustFailBeforeSwapMutation, true);
+  assert.equal(fixture.contract.transientObservationMayBeWaitedOutButNotIgnored, true);
+  assert.equal(fixture.contract.quiescenceLedgerRequiredOnPassAndFailure, true);
+  assert.equal(fixture.contract.phase5ManifestMayChange, false);
+  assert.equal(fixture.contract.protectedBrowserRunnerMayChange, false);
+  assert.equal(fixture.contract.phase5WorkloadOrThresholdsMayChange, false);
 });
 
 test("the exact lifecycle observation requires one SIGINT to one emulator process", async () => {

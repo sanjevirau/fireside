@@ -1,0 +1,7 @@
+{
+  "label": "official-soak",
+  "startedAt": "2026-09-04T04:34:33.276Z",
+  "passed": false,
+  "errorText": "Error: Refusing swap drain while Phase 5 stack processes are active: [{\"pid\":565969,\"directory\":\"/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/stack-official\"}]\n    at assertNoPhase5StackProcesses (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-74113ad/conformance/src/suite/phase5-swap-preflight.ts:46:11)\n    at async Object.assertQuiescent (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-74113ad/conformance/src/suite/run-phase5-gate.ts:1339:9)\n    at async drainPhase5Swap (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-74113ad/conformance/src/suite/phase5-swap-preflight.ts:87:3)\n    at async recordPreflight (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-74113ad/conformance/src/suite/run-phase5-gate.ts:1337:23)\n    at async main (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-74113ad/conformance/src/suite/run-phase5-gate.ts:245:7)\n    at async <anonymous> (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-74113ad/conformance/src/suite/run-phase5-gate.ts:1713:1)",
+  "completedAt": "2026-09-04T04:34:33.327Z"
+}

@@ -1,0 +1,4 @@
+Classification: launcher-only preflight rejection; no tmux session or Phase 5 workload started.
+Observed failure:
+install: cannot create directory '/srv/dev-fast/p5-runtime': Permission denied
+Correction: create the approved runtime root with sudo and assign it to sanjevi before launch.

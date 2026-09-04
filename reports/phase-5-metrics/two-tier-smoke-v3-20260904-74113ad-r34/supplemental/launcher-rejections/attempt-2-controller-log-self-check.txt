@@ -1,0 +1,5 @@
+Classification: launcher-only controller rejection; no Phase 5 workload started.
+Observed confirmation failure after tmux invocation:
+no server running on /tmp/tmux-1000/default
+Root cause: the controller redirected stdout to controller-74113ad-r34-then-full.log before the launcher began, while the launcher asserted that same log path did not exist.
+Correction: remove only the contradictory controller-log nonexistence assertion; retain the controller exit-marker assertion and every gate criterion.

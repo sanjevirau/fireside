@@ -1,0 +1,15 @@
+npm notice run fireside-conformance@0.0.1 test:suite:phase5-gate
+npm notice run node --import tsx src/suite/run-phase5-gate.ts --smoke --fireside-binary /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/target-74113ad/release/fireside --fireside-dir /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/stack-fireside --fresh-dir /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/fresh-colleague --java-home /home/sanjevi/.local/share/mise/installs/java/26.0.2.1 --node-binary /home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node --official-dir /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/stack-official --project-id demo-twodart-local --runtime-assets-root /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/inputs/Assets --runtime-root /srv/dev-fast/p5-runtime --twodart-revision 6bda5bf29b2399017d2a872e8f3fc1a15d073a54 --full-data /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/inputs/full-data --output-dir /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/diagnostics/two-tier-smoke-v3-20260904-74113ad-r34 --report-path /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/diagnostics/two-tier-smoke-v3-20260904-74113ad-r34.md
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+Error: Refusing swap drain while Phase 5 stack processes are active: [{"pid":565969,"directory":"/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/stack-official"}]
+    at assertNoPhase5StackProcesses (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-74113ad/conformance/src/suite/phase5-swap-preflight.ts:46:11)
+    at async Object.assertQuiescent (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-74113ad/conformance/src/suite/run-phase5-gate.ts:1339:9)
+    at async drainPhase5Swap (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-74113ad/conformance/src/suite/phase5-swap-preflight.ts:87:3)
+    at async recordPreflight (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-74113ad/conformance/src/suite/run-phase5-gate.ts:1337:23)
+    at async main (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-74113ad/conformance/src/suite/run-phase5-gate.ts:245:7)
+    at async <anonymous> (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-74113ad/conformance/src/suite/run-phase5-gate.ts:1713:1)
+
+Node.js v24.20.0

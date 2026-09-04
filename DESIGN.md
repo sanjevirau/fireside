@@ -2383,6 +2383,31 @@ available. Attempt and lifecycle directories use a 16-hex digest plus short
 labels; the harness models firebase-tools' exact 16-hex `fire_emu_*.sock`
 suffix and refuses any path above the 107-byte boundary.
 
+### Phase 5 stable swap-preflight quiescence oracle (r34)
+
+R34 passed its seven-job candidate CI and fresh Linux release build, then
+stopped before either emulator stack started. The official-soak preflight's
+single `/proc` scan observed PID `565969` with its current working directory at
+the isolated official Twodart checkout. It rejected the authorized swap drain
+within 51 ms. The original evidence did not record the process's command
+identity. Two later read-only host inspections found no matching process and no
+gate listener; systemd and current-boot OOM/resource checks remained clean.
+
+An instantaneous non-empty process scan is therefore insufficient to
+distinguish a short-lived environment-verification descendant from a running
+stack, while simply ignoring it would make the swap drain unsafe. Phase 5 now
+requires three consecutive empty samples, 250 ms apart, within a 30-second
+quiescence window before `swapoff`. Every sample is evidence. Matching process
+records include PID, parent PID, elapsed time, command name, command line, and
+working directory. A process that remains through the bounded window fails
+before any swap command; a transient process must disappear before the three
+empty samples can complete. The quiescence ledger is stored on both pass and
+failure.
+
+This is a preflight observation correction only. It changes no schema-v3
+manifest field, protected browser runner, workload, duration, soak threshold,
+or product behavior.
+
 ### Auth refresh grant reuse (r24 follow-up oracle)
 
 `auth-refresh-reuse` freezes 28 direct HTTP observations against firebase-tools

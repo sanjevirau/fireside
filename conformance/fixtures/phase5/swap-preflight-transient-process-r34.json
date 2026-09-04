@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "kind": "exact Phase 5 r34 preflight failure plus two later read-only host inspections",
+    "candidateRevision": "74113adf310d9beb6369cf4b1fe7da6471c8dc40",
+    "twodartRevision": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54",
+    "diagnostic": "two-tier-smoke-v3-20260904-74113ad-r34",
+    "manifestSha256": "fe9d44c1edb6105d6edc9f0ab3b3251cb34929b7b6113e559ff9a2558ad7b957",
+    "protectedRunnerSha256": "ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc"
+  },
+  "observation": {
+    "freshBuildPassed": true,
+    "releaseBinarySha256": "eb967542b64725d62aaaaaf74d294c150fe7725fbe9bf08b72bf938248956ba8",
+    "preflightStartedAt": "2026-09-04T04:34:33.276Z",
+    "preflightCompletedAt": "2026-09-04T04:34:33.327Z",
+    "preflightDurationMilliseconds": 51,
+    "singleScan": {
+      "activeProcesses": [
+        {
+          "pid": 565969,
+          "directory": "/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/stack-official"
+        }
+      ],
+      "commandIdentityCaptured": false
+    },
+    "laterInspections": [
+      {
+        "observedAt": "2026-09-04T12:43:03+08:00",
+        "matchingProcesses": 0,
+        "gateListeners": 0
+      },
+      {
+        "observedAt": "2026-09-04T12:56:02+08:00",
+        "matchingProcesses": 0,
+        "gateListeners": 0
+      }
+    ],
+    "officialStackStarted": false,
+    "firesideStackStarted": false,
+    "swapDrainStarted": false,
+    "failedSystemdUnits": 0,
+    "currentBootOomOrResourceEvidence": 0
+  },
+  "contract": {
+    "captureProcessFields": [
+      "pid",
+      "parentPid",
+      "elapsedMilliseconds",
+      "commandName",
+      "commandLine",
+      "directory"
+    ],
+    "requiredConsecutiveEmptySamples": 3,
+    "sampleIntervalMilliseconds": 250,
+    "maximumQuiescenceWaitMilliseconds": 30000,
+    "swapDrainOnlyAfterStableEmptySamples": true,
+    "persistentProcessMustFailBeforeSwapMutation": true,
+    "transientObservationMayBeWaitedOutButNotIgnored": true,
+    "quiescenceLedgerRequiredOnPassAndFailure": true,
+    "phase5ManifestMayChange": false,
+    "protectedBrowserRunnerMayChange": false,
+    "phase5WorkloadOrThresholdsMayChange": false
+  }
+}
