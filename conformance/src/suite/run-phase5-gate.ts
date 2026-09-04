@@ -47,10 +47,11 @@ import {
   type Phase5GeneratedCacheMeasurement,
 } from "./phase5-cache-state-parity.ts";
 import {
-  assertNoPhase5StackProcesses,
   drainPhase5Swap,
+  Phase5ProcessQuiescenceError,
   readPhase5SwapHostState,
   runPhase5SwapCommand,
+  waitForPhase5StackQuiescence,
 } from "./phase5-swap-preflight.ts";
 import {
   phase5RuntimeDirectory,
@@ -1336,9 +1337,16 @@ async function recordPreflight(
   try {
     const swapDrain = await drainPhase5Swap({
       assertQuiescent: async () => {
-        await assertNoPhase5StackProcesses([
-          args.officialDirectory, args.firesideDirectory, args.freshDirectory,
-        ]);
+        try {
+          record.processQuiescence = await waitForPhase5StackQuiescence([
+            args.officialDirectory, args.firesideDirectory, args.freshDirectory,
+          ]);
+        } catch (error: unknown) {
+          if (error instanceof Phase5ProcessQuiescenceError) {
+            record.processQuiescence = error.evidence;
+          }
+          throw error;
+        }
         const listeners = await capture("ss", ["-ltnH"], repositoryRoot);
         const gatePorts = Object.values(PHASE5_STACK_PORTS).flatMap((ports) => Object.values(ports));
         if (listeners.split("\n").some((line) => gatePorts.some((port) => line.includes(`:${port} `)))) {

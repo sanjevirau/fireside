@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
-  drainPhase5Swap, phase5StackDirectoryMatches, type SwapHostState, type SwapDrainDependencies,
+  drainPhase5Swap,
+  Phase5ProcessQuiescenceError,
+  phase5StackDirectoryMatches,
+  waitForPhase5StackQuiescence,
+  type Phase5StackProcess,
+  type SwapHostState,
+  type SwapDrainDependencies,
 } from "../src/suite/phase5-swap-preflight.ts";
 
 const runnerUrl = new URL("../src/suite/run-phase5-gate.ts", import.meta.url);
@@ -306,6 +312,67 @@ test("swap drain refuses an active stack before any command or state mutation", 
   assert.equal(phase5StackDirectoryMatches("/srv/dev-fast/runtime-data/fireside-phase5-current/harness", []), false);
 });
 
+function fakeQuiescence(scans: readonly (readonly Phase5StackProcess[])[]) {
+  let elapsedMilliseconds = 0;
+  let scanIndex = 0;
+  return {
+    now: () => new Date(elapsedMilliseconds),
+    scan: async () => scans[Math.min(scanIndex++, scans.length - 1)] ?? [],
+    sleep: async (milliseconds: number) => {
+      elapsedMilliseconds += milliseconds;
+    },
+  };
+}
+
+const transientStackProcess: Phase5StackProcess = {
+  pid: 565969,
+  parentPid: 1,
+  elapsedMilliseconds: 250,
+  commandName: "node",
+  commandLine: "node node_modules/.bin/firebase --version",
+  directory: "/isolated/official",
+};
+
+test("swap preflight records a transient process and requires three later empty samples", async () => {
+  const evidence = await waitForPhase5StackQuiescence(
+    ["/isolated/official"],
+    {
+      maximumWaitMilliseconds: 30_000,
+      requiredConsecutiveEmptySamples: 3,
+      sampleIntervalMilliseconds: 250,
+    },
+    fakeQuiescence([[transientStackProcess], [], [], []]),
+  );
+  assert.equal(evidence.passed, true);
+  assert.equal(evidence.samples.length, 4);
+  assert.deepEqual(evidence.samples[0]?.activeProcesses, [transientStackProcess]);
+  assert.deepEqual(evidence.samples.slice(1).map(({ activeProcesses }) => activeProcesses.length), [0, 0, 0]);
+  assert.equal(evidence.completedAt, "1970-01-01T00:00:00.750Z");
+});
+
+test("persistent stack processes retain their identity and fail before swap mutation", async () => {
+  const dependencies = fakeQuiescence([[transientStackProcess]]);
+  let failure: Phase5ProcessQuiescenceError | undefined;
+  try {
+    await waitForPhase5StackQuiescence(
+      ["/isolated/official"],
+      {
+        maximumWaitMilliseconds: 500,
+        requiredConsecutiveEmptySamples: 3,
+        sampleIntervalMilliseconds: 250,
+      },
+      dependencies,
+    );
+  } catch (error: unknown) {
+    assert.ok(error instanceof Phase5ProcessQuiescenceError);
+    failure = error;
+  }
+  assert.equal(failure?.evidence.passed, false);
+  assert.equal(failure?.evidence.samples.length, 3);
+  assert.deepEqual(failure?.evidence.samples.at(-1)?.activeProcesses, [transientStackProcess]);
+  assert.match(failure?.message ?? "", /565969/u);
+});
+
 test("a failed drain still restores swap and failures or swappiness drift cannot pass", async () => {
   for (const options of [{ failed: "swapoff" }, { failed: "swapon" }, { drift: true }] as const) {
     const fake = fakeSwapDrain(options);
@@ -327,6 +394,8 @@ test("every stack launch records a drained zero-activity preflight; soak swap is
   assert.match(source, /await recordPreflight\(args, manifest, environment, `\$\{stack\}-restart`\)/u);
   assert.match(source, /await recordPreflight\(args, manifest, environment, label\)/u);
   assert.match(source, /record\.swapDrain = swapDrain/u);
+  assert.match(source, /record\.processQuiescence = await waitForPhase5StackQuiescence/u);
+  assert.match(source, /record\.processQuiescence = error\.evidence/u);
   assert.match(source, /record\.hostHealth = await captureHostHealth\(manifest\)/u);
   assert.match(source, /preflights\[label\] = record/u);
   assert.match(source, /swapDrain\.after\.vmSwappiness !== environment\.vmSwappiness/u);
