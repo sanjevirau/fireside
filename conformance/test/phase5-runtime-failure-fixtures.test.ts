@@ -83,6 +83,50 @@ const firesideFullDataResponseMaterializationR37Url = new URL(
   "../fixtures/phase5/fireside-full-data-response-materialization-r37.json",
   import.meta.url,
 );
+const firesideStorageListPaginationR38Url = new URL(
+  "../fixtures/phase5/fireside-storage-list-pagination-r38.json",
+  import.meta.url,
+);
+
+test("r38 freezes the full-data Storage list pagination defect", async () => {
+  const fixture = JSON.parse(
+    await readFile(firesideStorageListPaginationR38Url, "utf8"),
+  ) as {
+    readonly schemaVersion: number;
+    readonly gateResult: string;
+    readonly classification: string;
+    readonly dataset: Readonly<Record<string, number>>;
+    readonly observation: Readonly<Record<string, boolean | number | string | readonly string[]>>;
+    readonly diagnosis: Readonly<Record<string, boolean | number | string>>;
+    readonly source: Readonly<Record<string, boolean | string>>;
+    readonly contract: Readonly<Record<string, boolean>>;
+  };
+
+  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.gateResult, "failed");
+  assert.equal(fixture.classification, "fireside-product-defect");
+  assert.equal(fixture.dataset.storageObjects, 33_353);
+  assert.equal(fixture.observation.exactCandidateSmokePassed, true);
+  assert.deepEqual(fixture.observation.completedJourneys, [
+    "otp-auth-login",
+    "dashboard-and-deck-list",
+    "existing-deck-and-listener-edit",
+    "catalog-slide-add",
+  ]);
+  assert.equal(fixture.observation.failedJourney, "deck-image-upload");
+  assert.equal(fixture.observation.firestoreUserImagesDocumentObserved, true);
+  assert.equal(fixture.observation.storageObjectDifferenceObserved, false);
+  assert.equal(fixture.observation.pageErrors, 0);
+  assert.equal(fixture.observation.gatingRequestFailures, 0);
+  assert.equal(fixture.observation.soakStarted, false);
+  assert.equal(fixture.diagnosis.firesideDefaultListLimit, 1_000);
+  assert.equal(fixture.diagnosis.firesideHonorsPageToken, false);
+  assert.equal(fixture.diagnosis.firesideEmitsNextPageToken, false);
+  assert.equal(fixture.diagnosis.officialPageTokenIsInclusiveNextObjectName, true);
+  assert.equal(fixture.source.gcsListIgnoresPageToken, true);
+  assert.equal(fixture.source.firebaseListIgnoresPageToken, true);
+  for (const value of Object.values(fixture.contract)) assert.equal(value, true);
+});
 
 test("r37 freezes the remaining full-data RunQuery materialization defect", async () => {
   const fixture = JSON.parse(

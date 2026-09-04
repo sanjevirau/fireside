@@ -2615,6 +2615,29 @@ This is a transport-memory correction; query results, ordering, transaction read
 tracking, skipped-result metadata, and the immutable Phase 5 criteria remain
 unchanged.
 
+R38 reached the fifth full-data browser journey after the exact-candidate smoke
+passed, then observed the new `userImages` Firestore document but could not
+observe the corresponding Storage objects. Twodart commits all five object
+variants before it writes that document, so the write was not pending. The
+full dataset contains 33,353 objects, while both Fireside list routes returned
+at most the first 1,000 objects, ignored `pageToken`, and omitted
+`nextPageToken`. Consequently `@google-cloud/storage` autopagination could
+never reach newly written `userImages/` objects outside that first page. The
+frozen failure is
+`conformance/fixtures/phase5/fireside-storage-list-pagination-r38.json`.
+
+The official firebase-tools 15.22.0 oracle fixture at
+`conformance/fixtures/firebase-suite-v1/storage-list-pagination/` captures
+1,002 synthetic objects through both GCS JSON and Firebase `/v0` list routes.
+Objects are ordered lexicographically by name. The default page size is 1,000;
+`nextPageToken` is the exact name of the first object on the next page, and
+that object is included when the token is resumed. A token which is not an
+existing object name restarts at the first item. Prefix and delimiter grouping
+are computed before item pagination, and both routes share the same page
+contract. An unbounded `bucket.getFiles()` call must therefore follow the token
+and return all 1,002 objects. Fireside must match this contract so SDK callers
+can enumerate any supported dataset without silently truncating at 1,000.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "gateResult": "failed",
+  "classification": "fireside-product-defect",
+  "candidateCommit": "f686f66ea431769548d17cb296c3bec316cab683",
+  "manifestSha256": "48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e",
+  "evidenceDirectory": "reports/phase-5-metrics/failed-full-gate-v3-20260905-f686f66-r36-fireside-repair",
+  "dataset": {
+    "firestoreDocuments": 211202,
+    "storageObjects": 33353,
+    "storageObjectBytes": 6689692200
+  },
+  "observation": {
+    "exactCandidateSmokePassed": true,
+    "completedJourneys": [
+      "otp-auth-login",
+      "dashboard-and-deck-list",
+      "existing-deck-and-listener-edit",
+      "catalog-slide-add"
+    ],
+    "failedJourney": "deck-image-upload",
+    "failedStep": "waitForStorageDifference",
+    "timeoutMilliseconds": 300000,
+    "firestoreUserImagesDocumentObserved": true,
+    "storageObjectDifferenceObserved": false,
+    "pageErrors": 0,
+    "gatingRequestFailures": 0,
+    "peakFiresidePssBytes": 3610890240,
+    "peakAggregatePssBytes": 12338673664,
+    "failedSystemdUnits": 0,
+    "kernelOomOrResourceEvidence": 0,
+    "soakStarted": false
+  },
+  "diagnosis": {
+    "twodartWritesStorageObjectsBeforeFirestoreDocument": true,
+    "browserObservedFirestoreDocument": true,
+    "googleCloudStorageGetFilesUsesAutopagination": true,
+    "firesideDefaultListLimit": 1000,
+    "firesideHonorsPageToken": false,
+    "firesideEmitsNextPageToken": false,
+    "newUserImageObjectsOutsideFirstPage": true,
+    "officialOracleFixture": "conformance/fixtures/firebase-suite-v1/storage-list-pagination/fixture.json",
+    "officialDefaultPageLimit": 1000,
+    "officialPageTokenIsInclusiveNextObjectName": true
+  },
+  "source": {
+    "storageFrontSha256": "ffe5498f92d4350a172997bc8c64bc638c95b3c213dd7d72c5e6cc2f4676f15f",
+    "gcsListIgnoresPageToken": true,
+    "firebaseListIgnoresPageToken": true,
+    "bothRoutesOmitNextPageToken": true
+  },
+  "evidenceSha256": {
+    "browser-fireside-initial.json": "f69739453d40a9756ba71e5ebd89c46d3468a8fc10830a7a3cc3df2cbc57b16c",
+    "browser-fireside-initial.json.diagnostics.jsonl": "a165eac4129884527a2a598c4457ce7b3c9300fa71a15b0553c9e3896adf7fe4",
+    "fireside-initial-process-memory.json": "b0a228673ba912b3554222088e019fe0b17b08af9eac93f9757e7a20daf58776",
+    "manifest.json": "48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e"
+  },
+  "contract": {
+    "sortObjectsLexicographically": true,
+    "applyPrefixAndDelimiterBeforePagination": true,
+    "defaultMaxResultsIs1000": true,
+    "nextPageTokenNamesFirstItemOfNextPage": true,
+    "resumeTokenItemIsIncluded": true,
+    "unknownTokenRestartsAtFirstItem": true,
+    "gcsAndFirebaseRoutesShareSemantics": true,
+    "sdkAutopaginationMustReachObjectsBeyondFirstPage": true
+  }
+}
