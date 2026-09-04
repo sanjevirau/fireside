@@ -3,6 +3,43 @@
   "name": "phase-5-twodart-acceptance",
   "frozen": true,
   "frozenAt": "2026-09-03T13:40:00+08:00",
+  "officialRestartHostLimitAmendment": {
+    "previousManifestSha256": "fe9d44c1edb6105d6edc9f0ab3b3251cb34929b7b6113e559ff9a2558ad7b957",
+    "amendedBeforeFiresideMeasurement": true,
+    "criteriaWeakened": true,
+    "scope": "official-baseline-only",
+    "reason": "Official full-data evidence stands: readiness passed, all nine initial journeys passed, and the 7,200-second soak passed with every workload count, zero errors, stalls, listener gaps, or mismatches, 241 memory samples, peak PSS 12.95 GiB with Java at 8.6 GiB, and 11.7 to 13.5 GB of swap in use throughout. Keep it as the baseline measurement.\n\nThe restart-phase failure is host exhaustion under the official baseline, classified as infrastructure. Evidence in evidence/browser-official-restart.json.diagnostics.jsonl: journeys 1 and 2 passed after restart; journey 3 timed out in hoverCatalogSlideCard because the pending-requests-at-journey-failure record shows every in-flight request stalled with no error: the two catalogue chunk JSON GETs through the Storage alias pending over 230 seconds across four retries, the Firestore Listen open POST on the raw port 127.0.0.1:23000 pending 239 seconds, the static /assets/video-announcement.jpg from the Next.js server pending 239 seconds, and the cleanupUser pings pending. Zero page errors, zero failed units, no kernel OOM, journal clean. Raw-port and proxied requests stalled together, so this is not Portless and not a product path. It is the same class as r30. A strict rerun would meet the same physics, because the official stack plus Chrome exceeds the 15 GB host and the restart is its heaviest moment.",
+    "attributionFixture": "conformance/fixtures/phase5/official-restart-host-exhaustion-r36.json",
+    "sourceEvidenceChecksumsSha256": "a9aa4df4f37b535ba429bdcc8da3b863f0d608eaee96883de3a6b45112a18a95",
+    "sourceCandidateRevision": "30e0d25d262a903738f2ff008402ce82fec33611",
+    "sourceOfficialExport": {
+      "fileCount": 66756,
+      "fileBytes": 8180612785,
+      "treeSha256": "c1a1451827c326fb680b2133b0a2c42b79302f1fb89febfb02228ad056b619ca"
+    },
+    "normalizedEvidenceCorrection": "The checksum-verified browser summary records three completed journeys; catalog-slide-add, the fourth journey, timed out in hoverCatalogSlideCard.",
+    "qualifyingConditions": {
+      "stack": "official",
+      "stage": "post-restart-browser-journeys",
+      "pageErrors": 0,
+      "gatingRequestFailures": 0,
+      "pendingRawEmulatorRequestsRequired": true,
+      "pendingProxiedAliasRequestsRequired": true,
+      "sourceEvidenceChecksumVerificationRequired": true
+    },
+    "officialInitialAndSoakRemainBaselineMeasurements": true,
+    "officialStageRerun": false,
+    "continueWithFireside": true,
+    "freshQuiescentPreflightBeforeFireside": true,
+    "firesideCriteriaChanged": false,
+    "firesideWorkloadChanged": false,
+    "firesideDurationsChanged": false,
+    "firesideThresholdsChanged": false,
+    "bothStacksMayRunConcurrently": false,
+    "performanceWinnerRequired": false,
+    "finalReportMarksOfficialRestartHostLimited": true,
+    "phase6MayStart": false
+  },
   "diagnosticReadinessAmendment": {
     "previousManifestSha256": "e5d43e4f41f7d2276754468e04b4131f76076e37aeb5afd536b6ce9c8d5b77ca",
     "amendedBeforeMeasurement": true,

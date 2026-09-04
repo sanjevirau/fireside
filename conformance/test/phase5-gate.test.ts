@@ -243,7 +243,7 @@ test("Phase 5 gate includes smoke, fresh colleague, regression, and checksum pat
   assert.match(source, /orphanCheck: true/u);
   assert.match(source, /--smoke-evidence is required for a full-data Phase 5 attempt/u);
   assert.match(source, /validateSmokePrerequisite\(args, manifest\)/u);
-  assert.match(source, /environment\.candidateRevision !== currentRevision/u);
+  assert.match(source, /environment\.candidateRevision !== expectedCandidateRevision/u);
   assert.match(source, /await verifyChecksumManifest\(smokeEvidence\)/u);
   assert.match(source, /`phase5-smoke-\$\{digest\(args\.outputDirectory\)\.slice\(0, 16\)\}`/u);
   assert.match(source, /preparePhase5RuntimeRoot\(\s*args\.runtimeRoot,\s*manifest\.host\.minimumAvailableDiskBytes/u);
@@ -403,4 +403,42 @@ test("every stack launch records a drained zero-activity preflight; soak swap is
   assert.doesNotMatch(source, /swap\??\.swap(?:In|Out)PagesDelta !== 0/u);
   assert.ok(source.indexOf("await writeSoakComparison(args, prefix)") < source.indexOf("assertCommand(soak)"));
   assert.match(source, /renderPhase5ResourceComparison\(soak\)/u);
+});
+
+test("r36 continuation reuses only the exact official baseline and keeps Fireside strict", async () => {
+  const source = await readFile(runnerUrl, "utf8");
+  const plan = await readFile(
+    new URL("../src/suite/phase5-acceptance-plan.ts", import.meta.url),
+    "utf8",
+  );
+  const continuation = source.slice(
+    source.indexOf("async function preserveOfficialBaselineEvidence("),
+    source.indexOf("async function readJsonRecord("),
+  );
+  for (const exactHash of [
+    "a9aa4df4f37b535ba429bdcc8da3b863f0d608eaee96883de3a6b45112a18a95",
+    "41f04b158bf0468b4feea214a317f7e9832e31cefca70eecb856b41d06bbadbd",
+    "225a7228a8d74cd347f5360e7ae3fd45cee9b066d47ef92dac2dfe9c6d382e01",
+    "6ab4eca8f39ca7946d75da2fc2f8876f7efb79111f44fcfad9dac1cc1d982685",
+  ]) {
+    assert.ok(
+      source.includes(exactHash) || plan.includes(exactHash),
+      `exact r36 evidence identity ${exactHash} is missing`,
+    );
+  }
+  assert.match(continuation, /await verifyChecksumManifest\(source\)/u);
+  assert.match(continuation, /storageAlias\.length !== 8/u);
+  assert.match(continuation, /\(ageMs \?\? 0\) >= 239_000/u);
+  assert.match(continuation, /restartBrowser\?\.pageErrors !== 0/u);
+  assert.match(continuation, /restartBrowser\.requestFailures !== 0/u);
+  assert.match(source, /officialBaseline !== null && stack === "official"\) continue/u);
+  assert.match(source, /assertStateMatchesFrozen\(\s*firesideInitialBefore/u);
+  assert.match(source, /assertExactState\(firesideInitialAfter, firesideRestartBefore\)/u);
+  assert.match(source, /runOfficialExportParity\(/u);
+  assert.match(source, /assertExactState\(firesideState, importedState\)/u);
+  assert.match(source, /officialStackRerun: false/u);
+  assert.match(source, /"fireside-official-export-parity"/u);
+  assert.match(source, /Host-limited during catalog-slide-add/u);
+  assert.match(source, /No performance winner is claimed/u);
+  assert.doesNotMatch(source, /catch[^}]*host-limited/isu);
 });

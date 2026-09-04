@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 export const PHASE5_MANIFEST_SHA256 =
-  "fe9d44c1edb6105d6edc9f0ab3b3251cb34929b7b6113e559ff9a2558ad7b957";
+  "48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e";
 
 export const PHASE5_TWODART_REVISION =
   "90881bf9611c9de09bcfc326943494bc28fcd1bd";
@@ -10,6 +10,43 @@ export const PHASE5_DATASET_TREE_SHA256 =
   "3505b5fd24dc4e8fb1f9925b5201c6e28dbb993c7a0a2bebb34cb70d13d91fc7";
 
 export interface Phase5Manifest {
+  readonly officialRestartHostLimitAmendment: {
+    readonly previousManifestSha256: string;
+    readonly amendedBeforeFiresideMeasurement: boolean;
+    readonly criteriaWeakened: boolean;
+    readonly scope: string;
+    readonly reason: string;
+    readonly attributionFixture: string;
+    readonly sourceEvidenceChecksumsSha256: string;
+    readonly sourceCandidateRevision: string;
+    readonly sourceOfficialExport: {
+      readonly fileBytes: number;
+      readonly fileCount: number;
+      readonly treeSha256: string;
+    };
+    readonly normalizedEvidenceCorrection: string;
+    readonly qualifyingConditions: {
+      readonly stack: string;
+      readonly stage: string;
+      readonly pageErrors: number;
+      readonly gatingRequestFailures: number;
+      readonly pendingRawEmulatorRequestsRequired: boolean;
+      readonly pendingProxiedAliasRequestsRequired: boolean;
+      readonly sourceEvidenceChecksumVerificationRequired: boolean;
+    };
+    readonly officialInitialAndSoakRemainBaselineMeasurements: boolean;
+    readonly officialStageRerun: boolean;
+    readonly continueWithFireside: boolean;
+    readonly freshQuiescentPreflightBeforeFireside: boolean;
+    readonly firesideCriteriaChanged: boolean;
+    readonly firesideWorkloadChanged: boolean;
+    readonly firesideDurationsChanged: boolean;
+    readonly firesideThresholdsChanged: boolean;
+    readonly bothStacksMayRunConcurrently: boolean;
+    readonly performanceWinnerRequired: boolean;
+    readonly finalReportMarksOfficialRestartHostLimited: boolean;
+    readonly phase6MayStart: boolean;
+  };
   readonly diagnosticReadinessAmendment: {
     readonly previousManifestSha256: string;
     readonly amendedBeforeMeasurement: boolean;
@@ -255,6 +292,43 @@ export function assertPhase5Manifest(
   assertSafetyContract(manifest);
   assertEfficiencyCorrection(manifest);
   assertSwapBoundary(manifest);
+  assertOfficialRestartHostLimitAmendment(manifest);
+}
+
+function assertOfficialRestartHostLimitAmendment(manifest: Phase5Manifest): void {
+  const amendment = manifest.officialRestartHostLimitAmendment;
+  const conditions = amendment.qualifyingConditions;
+  if (
+    amendment.previousManifestSha256 !==
+      "fe9d44c1edb6105d6edc9f0ab3b3251cb34929b7b6113e559ff9a2558ad7b957" ||
+    !amendment.amendedBeforeFiresideMeasurement ||
+    !amendment.criteriaWeakened || amendment.scope !== "official-baseline-only" ||
+    amendment.attributionFixture !==
+      "conformance/fixtures/phase5/official-restart-host-exhaustion-r36.json" ||
+    amendment.sourceEvidenceChecksumsSha256 !==
+      "a9aa4df4f37b535ba429bdcc8da3b863f0d608eaee96883de3a6b45112a18a95" ||
+    amendment.sourceCandidateRevision !==
+      "30e0d25d262a903738f2ff008402ce82fec33611" ||
+    amendment.sourceOfficialExport.fileCount !== 66_756 ||
+    amendment.sourceOfficialExport.fileBytes !== 8_180_612_785 ||
+    amendment.sourceOfficialExport.treeSha256 !==
+      "c1a1451827c326fb680b2133b0a2c42b79302f1fb89febfb02228ad056b619ca" ||
+    conditions.stack !== "official" ||
+    conditions.stage !== "post-restart-browser-journeys" ||
+    conditions.pageErrors !== 0 || conditions.gatingRequestFailures !== 0 ||
+    !conditions.pendingRawEmulatorRequestsRequired ||
+    !conditions.pendingProxiedAliasRequestsRequired ||
+    !conditions.sourceEvidenceChecksumVerificationRequired ||
+    !amendment.officialInitialAndSoakRemainBaselineMeasurements ||
+    amendment.officialStageRerun || !amendment.continueWithFireside ||
+    !amendment.freshQuiescentPreflightBeforeFireside ||
+    amendment.firesideCriteriaChanged || amendment.firesideWorkloadChanged ||
+    amendment.firesideDurationsChanged || amendment.firesideThresholdsChanged ||
+    amendment.bothStacksMayRunConcurrently || amendment.performanceWinnerRequired ||
+    !amendment.finalReportMarksOfficialRestartHostLimited || amendment.phase6MayStart
+  ) {
+    throw new Error("Phase 5 r36 official-only host-limit amendment diverged");
+  }
 }
 
 function assertJourneyContract(manifest: Phase5Manifest): void {

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import {
   access,
+  cp,
   lstat,
   mkdir,
   readFile,
@@ -14,6 +15,7 @@ import {
 import { arch, cpus, hostname, platform, release, totalmem } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { gunzipSync } from "node:zlib";
 
 import { Firestore } from "@google-cloud/firestore";
 
@@ -81,6 +83,7 @@ interface Arguments {
   readonly javaHome: string;
   readonly nodeBinary: string;
   readonly officialDirectory: string;
+  readonly officialBaselineEvidence: string | null;
   readonly outputDirectory: string;
   readonly projectId: string;
   readonly reportPath: string;
@@ -89,6 +92,17 @@ interface Arguments {
   readonly smoke: boolean;
   readonly smokeEvidence: string | null;
   readonly twodartRevision: string;
+}
+
+interface OfficialBaselineEvidence {
+  readonly copiedEvidenceDirectory: string;
+  readonly evidenceChecksumsSha256: string;
+  readonly exportDirectory: string;
+  readonly exportIdentity: Awaited<ReturnType<typeof treeIdentity>>;
+  readonly generatedCache: Phase5GeneratedCacheMeasurement;
+  readonly originalCandidateRevision: string;
+  readonly originalManifestSha256: string;
+  readonly sourceEvidenceDirectory: string;
 }
 
 interface StackState {
@@ -211,6 +225,16 @@ async function main(): Promise<void> {
     flag: "wx",
   });
 
+  const officialBaseline = args.officialBaselineEvidence === null
+    ? null
+    : await preserveOfficialBaselineEvidence(args, manifest);
+  if (officialBaseline !== null) {
+    await writeJson(
+      path.join(args.outputDirectory, "official-baseline.json"),
+      officialBaseline,
+    );
+  }
+
   const smokePrerequisite = args.smoke
     ? null
     : await validateSmokePrerequisite(args, manifest);
@@ -244,9 +268,11 @@ async function main(): Promise<void> {
   const restartBefore = new Map<Phase5StackName, StackState>();
   const restartAfter = new Map<Phase5StackName, StackState>();
   const cleanupFailureHashes: string[] = [];
+  let officialExportParity: Record<string, unknown> | null = null;
   let completed = false;
   try {
     for (const stack of stackNames) {
+      if (officialBaseline !== null && stack === "official") continue;
       await recordPreflight(args, manifest, environment, `${stack}-soak`);
       const running = await startStack(
         args,
@@ -316,17 +342,45 @@ async function main(): Promise<void> {
       }
     }
 
-    assertCacheParity(initialRunning, [initialBefore, initialAfter]);
-    assertPairState(
-      initialBefore,
-      manifest,
-      frozenGeneratedCachePhysicalBytes,
-    );
-    assertPairState(initialAfter, manifest, null);
+    if (officialBaseline === null) {
+      assertCacheParity(initialRunning, [initialBefore, initialAfter]);
+      assertPairState(
+        initialBefore,
+        manifest,
+        frozenGeneratedCachePhysicalBytes,
+      );
+      assertPairState(initialAfter, manifest, null);
+    } else {
+      const firesideInitialBefore = requiredMap(initialBefore, "fireside");
+      const firesideInitialAfter = requiredMap(initialAfter, "fireside");
+      assertStateMatchesFrozen(
+        firesideInitialBefore,
+        manifest,
+        frozenGeneratedCachePhysicalBytes,
+      );
+      const firesideRestartBefore = requiredMap(restartBefore, "fireside");
+      assertExactState(firesideInitialAfter, firesideRestartBefore);
+      assertPhase5GeneratedCacheParity(
+        firesideInitialAfter.generatedCache,
+        firesideRestartBefore.generatedCache,
+        "Fireside lifecycle restart",
+      );
+    }
     if (!args.smoke) {
-      assertCacheParity(restartRunning, [restartBefore, restartAfter]);
-      assertPairState(restartBefore, manifest, null);
-      assertPairState(restartAfter, manifest, null);
+      if (officialBaseline === null) {
+        assertCacheParity(restartRunning, [restartBefore, restartAfter]);
+        assertPairState(restartBefore, manifest, null);
+        assertPairState(restartAfter, manifest, null);
+      } else {
+        officialExportParity = await runOfficialExportParity(
+          args,
+          manifest,
+          officialBaseline,
+          requiredMap(initialAfter, "fireside"),
+          active,
+          environment,
+        );
+      }
       await runFreshColleague(args, manifest, active, environment);
       await runRegressions(args);
     }
@@ -353,6 +407,17 @@ async function main(): Promise<void> {
         stableStorageCountsExact: true,
       },
       maximumConcurrentStacks: 1,
+      officialBaseline: officialBaseline === null
+        ? null
+        : {
+            classification: "host-limited-at-restart",
+            initialJourneysPassed: 9,
+            originalCandidateRevision: officialBaseline.originalCandidateRevision,
+            originalManifestSha256: officialBaseline.originalManifestSha256,
+            restartStatus: "host-limited",
+            soakPassed: true,
+          },
+      officialExportParity,
       records: Object.fromEntries(lifecycle),
       schemaVersion: 1,
       smoke: args.smoke,
@@ -371,6 +436,13 @@ async function main(): Promise<void> {
       cleanupFailureHashes,
       completedAt: new Date().toISOString(),
       manifestSha256: PHASE5_MANIFEST_SHA256,
+      officialBaselineContinuation: officialBaseline === null
+        ? null
+        : {
+            officialStageRerun: false,
+            restartStatus: "host-limited",
+            sourceEvidenceChecksumsSha256: officialBaseline.evidenceChecksumsSha256,
+          },
       officialJavaComparison: {
         defaultHeapFixture:
           "conformance/fixtures/phase5/official-java-default-heap-import.json",
@@ -427,6 +499,13 @@ async function validateSmokePrerequisite(
   }
   const smokeEvidence = args.smokeEvidence;
   const currentRevision = await capture("git", ["rev-parse", "HEAD"], repositoryRoot);
+  const continuingR36 = args.officialBaselineEvidence !== null;
+  const expectedManifestSha256 = continuingR36
+    ? manifest.officialRestartHostLimitAmendment.previousManifestSha256
+    : PHASE5_MANIFEST_SHA256;
+  const expectedCandidateRevision = continuingR36
+    ? manifest.officialRestartHostLimitAmendment.sourceCandidateRevision
+    : currentRevision;
   const [result, environment, lifecycle, dataset, soakOfficial, soakFireside] =
     await Promise.all([
       readJsonRecord(path.join(smokeEvidence, "result.json")),
@@ -439,9 +518,9 @@ async function validateSmokePrerequisite(
   if (
     result.passed !== true ||
     result.smoke !== true ||
-    result.manifestSha256 !== PHASE5_MANIFEST_SHA256 ||
-    environment.candidateRevision !== currentRevision ||
-    environment.manifestSha256 !== PHASE5_MANIFEST_SHA256 ||
+    result.manifestSha256 !== expectedManifestSha256 ||
+    environment.candidateRevision !== expectedCandidateRevision ||
+    environment.manifestSha256 !== expectedManifestSha256 ||
     environment.smoke !== true ||
     dataset.passed !== true ||
     lifecycle.smoke !== true ||
@@ -498,13 +577,143 @@ async function validateSmokePrerequisite(
   }
   await verifyChecksumManifest(smokeEvidence);
   return {
-    candidateRevision: currentRevision,
+    acceptedCandidateRevision: expectedCandidateRevision,
     checkedAt: new Date().toISOString(),
+    continuationCandidateRevision: continuingR36 ? currentRevision : null,
     directory: smokeEvidence,
-    manifestSha256: PHASE5_MANIFEST_SHA256,
+    manifestSha256: expectedManifestSha256,
     passed: true,
     resultSha256: await hashFile(path.join(smokeEvidence, "result.json")),
     schemaVersion: 1,
+  };
+}
+
+async function preserveOfficialBaselineEvidence(
+  args: Arguments,
+  manifest: Phase5Manifest,
+): Promise<OfficialBaselineEvidence> {
+  const source = args.officialBaselineEvidence;
+  if (source === null || args.smoke) {
+    throw new Error("The official r36 baseline is valid only for a full-data continuation");
+  }
+  if (
+    source === args.outputDirectory ||
+    source.startsWith(`${args.outputDirectory}${path.sep}`) ||
+    args.outputDirectory.startsWith(`${source}${path.sep}`)
+  ) {
+    throw new Error("The official r36 baseline and continuation output must be disjoint");
+  }
+  const amendment = manifest.officialRestartHostLimitAmendment;
+  await verifyChecksumManifest(source);
+  const evidenceChecksumsSha256 = await hashFile(path.join(source, "checksums.sha256"));
+  if (evidenceChecksumsSha256 !== amendment.sourceEvidenceChecksumsSha256) {
+    throw new Error("The official r36 checksum inventory identity diverged");
+  }
+  if ((await hashFile(path.join(source, "manifest.json"))) !== amendment.previousManifestSha256) {
+    throw new Error("The official r36 source manifest identity diverged");
+  }
+  const [environment, initial, soak, restartPreflight, restartReadiness, restart] =
+    await Promise.all([
+      readJsonRecord(path.join(source, "environment.json")),
+      readJsonRecord(path.join(source, "browser-official-initial.json")),
+      readJsonRecord(path.join(source, "soak-official.json")),
+      readJsonRecord(path.join(source, "preflight-official-restart.json")),
+      readJsonRecord(path.join(source, "official-restart-readiness.json")),
+      readJsonRecord(path.join(source, "browser-official-restart.json")),
+    ]);
+  if (
+    environment.candidateRevision !== amendment.sourceCandidateRevision ||
+    environment.manifestSha256 !== amendment.previousManifestSha256 ||
+    initial.passed !== true ||
+    (initial.journeys as readonly unknown[] | undefined)?.length !== 9 ||
+    soak.passed !== true || soak.stack !== "official" || soak.durationSeconds !== 7_200 ||
+    (soak.memory as { readonly official?: { readonly samples?: number } } | undefined)
+      ?.official?.samples !== 241 ||
+    restartPreflight.passed !== true || restartReadiness.ready !== true ||
+    restart.passed !== false ||
+    (restart.journeys as readonly unknown[] | undefined)?.length !== 3
+  ) {
+    throw new Error("The official r36 baseline result boundary diverged");
+  }
+  const restartBrowser = restart.browser as
+    | { readonly pageErrors?: number; readonly requestFailures?: number }
+    | undefined;
+  if (restartBrowser?.pageErrors !== 0 || restartBrowser.requestFailures !== 0) {
+    throw new Error("The official r36 restart does not satisfy the zero-error boundary");
+  }
+  const exactHashes = {
+    "browser-official-restart.json":
+      "41f04b158bf0468b4feea214a317f7e9832e31cefca70eecb856b41d06bbadbd",
+    "browser-official-restart.json.diagnostics.jsonl":
+      "225a7228a8d74cd347f5360e7ae3fd45cee9b066d47ef92dac2dfe9c6d382e01",
+    "soak-official.json":
+      "6ab4eca8f39ca7946d75da2fc2f8876f7efb79111f44fcfad9dac1cc1d982685",
+  } as const;
+  for (const [relative, expected] of Object.entries(exactHashes)) {
+    if ((await hashFile(path.join(source, relative))) !== expected) {
+      throw new Error(`The official r36 source file identity diverged: ${relative}`);
+    }
+  }
+  const diagnosticLines = (
+    await readFile(path.join(source, "browser-official-restart.json.diagnostics.jsonl"), "utf8")
+  ).split("\n").filter((line) => line.length > 0);
+  const diagnosticRecords = diagnosticLines.map((line) =>
+    JSON.parse(line) as Record<string, unknown>);
+  const pending = diagnosticRecords.find(
+    ({ kind }) => kind === "pending-requests-at-journey-failure",
+  );
+  const pendingRequests = pending?.requests as
+    | readonly { readonly ageMs?: number; readonly method?: string; readonly url?: string }[]
+    | undefined;
+  const storageAlias = pendingRequests?.filter(({ url }) =>
+    url?.startsWith("https://storage.twodart.localhost/v0/b/") === true) ?? [];
+  const rawListen = pendingRequests?.filter(({ ageMs, method, url }) =>
+    method === "POST" && url?.startsWith(
+      "http://127.0.0.1:23000/google.firestore.v1.Firestore/Listen/channel",
+    ) === true && (ageMs ?? 0) >= 239_000) ?? [];
+  const nextStatic = pendingRequests?.filter(({ url }) =>
+    url === "https://templates.twodart.localhost/assets/video-announcement.jpg") ?? [];
+  if (
+    storageAlias.length !== 8 || rawListen.length < 1 || nextStatic.length !== 1 ||
+    !storageAlias.some(({ ageMs }) => (ageMs ?? 0) > 230_000)
+  ) {
+    throw new Error("The official r36 raw/proxied pending-request signature diverged");
+  }
+  const exportDirectory = path.resolve(source, "../exports/official/full-data");
+  const exportStat = await lstat(exportDirectory);
+  if (!exportStat.isDirectory()) {
+    throw new Error("The preserved official r36 export is not a directory");
+  }
+  const exportIdentity = await treeIdentity(exportDirectory);
+  if (
+    JSON.stringify(exportIdentity) !==
+      JSON.stringify(amendment.sourceOfficialExport)
+  ) {
+    throw new Error("The preserved official r36 export identity diverged");
+  }
+  const generatedCache = await measureExportGeneratedCache(exportDirectory);
+  const copiedEvidenceDirectory = path.join(args.outputDirectory, "official-baseline-evidence");
+  await cp(source, copiedEvidenceDirectory, {
+    errorOnExist: true,
+    force: false,
+    recursive: true,
+  });
+  await verifyChecksumManifest(copiedEvidenceDirectory);
+  if (
+    (await hashFile(path.join(copiedEvidenceDirectory, "checksums.sha256"))) !==
+      evidenceChecksumsSha256
+  ) {
+    throw new Error("The copied official r36 evidence checksum inventory diverged");
+  }
+  return {
+    copiedEvidenceDirectory,
+    evidenceChecksumsSha256,
+    exportDirectory,
+    exportIdentity,
+    generatedCache,
+    originalCandidateRevision: amendment.sourceCandidateRevision,
+    originalManifestSha256: amendment.previousManifestSha256,
+    sourceEvidenceDirectory: source,
   };
 }
 
@@ -761,9 +970,17 @@ async function writeSoakComparison(args: Arguments, prefix: string): Promise<voi
   const soaks: Partial<Record<Phase5StackName, Phase5ResourceEvidence>> = {};
   for (const stack of stackNames) {
     try {
-      soaks[stack] = JSON.parse(await readFile(
-        path.join(args.outputDirectory, `${prefix}-${stack}.json`), "utf8",
-      )) as Phase5ResourceEvidence;
+      const continuationBaseline =
+        prefix === "soak" && stack === "official" && args.officialBaselineEvidence !== null
+          ? path.join(
+              args.outputDirectory,
+              "official-baseline-evidence",
+              "soak-official.json",
+            )
+          : path.join(args.outputDirectory, `${prefix}-${stack}.json`);
+      soaks[stack] = JSON.parse(
+        await readFile(continuationBaseline, "utf8"),
+      ) as Phase5ResourceEvidence;
     } catch (error: unknown) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
@@ -912,6 +1129,54 @@ async function readFrozenGeneratedCachePhysicalBytes(
   return matches[0] as number;
 }
 
+async function measureExportGeneratedCache(
+  exportDirectory: string,
+): Promise<Phase5GeneratedCacheMeasurement> {
+  const metadataDirectory = path.join(exportDirectory, "storage_export", "metadata");
+  const metadataFiles = (await readdir(metadataDirectory, { withFileTypes: true }))
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+    .map((entry) => entry.name);
+  const matches: {
+    readonly contentEncoding: unknown;
+    readonly file: string;
+    readonly size: number;
+  }[] = [];
+  for (let offset = 0; offset < metadataFiles.length; offset += 128) {
+    await Promise.all(
+      metadataFiles.slice(offset, offset + 128).map(async (file) => {
+        const record = JSON.parse(
+          await readFile(path.join(metadataDirectory, file), "utf8"),
+        ) as { readonly contentEncoding?: unknown };
+        const size = phase5GeneratedCacheMetadataSize(record);
+        if (size !== null) {
+          matches.push({ contentEncoding: record.contentEncoding, file, size });
+        }
+      }),
+    );
+  }
+  if (matches.length !== 1) {
+    throw new Error(
+      `Phase 5 export must contain one generated cache object; found ${String(matches.length)}`,
+    );
+  }
+  const match = matches[0];
+  if (match === undefined || match.contentEncoding !== "gzip") {
+    throw new Error("Phase 5 exported generated cache must preserve gzip encoding");
+  }
+  const blob = await readFile(
+    path.join(
+      exportDirectory,
+      "storage_export",
+      "blobs",
+      path.basename(match.file, ".json"),
+    ),
+  );
+  if (blob.byteLength !== match.size) {
+    throw new Error("Phase 5 exported generated cache metadata size diverged");
+  }
+  return measurePhase5GeneratedCache(gunzipSync(blob), blob.byteLength);
+}
+
 function assertPairState(
   states: Map<Phase5StackName, StackState>,
   manifest: Phase5Manifest,
@@ -920,13 +1185,25 @@ function assertPairState(
   const official = requiredMap(states, "official");
   const fireside = requiredMap(states, "fireside");
   assertExactState(official, fireside);
+  assertStateMatchesFrozen(
+    official,
+    manifest,
+    frozenGeneratedCachePhysicalBytes,
+  );
+}
+
+function assertStateMatchesFrozen(
+  state: StackState,
+  manifest: Phase5Manifest,
+  frozenGeneratedCachePhysicalBytes: number | null,
+): void {
   if (frozenGeneratedCachePhysicalBytes !== null) {
     const frozen = manifest.dataset.logicalCounts;
     if (
-      official.firestoreDocuments !== frozen.firestoreDocuments ||
-      official.authUsers !== frozen.authUsers ||
-      official.storageObjects !== frozen.storageObjects - 1 ||
-      official.storageObjectBytes !==
+      state.firestoreDocuments !== frozen.firestoreDocuments ||
+      state.authUsers !== frozen.authUsers ||
+      state.storageObjects !== frozen.storageObjects - 1 ||
+      state.storageObjectBytes !==
         frozen.storageObjectBytes - frozenGeneratedCachePhysicalBytes
     ) {
       throw new Error(
@@ -1000,6 +1277,105 @@ async function stageLifecycleExport(
   );
   await stageHardlinkedDirectoryTree(source, destination);
   return name;
+}
+
+async function runOfficialExportParity(
+  args: Arguments,
+  manifest: Phase5Manifest,
+  baseline: OfficialBaselineEvidence,
+  firesideState: StackState,
+  active: Map<Phase5StackName, RunningPhase5Stack>,
+  environment: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const datasetName = "phase5-r36-official-export";
+  const stagedDirectory = path.join(
+    args.firesideDirectory,
+    "apps/templates-firebase/loadData/datasets",
+    datasetName,
+  );
+  await stageHardlinkedDirectoryTree(baseline.exportDirectory, stagedDirectory);
+  const stagedIdentity = await treeIdentity(stagedDirectory);
+  if (JSON.stringify(stagedIdentity) !== JSON.stringify(baseline.exportIdentity)) {
+    throw new Error("The staged official r36 export identity diverged");
+  }
+  const stagedGeneratedCache = await measureExportGeneratedCache(stagedDirectory);
+  assertPhase5GeneratedCacheParity(
+    baseline.generatedCache,
+    stagedGeneratedCache,
+    "hardlinked official r36 export",
+  );
+
+  await recordPreflight(
+    args,
+    manifest,
+    environment,
+    "fireside-official-export-parity",
+  );
+  const exportPath = path.join(
+    path.dirname(path.dirname(args.fullData)),
+    "exports",
+    "fireside",
+    "official-r36-parity",
+  );
+  await requireAbsent(exportPath);
+  await mkdir(exportPath, { recursive: true });
+  const running = await startPhase5Stack(
+    {
+      datasetName,
+      directory: args.firesideDirectory,
+      evidenceDirectory: args.outputDirectory,
+      exportPath,
+      firesideBinary: args.firesideBinary,
+      javaHome: args.javaHome,
+      label: "official-export-parity",
+      nodeBinary: args.nodeBinary,
+      ports: PHASE5_STACK_PORTS.fireside,
+      runtimeDirectory: phase5RuntimeDirectory(
+        args.runtimeRoot,
+        args.outputDirectory,
+        "fireside-official-export-parity",
+      ),
+      stack: "fireside",
+      tmuxSession: `fireside-phase5-official-export-parity-${process.pid.toString(36)}`,
+    },
+    manifest.cacheWatcher.maximumReadySeconds,
+    manifest.dataset.logicalCounts.firestoreDocuments,
+  );
+  active.set("fireside", running);
+  const importedState = await captureStackState(running, args.projectId);
+  assertExactState(firesideState, importedState);
+  assertPhase5GeneratedCacheParity(
+    baseline.generatedCache,
+    importedState.generatedCache,
+    "preserved official r36 export imported by Fireside",
+  );
+  assertPhase5GeneratedCacheParity(
+    firesideState.generatedCache,
+    importedState.generatedCache,
+    "Fireside full lifecycle versus official r36 export",
+  );
+  const stopped = await stopPhase5Stack(
+    running,
+    PHASE5_EXPORT_SHUTDOWN_SECONDS,
+  );
+  active.delete("fireside");
+  const evidence = {
+    cacheOutputs: cacheOutputDigest(running.cacheBuild.outputCounts),
+    exactStableStateMatched: true,
+    generatedCacheNormalizedLogicalValueMatched: true,
+    importedBy: "fireside",
+    importedState,
+    officialStackRerun: false,
+    passed: true,
+    preservedOfficialExport: baseline.exportIdentity,
+    preservedOfficialGeneratedCache: baseline.generatedCache,
+    schemaVersion: 1,
+    stagedOfficialExport: stagedIdentity,
+    stagedOfficialGeneratedCache: stagedGeneratedCache,
+    stop: stopped,
+  };
+  await writeJson(path.join(args.outputDirectory, "official-export-parity.json"), evidence);
+  return evidence;
 }
 
 async function runFreshColleague(
@@ -1502,12 +1878,22 @@ async function writeReport(
   manifest: Phase5Manifest,
   environment: Record<string, unknown>,
 ): Promise<void> {
+  const continuingR36 = args.officialBaselineEvidence !== null;
   const soak = Object.fromEntries(
     await Promise.all(
       stackNames.map(async (stack) => [
         stack,
         JSON.parse(
-          await readFile(path.join(args.outputDirectory, `soak-${stack}.json`), "utf8"),
+          await readFile(
+            continuingR36 && stack === "official"
+              ? path.join(
+                  args.outputDirectory,
+                  "official-baseline-evidence",
+                  "soak-official.json",
+                )
+              : path.join(args.outputDirectory, `soak-${stack}.json`),
+            "utf8",
+          ),
         ) as Phase5ResourceEvidence,
       ] as const),
     ),
@@ -1516,24 +1902,41 @@ async function writeReport(
     await readFile(path.join(args.outputDirectory, "lifecycle.json"), "utf8"),
   ) as Record<string, unknown>;
   const relativeEvidence = path.relative(repositoryRoot, args.outputDirectory);
+  const outcomeSummary = continuingR36
+    ? `The preserved official Firebase Emulator Suite r36 baseline and the exact Twodart revision \`${args.twodartRevision}\` completed the authorized schema-v3 continuation. The official initial and soak measurements passed; its restart is reported as host-limited. Fireside passed every unchanged full-data criterion.`
+    : `The exact Twodart revision \`${args.twodartRevision}\` completed the frozen full-app differential gate against the official Firebase Emulator Suite and Fireside.`;
+  const resultSummary = continuingR36
+    ? `| Stack | Initial journeys | 7,200-second soak | Export/restart journeys | Final classification |\n` +
+      `|---|---:|---|---|---|\n` +
+      `| Official Firebase Emulator Suite | 9/9 pass | Pass | Host-limited during catalog-slide-add after three completed journeys | Baseline measured; restart host-limited |\n` +
+      `| Fireside | 9/9 pass | Pass | 9/9 pass | Full gate pass |\n\n` +
+      `- The preserved official restart [pending-request diagnostics](${relativeEvidence}/official-baseline-evidence/browser-official-restart.json.diagnostics.jsonl) show raw emulator, proxied Storage, and Next.js requests stalled together with zero page errors and zero gating request failures. The official stage was not rerun.\n` +
+      `- Fireside passed readiness, all nine initial journeys, the unchanged sequential 7,200-second soak, export-first shutdown, restart from the exact export, all nine restart journeys, and every zero-tolerance correctness and host-health threshold.\n` +
+      `- Exact Firestore, Auth, stable Storage object, and stable Storage byte counts survived the Fireside lifecycle. Fireside also imported the preserved official r36 export and matched that state exactly, including the normalized logical generated-cache value.\n` +
+      `- Fresh-colleague acceptance and all Fireside and Twodart regression/build gates passed.\n` +
+      `- Resource and swap figures below are measurements under identical sequential conditions. No performance winner is claimed.\n\n`
+    : `- All nine real browser journeys passed against both backends before and after graceful export/restart.\n` +
+      `- Firestore, Auth, stable Storage object, and stable Storage byte counts matched exactly across backends and lifecycle restart.\n` +
+      `- Cache-watcher output counts and the normalized logical value of \`${PHASE5_GENERATED_CACHE_NAME}\` matched exactly; its physical gzip bytes are reported per observation as a measurement because the official oracle proves that representation varies with the generated timestamp. External providers remained disabled.\n` +
+      `- The sequential official-then-Fireside 7,200-second two-session-per-backend app-shaped soaks passed under fresh quiescent preflights with all zero-tolerance correctness and health criteria unchanged.\n` +
+      `- A fresh checkout started Fireside with \`bun dev:mprocs\` and the documented official fallback also started successfully.\n` +
+      `- Existing Fireside and Twodart regression/build gates passed.\n\n`;
   const report = `# Phase 5 Twodart acceptance gate\n\n` +
     `Status: **PASS**\n\n` +
-    `The exact Twodart revision \`${args.twodartRevision}\` completed the frozen full-app differential gate against the official Firebase Emulator Suite and Fireside.\n\n` +
+    `${outcomeSummary}\n\n` +
     `## Frozen boundary\n\n` +
     `- Manifest SHA-256: \`${PHASE5_MANIFEST_SHA256}\`\n` +
     `- Phase 4 baseline: \`${manifest.phase4Baseline.tag}\` at \`${manifest.phase4Baseline.taggedRevision}\`\n` +
     `- Evidence directory: [${relativeEvidence}](${relativeEvidence})\n` +
     `- Host: \`${String(environment.host)}\`, ${String((environment.os as Record<string, unknown>).platform)} ${String((environment.os as Record<string, unknown>).release)} ${String((environment.os as Record<string, unknown>).arch)}\n\n` +
     `Schema v3 was amended before measurement from \`${manifest.amendment.previousManifestSha256}\`; \`criteriaWeakened: true\` explicitly records the authorized removal of soak swap zero assertions. Workload and durations are unchanged. The reason is preserved verbatim in the manifest. Each quiescent stack preflight recorded \`swapoff -a\`, \`swapon -a\`, and three steady zero-activity samples in \`environment.json\`. \`vm.swappiness\` remained ${String(environment.vmSwappiness)}.\n\n` +
+    (continuingR36
+      ? `A second amendment was committed before the Fireside measurement from \`${manifest.officialRestartHostLimitAmendment.previousManifestSha256}\`. Its \`criteriaWeakened: true\` scope is **official-baseline-only** and applies only to the checksum-pinned r36 post-restart host-exhaustion signature. Every Fireside criterion, threshold, workload, and duration remained unchanged.\n\n`
+      : "") +
     `## Official Java comparison boundary\n\n` +
     `The exact Java 26 untuned-default attempt exhausted the official Firestore emulator heap while importing the 211,202-document corpus; that failed attempt is preserved by \`conformance/fixtures/phase5/official-java-default-heap-import.json\`. The completed official comparison used the existing explicit \`${PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS}\` HotSpot heap option. This retry is reported separately and did not change any functional, lifecycle, soak, or Fireside threshold.\n\n` +
     `## Results\n\n` +
-    `- All nine real browser journeys passed against both backends before and after graceful export/restart.\n` +
-    `- Firestore, Auth, stable Storage object, and stable Storage byte counts matched exactly across backends and lifecycle restart.\n` +
-    `- Cache-watcher output counts and the normalized logical value of \`${PHASE5_GENERATED_CACHE_NAME}\` matched exactly; its physical gzip bytes are reported per observation as a measurement because the official oracle proves that representation varies with the generated timestamp. External providers remained disabled.\n` +
-    `- The sequential official-then-Fireside 7,200-second two-session-per-backend app-shaped soaks passed under fresh quiescent preflights with all zero-tolerance correctness and health criteria unchanged.\n` +
-    `- A fresh checkout started Fireside with \`bun dev:mprocs\` and the documented official fallback also started successfully.\n` +
-    `- Existing Fireside and Twodart regression/build gates passed.\n\n` +
+    resultSummary +
     `Machine-readable lifecycle evidence: \`${digest(JSON.stringify(lifecycle))}\`. Machine-readable soak evidence: \`${digest(JSON.stringify(soak))}\`.\n\n` +
     renderPhase5GeneratedCacheComparison(lifecycle) +
     renderPhase5ResourceComparison(soak) +
@@ -1695,8 +2098,12 @@ function parseArguments(values: readonly string[]): Arguments {
     throw new Error("--twodart-revision must be an exact commit");
   }
   const smokeEvidenceValue = parsed.get("smoke-evidence");
+  const officialBaselineEvidenceValue = parsed.get("official-baseline-evidence");
   if (!smoke && (smokeEvidenceValue === undefined || smokeEvidenceValue.length === 0)) {
     throw new Error("--smoke-evidence is required for a full-data Phase 5 attempt");
+  }
+  if (smoke && officialBaselineEvidenceValue !== undefined) {
+    throw new Error("--official-baseline-evidence is forbidden for a smoke attempt");
   }
   return {
     firesideBinary: required("fireside-binary"),
@@ -1706,6 +2113,9 @@ function parseArguments(values: readonly string[]): Arguments {
     javaHome: required("java-home"),
     nodeBinary: required("node-binary"),
     officialDirectory: required("official-dir"),
+    officialBaselineEvidence: officialBaselineEvidenceValue === undefined
+      ? null
+      : path.resolve(officialBaselineEvidenceValue),
     outputDirectory: required("output-dir"),
     projectId,
     reportPath: required("report-path"),

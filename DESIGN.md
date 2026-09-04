@@ -2464,6 +2464,24 @@ criterion remains required. The final report labels the official restart
 host-limited, shows resource measurements side by side, and chooses no
 performance winner.
 
+The schema-v3 continuation implements that exception as an explicit
+`--official-baseline-evidence` mode, not as a runtime failure handler. Before
+launching anything it verifies the original manifest, checksum inventory,
+official soak, browser summary, diagnostics, zero-error boundary, and the exact
+raw-plus-proxied pending-request signature. It then copies the evidence into the
+new immutable output, skips the official stack unconditionally, and starts the
+normal Fireside lifecycle only after the normal swap-drained preflight.
+Fireside still has to match the frozen input counts, pass both nine-journey
+windows and the complete soak, and restart from its exact export. To retain an
+exact cross-stack persistent-state check without rerunning the memory-bound
+official stack, a final fresh-preflight Fireside process imports the preserved
+official r36 export and compares all stable counts plus the normalized generated
+cache value. This additional import is parity evidence; it is not an official
+measurement rerun and does not relax a Fireside criterion.
+The preserved official export itself is independently frozen as 66,756 files,
+8,180,612,785 bytes, and tree SHA-256
+`c1a1451827c326fb680b2133b0a2c42b79302f1fb89febfb02228ad056b619ca`.
+
 ### Auth refresh grant reuse (r24 follow-up oracle)
 
 `auth-refresh-reuse` freezes 28 direct HTTP observations against firebase-tools

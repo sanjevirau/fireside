@@ -110,6 +110,54 @@ test("r22 diagnostic amendment splits readiness without touching workload or soa
   assert.equal(manifest.readinessEvidence.perConditionReadyTimesRequired, true);
 });
 
+test("r36 amendment is official-only and leaves every Fireside criterion strict", async () => {
+  const manifest = JSON.parse(await readFile(manifestUrl, "utf8")) as Phase5Manifest;
+  const amendment = manifest.officialRestartHostLimitAmendment;
+  assert.equal(
+    amendment.previousManifestSha256,
+    "fe9d44c1edb6105d6edc9f0ab3b3251cb34929b7b6113e559ff9a2558ad7b957",
+  );
+  assert.equal(amendment.amendedBeforeFiresideMeasurement, true);
+  assert.equal(amendment.criteriaWeakened, true);
+  assert.equal(amendment.scope, "official-baseline-only");
+  assert.match(amendment.reason, /^Official full-data evidence stands:/u);
+  assert.match(amendment.reason, /The restart-phase failure is host exhaustion/u);
+  assert.match(amendment.normalizedEvidenceCorrection, /three completed journeys/u);
+  assert.deepEqual(amendment.qualifyingConditions, {
+    stack: "official",
+    stage: "post-restart-browser-journeys",
+    pageErrors: 0,
+    gatingRequestFailures: 0,
+    pendingRawEmulatorRequestsRequired: true,
+    pendingProxiedAliasRequestsRequired: true,
+    sourceEvidenceChecksumVerificationRequired: true,
+  });
+  assert.equal(amendment.officialInitialAndSoakRemainBaselineMeasurements, true);
+  assert.deepEqual(amendment.sourceOfficialExport, {
+    fileCount: 66_756,
+    fileBytes: 8_180_612_785,
+    treeSha256: "c1a1451827c326fb680b2133b0a2c42b79302f1fb89febfb02228ad056b619ca",
+  });
+  assert.equal(amendment.officialStageRerun, false);
+  assert.equal(amendment.continueWithFireside, true);
+  assert.equal(amendment.freshQuiescentPreflightBeforeFireside, true);
+  for (const key of [
+    "firesideCriteriaChanged",
+    "firesideWorkloadChanged",
+    "firesideDurationsChanged",
+    "firesideThresholdsChanged",
+    "bothStacksMayRunConcurrently",
+    "performanceWinnerRequired",
+    "phase6MayStart",
+  ] as const) {
+    assert.equal(amendment[key], false);
+  }
+  assert.equal(amendment.finalReportMarksOfficialRestartHostLimited, true);
+  assert.ok(Object.values(manifest.soak.thresholds).every((threshold) => threshold === 0));
+  assert.equal(manifest.soak.durationSeconds, 7_200);
+  assert.equal(manifest.differentialJourneys.journeys.length, 9);
+});
+
 test("the Phase 5 manifest rejects byte drift before any measurement", async () => {
   const bytes = await readFile(manifestUrl);
   const manifest = JSON.parse(bytes.toString("utf8")) as Phase5Manifest;
