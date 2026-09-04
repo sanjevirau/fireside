@@ -15,7 +15,7 @@ defect. This attempt cannot be promoted or tagged.
 - The immutable schema-v3 manifest remained SHA-256
   `48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e`.
 - The protected browser runner remained SHA-256
-  `ad61e2e793ddc8bbd5364a3f506512b09600990e804d45ec8d092294123ff6e0`.
+  `ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc`.
 - The fresh Linux build and both cheap stacks passed: nine journeys, 60-second
   soak, export-first shutdown, cleanup, and orphan checks on each stack.
 - Fireside imported the frozen 8,180,616,677-byte dataset with 211,202
