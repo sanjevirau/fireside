@@ -59,6 +59,85 @@ const tinyBrowserR10LoginRenderUrl = new URL(
   "../fixtures/phase5/tiny-browser-r10-login-render-contract.json",
   import.meta.url,
 );
+const officialStorageRuntimeCapacityR33Url = new URL(
+  "../fixtures/phase5/official-storage-runtime-capacity-r33.json",
+  import.meta.url,
+);
+
+test("the r33 official Storage import freezes the runtime-filesystem capacity failure", async () => {
+  const fixture = JSON.parse(
+    await readFile(officialStorageRuntimeCapacityR33Url, "utf8"),
+  ) as {
+    readonly contract: {
+      readonly fullDataRuntimeMustNotUseQuotaConstrainedSystemTmpfs: boolean;
+      readonly maximumLinuxUnixSocketPathBytes: number;
+      readonly minimumAvailableRuntimeBytesFromManifest: boolean;
+      readonly phase5ManifestMayChange: boolean;
+      readonly phase5WorkloadOrThresholdsMayChange: boolean;
+      readonly privateDatasetContentStored: boolean;
+      readonly runtimeCapacityMustBeCheckedDuringEnvironmentVerification: boolean;
+      readonly runtimeDirectoryMustLeaveSocketSuffixHeadroom: boolean;
+      readonly runtimeMustUseTheControlledLargeCapacityFilesystem: boolean;
+      readonly smokeAndFullDataUseTheSamePlacementRule: boolean;
+    };
+    readonly observation: {
+      readonly currentBootOomOrResourceEvidence: number;
+      readonly datasetFileBytes: number;
+      readonly errnoName: string;
+      readonly errnoNumber: number;
+      readonly failedSystemdUnits: number;
+      readonly firesideFullDataStackStarted: boolean;
+      readonly operation: string;
+      readonly processExitedBeforeReadiness: boolean;
+      readonly runtimeFilesystem: {
+        readonly availableBytesAtInspection: number;
+        readonly optionsInclude: readonly string[];
+        readonly totalBytes: number;
+        readonly type: string;
+      };
+      readonly smokeJourneysPerStack: number;
+      readonly smokePassedImmediatelyBeforeFullGate: boolean;
+      readonly sourceFilesystem: {
+        readonly availableBytesAtInspection: number;
+        readonly type: string;
+      };
+    };
+    readonly schemaVersion: number;
+  };
+
+  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.observation.errnoNumber, -122);
+  assert.equal(fixture.observation.errnoName, "EDQUOT");
+  assert.match(fixture.observation.operation, /StorageLayer\.import/u);
+  assert.equal(fixture.observation.runtimeFilesystem.type, "tmpfs");
+  assert.ok(fixture.observation.runtimeFilesystem.optionsInclude.includes("usrquota"));
+  assert.ok(
+    fixture.observation.datasetFileBytes > fixture.observation.runtimeFilesystem.totalBytes,
+  );
+  assert.equal(fixture.observation.sourceFilesystem.type, "ext4");
+  assert.ok(
+    fixture.observation.sourceFilesystem.availableBytesAtInspection >
+      fixture.observation.datasetFileBytes,
+  );
+  assert.equal(fixture.observation.processExitedBeforeReadiness, true);
+  assert.equal(fixture.observation.firesideFullDataStackStarted, false);
+  assert.equal(fixture.observation.failedSystemdUnits, 0);
+  assert.equal(fixture.observation.currentBootOomOrResourceEvidence, 0);
+  assert.equal(fixture.observation.smokePassedImmediatelyBeforeFullGate, true);
+  assert.equal(fixture.observation.smokeJourneysPerStack, 9);
+  assert.deepEqual(fixture.contract, {
+    fullDataRuntimeMustNotUseQuotaConstrainedSystemTmpfs: true,
+    maximumLinuxUnixSocketPathBytes: 107,
+    minimumAvailableRuntimeBytesFromManifest: true,
+    phase5ManifestMayChange: false,
+    phase5WorkloadOrThresholdsMayChange: false,
+    privateDatasetContentStored: false,
+    runtimeCapacityMustBeCheckedDuringEnvironmentVerification: true,
+    runtimeDirectoryMustLeaveSocketSuffixHeadroom: true,
+    runtimeMustUseTheControlledLargeCapacityFilesystem: true,
+    smokeAndFullDataUseTheSamePlacementRule: true,
+  });
+});
 
 test("the exact lifecycle observation requires one SIGINT to one emulator process", async () => {
   const fixture = JSON.parse(await readFile(singleSigintUrl, "utf8")) as {

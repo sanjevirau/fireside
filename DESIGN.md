@@ -2349,6 +2349,35 @@ are subtracted from the manifest's total Storage baseline before comparing the
 remaining stable state; the manifest, workload, durations, browser runner and
 zero-mismatch rule remain unchanged.
 
+### Phase 5 official Storage runtime-capacity oracle (r33)
+
+R33 passed the complete cheap tier on both stacks: all readiness conditions,
+nine browser journeys per stack, both sequential 60-second soaks, export-first
+shutdown, cleanup, stable-state parity, generated-cache parity, and checksums.
+The automatically started full-data gate then stopped before official readiness.
+Fireside's full-data stack never started.
+
+The exact firebase-tools 15.22.0 debug log reports Linux errno `-122`
+(`EDQUOT`) while `StorageLayer.import` copied a frozen Storage blob through
+`Persistence.copyFromExternalPath` into
+`/tmp/fireside-p5-699bdd1247257164/official-initial`. The controller then shut
+the already-started emulators down in order. The host recorded zero failed
+systemd units and zero current-boot OOM or resource-kill evidence.
+
+Read-only filesystem inspection proves that `/tmp` is an 8,073,437,184-byte
+`tmpfs` mounted with `usrquota`, while the frozen input tree is 8,180,616,677
+bytes. The input and isolated Phase 5 trees reside on the controlled ext4
+filesystem at `/srv/dev-fast`, which had 229,285,539,840 bytes available. The
+failure is therefore harness runtime placement, not an emulator-product,
+Twodart-application, memory-pressure, or workload defect.
+
+All Phase 5 emulator runtime directories must use the controlled large-capacity
+filesystem and must be capacity-checked against the manifest minimum before
+launch. Their path must remain short enough for the 107-byte Linux Functions
+Unix-socket boundary. Smoke and full-data attempts use the same placement rule;
+the manifest, protected browser runner, workload, durations, and thresholds do
+not change.
+
 ### Auth refresh grant reuse (r24 follow-up oracle)
 
 `auth-refresh-reuse` freezes 28 direct HTTP observations against firebase-tools

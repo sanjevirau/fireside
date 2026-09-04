@@ -3,11 +3,12 @@
 Phase 5 is **incomplete**. The current authorization is the bounded fix/cheap-smoke
 loop supplied after r25, followed immediately by the immutable full-data gate
 only when both complete cheap-smoke stacks pass. R26 through r30 remain preserved
-failed attempts under the previous allowance. R30 is now classified as the first
-infrastructure stall, and the user-authorized attempt budget resets to **eight at
-r31**. Oracle probes are not acceptance smokes. No full-data gate has launched
-for the current candidate. R32 completed both smoke stacks but exposed a second
-generated-cache link location that the r31 normalizer did not yet cover.
+failed attempts under the previous allowance. R30 is classified as the first
+infrastructure stall, and the user-authorized attempt budget reset to **eight at
+r31**. Oracle probes are not acceptance smokes. R33 passed the entire cheap tier
+on both stacks and automatically launched the full-data gate. That full attempt
+stopped before official readiness on the newly frozen harness runtime-placement
+defect; Fireside's full-data stack did not start.
 
 ## Current loop
 
@@ -21,6 +22,7 @@ generated-cache link location that the r31 normalizer did not yet cover.
 | [r30](phase-5-smoke-20260904-r30.md) (previous attempt 5/8) | Official 4/9; journey 5 image visibility timed out after 180 s; Fireside not started | Infrastructure, first occurrence: official Storage-alias downloads stalled after upload, all five object commits, and Firestore write succeeded | `87ad833` | `75f7e4a` | [33785390892](https://github.com/sanjevirau/fireside/actions/runs/33785390892), 7/7 green | Failed; official exit zero; single fresh-preflight retry authorized as r31 after read-only attribution diagnostics; new budget starts at 1/8 |
 | [r31](phase-5-smoke-20260904-r31.md) (attempt 1/8 after reset) | Both stacks 9/9 + 60 s soak | Harness: physical bytes of the generated cache vary with timestamp even across official runs; stable state must remain exact while cache uses its separate normalized parity gate | `phase5-cache-state-parity` fixture | `23b6759` | [33813205201](https://github.com/sanjevirau/fireside/actions/runs/33813205201), 7/7 green; evidence [33817117705](https://github.com/sanjevirau/fireside/actions/runs/33817117705), 7/7 green | Failed only at final exact state comparison; both export-first exits zero; no r30 stall; full-data directory absent |
 | [r32](phase-5-smoke-20260904-r32.md) (attempt 2/8 after reset) | Both stacks 9/9 + 60 s soak | Harness: current cache shape stores the dynamic stack Storage port under `data.themeMetadataData.slides[].slideThemeData[]`; decoded exports otherwise differ only by the declared timestamp | updated `phase5-cache-state-parity` fixture | `585f588` | [33822092710](https://github.com/sanjevirau/fireside/actions/runs/33822092710), 7/7 green after one infrastructure-only cell rerun | Failed only at generated-cache observation 2; both export-first exits zero; full-data directory absent |
+| [r33](phase-5-full-gate-20260904-r33.md) (attempt 3/8 after reset) | Both smoke stacks 9/9 + 60 s soak; automatic full gate reached official Storage import | Harness: firebase-tools copied the 8.18 GB input into quota-constrained `/tmp`; Linux `EDQUOT` stopped official readiness | `official-storage-runtime-capacity-r33` fixture | `72a5c49` | [33826287482](https://github.com/sanjevirau/fireside/actions/runs/33826287482), 7/7 green after one infrastructure-only cell rerun | Cheap tier passed completely; full gate invalid-harness before journeys/soak; Fireside full stack not started |
 
 R25 failure evidence is published in `b79750636e1666e1d097b341b7cc9f85ba74d28c`;
 [evidence CI 33748445917](https://github.com/sanjevirau/fireside/actions/runs/33748445917)

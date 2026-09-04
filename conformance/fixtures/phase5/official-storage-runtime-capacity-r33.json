@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "kind": "exact Phase 5 r33 official firebase-tools 15.22.0 full-data startup failure plus read-only host filesystem inspection",
+    "candidateRevision": "72a5c49442915076e4a0490864af5c67f2960044",
+    "twodartRevision": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54",
+    "diagnostic": "full-gate-v3-20260904-72a5c49-r33",
+    "manifestSha256": "fe9d44c1edb6105d6edc9f0ab3b3251cb34929b7b6113e559ff9a2558ad7b957"
+  },
+  "observation": {
+    "datasetFileBytes": 8180616677,
+    "storageObjectBytes": 6689692200,
+    "runtimeDirectory": "/tmp/fireside-p5-699bdd1247257164/official-initial",
+    "runtimeFilesystem": {
+      "target": "/tmp",
+      "source": "tmpfs",
+      "type": "tmpfs",
+      "optionsInclude": [
+        "size=7884216k",
+        "usrquota"
+      ],
+      "totalBytes": 8073437184,
+      "availableBytesAtInspection": 7672303616
+    },
+    "sourceFilesystem": {
+      "target": "/srv/dev-fast",
+      "source": "/dev/sdb1",
+      "type": "ext4",
+      "availableBytesAtInspection": 229285539840
+    },
+    "firebaseToolsVersion": "15.22.0",
+    "operation": "StorageLayer.import -> Persistence.copyFromExternalPath -> copyFileSync",
+    "errnoNumber": -122,
+    "errnoName": "EDQUOT",
+    "processExitedBeforeReadiness": true,
+    "orderlyControllerShutdown": true,
+    "firesideFullDataStackStarted": false,
+    "failedSystemdUnits": 0,
+    "currentBootOomOrResourceEvidence": 0,
+    "smokePassedImmediatelyBeforeFullGate": true,
+    "smokeJourneysPerStack": 9
+  },
+  "contract": {
+    "fullDataRuntimeMustNotUseQuotaConstrainedSystemTmpfs": true,
+    "runtimeMustUseTheControlledLargeCapacityFilesystem": true,
+    "runtimeCapacityMustBeCheckedDuringEnvironmentVerification": true,
+    "minimumAvailableRuntimeBytesFromManifest": true,
+    "maximumLinuxUnixSocketPathBytes": 107,
+    "runtimeDirectoryMustLeaveSocketSuffixHeadroom": true,
+    "smokeAndFullDataUseTheSamePlacementRule": true,
+    "phase5ManifestMayChange": false,
+    "phase5WorkloadOrThresholdsMayChange": false,
+    "privateDatasetContentStored": false
+  }
+}
