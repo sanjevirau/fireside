@@ -75,6 +75,48 @@ const officialRestartHostExhaustionR36Url = new URL(
   "../fixtures/phase5/official-restart-host-exhaustion-r36.json",
   import.meta.url,
 );
+const firesideInitialHostStallR36Url = new URL(
+  "../fixtures/phase5/fireside-initial-host-stall-r36.json",
+  import.meta.url,
+);
+
+test("the r36 Fireside initial failure remains strict despite the host-wide stall", async () => {
+  const fixture = JSON.parse(
+    await readFile(firesideInitialHostStallR36Url, "utf8"),
+  ) as {
+    readonly contract: Readonly<Record<string, boolean>>;
+    readonly gateResult: string;
+    readonly observation: {
+      readonly completedJourneys: readonly string[];
+      readonly gatingRequestFailures: number;
+      readonly pageErrors: number;
+      readonly pendingRequestClasses: Readonly<Record<string, number>>;
+      readonly preflightPassed: boolean;
+      readonly readinessPassed: boolean;
+      readonly soakStarted: boolean;
+    };
+    readonly schemaVersion: number;
+  };
+  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.gateResult, "failed");
+  assert.equal(fixture.observation.preflightPassed, true);
+  assert.equal(fixture.observation.readinessPassed, true);
+  assert.deepEqual(fixture.observation.completedJourneys, [
+    "otp-auth-login",
+    "dashboard-and-deck-list",
+  ]);
+  assert.equal(fixture.observation.pageErrors, 1);
+  assert.equal(fixture.observation.gatingRequestFailures, 0);
+  assert.deepEqual(fixture.observation.pendingRequestClasses, {
+    rawFiresideListen: 7,
+    rawFiresideAuthToken: 1,
+    proxiedStorageCache: 1,
+    nextStaticAsset: 1,
+    cleanupPing: 1,
+  });
+  assert.equal(fixture.observation.soakStarted, false);
+  for (const value of Object.values(fixture.contract)) assert.equal(value, false);
+});
 
 test("the r36 official restart freezes the narrowly scoped host-limit boundary", async () => {
   const fixture = JSON.parse(

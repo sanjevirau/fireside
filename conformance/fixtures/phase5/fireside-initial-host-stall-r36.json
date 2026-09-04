@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "gateResult": "failed",
+  "attribution": "host-wide-stall-observation",
+  "candidateRevision": "3a5644f15f8a53912da1bf004fb354246fa5a92e",
+  "candidateCiRun": 33863537340,
+  "manifestSha256": "48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e",
+  "protectedBrowserRunnerSha256": "ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc",
+  "releaseBinarySha256": "e0c4842e0659a65493aebb26168502b4f97cdf21b270b05990acabb547942821",
+  "observation": {
+    "preflightPassed": true,
+    "preflightResidualSwapBytesAfterDrain": 0,
+    "preflightSteadySwapInSamples": [0, 0, 0],
+    "preflightSteadySwapOutSamples": [0, 0, 0],
+    "readinessPassed": true,
+    "emulatorReadyMilliseconds": 136623,
+    "applicationReadyMilliseconds": 491293,
+    "completedJourneys": [
+      "otp-auth-login",
+      "dashboard-and-deck-list"
+    ],
+    "failedJourney": "existing-deck-and-listener-edit",
+    "failedWait": "locator('input[placeholder=\"Untitled Presentation\"]') to be visible",
+    "waitTimeoutMilliseconds": 300000,
+    "pageErrors": 1,
+    "pageErrorText": "FirebaseError: Firebase: Error (auth/network-request-failed).",
+    "pageErrorHash": "7ae144f66a88b0bc98055bb3f67b88dcd710c4b18279b61b240ad21d3268c616",
+    "gatingRequestFailures": 0,
+    "pendingRequestsAtFailure": 11,
+    "oldestPendingRequestMilliseconds": 616025,
+    "pendingRequestClasses": {
+      "rawFiresideListen": 7,
+      "rawFiresideAuthToken": 1,
+      "proxiedStorageCache": 1,
+      "nextStaticAsset": 1,
+      "cleanupPing": 1
+    },
+    "loaderDomText": "Loading... - Choladeck",
+    "failedSystemdUnitsAfterCleanup": 0,
+    "kernelOomOrResourceEvidenceAfterCleanup": 0,
+    "workloadProcessesAfterCleanup": 0,
+    "workloadListenersAfterCleanup": 0,
+    "soakStarted": false,
+    "restartStarted": false,
+    "parityStarted": false,
+    "freshColleagueStarted": false,
+    "regressionsStarted": false
+  },
+  "contract": {
+    "firesideCriteriaChanged": false,
+    "failureMayBeSilentlyRerun": false,
+    "phase5MayPass": false,
+    "performanceWinnerMayBeClaimed": false,
+    "phase5TagMayBeCreated": false,
+    "phase6MayStart": false
+  },
+  "evidenceDirectory": "reports/phase-5-metrics/failed-full-gate-20260904-3a5644f-r36-fireside-continuation"
+}

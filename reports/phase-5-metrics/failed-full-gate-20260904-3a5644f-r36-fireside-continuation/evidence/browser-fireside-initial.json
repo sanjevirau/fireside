@@ -1,0 +1,153 @@
+{
+  "browser": {
+    "pageErrors": 1,
+    "pageErrorHashes": [
+      "7ae144f66a88b0bc98055bb3f67b88dcd710c4b18279b61b240ad21d3268c616"
+    ],
+    "pageErrorCallsiteClasses": [
+      "first-party:https://phase5-fireside.templates.twodart.localhost:443/_next/static:647:41"
+    ],
+    "pageErrorNames": [
+      "FirebaseError"
+    ],
+    "consoleErrors": 4,
+    "consoleErrorHashes": [
+      "21a970b08153ca8a62f97dd8e821779845624f8fc50c168c1e05c43dfe64909f",
+      "6e02c12b0362db5db78a7a024c4bcfcce864310d99a5c1e6064d2f50abb2f77e",
+      "bf8900b5e19dd9fe22d66234fb48f8351ab992fd5d09d20946770f26d82aa451",
+      "e0ff9aa77408c9486e0817a6c85a725a16b7602f448e25acfd52bc532170f27b"
+    ],
+    "consoleErrorOrigins": [
+      "first-party:https://phase5-fireside.templates.twodart.localhost:443/_next/static",
+      "first-party:https://phase5-fireside.templates.twodart.localhost:443/login/overview"
+    ],
+    "requestFailures": 0,
+    "requestFailureClasses": [
+      "GET:fetch:http://127.0.0.1:23100/google.firestore.v1.Firestore/Listen:net::ERR_ABORTED",
+      "GET:fetch:http://127.0.0.1:23100/google.firestore.v1.Firestore/Write:net::ERR_ABORTED",
+      "POST:fetch:http://127.0.0.1:23100/google.firestore.v1.Firestore/Listen:net::ERR_ABORTED",
+      "POST:fetch:http://127.0.0.1:23100/google.firestore.v1.Firestore/Write:net::ERR_ABORTED"
+    ],
+    "requestFailureHashes": []
+  },
+  "candidateIdentityStored": false,
+  "errorHash": "44189ba8f71ad2d0880a57a5c43c88960e600aa2ee6e001907da1176859c30f7",
+  "iteration": "initial",
+  "journeys": [
+    {
+      "backendAssertions": 2,
+      "durationMs": 35494,
+      "id": "otp-auth-login",
+      "networkAssertions": 2,
+      "renderedAssertions": 4
+    },
+    {
+      "backendAssertions": 2,
+      "durationMs": 92251,
+      "id": "dashboard-and-deck-list",
+      "networkAssertions": 1,
+      "renderedAssertions": 2
+    }
+  ],
+  "navigations": [
+    {
+      "label": "login",
+      "status": 200
+    },
+    {
+      "label": "otp-request",
+      "status": 200
+    },
+    {
+      "label": "otp-verify",
+      "status": 200
+    }
+  ],
+  "clientRouteState": {
+    "dom": {
+      "bodyChildCount": 6,
+      "documentReadyState": "complete",
+      "emailInputCount": 0,
+      "inputCount": 1,
+      "loginFormCount": 0,
+      "loadingSpinnerCount": 0,
+      "nextErrorOverlayCount": 1,
+      "rootDivCount": 1
+    },
+    "finalDocumentPath": "/presentation/:id",
+    "finalDocumentQueryKeys": [],
+    "history": [
+      {
+        "kind": "history.replaceState",
+        "path": "/home/recent",
+        "queryKeys": []
+      },
+      {
+        "kind": "history.replaceState",
+        "path": "/home/recent",
+        "queryKeys": []
+      },
+      {
+        "kind": "history.pushState",
+        "path": "/presentation/:id",
+        "queryKeys": []
+      }
+    ],
+    "nextRouter": {
+      "asPath": "/presentation/:id",
+      "pathname": "/presentation/[...slug]",
+      "queryKeys": [
+        "slug"
+      ],
+      "route": "/presentation/[...slug]"
+    }
+  },
+  "network": {
+    "firstPartyResponses": 1287,
+    "requiredFailures": 0,
+    "requiredRequests": 1045,
+    "routeClasses": [
+      "blob://:80/https:/phase5-fireside.templates.twodart.localhost",
+      "http://127.0.0.1:23100/google.firestore.v1.Firestore/Listen",
+      "http://127.0.0.1:23100/google.firestore.v1.Firestore/Write",
+      "http://127.0.0.1:23101/identitytoolkit.googleapis.com/v1",
+      "http://127.0.0.1:23101/securetoken.googleapis.com/v1",
+      "https://phase5-fireside.storage.twodart.localhost:443/v0/b",
+      "https://phase5-fireside.templates.twodart.localhost:443/:id",
+      "https://phase5-fireside.templates.twodart.localhost:443/__nextjs_font/geist-latin.woff2",
+      "https://phase5-fireside.templates.twodart.localhost:443/__nextjs_font/geist-mono-latin.woff2",
+      "https://phase5-fireside.templates.twodart.localhost:443/_next/static",
+      "https://phase5-fireside.templates.twodart.localhost:443/api/login",
+      "https://phase5-fireside.templates.twodart.localhost:443/assets/placeholder.svg",
+      "https://phase5-fireside.templates.twodart.localhost:443/assets/video-announcement.jpg",
+      "https://phase5-fireside.templates.twodart.localhost:443/choladeck-app-screenshot.jpg",
+      "https://phase5-fireside.templates.twodart.localhost:443/favicon.svg",
+      "https://phase5-fireside.templates.twodart.localhost:443/home/recent",
+      "https://phase5-fireside.templates.twodart.localhost:443/login/overview",
+      "https://phase5-fireside.templates.twodart.localhost:443/presentation/:id"
+    ],
+    "websocketConnections": 4,
+    "websocketFramesReceived": 11
+  },
+  "undefinedLoginRequests": {
+    "count": 0,
+    "initiatorCallsiteClasses": [],
+    "initiatorCallsiteHashes": [],
+    "initiatorTypes": [],
+    "navigationRequests": 0,
+    "resourceTypes": []
+  },
+  "passed": false,
+  "privacy": {
+    "credentialsStored": false,
+    "datasetIdentityStored": false,
+    "deckContentStored": false,
+    "otpStored": false,
+    "queryValuesStored": false,
+    "requestInitiatorPayloadStored": false,
+    "userIdentityStored": false
+  },
+  "schemaVersion": 1,
+  "skippedJourneys": [],
+  "stack": "fireside"
+}
