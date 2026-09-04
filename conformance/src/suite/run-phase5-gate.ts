@@ -336,6 +336,7 @@ async function main(): Promise<void> {
         normalization: [
           "metadata.buildTimestamp",
           "data.general.slideThemeData[].chunkedJsonLink storage port",
+          "data.themeMetadataData.slides[].slideThemeData[].chunkedJsonLink storage port",
         ],
         normalizedLogicalValuesMatched: true,
         physicalBytesMeasurementOnly: true,

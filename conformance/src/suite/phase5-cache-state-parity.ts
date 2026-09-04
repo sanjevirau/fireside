@@ -38,6 +38,19 @@ export function phase5GeneratedCacheMetadataSize(value: unknown): number | null 
   return size;
 }
 
+function normalizeRawStorageLink(value: unknown): void {
+  if (!isRecord(value) || typeof value.chunkedJsonLink !== "string") return;
+  value.chunkedJsonLink = value.chunkedJsonLink.replace(
+    /http:\/\/127\.0\.0\.1:\d+(?=\/)/u,
+    "http://127.0.0.1:<storage-port>",
+  );
+}
+
+function normalizeThemeLinks(value: unknown): void {
+  if (!Array.isArray(value)) return;
+  for (const theme of value) normalizeRawStorageLink(theme);
+}
+
 export function normalizePhase5GeneratedCache(value: unknown): unknown {
   const normalized = structuredClone(value);
   if (!isRecord(normalized)) throw new Error("Phase 5 generated cache must be a JSON object");
@@ -45,14 +58,15 @@ export function normalizePhase5GeneratedCache(value: unknown): unknown {
   if (isRecord(normalized.metadata)) delete normalized.metadata.buildTimestamp;
   const data = normalized.data;
   if (!isRecord(data)) return normalized;
+
   const general = data.general;
-  if (!isRecord(general) || !Array.isArray(general.slideThemeData)) return normalized;
-  for (const theme of general.slideThemeData) {
-    if (!isRecord(theme) || typeof theme.chunkedJsonLink !== "string") continue;
-    theme.chunkedJsonLink = theme.chunkedJsonLink.replace(
-      /http:\/\/127\.0\.0\.1:\d+(?=\/)/u,
-      "http://127.0.0.1:<storage-port>",
-    );
+  if (isRecord(general)) normalizeThemeLinks(general.slideThemeData);
+
+  const themeMetadata = data.themeMetadataData;
+  if (isRecord(themeMetadata) && Array.isArray(themeMetadata.slides)) {
+    for (const slide of themeMetadata.slides) {
+      if (isRecord(slide)) normalizeThemeLinks(slide.slideThemeData);
+    }
   }
   return normalized;
 }

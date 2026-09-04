@@ -2321,17 +2321,22 @@ fixture includes exact bodies, headers, hashes, source hashes and a real-browser
 observation. Its bucket, object and origin are synthetic; no credentials or user
 data are retained.
 
-### Phase 5 generated-cache state parity oracle (r31)
+### Phase 5 generated-cache state parity oracle (r31-r32)
 
 The cache watcher owns `assets-local.twodart.com/cache/main-cache-local.json` as
 an operational output, not a stable frozen-data artifact. Synthetic r29 and r31
-exports show that all four official/Fireside cache bodies decode to 107,473
-bytes and share one canonical SHA-256 after removing the generated
+exports show that all six official/Fireside cache bodies decode to 107,473
+bytes and share one canonical SHA-256 per attempt after removing the generated
 `metadata.buildTimestamp` and replacing the intentional stack-specific raw
-Storage port in `data.general.slideThemeData[].chunkedJsonLink`. The official
-gzip representation itself changed from 12,436 to 12,437 bytes across those two
-runs without a normalized logical change. Fireside matched the official size in
-each final export. The emulators must continue to preserve and report the exact
+Storage port in both observed link locations:
+`data.general.slideThemeData[].chunkedJsonLink` and
+`data.themeMetadataData.slides[].slideThemeData[].chunkedJsonLink`. The r32
+export proved the second location is live; omitting it caused a false parity
+failure even though those two generated values were the complete decoded JSON
+diff. The official gzip representation itself changed from 12,436 to 12,437
+bytes across runs without a normalized logical change. Fireside matched the
+official size in the r29 and r31 final exports and differed by one measured byte
+in r32. The emulators must continue to preserve and report the exact
 client-supplied gzip bytes; metadata may not be falsified to make parity pass.
 
 Phase 5 therefore counts every other Storage object and byte as stable state and

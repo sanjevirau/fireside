@@ -100,6 +100,14 @@ test("generated cache parity normalizes only the frozen dynamic contract", () =>
               `http://127.0.0.1:${String(storagePort)}/download/chunk.json`,
           }],
         },
+        themeMetadataData: {
+          slides: [{
+            slideThemeData: [{
+              chunkedJsonLink:
+                `http://127.0.0.1:${String(storagePort)}/download/nested-chunk.json`,
+            }],
+          }],
+        },
       },
       metadata: { buildTimestamp, retained: "measured" },
     }));
