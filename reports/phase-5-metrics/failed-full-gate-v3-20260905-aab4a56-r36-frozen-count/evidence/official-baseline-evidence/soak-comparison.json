@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 3,
+  "swapIsMeasurementOnly": true,
+  "winnerRequired": false,
+  "topProcessRanking": "per-PID maximum sampled PSS; independent ranks, not matched process identities",
+  "stacks": {
+    "official": {
+      "durationSeconds": 7200,
+      "passed": true,
+      "swapActivity": {
+        "residualSwapBytesAtEnd": 12597698560,
+        "residualSwapBytesAtStart": 13496057856,
+        "sampleCount": 241,
+        "swapInPagesDelta": 499591,
+        "swapOutPagesDelta": 438844
+      },
+      "topProcessesByPss": [
+        {
+          "command": "java",
+          "pid": 599724,
+          "peakPssBytes": 9342156800,
+          "peakRssBytes": 9352003584,
+          "samples": 241
+        },
+        {
+          "command": "MainThread",
+          "pid": 600716,
+          "peakPssBytes": 2679262208,
+          "peakRssBytes": 2701492224,
+          "samples": 241
+        },
+        {
+          "command": "next-server (v1",
+          "pid": 599598,
+          "peakPssBytes": 1391630336,
+          "peakRssBytes": 1422639104,
+          "samples": 241
+        },
+        {
+          "command": "TwodartNet",
+          "pid": 599953,
+          "peakPssBytes": 559923200,
+          "peakRssBytes": 580517888,
+          "samples": 241
+        },
+        {
+          "command": "MainThread",
+          "pid": 599537,
+          "peakPssBytes": 272686080,
+          "peakRssBytes": 294854656,
+          "samples": 241
+        },
+        {
+          "command": "MainThread",
+          "pid": 601687,
+          "peakPssBytes": 164699136,
+          "peakRssBytes": 203812864,
+          "samples": 241
+        },
+        {
+          "command": "MainThread",
+          "pid": 602156,
+          "peakPssBytes": 163798016,
+          "peakRssBytes": 207527936,
+          "samples": 240
+        },
+        {
+          "command": "MainThread",
+          "pid": 602162,
+          "peakPssBytes": 163603456,
+          "peakRssBytes": 207339520,
+          "samples": 240
+        },
+        {
+          "command": "dotnet",
+          "pid": 599855,
+          "peakPssBytes": 118595584,
+          "peakRssBytes": 136192000,
+          "samples": 241
+        },
+        {
+          "command": "java",
+          "pid": 600034,
+          "peakPssBytes": 95794176,
+          "peakRssBytes": 105709568,
+          "samples": 241
+        }
+      ]
+    },
+    "fireside": null
+  }
+}

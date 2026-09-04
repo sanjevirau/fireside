@@ -1,0 +1,447 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-09-04T18:50:37.439Z",
+  "timestamp": "2026-09-04T18:51:09.580Z",
+  "elapsedMilliseconds": 32141,
+  "deadlines": {
+    "emulator": {
+      "maximumSeconds": 60,
+      "deadlineAt": "2026-09-04T18:51:37.439Z",
+      "readyMilliseconds": 16924
+    },
+    "application": {
+      "maximumSeconds": 1200,
+      "deadlineAt": "2026-09-04T19:10:37.439Z",
+      "readyMilliseconds": 31568
+    }
+  },
+  "conditions": [
+    {
+      "id": "marker:firebase-emulator.log",
+      "group": "emulator",
+      "kind": "marker",
+      "target": "All emulators ready",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.272Z",
+      "elapsedMilliseconds": 30833,
+      "firstReadyAt": "2026-09-04T18:50:37.661Z",
+      "firstReadyMilliseconds": 222,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "marker:firebase-cache-watch.log",
+      "group": "application",
+      "kind": "marker",
+      "target": "Smart watcher started successfully",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.272Z",
+      "elapsedMilliseconds": 30833,
+      "firstReadyAt": "2026-09-04T18:50:37.662Z",
+      "firstReadyMilliseconds": 223,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "marker:templates.log",
+      "group": "application",
+      "kind": "marker",
+      "target": "Ready in",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.272Z",
+      "elapsedMilliseconds": 30833,
+      "firstReadyAt": "2026-09-04T18:50:37.662Z",
+      "firstReadyMilliseconds": 223,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "marker:dotnet.log",
+      "group": "application",
+      "kind": "marker",
+      "target": "Now listening on:",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.272Z",
+      "elapsedMilliseconds": 30833,
+      "firstReadyAt": "2026-09-04T18:50:37.661Z",
+      "firstReadyMilliseconds": 222,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "port:firestore",
+      "group": "emulator",
+      "kind": "port",
+      "target": "127.0.0.1:23100",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.269Z",
+      "elapsedMilliseconds": 30830,
+      "firstReadyAt": "2026-09-04T18:50:42.456Z",
+      "firstReadyMilliseconds": 5017,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "port:auth",
+      "group": "emulator",
+      "kind": "port",
+      "target": "127.0.0.1:23101",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.269Z",
+      "elapsedMilliseconds": 30830,
+      "firstReadyAt": "2026-09-04T18:50:42.456Z",
+      "firstReadyMilliseconds": 5017,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "port:storage",
+      "group": "emulator",
+      "kind": "port",
+      "target": "127.0.0.1:23102",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.270Z",
+      "elapsedMilliseconds": 30831,
+      "firstReadyAt": "2026-09-04T18:50:42.456Z",
+      "firstReadyMilliseconds": 5017,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "port:functions",
+      "group": "emulator",
+      "kind": "port",
+      "target": "127.0.0.1:23103",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.270Z",
+      "elapsedMilliseconds": 30831,
+      "firstReadyAt": "2026-09-04T18:50:48.396Z",
+      "firstReadyMilliseconds": 10957,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "port:pubsub",
+      "group": "emulator",
+      "kind": "port",
+      "target": "127.0.0.1:23104",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.270Z",
+      "elapsedMilliseconds": 30831,
+      "firstReadyAt": "2026-09-04T18:50:42.456Z",
+      "firstReadyMilliseconds": 5017,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "port:hub",
+      "group": "emulator",
+      "kind": "port",
+      "target": "127.0.0.1:23105",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.270Z",
+      "elapsedMilliseconds": 30831,
+      "firstReadyAt": "2026-09-04T18:50:42.456Z",
+      "firstReadyMilliseconds": 5017,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "port:ui",
+      "group": "emulator",
+      "kind": "port",
+      "target": "127.0.0.1:23106",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.270Z",
+      "elapsedMilliseconds": 30831,
+      "firstReadyAt": "2026-09-04T18:50:42.456Z",
+      "firstReadyMilliseconds": 5017,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "port:firestoreWebsocket",
+      "group": "emulator",
+      "kind": "port",
+      "target": "127.0.0.1:23107",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.270Z",
+      "elapsedMilliseconds": 30831,
+      "firstReadyAt": "2026-09-04T18:50:42.456Z",
+      "firstReadyMilliseconds": 5017,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "port:logging",
+      "group": "emulator",
+      "kind": "port",
+      "target": "127.0.0.1:23108",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.270Z",
+      "elapsedMilliseconds": 30831,
+      "firstReadyAt": "2026-09-04T18:50:42.456Z",
+      "firstReadyMilliseconds": 5017,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "port:eventarc",
+      "group": "emulator",
+      "kind": "port",
+      "target": "127.0.0.1:23109",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.270Z",
+      "elapsedMilliseconds": 30831,
+      "firstReadyAt": "2026-09-04T18:50:42.456Z",
+      "firstReadyMilliseconds": 5017,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "port:tasks",
+      "group": "emulator",
+      "kind": "port",
+      "target": "127.0.0.1:23110",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.270Z",
+      "elapsedMilliseconds": 30831,
+      "firstReadyAt": "2026-09-04T18:50:42.456Z",
+      "firstReadyMilliseconds": 5017,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "port:mprocsControl",
+      "group": "application",
+      "kind": "port",
+      "target": "127.0.0.1:23111",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.272Z",
+      "elapsedMilliseconds": 30833,
+      "firstReadyAt": "2026-09-04T18:50:40.062Z",
+      "firstReadyMilliseconds": 2623,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "port:cacheWebsocket",
+      "group": "application",
+      "kind": "port",
+      "target": "127.0.0.1:23112",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.270Z",
+      "elapsedMilliseconds": 30831,
+      "firstReadyAt": "2026-09-04T18:50:55.653Z",
+      "firstReadyMilliseconds": 18214,
+      "result": {
+        "ready": true,
+        "outcome": "ready"
+      }
+    },
+    {
+      "id": "probe:functions-inventory",
+      "group": "emulator",
+      "kind": "probe",
+      "target": "http://127.0.0.1:23103/backends",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.271Z",
+      "elapsedMilliseconds": 30832,
+      "firstReadyAt": "2026-09-04T18:50:48.781Z",
+      "firstReadyMilliseconds": 11342,
+      "result": {
+        "ready": true,
+        "outcome": "http",
+        "status": 200
+      }
+    },
+    {
+      "id": "probe:emulator-hub",
+      "group": "emulator",
+      "kind": "probe",
+      "target": "http://127.0.0.1:23105/emulators",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.271Z",
+      "elapsedMilliseconds": 30832,
+      "firstReadyAt": "2026-09-04T18:50:42.460Z",
+      "firstReadyMilliseconds": 5021,
+      "result": {
+        "ready": true,
+        "outcome": "http",
+        "status": 200
+      }
+    },
+    {
+      "id": "probe:frontend-login",
+      "group": "application",
+      "kind": "probe",
+      "target": "https://phase5-fireside.templates.twodart.localhost/login/overview",
+      "attempts": 5,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:09.007Z",
+      "elapsedMilliseconds": 31568,
+      "firstReadyAt": "2026-09-04T18:51:09.007Z",
+      "firstReadyMilliseconds": 31568,
+      "result": {
+        "ready": true,
+        "outcome": "http",
+        "status": 200
+      }
+    },
+    {
+      "id": "probe:twodartnet-health",
+      "group": "application",
+      "kind": "probe",
+      "target": "https://phase5-fireside.twodartnet.twodart.localhost/api/HealthCheck",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.272Z",
+      "elapsedMilliseconds": 30833,
+      "firstReadyAt": "2026-09-04T18:51:00.766Z",
+      "firstReadyMilliseconds": 23327,
+      "result": {
+        "ready": true,
+        "outcome": "http",
+        "status": 200
+      }
+    },
+    {
+      "id": "probe:cache-json-raw",
+      "group": "application",
+      "kind": "probe",
+      "target": "http://127.0.0.1:23102/v0/b/assets-local.twodart.com/o/cache%2Fmain-cache-local.json?alt=media",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.272Z",
+      "elapsedMilliseconds": 30833,
+      "firstReadyAt": "2026-09-04T18:50:57.087Z",
+      "firstReadyMilliseconds": 19648,
+      "result": {
+        "status": 200,
+        "decodedByteLength": 105291,
+        "decodedSha256": "cef6d57bd5ec8a61cff76f39e92f56a92597ec243895db562724c404c7f884df",
+        "ready": true,
+        "outcome": "http",
+        "jsonValid": true
+      }
+    },
+    {
+      "id": "probe:cache-json-alias",
+      "group": "application",
+      "kind": "probe",
+      "target": "https://phase5-fireside.storage.twodart.localhost/v0/b/assets-local.twodart.com/o/cache%2Fmain-cache-local.json?alt=media",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.283Z",
+      "elapsedMilliseconds": 30844,
+      "firstReadyAt": "2026-09-04T18:50:57.097Z",
+      "firstReadyMilliseconds": 19658,
+      "result": {
+        "status": 200,
+        "decodedByteLength": 105291,
+        "decodedSha256": "cef6d57bd5ec8a61cff76f39e92f56a92597ec243895db562724c404c7f884df",
+        "ready": true,
+        "outcome": "http",
+        "jsonValid": true
+      }
+    },
+    {
+      "id": "probe:storage-alias-registration",
+      "group": "application",
+      "kind": "probe",
+      "target": "/home/sanjevi/.portless/routes.json",
+      "attempts": 27,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T18:51:09.580Z",
+      "observedAt": "2026-09-04T18:51:08.272Z",
+      "elapsedMilliseconds": 30833,
+      "firstReadyAt": "2026-09-04T18:50:40.063Z",
+      "firstReadyMilliseconds": 2624,
+      "result": {
+        "ready": true,
+        "outcome": "ready",
+        "error": null
+      }
+    }
+  ],
+  "unmetConditions": [],
+  "expiredGroups": [],
+  "failure": null,
+  "ready": true,
+  "consecutiveDefinitiveErrors": 0,
+  "passed": true
+}

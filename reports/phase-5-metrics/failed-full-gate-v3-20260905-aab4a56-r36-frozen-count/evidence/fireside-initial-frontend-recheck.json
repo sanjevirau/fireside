@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-09-04T19:07:32.056Z",
+  "timestamp": "2026-09-04T19:07:33.079Z",
+  "elapsedMilliseconds": 1023,
+  "deadlines": {
+    "emulator": {
+      "maximumSeconds": 1200,
+      "deadlineAt": "2026-09-04T19:27:32.056Z",
+      "readyMilliseconds": null
+    },
+    "application": {
+      "maximumSeconds": 1200,
+      "deadlineAt": "2026-09-04T19:27:32.056Z",
+      "readyMilliseconds": 684
+    }
+  },
+  "conditions": [
+    {
+      "id": "probe:frontend-login",
+      "group": "application",
+      "kind": "probe",
+      "target": "https://phase5-fireside.templates.twodart.localhost/login/overview",
+      "attempts": 2,
+      "pending": true,
+      "attemptStartedAt": "2026-09-04T19:07:33.079Z",
+      "observedAt": "2026-09-04T19:07:32.740Z",
+      "elapsedMilliseconds": 684,
+      "firstReadyAt": "2026-09-04T19:07:32.740Z",
+      "firstReadyMilliseconds": 684,
+      "result": {
+        "ready": true,
+        "outcome": "http",
+        "status": 200
+      }
+    }
+  ],
+  "unmetConditions": [],
+  "expiredGroups": [],
+  "failure": null,
+  "ready": true,
+  "consecutiveDefinitiveErrors": 0,
+  "passed": true
+}

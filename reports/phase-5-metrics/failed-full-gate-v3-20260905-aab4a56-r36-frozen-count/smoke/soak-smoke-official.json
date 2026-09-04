@@ -1,0 +1,1997 @@
+{
+  "primaryErrorText": null,
+  "cleanupErrorTexts": [],
+  "candidateIdentityStored": false,
+  "completedAt": "2026-09-04T18:50:22.619Z",
+  "datasetIdentityStored": false,
+  "durationSeconds": 60,
+  "expected": {
+    "catalogReads": 4,
+    "functionDispatches": 2,
+    "gatewayWrites": 12,
+    "runAndCaseWrites": 8,
+    "storageCycles": 2,
+    "tokenBatches": 24,
+    "tokenWrites": 480
+  },
+  "failureHashes": [],
+  "health": {
+    "after": {
+      "failedUnits": 0,
+      "oomOrResourceEvidence": 0
+    },
+    "before": {
+      "failedUnits": 0,
+      "oomOrResourceEvidence": 0
+    }
+  },
+  "manifestSha256": "48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e",
+  "memory": {
+    "official": {
+      "peakPssBytes": 10592003072,
+      "peakRssBytes": 11893223424,
+      "pssSlopeBytesPerHour": 9618915128.485662,
+      "rssSlopeBytesPerHour": 15831532061.29285,
+      "samples": 3
+    }
+  },
+  "topProcessesByPss": {
+    "official": [
+      {
+        "command": "next-server (v1",
+        "pid": 685860,
+        "peakPssBytes": 7774426112,
+        "peakRssBytes": 7829086208,
+        "samples": 3
+      },
+      {
+        "command": "java",
+        "pid": 685974,
+        "peakPssBytes": 603467776,
+        "peakRssBytes": 620027904,
+        "samples": 3
+      },
+      {
+        "command": "TwodartNet",
+        "pid": 686332,
+        "peakPssBytes": 414047232,
+        "peakRssBytes": 463011840,
+        "samples": 3
+      },
+      {
+        "command": "dotnet",
+        "pid": 686123,
+        "peakPssBytes": 241602560,
+        "peakRssBytes": 288862208,
+        "samples": 3
+      },
+      {
+        "command": "MainThread",
+        "pid": 685796,
+        "peakPssBytes": 225976320,
+        "peakRssBytes": 274989056,
+        "samples": 3
+      },
+      {
+        "command": "MainThread",
+        "pid": 687342,
+        "peakPssBytes": 160082944,
+        "peakRssBytes": 211210240,
+        "samples": 3
+      },
+      {
+        "command": "MainThread",
+        "pid": 688081,
+        "peakPssBytes": 158332928,
+        "peakRssBytes": 209588224,
+        "samples": 2
+      },
+      {
+        "command": "MainThread",
+        "pid": 688087,
+        "peakPssBytes": 157768704,
+        "peakRssBytes": 209063936,
+        "samples": 2
+      },
+      {
+        "command": "java",
+        "pid": 686181,
+        "peakPssBytes": 154456064,
+        "peakRssBytes": 170967040,
+        "samples": 3
+      },
+      {
+        "command": "java",
+        "pid": 686231,
+        "peakPssBytes": 133095424,
+        "peakRssBytes": 149680128,
+        "samples": 3
+      }
+    ]
+  },
+  "privateContentStored": false,
+  "projectId": "demo-twodart-local",
+  "raw": {
+    "swapWindow": {
+      "start": {
+        "swapFreeBytes": 19954679808,
+        "swapInPages": 45014935,
+        "swapOutPages": 78493572,
+        "swapTotalBytes": 21474828288
+      },
+      "end": {
+        "swapFreeBytes": 20051427328,
+        "swapInPages": 45017261,
+        "swapOutPages": 78493572,
+        "swapTotalBytes": 21474828288
+      }
+    },
+    "memorySamples": [
+      {
+        "capturedAt": "2026-09-04T18:49:22.338Z",
+        "elapsedMilliseconds": 383,
+        "host": {
+          "swapFreeBytes": 19954847744,
+          "swapInPages": 45015078,
+          "swapOutPages": 78493572,
+          "swapTotalBytes": 21474828288
+        },
+        "stacks": {
+          "official": {
+            "processCount": 64,
+            "processes": [
+              {
+                "command": "bash",
+                "pid": 685211,
+                "pssBytes": 489472,
+                "rssBytes": 4268032
+              },
+              {
+                "command": "bun",
+                "pid": 685300,
+                "pssBytes": 257024,
+                "rssBytes": 4763648
+              },
+              {
+                "command": "bash",
+                "pid": 685301,
+                "pssBytes": 286720,
+                "rssBytes": 3469312
+              },
+              {
+                "command": "bunx",
+                "pid": 685670,
+                "pssBytes": 251904,
+                "rssBytes": 4788224
+              },
+              {
+                "command": "MainThread",
+                "pid": 685671,
+                "pssBytes": 1552384,
+                "rssBytes": 37937152
+              },
+              {
+                "command": "mprocs",
+                "pid": 685678,
+                "pssBytes": 5558272,
+                "rssBytes": 5566464
+              },
+              {
+                "command": "sh",
+                "pid": 685692,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "sh",
+                "pid": 685693,
+                "pssBytes": 33792,
+                "rssBytes": 1875968
+              },
+              {
+                "command": "sh",
+                "pid": 685694,
+                "pssBytes": 33792,
+                "rssBytes": 1875968
+              },
+              {
+                "command": "bunx",
+                "pid": 685695,
+                "pssBytes": 251904,
+                "rssBytes": 4788224
+              },
+              {
+                "command": "sh",
+                "pid": 685700,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "bunx",
+                "pid": 685701,
+                "pssBytes": 251904,
+                "rssBytes": 4788224
+              },
+              {
+                "command": "bunx",
+                "pid": 685702,
+                "pssBytes": 268288,
+                "rssBytes": 4804608
+              },
+              {
+                "command": "sh",
+                "pid": 685703,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "sh",
+                "pid": 685704,
+                "pssBytes": 32768,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "MainThread",
+                "pid": 685705,
+                "pssBytes": 2393088,
+                "rssBytes": 45432832
+              },
+              {
+                "command": "bun",
+                "pid": 685706,
+                "pssBytes": 240640,
+                "rssBytes": 4759552
+              },
+              {
+                "command": "sh",
+                "pid": 685707,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "MainThread",
+                "pid": 685708,
+                "pssBytes": 2465792,
+                "rssBytes": 45412352
+              },
+              {
+                "command": "MainThread",
+                "pid": 685709,
+                "pssBytes": 2400256,
+                "rssBytes": 45416448
+              },
+              {
+                "command": "tail",
+                "pid": 685710,
+                "pssBytes": 1223680,
+                "rssBytes": 6799360
+              },
+              {
+                "command": "tail",
+                "pid": 685711,
+                "pssBytes": 1171456,
+                "rssBytes": 6455296
+              },
+              {
+                "command": "tail",
+                "pid": 685713,
+                "pssBytes": 1211392,
+                "rssBytes": 6819840
+              },
+              {
+                "command": "sh",
+                "pid": 685714,
+                "pssBytes": 36864,
+                "rssBytes": 1875968
+              },
+              {
+                "command": "bunx",
+                "pid": 685716,
+                "pssBytes": 256000,
+                "rssBytes": 4792320
+              },
+              {
+                "command": "bash",
+                "pid": 685719,
+                "pssBytes": 302080,
+                "rssBytes": 3481600
+              },
+              {
+                "command": "MainThread",
+                "pid": 685725,
+                "pssBytes": 2396160,
+                "rssBytes": 45596672
+              },
+              {
+                "command": "MainThread",
+                "pid": 685796,
+                "pssBytes": 225730560,
+                "rssBytes": 274669568
+              },
+              {
+                "command": "sh",
+                "pid": 685802,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "sh",
+                "pid": 685803,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "bun",
+                "pid": 685804,
+                "pssBytes": 232448,
+                "rssBytes": 4648960
+              },
+              {
+                "command": "bun",
+                "pid": 685805,
+                "pssBytes": 440320,
+                "rssBytes": 5181440
+              },
+              {
+                "command": "python",
+                "pid": 685806,
+                "pssBytes": 3435520,
+                "rssBytes": 6467584
+              },
+              {
+                "command": "sh",
+                "pid": 685807,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "dotnet",
+                "pid": 685808,
+                "pssBytes": 30200832,
+                "rssBytes": 72212480
+              },
+              {
+                "command": "MainThread",
+                "pid": 685809,
+                "pssBytes": 13459456,
+                "rssBytes": 56369152
+              },
+              {
+                "command": "sh",
+                "pid": 685811,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "bun",
+                "pid": 685812,
+                "pssBytes": 207872,
+                "rssBytes": 4554752
+              },
+              {
+                "command": "bun",
+                "pid": 685818,
+                "pssBytes": 215040,
+                "rssBytes": 4575232
+              },
+              {
+                "command": "MainThread",
+                "pid": 685825,
+                "pssBytes": 2843648,
+                "rssBytes": 49881088
+              },
+              {
+                "command": "dotnet",
+                "pid": 685848,
+                "pssBytes": 48333824,
+                "rssBytes": 93937664
+              },
+              {
+                "command": "next-server (v1",
+                "pid": 685860,
+                "pssBytes": 7774426112,
+                "rssBytes": 7829086208
+              },
+              {
+                "command": "sh",
+                "pid": 685870,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "esbuild",
+                "pid": 685871,
+                "pssBytes": 35778560,
+                "rssBytes": 36945920
+              },
+              {
+                "command": "sh",
+                "pid": 685872,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "java",
+                "pid": 685974,
+                "pssBytes": 592137216,
+                "rssBytes": 608686080
+              },
+              {
+                "command": "MainThread",
+                "pid": 686003,
+                "pssBytes": 1426432,
+                "rssBytes": 35131392
+              },
+              {
+                "command": "MainThread",
+                "pid": 686009,
+                "pssBytes": 3186688,
+                "rssBytes": 44560384
+              },
+              {
+                "command": "dotnet",
+                "pid": 686123,
+                "pssBytes": 241169408,
+                "rssBytes": 288428032
+              },
+              {
+                "command": "java",
+                "pid": 686181,
+                "pssBytes": 149718016,
+                "rssBytes": 166195200
+              },
+              {
+                "command": "java",
+                "pid": 686231,
+                "pssBytes": 133094400,
+                "rssBytes": 149680128
+              },
+              {
+                "command": "TwodartNet",
+                "pid": 686332,
+                "pssBytes": 412696576,
+                "rssBytes": 461651968
+              },
+              {
+                "command": "MainThread",
+                "pid": 686425,
+                "pssBytes": 18377728,
+                "rssBytes": 58318848
+              },
+              {
+                "command": "sh",
+                "pid": 686426,
+                "pssBytes": 144384,
+                "rssBytes": 1986560
+              },
+              {
+                "command": "bun",
+                "pid": 686430,
+                "pssBytes": 1452032,
+                "rssBytes": 5885952
+              },
+              {
+                "command": "bun",
+                "pid": 686432,
+                "pssBytes": 2156544,
+                "rssBytes": 6844416
+              },
+              {
+                "command": "MainThread",
+                "pid": 686437,
+                "pssBytes": 12379136,
+                "rssBytes": 50184192
+              },
+              {
+                "command": "MainThread",
+                "pid": 686450,
+                "pssBytes": 14968832,
+                "rssBytes": 53985280
+              },
+              {
+                "command": "esbuild",
+                "pid": 686458,
+                "pssBytes": 14249984,
+                "rssBytes": 15417344
+              },
+              {
+                "command": "MainThread",
+                "pid": 686488,
+                "pssBytes": 93125632,
+                "rssBytes": 145891328
+              },
+              {
+                "command": "MainThread",
+                "pid": 686609,
+                "pssBytes": 84212736,
+                "rssBytes": 133509120
+              },
+              {
+                "command": "MainThread",
+                "pid": 686615,
+                "pssBytes": 90546176,
+                "rssBytes": 140070912
+              },
+              {
+                "command": "MainThread",
+                "pid": 686626,
+                "pssBytes": 84726784,
+                "rssBytes": 134066176
+              },
+              {
+                "command": "MainThread",
+                "pid": 687342,
+                "pssBytes": 160082944,
+                "rssBytes": 211210240
+              }
+            ],
+            "pssBytes": 10268818432,
+            "rssBytes": 11466592256
+          }
+        }
+      },
+      {
+        "capturedAt": "2026-09-04T18:49:52.248Z",
+        "elapsedMilliseconds": 30293,
+        "host": {
+          "swapFreeBytes": 19954941952,
+          "swapInPages": 45015286,
+          "swapOutPages": 78493572,
+          "swapTotalBytes": 21474828288
+        },
+        "stacks": {
+          "official": {
+            "processCount": 66,
+            "processes": [
+              {
+                "command": "bash",
+                "pid": 685211,
+                "pssBytes": 481280,
+                "rssBytes": 4268032
+              },
+              {
+                "command": "bun",
+                "pid": 685300,
+                "pssBytes": 257024,
+                "rssBytes": 4763648
+              },
+              {
+                "command": "bash",
+                "pid": 685301,
+                "pssBytes": 287744,
+                "rssBytes": 3469312
+              },
+              {
+                "command": "bunx",
+                "pid": 685670,
+                "pssBytes": 251904,
+                "rssBytes": 4788224
+              },
+              {
+                "command": "MainThread",
+                "pid": 685671,
+                "pssBytes": 1552384,
+                "rssBytes": 37937152
+              },
+              {
+                "command": "mprocs",
+                "pid": 685678,
+                "pssBytes": 5623808,
+                "rssBytes": 5632000
+              },
+              {
+                "command": "sh",
+                "pid": 685692,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "sh",
+                "pid": 685693,
+                "pssBytes": 33792,
+                "rssBytes": 1875968
+              },
+              {
+                "command": "sh",
+                "pid": 685694,
+                "pssBytes": 33792,
+                "rssBytes": 1875968
+              },
+              {
+                "command": "bunx",
+                "pid": 685695,
+                "pssBytes": 251904,
+                "rssBytes": 4788224
+              },
+              {
+                "command": "sh",
+                "pid": 685700,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "bunx",
+                "pid": 685701,
+                "pssBytes": 251904,
+                "rssBytes": 4788224
+              },
+              {
+                "command": "bunx",
+                "pid": 685702,
+                "pssBytes": 268288,
+                "rssBytes": 4804608
+              },
+              {
+                "command": "sh",
+                "pid": 685703,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "sh",
+                "pid": 685704,
+                "pssBytes": 32768,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "MainThread",
+                "pid": 685705,
+                "pssBytes": 2359296,
+                "rssBytes": 45432832
+              },
+              {
+                "command": "bun",
+                "pid": 685706,
+                "pssBytes": 240640,
+                "rssBytes": 4759552
+              },
+              {
+                "command": "sh",
+                "pid": 685707,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "MainThread",
+                "pid": 685708,
+                "pssBytes": 2432000,
+                "rssBytes": 45412352
+              },
+              {
+                "command": "MainThread",
+                "pid": 685709,
+                "pssBytes": 2366464,
+                "rssBytes": 45416448
+              },
+              {
+                "command": "tail",
+                "pid": 685710,
+                "pssBytes": 1225728,
+                "rssBytes": 6799360
+              },
+              {
+                "command": "tail",
+                "pid": 685711,
+                "pssBytes": 1164288,
+                "rssBytes": 6455296
+              },
+              {
+                "command": "tail",
+                "pid": 685713,
+                "pssBytes": 1213440,
+                "rssBytes": 6819840
+              },
+              {
+                "command": "sh",
+                "pid": 685714,
+                "pssBytes": 36864,
+                "rssBytes": 1875968
+              },
+              {
+                "command": "bunx",
+                "pid": 685716,
+                "pssBytes": 256000,
+                "rssBytes": 4792320
+              },
+              {
+                "command": "bash",
+                "pid": 685719,
+                "pssBytes": 295936,
+                "rssBytes": 3481600
+              },
+              {
+                "command": "MainThread",
+                "pid": 685725,
+                "pssBytes": 2366464,
+                "rssBytes": 45600768
+              },
+              {
+                "command": "MainThread",
+                "pid": 685796,
+                "pssBytes": 225976320,
+                "rssBytes": 274989056
+              },
+              {
+                "command": "sh",
+                "pid": 685802,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "sh",
+                "pid": 685803,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "bun",
+                "pid": 685804,
+                "pssBytes": 232448,
+                "rssBytes": 4648960
+              },
+              {
+                "command": "bun",
+                "pid": 685805,
+                "pssBytes": 440320,
+                "rssBytes": 5181440
+              },
+              {
+                "command": "python",
+                "pid": 685806,
+                "pssBytes": 3437568,
+                "rssBytes": 6467584
+              },
+              {
+                "command": "sh",
+                "pid": 685807,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "dotnet",
+                "pid": 685808,
+                "pssBytes": 30255104,
+                "rssBytes": 72278016
+              },
+              {
+                "command": "MainThread",
+                "pid": 685809,
+                "pssBytes": 13447168,
+                "rssBytes": 56369152
+              },
+              {
+                "command": "sh",
+                "pid": 685811,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "bun",
+                "pid": 685812,
+                "pssBytes": 207872,
+                "rssBytes": 4554752
+              },
+              {
+                "command": "bun",
+                "pid": 685818,
+                "pssBytes": 215040,
+                "rssBytes": 4575232
+              },
+              {
+                "command": "MainThread",
+                "pid": 685825,
+                "pssBytes": 2803712,
+                "rssBytes": 49881088
+              },
+              {
+                "command": "dotnet",
+                "pid": 685848,
+                "pssBytes": 48359424,
+                "rssBytes": 93982720
+              },
+              {
+                "command": "next-server (v1",
+                "pid": 685860,
+                "pssBytes": 7773471744,
+                "rssBytes": 7828230144
+              },
+              {
+                "command": "sh",
+                "pid": 685870,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "esbuild",
+                "pid": 685871,
+                "pssBytes": 35946496,
+                "rssBytes": 37113856
+              },
+              {
+                "command": "sh",
+                "pid": 685872,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "java",
+                "pid": 685974,
+                "pssBytes": 598789120,
+                "rssBytes": 615342080
+              },
+              {
+                "command": "MainThread",
+                "pid": 686003,
+                "pssBytes": 1426432,
+                "rssBytes": 35131392
+              },
+              {
+                "command": "MainThread",
+                "pid": 686009,
+                "pssBytes": 3170304,
+                "rssBytes": 44564480
+              },
+              {
+                "command": "dotnet",
+                "pid": 686123,
+                "pssBytes": 241545216,
+                "rssBytes": 288804864
+              },
+              {
+                "command": "java",
+                "pid": 686181,
+                "pssBytes": 149922816,
+                "rssBytes": 166404096
+              },
+              {
+                "command": "java",
+                "pid": 686231,
+                "pssBytes": 133095424,
+                "rssBytes": 149680128
+              },
+              {
+                "command": "TwodartNet",
+                "pid": 686332,
+                "pssBytes": 412982272,
+                "rssBytes": 461942784
+              },
+              {
+                "command": "MainThread",
+                "pid": 686425,
+                "pssBytes": 18370560,
+                "rssBytes": 58318848
+              },
+              {
+                "command": "sh",
+                "pid": 686426,
+                "pssBytes": 144384,
+                "rssBytes": 1986560
+              },
+              {
+                "command": "bun",
+                "pid": 686430,
+                "pssBytes": 1452032,
+                "rssBytes": 5885952
+              },
+              {
+                "command": "bun",
+                "pid": 686432,
+                "pssBytes": 2156544,
+                "rssBytes": 6844416
+              },
+              {
+                "command": "MainThread",
+                "pid": 686437,
+                "pssBytes": 12376064,
+                "rssBytes": 50184192
+              },
+              {
+                "command": "MainThread",
+                "pid": 686450,
+                "pssBytes": 15138816,
+                "rssBytes": 54157312
+              },
+              {
+                "command": "esbuild",
+                "pid": 686458,
+                "pssBytes": 14393344,
+                "rssBytes": 15560704
+              },
+              {
+                "command": "MainThread",
+                "pid": 686488,
+                "pssBytes": 93367296,
+                "rssBytes": 146206720
+              },
+              {
+                "command": "MainThread",
+                "pid": 686609,
+                "pssBytes": 84135936,
+                "rssBytes": 133509120
+              },
+              {
+                "command": "MainThread",
+                "pid": 686615,
+                "pssBytes": 90468352,
+                "rssBytes": 140070912
+              },
+              {
+                "command": "MainThread",
+                "pid": 686626,
+                "pssBytes": 84648960,
+                "rssBytes": 134066176
+              },
+              {
+                "command": "MainThread",
+                "pid": 687342,
+                "pssBytes": 159943680,
+                "rssBytes": 211210240
+              },
+              {
+                "command": "MainThread",
+                "pid": 688081,
+                "pssBytes": 158332928,
+                "rssBytes": 209588224
+              },
+              {
+                "command": "MainThread",
+                "pid": 688087,
+                "pssBytes": 157768704,
+                "rssBytes": 209063936
+              }
+            ],
+            "pssBytes": 10592003072,
+            "rssBytes": 11893223424
+          }
+        }
+      },
+      {
+        "capturedAt": "2026-09-04T18:50:22.265Z",
+        "elapsedMilliseconds": 60310,
+        "host": {
+          "swapFreeBytes": 20051427328,
+          "swapInPages": 45017261,
+          "swapOutPages": 78493572,
+          "swapTotalBytes": 21474828288
+        },
+        "stacks": {
+          "official": {
+            "processCount": 66,
+            "processes": [
+              {
+                "command": "bash",
+                "pid": 685211,
+                "pssBytes": 481280,
+                "rssBytes": 4268032
+              },
+              {
+                "command": "bun",
+                "pid": 685300,
+                "pssBytes": 257024,
+                "rssBytes": 4763648
+              },
+              {
+                "command": "bash",
+                "pid": 685301,
+                "pssBytes": 287744,
+                "rssBytes": 3469312
+              },
+              {
+                "command": "bunx",
+                "pid": 685670,
+                "pssBytes": 251904,
+                "rssBytes": 4788224
+              },
+              {
+                "command": "MainThread",
+                "pid": 685671,
+                "pssBytes": 1552384,
+                "rssBytes": 37937152
+              },
+              {
+                "command": "mprocs",
+                "pid": 685678,
+                "pssBytes": 5627904,
+                "rssBytes": 5636096
+              },
+              {
+                "command": "sh",
+                "pid": 685692,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "sh",
+                "pid": 685693,
+                "pssBytes": 33792,
+                "rssBytes": 1875968
+              },
+              {
+                "command": "sh",
+                "pid": 685694,
+                "pssBytes": 33792,
+                "rssBytes": 1875968
+              },
+              {
+                "command": "bunx",
+                "pid": 685695,
+                "pssBytes": 251904,
+                "rssBytes": 4788224
+              },
+              {
+                "command": "sh",
+                "pid": 685700,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "bunx",
+                "pid": 685701,
+                "pssBytes": 251904,
+                "rssBytes": 4788224
+              },
+              {
+                "command": "bunx",
+                "pid": 685702,
+                "pssBytes": 268288,
+                "rssBytes": 4804608
+              },
+              {
+                "command": "sh",
+                "pid": 685703,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "sh",
+                "pid": 685704,
+                "pssBytes": 32768,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "MainThread",
+                "pid": 685705,
+                "pssBytes": 2359296,
+                "rssBytes": 45432832
+              },
+              {
+                "command": "bun",
+                "pid": 685706,
+                "pssBytes": 240640,
+                "rssBytes": 4759552
+              },
+              {
+                "command": "sh",
+                "pid": 685707,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "MainThread",
+                "pid": 685708,
+                "pssBytes": 2432000,
+                "rssBytes": 45412352
+              },
+              {
+                "command": "MainThread",
+                "pid": 685709,
+                "pssBytes": 2366464,
+                "rssBytes": 45416448
+              },
+              {
+                "command": "tail",
+                "pid": 685710,
+                "pssBytes": 1222656,
+                "rssBytes": 6799360
+              },
+              {
+                "command": "tail",
+                "pid": 685711,
+                "pssBytes": 1179648,
+                "rssBytes": 6455296
+              },
+              {
+                "command": "tail",
+                "pid": 685713,
+                "pssBytes": 1217536,
+                "rssBytes": 6819840
+              },
+              {
+                "command": "sh",
+                "pid": 685714,
+                "pssBytes": 36864,
+                "rssBytes": 1875968
+              },
+              {
+                "command": "bunx",
+                "pid": 685716,
+                "pssBytes": 256000,
+                "rssBytes": 4792320
+              },
+              {
+                "command": "bash",
+                "pid": 685719,
+                "pssBytes": 295936,
+                "rssBytes": 3481600
+              },
+              {
+                "command": "MainThread",
+                "pid": 685725,
+                "pssBytes": 2366464,
+                "rssBytes": 45600768
+              },
+              {
+                "command": "MainThread",
+                "pid": 685796,
+                "pssBytes": 121806848,
+                "rssBytes": 170819584
+              },
+              {
+                "command": "sh",
+                "pid": 685802,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "sh",
+                "pid": 685803,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "bun",
+                "pid": 685804,
+                "pssBytes": 232448,
+                "rssBytes": 4648960
+              },
+              {
+                "command": "bun",
+                "pid": 685805,
+                "pssBytes": 440320,
+                "rssBytes": 5181440
+              },
+              {
+                "command": "python",
+                "pid": 685806,
+                "pssBytes": 3437568,
+                "rssBytes": 6467584
+              },
+              {
+                "command": "sh",
+                "pid": 685807,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "dotnet",
+                "pid": 685808,
+                "pssBytes": 30275584,
+                "rssBytes": 72298496
+              },
+              {
+                "command": "MainThread",
+                "pid": 685809,
+                "pssBytes": 13422592,
+                "rssBytes": 56344576
+              },
+              {
+                "command": "sh",
+                "pid": 685811,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "bun",
+                "pid": 685812,
+                "pssBytes": 207872,
+                "rssBytes": 4554752
+              },
+              {
+                "command": "bun",
+                "pid": 685818,
+                "pssBytes": 215040,
+                "rssBytes": 4575232
+              },
+              {
+                "command": "MainThread",
+                "pid": 685825,
+                "pssBytes": 2803712,
+                "rssBytes": 49881088
+              },
+              {
+                "command": "dotnet",
+                "pid": 685848,
+                "pssBytes": 48359424,
+                "rssBytes": 93982720
+              },
+              {
+                "command": "next-server (v1",
+                "pid": 685860,
+                "pssBytes": 7773471744,
+                "rssBytes": 7828230144
+              },
+              {
+                "command": "sh",
+                "pid": 685870,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "esbuild",
+                "pid": 685871,
+                "pssBytes": 36024320,
+                "rssBytes": 37191680
+              },
+              {
+                "command": "sh",
+                "pid": 685872,
+                "pssBytes": 29696,
+                "rssBytes": 1871872
+              },
+              {
+                "command": "java",
+                "pid": 685974,
+                "pssBytes": 603467776,
+                "rssBytes": 620027904
+              },
+              {
+                "command": "MainThread",
+                "pid": 686003,
+                "pssBytes": 1426432,
+                "rssBytes": 35131392
+              },
+              {
+                "command": "MainThread",
+                "pid": 686009,
+                "pssBytes": 3174400,
+                "rssBytes": 44568576
+              },
+              {
+                "command": "dotnet",
+                "pid": 686123,
+                "pssBytes": 241602560,
+                "rssBytes": 288862208
+              },
+              {
+                "command": "java",
+                "pid": 686181,
+                "pssBytes": 154456064,
+                "rssBytes": 170967040
+              },
+              {
+                "command": "java",
+                "pid": 686231,
+                "pssBytes": 133087232,
+                "rssBytes": 149680128
+              },
+              {
+                "command": "TwodartNet",
+                "pid": 686332,
+                "pssBytes": 414047232,
+                "rssBytes": 463011840
+              },
+              {
+                "command": "MainThread",
+                "pid": 686425,
+                "pssBytes": 18370560,
+                "rssBytes": 58318848
+              },
+              {
+                "command": "sh",
+                "pid": 686426,
+                "pssBytes": 144384,
+                "rssBytes": 1986560
+              },
+              {
+                "command": "bun",
+                "pid": 686430,
+                "pssBytes": 1452032,
+                "rssBytes": 5885952
+              },
+              {
+                "command": "bun",
+                "pid": 686432,
+                "pssBytes": 2156544,
+                "rssBytes": 6844416
+              },
+              {
+                "command": "MainThread",
+                "pid": 686437,
+                "pssBytes": 12376064,
+                "rssBytes": 50184192
+              },
+              {
+                "command": "MainThread",
+                "pid": 686450,
+                "pssBytes": 16150528,
+                "rssBytes": 55169024
+              },
+              {
+                "command": "esbuild",
+                "pid": 686458,
+                "pssBytes": 14102528,
+                "rssBytes": 15269888
+              },
+              {
+                "command": "MainThread",
+                "pid": 686488,
+                "pssBytes": 93375488,
+                "rssBytes": 146214912
+              },
+              {
+                "command": "MainThread",
+                "pid": 686609,
+                "pssBytes": 84135936,
+                "rssBytes": 133509120
+              },
+              {
+                "command": "MainThread",
+                "pid": 686615,
+                "pssBytes": 90468352,
+                "rssBytes": 140070912
+              },
+              {
+                "command": "MainThread",
+                "pid": 686626,
+                "pssBytes": 84648960,
+                "rssBytes": 134066176
+              },
+              {
+                "command": "MainThread",
+                "pid": 687342,
+                "pssBytes": 90184704,
+                "rssBytes": 141451264
+              },
+              {
+                "command": "MainThread",
+                "pid": 688081,
+                "pssBytes": 158332928,
+                "rssBytes": 209588224
+              },
+              {
+                "command": "MainThread",
+                "pid": 688087,
+                "pssBytes": 157768704,
+                "rssBytes": 209063936
+              }
+            ],
+            "pssBytes": 10429228032,
+            "rssBytes": 11730481152
+          }
+        }
+      }
+    ],
+    "stacks": {
+      "official": {
+        "catalogLatencyMilliseconds": [
+          29.970244000000093,
+          50.2533370000001,
+          29.144484999997076,
+          28.48335500000394
+        ],
+        "errorHashes": [],
+        "errorTexts": [],
+        "functionLatencyMilliseconds": [
+          1672.9951110000002,
+          1678.995707000001
+        ],
+        "listenerLatencyMilliseconds": [
+          46,
+          43,
+          79,
+          79,
+          79,
+          79,
+          79,
+          79,
+          79,
+          79,
+          79,
+          79,
+          79,
+          79,
+          79,
+          79,
+          79,
+          79,
+          79,
+          79,
+          79,
+          79,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          23,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          31,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          27,
+          38,
+          38,
+          38,
+          38,
+          38,
+          38,
+          38,
+          38,
+          38,
+          38,
+          38,
+          38,
+          38,
+          38,
+          38,
+          38,
+          38,
+          38,
+          38,
+          38,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          23,
+          34,
+          48,
+          48,
+          48,
+          48,
+          48,
+          48,
+          48,
+          48,
+          48,
+          48,
+          48,
+          48,
+          48,
+          48,
+          48,
+          48,
+          48,
+          48,
+          48,
+          48,
+          29,
+          29,
+          29,
+          29,
+          29,
+          29,
+          29,
+          30,
+          30,
+          30,
+          30,
+          30,
+          30,
+          30,
+          30,
+          30,
+          30,
+          30,
+          30,
+          30,
+          12,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          13,
+          32,
+          32,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          33,
+          22,
+          35,
+          35,
+          35,
+          35,
+          35,
+          35,
+          35,
+          35,
+          35,
+          35,
+          35,
+          35,
+          35,
+          35,
+          35,
+          35,
+          35,
+          35,
+          35,
+          35,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          32,
+          29,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          59,
+          42,
+          42,
+          42,
+          42,
+          42,
+          42,
+          42,
+          42,
+          42,
+          42,
+          42,
+          42,
+          42,
+          42,
+          42,
+          42,
+          42,
+          42,
+          42,
+          42,
+          16,
+          37,
+          37,
+          37,
+          37,
+          37,
+          37,
+          37,
+          37,
+          37,
+          37,
+          37,
+          37,
+          37,
+          37,
+          37,
+          37,
+          37,
+          37,
+          37,
+          37,
+          19,
+          44,
+          44,
+          44,
+          44,
+          44,
+          44,
+          44,
+          44,
+          44,
+          44,
+          44,
+          44,
+          44,
+          44,
+          44,
+          44,
+          44,
+          44,
+          44,
+          44,
+          25,
+          47,
+          47,
+          47,
+          47,
+          47,
+          47,
+          47,
+          47,
+          47,
+          47,
+          47,
+          47,
+          47,
+          47,
+          47,
+          47,
+          47,
+          47,
+          47,
+          47,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          30,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          25,
+          25,
+          25,
+          25,
+          25,
+          25,
+          25,
+          25,
+          25,
+          25,
+          25,
+          25,
+          25,
+          25,
+          25,
+          25,
+          25,
+          25,
+          25,
+          25,
+          16,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          18,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          34,
+          35,
+          35,
+          35,
+          35,
+          22,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          26,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20
+        ],
+        "storageLatencyMilliseconds": [
+          91.44885200000044,
+          75.60025599999972
+        ],
+        "writeLatencyMilliseconds": [
+          55.59523300000001,
+          37.261858999999276,
+          39.59259700000075,
+          58.5100510000002,
+          79.15666300000066,
+          58.48760100000072,
+          55.2455829999999,
+          60.64085800000066,
+          24.430279999996856,
+          39.13181699999768,
+          45.26278199999797,
+          38.5332070000004,
+          19.9327830000002,
+          33.81355099999928,
+          48.240648999999394,
+          51.566327000000456,
+          26.146066999997856,
+          32.84603299999799,
+          44.963401999997586,
+          47.574249999997846,
+          30.900123999999778,
+          33.78409200000169,
+          23.69534000000567,
+          37.020018999995955,
+          39.10965700000088,
+          36.117758999993384,
+          51.842036000001826,
+          47.99895899999683,
+          33.8771310000011,
+          30.686114000003727,
+          17.537884999997914,
+          25.030508999996528,
+          32.42704199999571,
+          35.260110000002896,
+          14.939357000002929,
+          19.45183299999917,
+          37.40739800000301,
+          35.32056999999622,
+          26.699207000005117,
+          30.228775000003225,
+          31.356762999996135,
+          34.99281999999948,
+          24.21774000000005,
+          22.02595100000326
+        ]
+      }
+    }
+  },
+  "schemaVersion": 1,
+  "smoke": true,
+  "swapActivity": {
+    "residualSwapBytesAtEnd": 1423400960,
+    "residualSwapBytesAtStart": 1520148480,
+    "sampleCount": 3,
+    "swapInPagesDelta": 2326,
+    "swapOutPagesDelta": 0
+  },
+  "stack": "official",
+  "stacks": {
+    "official": {
+      "acknowledgedStateMismatches": 0,
+      "counts": {
+        "catalogReads": 4,
+        "functionDispatches": 2,
+        "gatewayWrites": 12,
+        "runAndCaseWrites": 8,
+        "storageCycles": 2,
+        "tokenBatches": 24,
+        "tokenWrites": 480
+      },
+      "duplicateObservableEffects": 0,
+      "errors": 0,
+      "listenerDelivery": {
+        "expected": 500,
+        "gaps": 0,
+        "observed": 500
+      },
+      "latencyMilliseconds": {
+        "catalogRead": {
+          "p50": 29.144484999997076,
+          "p99": 50.2533370000001,
+          "samples": 4
+        },
+        "functionDelivery": {
+          "p50": 1672.9951110000002,
+          "p99": 1678.995707000001,
+          "samples": 2
+        },
+        "listenerDelivery": {
+          "p50": 35,
+          "p99": 79,
+          "samples": 500
+        },
+        "storageCycle": {
+          "p50": 75.60025599999972,
+          "p99": 91.44885200000044,
+          "samples": 2
+        },
+        "writeCommit": {
+          "p50": 35.260110000002896,
+          "p99": 79.15666300000066,
+          "samples": 44
+        }
+      },
+      "sessions": 2,
+      "stalls": 0
+    }
+  },
+  "startedAt": "2026-09-04T18:49:16.282Z",
+  "syntheticIdentifiersStored": false,
+  "userIdentityStored": false,
+  "passed": true
+}

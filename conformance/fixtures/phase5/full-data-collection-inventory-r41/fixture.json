@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "capturedBeforeHarnessChange": true,
+  "classification": "phase5-harness-inventory-defect",
+  "candidateCommit": "aab4a562455619092ed51d11b419580d902db67a",
+  "candidateCiRun": 33906402165,
+  "manifestSha256": "48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e",
+  "protectedBrowserRunnerSha256": "ad61e2e793ddc8bbd5364a3f506512b09600990e804d45ec8d092294123ff6e0",
+  "dataset": {
+    "fileBytes": 8180616677,
+    "fileCount": 66758,
+    "treeSha256": "3505b5fd24dc4e8fb1f9925b5201c6e28dbb993c7a0a2bebb34cb70d13d91fc7",
+    "frozenFirestoreDocuments": 211202
+  },
+  "oracle": {
+    "firebaseTools": "15.22.0",
+    "firestoreEmulator": "1.21.0",
+    "java": "26.0.2.1",
+    "javaToolOptions": "-Xmx8g",
+    "existingInventoryCollectionGroups": 47,
+    "existingInventoryDocuments": 15383
+  },
+  "omittedCollectionGroups": [
+    { "collectionId": "aiEvalRuns", "documents": 75 },
+    { "collectionId": "aiGatewayGrants", "documents": 17 },
+    { "collectionId": "aiGatewayJobs", "documents": 2746 },
+    { "collectionId": "aiGatewayPairings", "documents": 19 },
+    { "collectionId": "aiGatewayWorkers", "documents": 98 },
+    { "collectionId": "aiPresentationConversations", "documents": 197 },
+    { "collectionId": "cases", "documents": 1186 },
+    { "collectionId": "events", "documents": 182487 },
+    { "collectionId": "materializedSlides", "documents": 922 },
+    { "collectionId": "messages", "documents": 494 },
+    { "collectionId": "payloadChunks", "documents": 7578 }
+  ],
+  "observations": {
+    "omittedDocumentsOfficial": 195819,
+    "omittedDocumentsFireside": 195819,
+    "completeDocumentsOfficial": 211202,
+    "completeDocumentsFireside": 211202,
+    "initialBrowserJourneysPassed": 9,
+    "restartBrowserJourneysPassed": 9,
+    "soakPassed": true,
+    "soakSeconds": 7200,
+    "soakSamples": 241,
+    "parityStarted": false,
+    "freshColleagueStarted": false,
+    "regressionsStarted": false
+  },
+  "rawEvidence": {
+    "firesideExistingInventorySha256": "4016b4fee8a5ef155ddc6168c565c2fe2abd69bc231b83e60cd3cac52bbd90f3",
+    "officialExistingInventorySha256": "acc2f0da1b6e6d37ea5c1223ef086856b169c6622e9e7aa2c311c93756da1b32",
+    "officialMissingTenSha256": "73cff9d717dcf52480b8c26e1de1845453b390526bf836664b9c94dbd8b05f17",
+    "officialAiGatewayWorkersSha256": "072dfa5c91e61abe52f878225685c5cf5e08bbc12b35a031adbb7a3542224662",
+    "firesideMissingElevenSha256": "cd11a71e8bd295fb11efec72fada800f3fedd6fa865565fb8811ea1a5f16cc05",
+    "firesideAllCollectionCountsSha256": "004b8b500bb2d0b34b76c2ecc6329746cdf761a83eb11165c4ebdcea029a8683"
+  },
+  "contract": {
+    "officialAndFiresideCollectionCountsMustMatch": true,
+    "completeInventoryMustEqualFrozenLogicalCount": true,
+    "missingCollectionGroupsMustBeAddedWithoutChangingTheDataset": true,
+    "manifestCriteriaChanged": false,
+    "protectedBrowserRunnerChanged": false,
+    "phase5MayPassFromThisAttempt": false,
+    "officialFullDataStageMayBeRerun": false,
+    "performanceWinnerMayBeClaimed": false,
+    "phase6MayStart": false
+  },
+  "privacy": {
+    "credentialsStored": false,
+    "documentContentsStored": false,
+    "documentIdsStored": false,
+    "realUserIdentifiersStored": false
+  }
+}

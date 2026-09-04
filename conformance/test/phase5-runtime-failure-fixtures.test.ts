@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
@@ -87,6 +88,128 @@ const firesideStorageListPaginationR38Url = new URL(
   "../fixtures/phase5/fireside-storage-list-pagination-r38.json",
   import.meta.url,
 );
+const fullDataCollectionInventoryR41Url = new URL(
+  "../fixtures/phase5/full-data-collection-inventory-r41/fixture.json",
+  import.meta.url,
+);
+
+test("r41 freezes the complete official and Fireside collection inventory", async () => {
+  const fixtureText = await readFile(fullDataCollectionInventoryR41Url, "utf8");
+  const fixture = JSON.parse(fixtureText) as {
+    readonly schemaVersion: number;
+    readonly capturedBeforeHarnessChange: boolean;
+    readonly classification: string;
+    readonly dataset: { readonly frozenFirestoreDocuments: number };
+    readonly oracle: {
+      readonly existingInventoryCollectionGroups: number;
+      readonly existingInventoryDocuments: number;
+    };
+    readonly omittedCollectionGroups: readonly {
+      readonly collectionId: string;
+      readonly documents: number;
+    }[];
+    readonly observations: Readonly<Record<string, boolean | number>>;
+    readonly rawEvidence: Readonly<Record<string, string>>;
+    readonly contract: Readonly<Record<string, boolean>>;
+    readonly privacy: Readonly<Record<string, boolean>>;
+  };
+
+  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.capturedBeforeHarnessChange, true);
+  assert.equal(fixture.classification, "phase5-harness-inventory-defect");
+  assert.equal(fixture.oracle.existingInventoryCollectionGroups, 47);
+  assert.equal(fixture.oracle.existingInventoryDocuments, 15_383);
+  assert.deepEqual(
+    fixture.omittedCollectionGroups.map(({ collectionId }) => collectionId),
+    [
+      "aiEvalRuns",
+      "aiGatewayGrants",
+      "aiGatewayJobs",
+      "aiGatewayPairings",
+      "aiGatewayWorkers",
+      "aiPresentationConversations",
+      "cases",
+      "events",
+      "materializedSlides",
+      "messages",
+      "payloadChunks",
+    ],
+  );
+  const omittedTotal = fixture.omittedCollectionGroups.reduce(
+    (sum, { documents }) => sum + documents,
+    0,
+  );
+  assert.equal(omittedTotal, 195_819);
+  assert.equal(
+    fixture.oracle.existingInventoryDocuments + omittedTotal,
+    fixture.dataset.frozenFirestoreDocuments,
+  );
+  assert.equal(fixture.observations.omittedDocumentsOfficial, omittedTotal);
+  assert.equal(fixture.observations.omittedDocumentsFireside, omittedTotal);
+  assert.equal(fixture.observations.completeDocumentsOfficial, 211_202);
+  assert.equal(fixture.observations.completeDocumentsFireside, 211_202);
+  assert.equal(fixture.observations.initialBrowserJourneysPassed, 9);
+  assert.equal(fixture.observations.restartBrowserJourneysPassed, 9);
+  assert.equal(fixture.observations.soakPassed, true);
+  assert.equal(fixture.observations.soakSeconds, 7_200);
+  for (const digest of Object.values(fixture.rawEvidence)) {
+    assert.match(digest, /^[0-9a-f]{64}$/u);
+  }
+  assert.deepEqual(fixture.privacy, {
+    credentialsStored: false,
+    documentContentsStored: false,
+    documentIdsStored: false,
+    realUserIdentifiersStored: false,
+  });
+  assert.equal(fixture.contract.manifestCriteriaChanged, false);
+  assert.equal(fixture.contract.protectedBrowserRunnerChanged, false);
+  assert.equal(fixture.contract.phase5MayPassFromThisAttempt, false);
+  assert.equal(fixture.contract.officialFullDataStageMayBeRerun, false);
+  assert.equal(fixture.contract.performanceWinnerMayBeClaimed, false);
+  assert.equal(fixture.contract.phase6MayStart, false);
+  assert.doesNotMatch(fixtureText, /(?:AIza|ya29\.|sk_(?:live|test)|\/Users\/|\/home\/sanjevi\/)/u);
+
+  const evidenceRoot = new URL(
+    "../../reports/phase-5-metrics/failed-full-gate-v3-20260905-aab4a56-r36-frozen-count/supplemental/",
+    import.meta.url,
+  );
+  const rawFiles: Readonly<Record<string, string>> = {
+    firesideExistingInventorySha256: "fireside-existing-list.json",
+    officialExistingInventorySha256: "official-existing-list.json",
+    officialMissingTenSha256: "official-missing-ten.json",
+    officialAiGatewayWorkersSha256: "official-ai-gateway-workers.json",
+    firesideMissingElevenSha256: "fireside-missing-eleven.json",
+    firesideAllCollectionCountsSha256: "all-collection-counts.tsv",
+  };
+  for (const [key, filename] of Object.entries(rawFiles)) {
+    const bytes = await readFile(new URL(filename, evidenceRoot));
+    assert.equal(
+      createHash("sha256").update(bytes).digest("hex"),
+      fixture.rawEvidence[key],
+    );
+  }
+});
+
+test("the r41 inventory fixture has a complete checksum inventory", async () => {
+  const root = new URL(
+    "../fixtures/phase5/full-data-collection-inventory-r41/",
+    import.meta.url,
+  );
+  const sums = (await readFile(new URL("SHA256SUMS", root), "utf8"))
+    .trimEnd()
+    .split("\n");
+  assert.equal(sums.length, 2);
+  for (const line of sums) {
+    const match = /^(?<sha>[0-9a-f]{64})  (?<name>.+)$/u.exec(line);
+    assert.ok(match?.groups !== undefined, line);
+    assert.equal(
+      createHash("sha256")
+        .update(await readFile(new URL(match.groups.name!, root)))
+        .digest("hex"),
+      match.groups.sha,
+    );
+  }
+});
 
 test("r38 freezes the full-data Storage list pagination defect", async () => {
   const fixture = JSON.parse(
