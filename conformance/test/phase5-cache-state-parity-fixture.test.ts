@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import {
+  assertPhase5GeneratedCacheParity,
+  isPhase5GeneratedCacheObject,
+  measurePhase5GeneratedCache,
+  phase5GeneratedCacheMetadataSize,
+  PHASE5_GENERATED_CACHE_BUCKET,
+  PHASE5_GENERATED_CACHE_NAME,
+} from "../src/suite/phase5-cache-state-parity.ts";
 
 const fixtureUrl = new URL(
   "../fixtures/phase5-cache-state-parity/observations.json",
@@ -73,4 +81,73 @@ test("generated Phase 5 cache bytes vary while normalized oracle values match", 
       storageObjectBytes: 11_891,
     },
   });
+});
+
+test("generated cache parity normalizes only the frozen dynamic contract", () => {
+  const body = (buildTimestamp: number, storagePort: number, fixed = "same") =>
+    Buffer.from(JSON.stringify({
+      data: {
+        general: {
+          fixed,
+          slideThemeData: [{
+            chunkedJsonLink:
+              `http://127.0.0.1:${String(storagePort)}/download/chunk.json`,
+          }],
+        },
+      },
+      metadata: { buildTimestamp, retained: "measured" },
+    }));
+  const official = measurePhase5GeneratedCache(body(1, 23_002), 123);
+  const fireside = measurePhase5GeneratedCache(body(999, 23_102), 127);
+  assert.equal(official.normalizedSha256, fireside.normalizedSha256);
+  assert.equal(official.physicalBytes, 123);
+  assert.equal(fireside.physicalBytes, 127);
+  assert.doesNotThrow(() =>
+    assertPhase5GeneratedCacheParity(official, fireside, "fixture"));
+  assert.throws(
+    () => assertPhase5GeneratedCacheParity(
+      official,
+      measurePhase5GeneratedCache(body(999, 23_102, "changed"), 127),
+      "fixture",
+    ),
+    /logical values diverged/u,
+  );
+  assert.throws(
+    () => assertPhase5GeneratedCacheParity(null, fireside, "fixture"),
+    /logical values diverged/u,
+  );
+  assert.equal(
+    isPhase5GeneratedCacheObject(
+      PHASE5_GENERATED_CACHE_BUCKET,
+      PHASE5_GENERATED_CACHE_NAME,
+    ),
+    true,
+  );
+  assert.equal(
+    isPhase5GeneratedCacheObject(
+      PHASE5_GENERATED_CACHE_BUCKET,
+      `${PHASE5_GENERATED_CACHE_NAME}.other`,
+    ),
+    false,
+  );
+  assert.equal(
+    phase5GeneratedCacheMetadataSize({
+      bucket: PHASE5_GENERATED_CACHE_BUCKET,
+      name: PHASE5_GENERATED_CACHE_NAME,
+      size: "752169",
+    }),
+    752_169,
+  );
+  assert.equal(
+    phase5GeneratedCacheMetadataSize({ bucket: "another", name: "object", size: 3 }),
+    null,
+  );
+  assert.throws(
+    () => phase5GeneratedCacheMetadataSize({
+      bucket: PHASE5_GENERATED_CACHE_BUCKET,
+      name: PHASE5_GENERATED_CACHE_NAME,
+      size: "not-a-number",
+    }),
+    /size is invalid/u,
+  );
 });

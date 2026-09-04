@@ -38,6 +38,15 @@ import {
   type Phase5SwapActivity,
 } from "./phase5-resource-evidence.ts";
 import {
+  assertPhase5GeneratedCacheParity,
+  isPhase5GeneratedCacheObject,
+  measurePhase5GeneratedCache,
+  phase5GeneratedCacheMetadataSize,
+  PHASE5_GENERATED_CACHE_BUCKET,
+  PHASE5_GENERATED_CACHE_NAME,
+  type Phase5GeneratedCacheMeasurement,
+} from "./phase5-cache-state-parity.ts";
+import {
   assertNoPhase5StackProcesses,
   drainPhase5Swap,
   readPhase5SwapHostState,
@@ -75,8 +84,11 @@ interface Arguments {
 interface StackState {
   readonly authUsers: number;
   readonly firestoreDocuments: number;
+  readonly generatedCache: Phase5GeneratedCacheMeasurement | null;
   readonly storageObjectBytes: number;
   readonly storageObjects: number;
+  readonly totalStorageObjectBytes: number;
+  readonly totalStorageObjects: number;
 }
 
 interface CommandEvidence {
@@ -200,6 +212,17 @@ async function main(): Promise<void> {
   }
 
   const environment = await verifyEnvironment(args, manifest);
+  const frozenGeneratedCachePhysicalBytes = args.smoke
+    ? null
+    : await readFrozenGeneratedCachePhysicalBytes(args.fullData);
+  environment.generatedCacheContract = {
+    bucket: PHASE5_GENERATED_CACHE_BUCKET,
+    frozenPhysicalBytes: frozenGeneratedCachePhysicalBytes,
+    name: PHASE5_GENERATED_CACHE_NAME,
+    normalizedLogicalParityRequired: true,
+    physicalBytesMeasurementOnly: true,
+    stableStorageCountsExact: true,
+  };
   await writeJson(path.join(args.outputDirectory, "environment.json"), environment);
 
   const lifecycle = new Map<Phase5StackName, Partial<LifecycleRecord>>();
@@ -256,6 +279,11 @@ async function main(): Promise<void> {
         restartBefore.set(stack, restart.before);
         restartAfter.set(stack, restart.after);
         assertExactState(initial.after, restart.before);
+        assertPhase5GeneratedCacheParity(
+          initial.after.generatedCache,
+          restart.before.generatedCache,
+          `${stack} lifecycle restart`,
+        );
         const restartStop = await stopPhase5Stack(
           restarted,
           PHASE5_EXPORT_SHUTDOWN_SECONDS,
@@ -278,13 +306,17 @@ async function main(): Promise<void> {
       }
     }
 
-    assertCacheParity(initialRunning);
-    assertPairState(initialBefore, manifest, !args.smoke);
-    assertPairState(initialAfter, manifest, !args.smoke);
+    assertCacheParity(initialRunning, [initialBefore, initialAfter]);
+    assertPairState(
+      initialBefore,
+      manifest,
+      frozenGeneratedCachePhysicalBytes,
+    );
+    assertPairState(initialAfter, manifest, null);
     if (!args.smoke) {
-      assertCacheParity(restartRunning);
-      assertPairState(restartBefore, manifest, false);
-      assertPairState(restartAfter, manifest, false);
+      assertCacheParity(restartRunning, [restartBefore, restartAfter]);
+      assertPairState(restartBefore, manifest, null);
+      assertPairState(restartAfter, manifest, null);
       await runFreshColleague(args, manifest, active, environment);
       await runRegressions(args);
     }
@@ -298,6 +330,17 @@ async function main(): Promise<void> {
       allowedCountMismatch: manifest.lifecycle.allowedCountMismatch,
       cacheOutputsMatched: true,
       executionOrder: stackNames,
+      generatedCacheParity: {
+        bucket: PHASE5_GENERATED_CACHE_BUCKET,
+        name: PHASE5_GENERATED_CACHE_NAME,
+        normalization: [
+          "metadata.buildTimestamp",
+          "data.general.slideThemeData[].chunkedJsonLink storage port",
+        ],
+        normalizedLogicalValuesMatched: true,
+        physicalBytesMeasurementOnly: true,
+        stableStorageCountsExact: true,
+      },
       maximumConcurrentStacks: 1,
       records: Object.fromEntries(lifecycle),
       schemaVersion: 1,
@@ -395,6 +438,18 @@ async function validateSmokePrerequisite(
     JSON.stringify(lifecycle.executionOrder) !== JSON.stringify(stackNames)
   ) {
     throw new Error("Phase 5 smoke prerequisite identity or result diverged");
+  }
+  const generatedCacheParity = lifecycle.generatedCacheParity as
+    | Readonly<Record<string, unknown>>
+    | undefined;
+  if (
+    generatedCacheParity?.bucket !== PHASE5_GENERATED_CACHE_BUCKET ||
+    generatedCacheParity.name !== PHASE5_GENERATED_CACHE_NAME ||
+    generatedCacheParity.normalizedLogicalValuesMatched !== true ||
+    generatedCacheParity.physicalBytesMeasurementOnly !== true ||
+    generatedCacheParity.stableStorageCountsExact !== true
+  ) {
+    throw new Error("Phase 5 smoke generated-cache parity prerequisite diverged");
   }
   const records = lifecycle.records as
     | Readonly<Record<string, { readonly initial?: LifecycleRecord["initial"]; readonly stops?: { readonly initial?: StoppedPhase5Stack } }>>
@@ -751,8 +806,11 @@ async function captureStackState(
   );
   if (!auth.ok) throw new Error(`${running.stack} Auth count failed with ${String(auth.status)}`);
   const authBody = (await auth.json()) as { readonly userInfo?: readonly unknown[] };
+  let generatedCache: Phase5GeneratedCacheMeasurement | null = null;
   let storageObjects = 0;
   let storageObjectBytes = 0;
+  let totalStorageObjects = 0;
+  let totalStorageObjectBytes = 0;
   for (const bucket of buckets) {
     let token = "";
     do {
@@ -766,51 +824,143 @@ async function captureStackState(
         throw new Error(`${running.stack} Storage count failed with ${String(response.status)}`);
       }
       const body = (await response.json()) as {
-        readonly items?: readonly { readonly size?: number | string }[];
+        readonly items?: readonly {
+          readonly name?: string;
+          readonly size?: number | string;
+        }[];
         readonly nextPageToken?: string;
       };
       const items = body.items ?? [];
-      storageObjects += items.length;
-      storageObjectBytes += items.reduce((total, item) => total + Number(item.size ?? 0), 0);
+      for (const item of items) {
+        const name = item.name ?? "";
+        const size = Number(item.size ?? 0);
+        if (!Number.isSafeInteger(size) || size < 0) {
+          throw new Error(`${running.stack} Storage object size is invalid`);
+        }
+        totalStorageObjects += 1;
+        totalStorageObjectBytes += size;
+        if (isPhase5GeneratedCacheObject(bucket, name)) {
+          if (generatedCache !== null) {
+            throw new Error(`${running.stack} listed the generated cache more than once`);
+          }
+          generatedCache = await captureGeneratedCache(running, size);
+        } else {
+          storageObjects += 1;
+          storageObjectBytes += size;
+        }
+      }
       token = body.nextPageToken ?? "";
     } while (token.length > 0);
   }
   return {
     authUsers: authBody.userInfo?.length ?? 0,
     firestoreDocuments,
+    generatedCache,
     storageObjectBytes,
     storageObjects,
+    totalStorageObjectBytes,
+    totalStorageObjects,
   };
+}
+
+async function captureGeneratedCache(
+  running: RunningPhase5Stack,
+  physicalBytes: number,
+): Promise<Phase5GeneratedCacheMeasurement> {
+  const response = await fetch(
+    `http://127.0.0.1:${String(running.ports.storage)}/v0/b/${PHASE5_GENERATED_CACHE_BUCKET}/o/${encodeURIComponent(PHASE5_GENERATED_CACHE_NAME)}?alt=media`,
+    {
+      headers: { "accept-encoding": "identity" },
+      signal: AbortSignal.timeout(60_000),
+    },
+  );
+  if (!response.ok) {
+    throw new Error(
+      `${running.stack} generated cache download failed with ${String(response.status)}`,
+    );
+  }
+  return measurePhase5GeneratedCache(
+    new Uint8Array(await response.arrayBuffer()),
+    physicalBytes,
+  );
+}
+
+async function readFrozenGeneratedCachePhysicalBytes(
+  fullData: string,
+): Promise<number> {
+  const metadataDirectory = path.join(fullData, "storage_export", "metadata");
+  const files = (await readdir(metadataDirectory, { withFileTypes: true }))
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+    .map((entry) => path.join(metadataDirectory, entry.name));
+  const matches: number[] = [];
+  for (let offset = 0; offset < files.length; offset += 128) {
+    const records: unknown[] = await Promise.all(
+      files.slice(offset, offset + 128).map(async (file) =>
+        JSON.parse(await readFile(file, "utf8")) as unknown),
+    );
+    for (const record of records) {
+      const size = phase5GeneratedCacheMetadataSize(record);
+      if (size !== null) matches.push(size);
+    }
+  }
+  if (matches.length !== 1) {
+    throw new Error(
+      `Frozen Phase 5 dataset must contain one generated cache object; found ${String(matches.length)}`,
+    );
+  }
+  return matches[0] as number;
 }
 
 function assertPairState(
   states: Map<Phase5StackName, StackState>,
   manifest: Phase5Manifest,
-  requireFrozenDatasetCounts: boolean,
+  frozenGeneratedCachePhysicalBytes: number | null,
 ): void {
   const official = requiredMap(states, "official");
   const fireside = requiredMap(states, "fireside");
   assertExactState(official, fireside);
-  if (requireFrozenDatasetCounts) {
+  if (frozenGeneratedCachePhysicalBytes !== null) {
     const frozen = manifest.dataset.logicalCounts;
     if (
       official.firestoreDocuments !== frozen.firestoreDocuments ||
       official.authUsers !== frozen.authUsers ||
-      official.storageObjects !== frozen.storageObjects ||
-      official.storageObjectBytes !== frozen.storageObjectBytes
+      official.storageObjects !== frozen.storageObjects - 1 ||
+      official.storageObjectBytes !==
+        frozen.storageObjectBytes - frozenGeneratedCachePhysicalBytes
     ) {
-      throw new Error("Measured imported state diverged from the frozen logical counts");
+      throw new Error(
+        "Measured imported stable state diverged from the frozen logical counts",
+      );
     }
   }
 }
 
 function assertExactState(left: StackState, right: StackState): void {
-  if (JSON.stringify(left) !== JSON.stringify(right)) {
-    throw new Error(`Phase 5 state mismatch: ${JSON.stringify({ left, right })}`);
+  const stableLeft = stableStackState(left);
+  const stableRight = stableStackState(right);
+  if (JSON.stringify(stableLeft) !== JSON.stringify(stableRight)) {
+    throw new Error(
+      `Phase 5 stable state mismatch: ${JSON.stringify({ left: stableLeft, right: stableRight })}`,
+    );
   }
 }
 
-function assertCacheParity(pair: Map<Phase5StackName, RunningPhase5Stack>): void {
+function stableStackState(state: StackState): Omit<
+  StackState,
+  "generatedCache" | "totalStorageObjectBytes" | "totalStorageObjects"
+> {
+  return {
+    authUsers: state.authUsers,
+    firestoreDocuments: state.firestoreDocuments,
+    storageObjectBytes: state.storageObjectBytes,
+    storageObjects: state.storageObjects,
+  };
+}
+
+function assertCacheParity(
+  pair: Map<Phase5StackName, RunningPhase5Stack>,
+  states: readonly Map<Phase5StackName, StackState>[],
+): void {
   const official = requiredMap(pair, "official").cacheBuild;
   const fireside = requiredMap(pair, "fireside").cacheBuild;
   if (
@@ -820,6 +970,13 @@ function assertCacheParity(pair: Map<Phase5StackName, RunningPhase5Stack>): void
     fireside.errors !== 0
   ) {
     throw new Error("Official and Fireside cache-watcher outputs diverged");
+  }
+  for (const [index, state] of states.entries()) {
+    assertPhase5GeneratedCacheParity(
+      requiredMap(state, "official").generatedCache,
+      requiredMap(state, "fireside").generatedCache,
+      `cross-stack observation ${String(index + 1)}`,
+    );
   }
 }
 
@@ -1332,8 +1489,8 @@ async function writeReport(
     `The exact Java 26 untuned-default attempt exhausted the official Firestore emulator heap while importing the 211,202-document corpus; that failed attempt is preserved by \`conformance/fixtures/phase5/official-java-default-heap-import.json\`. The completed official comparison used the existing explicit \`${PHASE5_OFFICIAL_JAVA_TOOL_OPTIONS}\` HotSpot heap option. This retry is reported separately and did not change any functional, lifecycle, soak, or Fireside threshold.\n\n` +
     `## Results\n\n` +
     `- All nine real browser journeys passed against both backends before and after graceful export/restart.\n` +
-    `- Firestore, Auth, Storage object, and Storage byte counts matched exactly across backends and lifecycle restart.\n` +
-    `- Cache-watcher output counts matched exactly; external providers remained disabled.\n` +
+    `- Firestore, Auth, stable Storage object, and stable Storage byte counts matched exactly across backends and lifecycle restart.\n` +
+    `- Cache-watcher output counts and the normalized logical value of \`${PHASE5_GENERATED_CACHE_NAME}\` matched exactly; its physical gzip bytes are reported per observation as a measurement because the official oracle proves that representation varies with the generated timestamp. External providers remained disabled.\n` +
     `- The sequential official-then-Fireside 7,200-second two-session-per-backend app-shaped soaks passed under fresh quiescent preflights with all zero-tolerance correctness and health criteria unchanged.\n` +
     `- A fresh checkout started Fireside with \`bun dev:mprocs\` and the documented official fallback also started successfully.\n` +
     `- Existing Fireside and Twodart regression/build gates passed.\n\n` +

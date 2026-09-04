@@ -179,6 +179,17 @@ test("Phase 5 gate compares every frozen persistent count without content", asyn
   assert.match(source, /collectionGroup\(collectionId\)\.count\(\)\.get\(\)/u);
   assert.match(source, /accounts:query/u);
   assert.match(source, /storage\/v1\/b\/\$\{bucket\}\/o/u);
+  assert.match(source, /isPhase5GeneratedCacheObject\(bucket, name\)/u);
+  assert.match(source, /"accept-encoding": "identity"/u);
+  assert.match(source, /measurePhase5GeneratedCache/u);
+  assert.match(source, /frozen\.storageObjects - 1/u);
+  assert.match(
+    source,
+    /frozen\.storageObjectBytes - frozenGeneratedCachePhysicalBytes/u,
+  );
+  assert.match(source, /stableStorageCountsExact: true/u);
+  assert.match(source, /physicalBytesMeasurementOnly: true/u);
+  assert.match(source, /normalizedLogicalValuesMatched: true/u);
 });
 
 test("Phase 5 gate preserves the no-private-evidence boundary", async () => {

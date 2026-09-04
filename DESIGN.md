@@ -2321,6 +2321,29 @@ fixture includes exact bodies, headers, hashes, source hashes and a real-browser
 observation. Its bucket, object and origin are synthetic; no credentials or user
 data are retained.
 
+### Phase 5 generated-cache state parity oracle (r31)
+
+The cache watcher owns `assets-local.twodart.com/cache/main-cache-local.json` as
+an operational output, not a stable frozen-data artifact. Synthetic r29 and r31
+exports show that all four official/Fireside cache bodies decode to 107,473
+bytes and share one canonical SHA-256 after removing the generated
+`metadata.buildTimestamp` and replacing the intentional stack-specific raw
+Storage port in `data.general.slideThemeData[].chunkedJsonLink`. The official
+gzip representation itself changed from 12,436 to 12,437 bytes across those two
+runs without a normalized logical change. Fireside matched the official size in
+each final export. The emulators must continue to preserve and report the exact
+client-supplied gzip bytes; metadata may not be falsified to make parity pass.
+
+Phase 5 therefore counts every other Storage object and byte as stable state and
+requires exact zero-mismatch parity for those values. The generated cache is
+required on both stacks and is compared by its normalized logical SHA-256 in the
+existing cache-watcher parity gate. Its encoded physical bytes and decoded bytes
+remain recorded per observation as measurements without a winner condition.
+For the full-data input, the frozen cache object's one count and recorded size
+are subtracted from the manifest's total Storage baseline before comparing the
+remaining stable state; the manifest, workload, durations, browser runner and
+zero-mismatch rule remain unchanged.
+
 ### Auth refresh grant reuse (r24 follow-up oracle)
 
 `auth-refresh-reuse` freezes 28 direct HTTP observations against firebase-tools
