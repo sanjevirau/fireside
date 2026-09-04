@@ -18,7 +18,7 @@ for the current candidate.
 | [r28](phase-5-smoke-20260903-r28.md) (attempt 3/8) | Official 9/9 + 60 s soak; Fireside 6/9, export comparison failed | Serialization compatibility: repeated reads change map order, not canonical values, in isolation; original before/after values unavailable | `ff6fff7` (map oracle and r28 evidence) | `b1ef52b` | [33760383375](https://github.com/sanjevirau/fireside/actions/runs/33760383375), 7/7 green | Failed; both export-first exits zero; full-data gate absent |
 | [r29](phase-5-smoke-20260904-r29.md) (attempt 4/8) | Both stacks 9/9; official 60 s soak; Fireside final browser health failed | Fireside product: `/v0` missing object is JSON and Chrome ORB-blocks it as an image; official returns a normal plain-text 404 | `87ad833` | `75f7e4a` | [33785390892](https://github.com/sanjevirau/fireside/actions/runs/33785390892), 7/7 green on repair candidate | Failed; both export-first exits zero; Fireside soak and full-data gate absent |
 | [r30](phase-5-smoke-20260904-r30.md) (previous attempt 5/8) | Official 4/9; journey 5 image visibility timed out after 180 s; Fireside not started | Infrastructure, first occurrence: official Storage-alias downloads stalled after upload, all five object commits, and Firestore write succeeded | `87ad833` | `75f7e4a` | [33785390892](https://github.com/sanjevirau/fireside/actions/runs/33785390892), 7/7 green | Failed; official exit zero; single fresh-preflight retry authorized as r31 after read-only attribution diagnostics; new budget starts at 1/8 |
-| [r31](phase-5-smoke-20260904-r31.md) (attempt 1/8 after reset) | Both stacks 9/9 + 60 s soak | Fireside differential under oracle-first inspection: sole pre-journey cache object is 11,889 B official versus 11,891 B Fireside | Pending saved-object fixture | `23b6759` | [33813205201](https://github.com/sanjevirau/fireside/actions/runs/33813205201), 7/7 green | Failed only at final exact state comparison; both export-first exits zero; no r30 stall; full-data directory absent |
+| [r31](phase-5-smoke-20260904-r31.md) (attempt 1/8 after reset) | Both stacks 9/9 + 60 s soak | Harness: physical bytes of the generated cache vary with timestamp even across official runs; stable state must remain exact while cache uses its separate normalized parity gate | `phase5-cache-state-parity` fixture | `23b6759` | [33813205201](https://github.com/sanjevirau/fireside/actions/runs/33813205201), 7/7 green; evidence [33817117705](https://github.com/sanjevirau/fireside/actions/runs/33817117705), 7/7 green | Failed only at final exact state comparison; both export-first exits zero; no r30 stall; full-data directory absent |
 
 R25 failure evidence is published in `b79750636e1666e1d097b341b7cc9f85ba74d28c`;
 [evidence CI 33748445917](https://github.com/sanjevirau/fireside/actions/runs/33748445917)
@@ -198,9 +198,16 @@ raw-versus-alias probe. The gate then stopped on the exact pre-journey state
 comparison because the one cache-watcher Storage object was 11,889 bytes on the
 official stack and 11,891 bytes on Fireside; Auth and Firestore were empty and
 the Storage object count was one on both. This is attempt 1/8 after the reset.
-The saved objects now require an oracle-first metadata, encoded-body, decoded-
-JSON, and canonical-value differential before any repair. The protected runner,
-manifest, workload, and exact byte-count criterion remain unchanged. R31 source
+The saved-object oracle shows all four r29/r31 outputs decode to 107,473 bytes
+and share one normalized canonical hash after removing only build timestamp and
+stack Storage port. The official gzip size changed from 12,436 to 12,437 bytes
+between r29 and r31 with no normalized logical change, while Fireside matched
+the official physical size in each final export. The harness therefore must
+keep stable object counts and bytes exact but validate this single generated
+operational cache through the existing separate cache-watcher parity gate,
+retaining physical bytes as a measurement. The protected runner, manifest
+thresholds, workload, durations, and product-reported metadata remain unchanged.
+R31 source
 candidate `23b6759365861f389232a3667b1d86c74a08c16f` passed all seven jobs in
 [CI 33813205201](https://github.com/sanjevirau/fireside/actions/runs/33813205201);
 fresh Linux binary SHA-256 was
