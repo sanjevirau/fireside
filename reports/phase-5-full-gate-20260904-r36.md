@@ -17,6 +17,7 @@ capacity of the 15 GiB host. Fireside's full-data stage had not started.
 - Candidate CI: GitHub Actions run `33844348621`, seven jobs green
 - Release binary SHA-256: `31d87f534d51a792741f8c47d02764f35067288ca8f5d18760474dc889fc1186`
 - Original evidence checksum inventory SHA-256: `a9aa4df4f37b535ba429bdcc8da3b863f0d608eaee96883de3a6b45112a18a95`
+- Preserved official export: 66,756 files, 8,180,612,785 bytes, tree SHA-256 `c1a1451827c326fb680b2133b0a2c42b79302f1fb89febfb02228ad056b619ca`
 - Restart diagnostics SHA-256: `225a7228a8d74cd347f5360e7ae3fd45cee9b066d47ef92dac2dfe9c6d382e01`
 - Permanent content-free contract: [`official-restart-host-exhaustion-r36.json`](../conformance/fixtures/phase5/official-restart-host-exhaustion-r36.json)
 

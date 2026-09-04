@@ -126,6 +126,11 @@ test("the r36 official restart freezes the narrowly scoped host-limit boundary",
         readonly failedSystemdUnits: number;
         readonly currentBootOomOrResourceEvidence: number;
       };
+      readonly officialExport: {
+        readonly fileBytes: number;
+        readonly fileCount: number;
+        readonly treeSha256: string;
+      };
       readonly firesideFullDataStageStarted: boolean;
       readonly bothStacksRanConcurrently: boolean;
     };
@@ -141,6 +146,7 @@ test("the r36 official restart freezes the narrowly scoped host-limit boundary",
       readonly officialStageMustNotBeRerun: boolean;
       readonly officialExceptionScope: string;
       readonly officialEvidenceMustRemainImmutableAndChecksumVerified: boolean;
+      readonly officialExportMustRemainTreeIdentityVerified: boolean;
       readonly continueWithFiresideAfterFreshQuiescentPreflight: boolean;
       readonly firesideCriteriaChanged: boolean;
       readonly firesideReadinessRequired: boolean;
@@ -205,6 +211,11 @@ test("the r36 official restart freezes the narrowly scoped host-limit boundary",
   assert.equal(fixture.observation.officialRestart.pendingRequests.rawAndProxiedPathsStalledTogether, true);
   assert.equal(fixture.observation.officialRestart.failedSystemdUnits, 0);
   assert.equal(fixture.observation.officialRestart.currentBootOomOrResourceEvidence, 0);
+  assert.deepEqual(fixture.observation.officialExport, {
+    fileCount: 66_756,
+    fileBytes: 8_180_612_785,
+    treeSha256: "c1a1451827c326fb680b2133b0a2c42b79302f1fb89febfb02228ad056b619ca",
+  });
   assert.equal(fixture.observation.firesideFullDataStageStarted, false);
   assert.equal(fixture.observation.bothStacksRanConcurrently, false);
   assert.deepEqual(fixture.classification, {
@@ -219,6 +230,7 @@ test("the r36 official restart freezes the narrowly scoped host-limit boundary",
     officialStageMustNotBeRerun: true,
     officialExceptionScope: "post-restart host exhaustion only",
     officialEvidenceMustRemainImmutableAndChecksumVerified: true,
+    officialExportMustRemainTreeIdentityVerified: true,
     continueWithFiresideAfterFreshQuiescentPreflight: true,
     firesideCriteriaChanged: false,
     firesideReadinessRequired: true,
