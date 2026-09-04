@@ -935,8 +935,19 @@ and one `req{i}___data__` per map. The response is framed
 `[1,<lastArrayIdWrittenToBackchannel>,<outstandingBytes>]`; leading `0` reports
 that no backchannel exists and asks the client to retry.
 
-Retries resend the same maps. Delivery is deduplicated by `ofs + map id` per
-session, not by RID alone, and a retried map must never reach Firestore twice.
+Retries resend the same maps. Delivery is deduplicated by the pair
+`(ofs, local map ID)` per session, not by RID alone, and a retried map must
+never reach Firestore twice. The absolute stream order is `ofs + local map ID`.
+Because the advertised HTTP/2 mode permits concurrent forward POSTs, a request
+with a future absolute ID may reach the server first. It is acknowledged but
+its maps remain buffered until every lower absolute ID arrives; consecutive
+maps are then delivered to the Firestore stream in absolute-ID order.
+
+The Java v1.22.0 six-write oracle in
+`conformance/fixtures/webchannel-v8/java-v1.22.0/write-batch-six` pins one
+`WriteResult` per mutation for both forced long polling and streaming. A
+six-mutation map therefore cannot consume the one-result response belonging to
+a later one-mutation map, even when their forward POSTs overlap.
 
 ### 7.3 Backchannel, replay, and teardown
 
@@ -1075,13 +1086,17 @@ preventing Closure from exceeding the HTTP/1.1 connection budget.
 
 Every backend response receives one consecutive array ID. `AID` removes only
 acknowledged prefixes; a reopened long poll receives every retained array above
-its supplied `AID`. Forward maps are ordered by local map ID and deduplicated by
-the pair `(ofs, local map ID)`, so a retry or overlapping POST cannot apply a
-map twice. Forward responses expose the observed three-value shape and report
-whether any backchannel is live. Teardown validates endpoint, SID, and optional
-`gsessionid` before removing the session. The HTTP 400 unknown-session body is
-compiled from an exact fixture-checked copy of the production body, including
-the nonzero-offset `Unknown SID` literal required by Closure.
+its supplied `AID`. Forward maps are deduplicated by the pair `(ofs, local map
+ID)` and delivered consecutively by their absolute `ofs + local map ID` value.
+Future maps from an overlapping POST remain in a bounded 4,096-map/64-MiB
+per-session buffer until a missing lower map arrives. A dedicated asynchronous
+delivery lock prevents two forward handlers from interleaving while feeding the
+shared Firestore stream. Forward responses expose the observed three-value
+shape and report whether any backchannel is live. Teardown validates endpoint,
+SID, and optional `gsessionid` before removing the session. The HTTP 400
+unknown-session body is compiled from an exact fixture-checked copy of the
+production body, including the nonzero-offset `Unknown SID` literal required by
+Closure.
 
 The 4,096-session bound applies to live sessions, not to an unbounded history
 of abandoned SDK instances. Normal idle expiry remains 30 minutes. Under

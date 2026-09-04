@@ -27,7 +27,7 @@ use axum::routing::get;
 use fireside_grpc_front::FirestoreService;
 use futures_util::{StreamExt as _, stream};
 use serde_json::{Value as JsonValue, json};
-use tokio::sync::{Notify, mpsc, watch};
+use tokio::sync::{Mutex as AsyncMutex, Notify, mpsc, watch};
 
 /// `WebChannel` endpoint used by the Firestore browser SDK for Listen.
 pub const LISTEN_CHANNEL_PATH: &str = "/google.firestore.v1.Firestore/Listen/channel";
@@ -42,6 +42,8 @@ const MAXIMUM_UNACKNOWLEDGED_ARRAYS: usize = 4_096;
 const MAXIMUM_UNACKNOWLEDGED_BYTES: usize = 64 * 1_024 * 1_024;
 const MAXIMUM_FORWARD_BODY_BYTES: usize = 32 * 1_024 * 1_024;
 const MAXIMUM_MAPS_PER_REQUEST: usize = 1_000;
+const MAXIMUM_PENDING_FORWARD_MAPS: usize = 4_096;
+const MAXIMUM_PENDING_FORWARD_BYTES: usize = 64 * 1_024 * 1_024;
 const DEFAULT_LONG_POLL_TIMEOUT: Duration = Duration::from_secs(30);
 const MAXIMUM_LONG_POLL_TIMEOUT: Duration = Duration::from_secs(60);
 const SERVER_WIRE_VERSION: u64 = 8;
@@ -275,6 +277,7 @@ struct Session {
     gsession_id: String,
     kind: ChannelKind,
     requests: mpsc::Sender<JsonValue>,
+    forward_delivery: AsyncMutex<()>,
     state: Mutex<SessionState>,
     notify: Notify,
     termination: watch::Sender<bool>,
@@ -287,8 +290,16 @@ struct SessionState {
     next_array_id: u64,
     acknowledged_array_id: u64,
     seen_maps: BTreeSet<(u64, u64)>,
+    pending_maps: BTreeMap<u64, PendingMap>,
+    pending_map_bytes: usize,
+    next_forward_map_id: u64,
     last_activity: Instant,
     terminal_error: Option<BackendError>,
+}
+
+struct PendingMap {
+    value: JsonValue,
+    encoded_bytes: usize,
 }
 
 #[derive(Clone)]
@@ -628,12 +639,16 @@ impl SessionRegistry {
             gsession_id,
             kind,
             requests: backend.requests,
+            forward_delivery: AsyncMutex::new(()),
             state: Mutex::new(SessionState {
                 arrays: VecDeque::new(),
                 array_bytes: 0,
                 next_array_id: 1,
                 acknowledged_array_id: 0,
                 seen_maps: BTreeSet::new(),
+                pending_maps: BTreeMap::new(),
+                pending_map_bytes: 0,
+                next_forward_map_id: 0,
                 last_activity: Instant::now(),
                 terminal_error: None,
             }),
@@ -739,15 +754,57 @@ impl SessionRegistry {
 
 impl Session {
     async fn send_maps(&self, ofs: u64, maps: Vec<MapMessage>) -> Result<(), ProtocolError> {
-        let new_maps = {
+        // Concurrent forward POSTs can reach the server out of order. Serialize
+        // delivery and hold future maps until every lower absolute map ID has
+        // arrived; Firestore stream requests are order-sensitive.
+        let _delivery = self.forward_delivery.lock().await;
+        let ready_maps = {
             let mut state = mutex_lock(&self.state);
             state.last_activity = Instant::now();
-            maps.into_iter()
-                .filter(|message| state.seen_maps.insert((ofs, message.local_id)))
-                .map(|message| message.value)
-                .collect::<Vec<_>>()
+            for message in maps {
+                let absolute_id = ofs.checked_add(message.local_id).ok_or_else(|| {
+                    ProtocolError::BadRequest("WebChannel forward map ID overflow".to_owned())
+                })?;
+                if !state.seen_maps.insert((ofs, message.local_id))
+                    || absolute_id < state.next_forward_map_id
+                    || state.pending_maps.contains_key(&absolute_id)
+                {
+                    continue;
+                }
+                let encoded_bytes = serde_json::to_vec(&message.value)
+                    .map_err(|error| ProtocolError::BadRequest(error.to_string()))?
+                    .len();
+                if state.pending_maps.len() >= MAXIMUM_PENDING_FORWARD_MAPS
+                    || state.pending_map_bytes.saturating_add(encoded_bytes)
+                        > MAXIMUM_PENDING_FORWARD_BYTES
+                {
+                    return Err(ProtocolError::Capacity(
+                        "WebChannel pending forward map buffer is full".to_owned(),
+                    ));
+                }
+                state.pending_map_bytes = state.pending_map_bytes.saturating_add(encoded_bytes);
+                state.pending_maps.insert(
+                    absolute_id,
+                    PendingMap {
+                        value: message.value,
+                        encoded_bytes,
+                    },
+                );
+            }
+
+            let mut ready = Vec::new();
+            loop {
+                let next_id = state.next_forward_map_id;
+                let Some(map) = state.pending_maps.remove(&next_id) else {
+                    break;
+                };
+                state.pending_map_bytes = state.pending_map_bytes.saturating_sub(map.encoded_bytes);
+                state.next_forward_map_id = state.next_forward_map_id.saturating_add(1);
+                ready.push(map.value);
+            }
+            ready
         };
-        for map in new_maps {
+        for map in ready_maps {
             self.requests
                 .send(map)
                 .await
@@ -1291,6 +1348,62 @@ mod tests {
             .expect("body-encoded owner bypass should succeed");
     }
 
+    #[tokio::test]
+    async fn firestore_backend_returns_one_result_per_write_in_a_batch() {
+        let backend = FirestoreBackend::new(FirestoreService::default());
+        let mut client = backend.open(
+            ChannelKind::Write,
+            &OpenRequest {
+                database: Some("projects/demo/databases/(default)".to_owned()),
+                initial_headers: BTreeMap::new(),
+            },
+        );
+        client
+            .requests
+            .send(json!({"database":"projects/demo/databases/(default)"}))
+            .await
+            .expect("client handshake");
+        let handshake = client
+            .responses
+            .recv()
+            .await
+            .expect("client handshake response")
+            .expect("client handshake");
+        let writes = (0..6)
+            .map(|index| {
+                json!({
+                    "update": {
+                        "name": format!(
+                            "projects/demo/databases/(default)/documents/batch/item-{index}"
+                        ),
+                        "fields": {"sequence": {"integerValue": index.to_string()}}
+                    }
+                })
+            })
+            .collect::<Vec<_>>();
+        client
+            .requests
+            .send(json!({
+                "streamToken": handshake["streamToken"],
+                "writes": writes,
+            }))
+            .await
+            .expect("six-write batch");
+        let response = client
+            .responses
+            .recv()
+            .await
+            .expect("batch response")
+            .expect("six-write batch response");
+        assert_eq!(
+            response["writeResults"]
+                .as_array()
+                .expect("writeResults are an array")
+                .len(),
+            6
+        );
+    }
+
     #[test]
     #[allow(clippy::unicode_not_nfc)]
     fn frame_lengths_use_decoded_utf16_code_units() {
@@ -1340,6 +1453,17 @@ mod tests {
                 },
             )
             .expect("session should open");
+        session
+            .send_maps(
+                0,
+                vec![MapMessage {
+                    local_id: 0,
+                    value: json!({"handshake": true}),
+                }],
+            )
+            .await
+            .expect("handshake succeeds");
+        assert_eq!(requests.recv().await, Some(json!({"handshake": true})));
         let maps = || {
             vec![MapMessage {
                 local_id: 0,
@@ -1347,14 +1471,69 @@ mod tests {
             }]
         };
         session
-            .send_maps(4, maps())
+            .send_maps(1, maps())
             .await
             .expect("first send succeeds");
         session
-            .send_maps(4, maps())
+            .send_maps(1, maps())
             .await
             .expect("retry is accepted");
         assert_eq!(requests.recv().await, Some(json!({"write": 1})));
+        assert!(requests.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn forward_maps_wait_for_gaps_and_preserve_absolute_order() {
+        let (request_sender, mut requests) = mpsc::channel(8);
+        let (_response_sender, responses) = mpsc::channel(8);
+        let session = SessionRegistry::default()
+            .create(
+                ChannelKind::Write,
+                BackendChannel {
+                    requests: request_sender,
+                    responses,
+                },
+            )
+            .expect("session should open");
+        session
+            .send_maps(
+                0,
+                vec![MapMessage {
+                    local_id: 0,
+                    value: json!({"handshake": true}),
+                }],
+            )
+            .await
+            .expect("handshake succeeds");
+        assert_eq!(requests.recv().await, Some(json!({"handshake": true})));
+
+        session
+            .send_maps(
+                2,
+                vec![MapMessage {
+                    local_id: 0,
+                    value: json!({"writes": ["later"]}),
+                }],
+            )
+            .await
+            .expect("future map is buffered");
+        assert!(requests.try_recv().is_err());
+
+        session
+            .send_maps(
+                1,
+                vec![MapMessage {
+                    local_id: 0,
+                    value: json!({"writes": [1, 2, 3, 4, 5, 6]}),
+                }],
+            )
+            .await
+            .expect("missing map releases the consecutive sequence");
+        assert_eq!(
+            requests.recv().await,
+            Some(json!({"writes": [1, 2, 3, 4, 5, 6]}))
+        );
+        assert_eq!(requests.recv().await, Some(json!({"writes": ["later"]})));
         assert!(requests.try_recv().is_err());
     }
 

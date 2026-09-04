@@ -86,7 +86,10 @@ async fn run_variant(ci: &str) {
             deterministic_rid(ci, iteration, 0),
         );
 
-        let base = u64::try_from(iteration).expect("round fits u64") * 10 + 10;
+        // BrowserChannel assigns one consecutive absolute map ID to every
+        // logical request. Keep the chaos schedule oracle-shaped while still
+        // overlapping the two forward POSTs and retrying their maps.
+        let base = u64::try_from(iteration).expect("round fits u64") * 3 + 1;
         let paired_maps = [map(iteration, 0), map(iteration, 1)];
         let overlapping_maps = [map(iteration, 2)];
         let paired = send_forward(
