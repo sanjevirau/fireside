@@ -14,11 +14,15 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import {
+  applyPhase5PortlessApplicationPorts,
   applyPhase5Ports,
   assertDistinctPhase5ApplicationUrls,
   assertPhase5PortlessPrefix,
+  PHASE5_APPLICATION_PORTS,
   PHASE5_APPLICATION_URL_KEYS,
+  PHASE5_MPROCS_APPLICATION_CONFIG,
   phase5PortEnvironment,
+  phase5ReservedPorts,
   phase5DatasetPaths,
   PHASE5_STACK_PORTS,
   renderSafeTwodartEnvironment,
@@ -61,6 +65,10 @@ test("the live Git prefix must agree with every captured Portless URL before lau
   const source = await readFile(new URL("../src/suite/run-phase5-gate.ts", import.meta.url), "utf8");
   assert.match(source, /capture\("bash", \["scripts\/dev\/portless-prefix.sh"\], directory\)/u);
   assert.match(source, /assertPhase5PortlessPrefix\(stackPortEnvironments\[name\], prefix\)/u);
+  assert.match(source, /applyPhase5PortlessApplicationPorts/u);
+  assert.match(source, /portlessApplicationConfigs/u);
+  assert.match(source, /\["fresh", args\.freshDirectory, PHASE5_APPLICATION_PORTS\.fireside\]/u);
+  assert.match(source, /phase5ReservedPorts\(\)/u);
 });
 
 test("the r13 rejection freezes the exact synthetic asset contamination", async () => {
@@ -137,10 +145,62 @@ test("Phase 5 host preparation freezes every official and Fireside port", () => 
       TWODART_FIREBASE_WEBSOCKET_PORT: String(ports.firestoreWebsocket),
     });
   }
-  const allPorts = Object.values(PHASE5_STACK_PORTS).flatMap((ports) =>
-    Object.values(ports)
-  );
+  const allPorts = phase5ReservedPorts();
   assert.equal(new Set(allPorts).size, allPorts.length);
+  assert.equal(allPorts.length, 36);
+});
+
+test("Phase 5 pins every Portless application before concurrent mprocs launch", () => {
+  const config = [
+    "bunx portless run --name templates.twodart -- next dev",
+    "bunx portless run --name papi.twodart -- python server.py",
+    "bunx portless run --name images.twodart -- node images.js",
+    "bunx portless run --name twodartnet.twodart --force -- dotnet run",
+    "bunx portless run --name ingest-ph.twodart -- wrangler dev",
+  ].join("\n");
+  assert.equal(PHASE5_MPROCS_APPLICATION_CONFIG, "scripts/dev/mprocs/js-dotnet.yaml");
+  for (const stack of ["official", "fireside"] as const) {
+    const ports = PHASE5_APPLICATION_PORTS[stack];
+    const rendered = applyPhase5PortlessApplicationPorts(config, ports);
+    assert.match(
+      rendered,
+      new RegExp(
+        `templates\\.twodart --app-port ${String(ports.templates)} --`,
+        "u",
+      ),
+    );
+    assert.match(
+      rendered,
+      new RegExp(`papi\\.twodart --app-port ${String(ports.papi)} --`, "u"),
+    );
+    assert.match(
+      rendered,
+      new RegExp(`images\\.twodart --app-port ${String(ports.images)} --`, "u"),
+    );
+    assert.match(
+      rendered,
+      new RegExp(
+        `twodartnet\\.twodart --app-port ${String(ports.twodartNet)} --force`,
+        "u",
+      ),
+    );
+    assert.match(
+      rendered,
+      new RegExp(
+        `ingest-ph\\.twodart --app-port ${String(ports.cfWorker)} --`,
+        "u",
+      ),
+    );
+    assert.equal(applyPhase5PortlessApplicationPorts(rendered, ports), rendered);
+  }
+  assert.throws(
+    () =>
+      applyPhase5PortlessApplicationPorts(
+        config.replace(/^.*images.*\n/mu, ""),
+        PHASE5_APPLICATION_PORTS.official,
+      ),
+    /Expected one Phase 5 Portless command for images\.twodart, observed 0/u,
+  );
 });
 
 test("Phase 5 input staging is immutable and uses distinct lifecycle exports", () => {

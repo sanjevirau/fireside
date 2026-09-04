@@ -23,10 +23,14 @@ import {
   type Phase5Manifest,
 } from "./phase5-acceptance-plan.ts";
 import {
+  applyPhase5PortlessApplicationPorts,
   assertDistinctPhase5ApplicationUrls,
   assertPhase5PortlessPrefix,
+  PHASE5_APPLICATION_PORTS,
   PHASE5_APPLICATION_URL_KEYS,
+  PHASE5_MPROCS_APPLICATION_CONFIG,
   PHASE5_STACK_PORTS,
+  phase5ReservedPorts,
   stageHardlinkedDirectoryTree,
   type Phase5StackName,
 } from "./phase5-host-prepare.ts";
@@ -1137,12 +1141,30 @@ async function verifyEnvironment(
     fireside: await readPhase5PortEnvironment(args.firesideDirectory),
   };
   const portlessPrefixes: Record<string, string> = {};
+  const portlessApplicationConfigs: Record<string, unknown> = {};
   for (const [name, directory] of [
     ["official", args.officialDirectory], ["fireside", args.firesideDirectory],
   ] as const) {
     const prefix = await capture("bash", ["scripts/dev/portless-prefix.sh"], directory);
     assertPhase5PortlessPrefix(stackPortEnvironments[name], prefix);
     portlessPrefixes[name] = prefix;
+  }
+  for (const [name, directory, ports] of [
+    ["official", args.officialDirectory, PHASE5_APPLICATION_PORTS.official],
+    ["fireside", args.firesideDirectory, PHASE5_APPLICATION_PORTS.fireside],
+    ["fresh", args.freshDirectory, PHASE5_APPLICATION_PORTS.fireside],
+  ] as const) {
+    const configPath = path.join(directory, PHASE5_MPROCS_APPLICATION_CONFIG);
+    const renderedConfig = applyPhase5PortlessApplicationPorts(
+      await readFile(configPath, "utf8"),
+      ports,
+    );
+    await writeFile(configPath, renderedConfig);
+    portlessApplicationConfigs[name] = {
+      path: PHASE5_MPROCS_APPLICATION_CONFIG,
+      ports,
+      sha256: digest(renderedConfig),
+    };
   }
   assertDistinctPhase5ApplicationUrls(
     stackPortEnvironments.official,
@@ -1265,6 +1287,7 @@ async function verifyEnvironment(
   const { vmSwappiness } = await readPhase5SwapHostState();
   return {
     applicationUrls,
+    portlessApplicationConfigs,
     portlessPrefixes,
     candidateRevision,
     capturedAt: new Date().toISOString(),
@@ -1348,8 +1371,12 @@ async function recordPreflight(
           throw error;
         }
         const listeners = await capture("ss", ["-ltnH"], repositoryRoot);
-        const gatePorts = Object.values(PHASE5_STACK_PORTS).flatMap((ports) => Object.values(ports));
-        if (listeners.split("\n").some((line) => gatePorts.some((port) => line.includes(`:${port} `)))) {
+        const gatePorts = phase5ReservedPorts();
+        if (
+          listeners
+            .split("\n")
+            .some((line) => gatePorts.some((port) => line.includes(`:${port} `)))
+        ) {
           throw new Error("Refusing swap drain while gate listeners are active");
         }
       },
@@ -1395,7 +1422,7 @@ async function captureHostHealth(manifest: Phase5Manifest): Promise<Record<strin
   const steady = numericVmstatLines.slice(-manifest.host.preflight.steadyVmstatSamples);
   const swapInPagesPerSecond = steady.map((fields) => Number(fields[6] ?? -1));
   const swapOutPagesPerSecond = steady.map((fields) => Number(fields[7] ?? -1));
-  const gatePorts = Object.values(PHASE5_STACK_PORTS).flatMap((ports) => Object.values(ports));
+  const gatePorts = phase5ReservedPorts();
   const conflictingListeners = listeners
     .split("\n")
     .filter((line) => gatePorts.some((port) => line.includes(`:${String(port)} `))).length;

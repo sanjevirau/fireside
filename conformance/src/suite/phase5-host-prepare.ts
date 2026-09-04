@@ -33,6 +33,14 @@ export interface Phase5StackPorts {
   readonly ui: number;
 }
 
+export interface Phase5ApplicationPorts {
+  readonly cfWorker: number;
+  readonly images: number;
+  readonly papi: number;
+  readonly templates: number;
+  readonly twodartNet: number;
+}
+
 export const PHASE5_STACK_PORTS: Readonly<
   Record<Phase5StackName, Phase5StackPorts>
 > = {
@@ -67,6 +75,73 @@ export const PHASE5_STACK_PORTS: Readonly<
     cacheWebsocket: 23_112,
   },
 };
+
+export const PHASE5_APPLICATION_PORTS: Readonly<
+  Record<Phase5StackName, Phase5ApplicationPorts>
+> = {
+  official: {
+    templates: 23_013,
+    papi: 23_014,
+    images: 23_015,
+    twodartNet: 23_016,
+    cfWorker: 23_017,
+  },
+  fireside: {
+    templates: 23_113,
+    papi: 23_114,
+    images: 23_115,
+    twodartNet: 23_116,
+    cfWorker: 23_117,
+  },
+};
+
+export const PHASE5_MPROCS_APPLICATION_CONFIG =
+  "scripts/dev/mprocs/js-dotnet.yaml";
+
+const PHASE5_PORTLESS_APPLICATION_NAMES: Readonly<
+  Record<keyof Phase5ApplicationPorts, string>
+> = {
+  templates: "templates.twodart",
+  papi: "papi.twodart",
+  images: "images.twodart",
+  twodartNet: "twodartnet.twodart",
+  cfWorker: "ingest-ph.twodart",
+};
+
+export function phase5ReservedPorts(): readonly number[] {
+  return [
+    ...Object.values(PHASE5_STACK_PORTS).flatMap((ports) => Object.values(ports)),
+    ...Object.values(PHASE5_APPLICATION_PORTS).flatMap((ports) =>
+      Object.values(ports)
+    ),
+  ];
+}
+
+export function applyPhase5PortlessApplicationPorts(
+  configText: string,
+  ports: Phase5ApplicationPorts,
+): string {
+  let rendered = configText;
+  for (const [key, name] of Object.entries(PHASE5_PORTLESS_APPLICATION_NAMES) as
+    readonly [keyof Phase5ApplicationPorts, string][]) {
+    const marker = `portless run --name ${name}`;
+    const occurrences = rendered.split(marker).length - 1;
+    if (occurrences !== 1) {
+      throw new Error(
+        `Expected one Phase 5 Portless command for ${name}, observed ${String(occurrences)}`,
+      );
+    }
+    const pattern = new RegExp(
+      `${escapeRegExp(marker)}(?: --app-port \\d+)?`,
+      "u",
+    );
+    rendered = rendered.replace(
+      pattern,
+      `${marker} --app-port ${String(ports[key])}`,
+    );
+  }
+  return rendered;
+}
 
 export const PHASE5_APPLICATION_URL_KEYS = [
   "CF_WORKER_URL",
@@ -392,6 +467,10 @@ async function assertDirectory(directory: string): Promise<void> {
   if (!(await stat(directory)).isDirectory()) {
     throw new Error(`Expected directory: ${directory}`);
   }
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 }
 
 async function stageDirectoryLink(
