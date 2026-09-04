@@ -43,6 +43,7 @@ type BrowserScenario =
   | "unicode-framing"
   | "unknown-sid"
   | "write"
+  | "write-batch-six"
   | "write-cross-client-update"
   | "write-missing-update-error"
   | "write-overlap";
@@ -160,6 +161,15 @@ const CAPTURE_CASES: readonly CaptureCase[] = [
     directory: "write-streaming",
     hypothesis: "Write handshake and acknowledgement in streaming mode",
     runs: [{ scenario: "write", variant: "streaming" }],
+  },
+  {
+    directory: "write-batch-six",
+    hypothesis:
+      "A six-mutation browser batch returns one WriteResult per mutation in both WebChannel variants",
+    runs: [
+      { scenario: "write-batch-six", variant: "long-poll" },
+      { scenario: "write-batch-six", variant: "streaming" },
+    ],
   },
   {
     directory: "write-overlap",

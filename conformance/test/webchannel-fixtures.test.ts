@@ -532,6 +532,37 @@ test("Java and cloud accept overlapping writes that reuse the last acknowledged 
   }
 });
 
+test("Java returns one WriteResult for every mutation in a six-write browser batch", async () => {
+  const contract = await readContract("java-v1.22.0", "write-batch-six");
+  const writeMaps = contract.exchanges.flatMap((exchange) =>
+    (exchange.request.form ?? []).flatMap(([name, value]) =>
+      name.endsWith("___data__") && value.includes("\"writes\"")
+        ? [JSON.parse(value) as { readonly writes?: readonly unknown[] }]
+        : []
+    )
+  );
+  assert.deepEqual(
+    writeMaps.map((value) => value.writes?.length ?? 0),
+    [6, 6],
+  );
+
+  const resultCounts = contract.exchanges
+    .flatMap((exchange) => exchange.response.frames)
+    .flatMap((frame) => Array.isArray(frame.json) ? frame.json : [])
+    .flatMap((array) => {
+      if (!Array.isArray(array) || !Array.isArray(array[1])) return [];
+      const response = array[1][0] as
+        | { readonly writeResults?: readonly unknown[] }
+        | undefined;
+      return response?.writeResults === undefined
+        ? []
+        : [response.writeResults.length];
+    });
+  assert.deepEqual(resultCounts, [6, 6]);
+  assert.ok(hasQueryValue(contract, "CI", "0"));
+  assert.ok(hasQueryValue(contract, "CI", "1"));
+});
+
 test("Java and cloud accept bundle Listen targets with nanosecond read times", async () => {
   for (const target of TARGETS) {
     const contract = await readContract(
@@ -619,7 +650,7 @@ function arrayIds(
 
 async function readContract(
   target: (typeof TARGETS)[number]["directory"],
-  captureCase: (typeof CASES)[number],
+  captureCase: (typeof CASES)[number] | "write-batch-six",
 ): Promise<DecodedCaptureContract> {
   return JSON.parse(
     await readFile(

@@ -23,6 +23,7 @@ import {
   updateDoc,
   waitForPendingWrites,
   where,
+  writeBatch,
 } from "firebase/firestore";
 
 type CaptureScenario =
@@ -40,6 +41,7 @@ type CaptureScenario =
   | "unicode-framing"
   | "unknown-sid"
   | "write"
+  | "write-batch-six"
   | "write-cross-client-update"
   | "write-missing-update-error"
   | "write-overlap";
@@ -327,6 +329,21 @@ window.firesideRunWebChannelCapture = async (
         });
         await waitForPendingWrites(firestore);
         observations.push("write-acknowledged");
+        break;
+      case "write-batch-six":
+        {
+          const batch = writeBatch(firestore);
+          for (let index = 0; index < 6; index += 1) {
+            batch.set(doc(firestore, COLLECTION, `oracle-batch-${String(index)}`), {
+              capture: "write-batch-six",
+              sequence: index,
+              synthetic: true,
+            });
+          }
+          await batch.commit();
+          await waitForPendingWrites(firestore);
+          observations.push("six-write-batch-acknowledged");
+        }
         break;
       case "write-cross-client-update":
         {
