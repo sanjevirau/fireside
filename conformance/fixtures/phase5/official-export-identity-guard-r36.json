@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "classification": "pre-measurement-harness",
+  "candidateRevision": "b6c2309e3356cc4bf28bf33da119d84c901f13c6",
+  "candidateCiRun": 33861280726,
+  "firesideMeasurementStarted": false,
+  "failure": "The preserved official r36 export identity diverged",
+  "cause": "The guard compared JSON serialization rather than the three identity fields, so equivalent objects with different insertion order compared unequal.",
+  "expected": {
+    "fileCount": 66756,
+    "fileBytes": 8180612785,
+    "treeSha256": "c1a1451827c326fb680b2133b0a2c42b79302f1fb89febfb02228ad056b619ca"
+  },
+  "observed": {
+    "fileCount": 66756,
+    "fileBytes": 8180612785,
+    "treeSha256": "c1a1451827c326fb680b2133b0a2c42b79302f1fb89febfb02228ad056b619ca"
+  },
+  "repair": "Compare fileCount, fileBytes, and treeSha256 independently without changing the frozen manifest or export.",
+  "evidenceDirectory": "reports/phase-5-metrics/preflight-continuation-20260904-b6c2309-r36"
+}

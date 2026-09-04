@@ -685,9 +685,11 @@ async function preserveOfficialBaselineEvidence(
     throw new Error("The preserved official r36 export is not a directory");
   }
   const exportIdentity = await treeIdentity(exportDirectory);
+  const expectedExportIdentity = amendment.sourceOfficialExport;
   if (
-    JSON.stringify(exportIdentity) !==
-      JSON.stringify(amendment.sourceOfficialExport)
+    exportIdentity.fileCount !== expectedExportIdentity.fileCount ||
+    exportIdentity.fileBytes !== expectedExportIdentity.fileBytes ||
+    exportIdentity.treeSha256 !== expectedExportIdentity.treeSha256
   ) {
     throw new Error("The preserved official r36 export identity diverged");
   }

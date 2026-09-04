@@ -24,6 +24,26 @@ const officialJavaFixtureUrl = new URL(
   "../fixtures/phase5/official-explicit-java-contract.json",
   import.meta.url,
 );
+const officialExportIdentityGuardFixtureUrl = new URL(
+  "../fixtures/phase5/official-export-identity-guard-r36.json",
+  import.meta.url,
+);
+
+test("r36 official-export guard failure is frozen before the typed-field repair", async () => {
+  const fixture = JSON.parse(
+    await readFile(officialExportIdentityGuardFixtureUrl, "utf8"),
+  ) as {
+    readonly classification: string;
+    readonly expected: Readonly<Record<string, unknown>>;
+    readonly firesideMeasurementStarted: boolean;
+    readonly observed: Readonly<Record<string, unknown>>;
+    readonly schemaVersion: number;
+  };
+  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.classification, "pre-measurement-harness");
+  assert.equal(fixture.firesideMeasurementStarted, false);
+  assert.deepEqual(fixture.observed, fixture.expected);
+});
 
 test("Phase 5 official explicit-Java boundary is frozen", async () => {
   const fixture = JSON.parse(await readFile(officialJavaFixtureUrl, "utf8")) as {
@@ -431,6 +451,10 @@ test("r36 continuation reuses only the exact official baseline and keeps Firesid
   assert.match(continuation, /\(ageMs \?\? 0\) >= 239_000/u);
   assert.match(continuation, /restartBrowser\?\.pageErrors !== 0/u);
   assert.match(continuation, /restartBrowser\.requestFailures !== 0/u);
+  assert.match(continuation, /exportIdentity\.fileCount !== expectedExportIdentity\.fileCount/u);
+  assert.match(continuation, /exportIdentity\.fileBytes !== expectedExportIdentity\.fileBytes/u);
+  assert.match(continuation, /exportIdentity\.treeSha256 !== expectedExportIdentity\.treeSha256/u);
+  assert.doesNotMatch(continuation, /JSON\.stringify\(exportIdentity\)/u);
   assert.match(source, /officialBaseline !== null && stack === "official"\) continue/u);
   assert.match(source, /assertStateMatchesFrozen\(\s*firesideInitialBefore/u);
   assert.match(source, /assertExactState\(firesideInitialAfter, firesideRestartBefore\)/u);

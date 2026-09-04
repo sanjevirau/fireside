@@ -15,10 +15,12 @@ wrappers selected port 4448. The r35 evidence is frozen before assigning unique
 fixed application ports. R36 passed the full cheap tier and measured the complete
 official full-data initial/soak baseline; its official restart then became
 host-limited across raw emulator, proxied Storage, and Next.js paths. That exact
-evidence is frozen. The official-only continuation is now encoded in manifest
-SHA-256 `48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e`;
-its candidate must pass the full seven-job matrix before the Fireside
-measurement starts.
+evidence is frozen. The official-only continuation is encoded in manifest
+SHA-256 `48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e`.
+Its first candidate passed all seven CI jobs, then a property-order-sensitive
+identity guard stopped before any Fireside measurement despite an exact export
+match. That failure is preserved; the typed-field guard repair must pass the
+full seven-job matrix before a new continuation starts.
 
 ## Current loop
 
@@ -35,7 +37,7 @@ measurement starts.
 | [r33](phase-5-full-gate-20260904-r33.md) (attempt 3/8 after reset) | Both smoke stacks 9/9 + 60 s soak; automatic full gate reached official Storage import | Harness: firebase-tools copied the 8.18 GB input into quota-constrained `/tmp`; Linux `EDQUOT` stopped official readiness | `official-storage-runtime-capacity-r33` fixture | `72a5c49` | [33826287482](https://github.com/sanjevirau/fireside/actions/runs/33826287482), 7/7 green after one infrastructure-only cell rerun | Cheap tier passed completely; full gate invalid-harness before journeys/soak; Fireside full stack not started |
 | [r34](phase-5-smoke-20260904-r34.md) (attempt 4/8 after reset) | Preflight only; no stack or journey started | Harness: one `/proc` scan caught a transient process at `stack-official` but did not retain command identity or establish stable quiescence | `swap-preflight-transient-process-r34` fixture | `74113ad` | [33834124800](https://github.com/sanjevirau/fireside/actions/runs/33834124800), 7/7 green | Fresh build passed; swap drain did not start; later inspections found zero matching processes/listeners; full gate absent |
 | [r35](phase-5-smoke-20260904-r35.md) (attempt 5/8 after reset) | Official 9/9 + 60 s soak; Fireside readiness only | Harness: concurrent Portless wrappers assigned port 4448 to both Images and TwodartNet; Images bound first and Kestrel failed | `portless-concurrent-port-allocation-r35` fixture | `27e96b6` | [33838985452](https://github.com/sanjevirau/fireside/actions/runs/33838985452), 7/7 green | Fireside emulator/cache/frontend ready but TwodartNet never ready; no Fireside browser/soak; full gate absent |
-| [r36](phase-5-full-gate-20260904-r36.md) (attempt 6/8 after reset) | Both smoke stacks 9/9 + 60 s soak; official full readiness + 9/9 + 7,200 s soak; official restart 3 journeys then host stall | Infrastructure: whole-host exhaustion under the official baseline; raw Firestore, proxied Storage, Next.js, and cleanup requests stalled together with zero page/gating request errors | `official-restart-host-exhaustion-r36` fixture | `30e0d25`; continuation candidate pending | [33844348621](https://github.com/sanjevirau/fireside/actions/runs/33844348621), 7/7 green on original candidate | Official initial/soak banked and restart host-limited; continuation harness implemented, full-matrix CI and Fireside stage pending |
+| [r36](phase-5-full-gate-20260904-r36.md) (attempt 6/8 after reset) | Both smoke stacks 9/9 + 60 s soak; official full readiness + 9/9 + 7,200 s soak; official restart 3 journeys then host stall; first continuation stopped before measurement | Infrastructure: whole-host exhaustion under the official baseline; then a pre-measurement harness guard compared equal export identities by JSON property order | `official-restart-host-exhaustion-r36` and `official-export-identity-guard-r36` fixtures | `30e0d25`; first continuation `b6c2309`; typed-field guard repair pending | [33844348621](https://github.com/sanjevirau/fireside/actions/runs/33844348621) and [33861280726](https://github.com/sanjevirau/fireside/actions/runs/33861280726), both 7/7 green | Official initial/soak banked and restart host-limited; first continuation started no Fireside workload; exact failure evidence preserved |
 
 R25 failure evidence is published in `b79750636e1666e1d097b341b7cc9f85ba74d28c`;
 [evidence CI 33748445917](https://github.com/sanjevirau/fireside/actions/runs/33748445917)

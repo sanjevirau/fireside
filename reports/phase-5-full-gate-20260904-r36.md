@@ -75,3 +75,19 @@ show both stacks side by side, mark only the official restart as host-limited,
 and claim no performance winner.
 
 No Phase 5 pass is claimed here. No tag is authorized, and Phase 6 must not start.
+
+## First continuation preflight
+
+Candidate `b6c2309e3356cc4bf28bf33da119d84c901f13c6` passed all seven jobs in
+GitHub Actions run `33861280726` and produced a fresh Linux release build. The
+continuation stopped before preflight, stack launch, or Fireside measurement
+because its official-export guard serialized two equivalent identity objects
+with different property insertion order. A direct read-only remeasurement
+matched the frozen identity exactly: 66,756 files, 8,180,612,785 bytes, and tree
+SHA-256 `c1a1451827c326fb680b2133b0a2c42b79302f1fb89febfb02228ad056b619ca`.
+
+The exact pre-measurement artifacts are preserved under
+[`phase-5-metrics/preflight-continuation-20260904-b6c2309-r36`](phase-5-metrics/preflight-continuation-20260904-b6c2309-r36/).
+The repair compares the three typed fields independently. It does not change
+the manifest, banked evidence, export, browser runner, workload, duration,
+thresholds, or official-only host-limit amendment.
