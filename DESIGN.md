@@ -2408,6 +2408,31 @@ This is a preflight observation correction only. It changes no schema-v3
 manifest field, protected browser runner, workload, duration, soak threshold,
 or product behavior.
 
+### Phase 5 Portless concurrent allocation oracle (r35)
+
+R35 passed its seven-job candidate CI and fresh Linux release build. The
+official cheap stack then passed readiness, all nine browser journeys, the
+60-second soak, export-first shutdown, cleanup, and orphan checks. During the
+Fireside stack boot, the Images and TwodartNet Portless wrappers both reported
+the same dynamically selected port, `4448`. Images bound it successfully;
+Kestrel then reported `address already in use` and TwodartNet never became
+ready. Fireside browser journeys and soak did not start, and neither did the
+full-data gate.
+
+Portless 0.11.1 explicitly documents an inherent time-of-check/time-of-use
+window in `findFreePort()`: it binds a probe socket, closes it, and returns the
+port. `runApp()` performs that selection before `RouteStore.addRoute()` takes
+the route-file lock. The lock protects route JSON but cannot reserve the port
+until the concurrently launched child binds. Portless's supported
+`--app-port` option bypasses dynamic assignment.
+
+The Phase 5 harness therefore assigns a distinct fixed port to every autostart
+Portless application for each isolated stack, stages those values into the
+mprocs configuration using `--app-port`, includes the full application-port
+set in the quiescent-listener preflight, and records the mapping. It does not
+change Portless hostnames, Twodart, the schema-v3 manifest, the protected
+browser runner, workload, duration, threshold, or emulator-product behavior.
+
 ### Auth refresh grant reuse (r24 follow-up oracle)
 
 `auth-refresh-reuse` freezes 28 direct HTTP observations against firebase-tools

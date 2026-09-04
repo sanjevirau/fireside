@@ -9,8 +9,10 @@ r31**. Oracle probes are not acceptance smokes. R33 passed the entire cheap tier
 on both stacks and automatically launched the full-data gate; its runtime-placement
 failure is corrected. R34 then stopped before either stack started because a
 single-sample quiescence check caught a transient checkout-owned process without
-recording its identity. The r34 evidence is now frozen before the stable-quiescence
-harness correction.
+recording its identity. R35 passed the full official cheap lifecycle but the
+Fireside stack could not start TwodartNet because two concurrent Portless
+wrappers selected port 4448. The r35 evidence is frozen before assigning unique
+fixed application ports.
 
 ## Current loop
 
@@ -26,6 +28,7 @@ harness correction.
 | [r32](phase-5-smoke-20260904-r32.md) (attempt 2/8 after reset) | Both stacks 9/9 + 60 s soak | Harness: current cache shape stores the dynamic stack Storage port under `data.themeMetadataData.slides[].slideThemeData[]`; decoded exports otherwise differ only by the declared timestamp | updated `phase5-cache-state-parity` fixture | `585f588` | [33822092710](https://github.com/sanjevirau/fireside/actions/runs/33822092710), 7/7 green after one infrastructure-only cell rerun | Failed only at generated-cache observation 2; both export-first exits zero; full-data directory absent |
 | [r33](phase-5-full-gate-20260904-r33.md) (attempt 3/8 after reset) | Both smoke stacks 9/9 + 60 s soak; automatic full gate reached official Storage import | Harness: firebase-tools copied the 8.18 GB input into quota-constrained `/tmp`; Linux `EDQUOT` stopped official readiness | `official-storage-runtime-capacity-r33` fixture | `72a5c49` | [33826287482](https://github.com/sanjevirau/fireside/actions/runs/33826287482), 7/7 green after one infrastructure-only cell rerun | Cheap tier passed completely; full gate invalid-harness before journeys/soak; Fireside full stack not started |
 | [r34](phase-5-smoke-20260904-r34.md) (attempt 4/8 after reset) | Preflight only; no stack or journey started | Harness: one `/proc` scan caught a transient process at `stack-official` but did not retain command identity or establish stable quiescence | `swap-preflight-transient-process-r34` fixture | `74113ad` | [33834124800](https://github.com/sanjevirau/fireside/actions/runs/33834124800), 7/7 green | Fresh build passed; swap drain did not start; later inspections found zero matching processes/listeners; full gate absent |
+| [r35](phase-5-smoke-20260904-r35.md) (attempt 5/8 after reset) | Official 9/9 + 60 s soak; Fireside readiness only | Harness: concurrent Portless wrappers assigned port 4448 to both Images and TwodartNet; Images bound first and Kestrel failed | `portless-concurrent-port-allocation-r35` fixture | `27e96b6` | [33838985452](https://github.com/sanjevirau/fireside/actions/runs/33838985452), 7/7 green | Fireside emulator/cache/frontend ready but TwodartNet never ready; no Fireside browser/soak; full gate absent |
 
 R25 failure evidence is published in `b79750636e1666e1d097b341b7cc9f85ba74d28c`;
 [evidence CI 33748445917](https://github.com/sanjevirau/fireside/actions/runs/33748445917)

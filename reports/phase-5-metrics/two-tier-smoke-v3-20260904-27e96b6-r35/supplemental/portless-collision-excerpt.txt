@@ -1,0 +1,17 @@
+[stack-fireside/.logs/images.log, ANSI stripped]
+-- Using port 4448
+Running: PORT=4448 HOST=127.0.0.1 PORTLESS_URL=https://phase5-fireside.images.twodart.localhost NODE_EXTRA_CA_CERTS="/home/sanjevi/.portless/ca.pem" bash -c HOST=127.0.0.1 PORT=$PORT bun --filter @twodart/images-express dev
+│ [1] Server successfully started. Listening at http://127.0.0.1:4448/
+
+[stack-fireside/.logs/dotnet.log, ANSI stripped]
+-- Using port 4448
+Running: PORT=4448 HOST=127.0.0.1 PORTLESS_URL=https://phase5-fireside.twodartnet.twodart.localhost NODE_EXTRA_CA_CERTS="/home/sanjevi/.portless/ca.pem" bash -c set -a; [ -f engines/twodartnet/.env ] && . engines/twodartnet/.env; export ASPNETCORE_ENVIRONMENT=Development FONTCONFIG_PATH=/opt/homebrew/etc/fonts/; set +a; cd engines/twodartnet && exec dotnet watch --no-hot-reload --non-interactive run --project TwodartNet/TwodartNet.csproj --urls http://127.0.0.1:$PORT
+System.IO.IOException: Failed to bind to address http://127.0.0.1:4448: address already in use.
+Unhandled exception. System.IO.IOException: Failed to bind to address http://127.0.0.1:4448: address already in use.
+dotnet watch ⏳ Waiting for a file to change before restarting ...
+
+[stack-official control, ANSI stripped]
+images.log: -- Using port 4191
+images.log: Server successfully started. Listening at http://127.0.0.1:4191/
+dotnet.log: -- Using port 4608
+dotnet.log: Now listening on: http://localhost:4608

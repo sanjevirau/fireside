@@ -67,6 +67,10 @@ const swapPreflightTransientProcessR34Url = new URL(
   "../fixtures/phase5/swap-preflight-transient-process-r34.json",
   import.meta.url,
 );
+const portlessConcurrentPortAllocationR35Url = new URL(
+  "../fixtures/phase5/portless-concurrent-port-allocation-r35.json",
+  import.meta.url,
+);
 
 test("the r33 official Storage import freezes the runtime-filesystem capacity failure", async () => {
   const fixture = JSON.parse(
@@ -207,6 +211,84 @@ test("the r34 single-process observation requires evidenced stable quiescence", 
   assert.equal(fixture.contract.phase5ManifestMayChange, false);
   assert.equal(fixture.contract.protectedBrowserRunnerMayChange, false);
   assert.equal(fixture.contract.phase5WorkloadOrThresholdsMayChange, false);
+});
+
+test("the r35 Portless collision requires fixed unique application ports", async () => {
+  const fixture = JSON.parse(
+    await readFile(portlessConcurrentPortAllocationR35Url, "utf8"),
+  ) as {
+    readonly schemaVersion: number;
+    readonly observation: {
+      readonly official: { readonly journeysPassed: number; readonly soakPassed: boolean };
+      readonly fireside: {
+        readonly imagesPort: number;
+        readonly imagesBound: boolean;
+        readonly twodartNetPort: number;
+        readonly twodartNetError: string;
+        readonly browserStarted: boolean;
+        readonly soakStarted: boolean;
+        readonly unmetConditions: readonly string[];
+      };
+      readonly fullDataGateStarted: boolean;
+      readonly failedSystemdUnits: number;
+      readonly currentBootOomOrResourceEvidence: number;
+    };
+    readonly portlessSourceContract: {
+      readonly freePortCheckPrecedesRouteLock: boolean;
+      readonly freePortCheckClosesProbeSocketBeforeChildBind: boolean;
+      readonly routeFileWritesAreLocked: boolean;
+      readonly routeLockDoesNotReserveApplicationPort: boolean;
+      readonly supportedFixedPortOption: string;
+    };
+    readonly contract: {
+      readonly applicationPortsMustBeUniqueAcrossBothStacks: boolean;
+      readonly applicationPortsMustBeIncludedInQuiescentPreflight: boolean;
+      readonly allAutostartPortlessApplicationsMustUsePinnedAppPorts: boolean;
+      readonly portlessHostnamesRemainUnchanged: boolean;
+      readonly twodartRevisionMayChange: boolean;
+      readonly phase5ManifestMayChange: boolean;
+      readonly protectedBrowserRunnerMayChange: boolean;
+      readonly phase5WorkloadOrThresholdsMayChange: boolean;
+    };
+  };
+
+  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.observation.official.journeysPassed, 9);
+  assert.equal(fixture.observation.official.soakPassed, true);
+  assert.equal(fixture.observation.fireside.imagesPort, 4448);
+  assert.equal(fixture.observation.fireside.twodartNetPort, 4448);
+  assert.equal(fixture.observation.fireside.imagesBound, true);
+  assert.equal(
+    fixture.observation.fireside.twodartNetError,
+    "System.IO.IOException: Failed to bind to address http://127.0.0.1:4448: address already in use.",
+  );
+  assert.deepEqual(fixture.observation.fireside.unmetConditions, [
+    "marker:dotnet.log",
+    "probe:twodartnet-health",
+  ]);
+  assert.equal(fixture.observation.fireside.browserStarted, false);
+  assert.equal(fixture.observation.fireside.soakStarted, false);
+  assert.equal(fixture.observation.fullDataGateStarted, false);
+  assert.equal(fixture.observation.failedSystemdUnits, 0);
+  assert.equal(fixture.observation.currentBootOomOrResourceEvidence, 0);
+  assert.equal(fixture.portlessSourceContract.freePortCheckPrecedesRouteLock, true);
+  assert.equal(
+    fixture.portlessSourceContract.freePortCheckClosesProbeSocketBeforeChildBind,
+    true,
+  );
+  assert.equal(fixture.portlessSourceContract.routeFileWritesAreLocked, true);
+  assert.equal(fixture.portlessSourceContract.routeLockDoesNotReserveApplicationPort, true);
+  assert.equal(fixture.portlessSourceContract.supportedFixedPortOption, "--app-port");
+  assert.deepEqual(fixture.contract, {
+    applicationPortsMustBeUniqueAcrossBothStacks: true,
+    applicationPortsMustBeIncludedInQuiescentPreflight: true,
+    allAutostartPortlessApplicationsMustUsePinnedAppPorts: true,
+    portlessHostnamesRemainUnchanged: true,
+    twodartRevisionMayChange: false,
+    phase5ManifestMayChange: false,
+    protectedBrowserRunnerMayChange: false,
+    phase5WorkloadOrThresholdsMayChange: false,
+  });
 });
 
 test("the exact lifecycle observation requires one SIGINT to one emulator process", async () => {

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "kind": "exact Phase 5 r35 stack logs plus readable Portless 0.11.1 source",
+    "candidateRevision": "27e96b669c374c92483b20d28293992fb5ebb129",
+    "twodartRevision": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54",
+    "diagnostic": "two-tier-smoke-v3-20260904-27e96b6-r35",
+    "manifestSha256": "fe9d44c1edb6105d6edc9f0ab3b3251cb34929b7b6113e559ff9a2558ad7b957",
+    "protectedRunnerSha256": "ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc",
+    "portlessVersion": "0.11.1",
+    "portlessRevision": "a9385b83250c78855fb51dc1742671c45fbf07ed"
+  },
+  "observation": {
+    "official": {
+      "journeysPassed": 9,
+      "soakSeconds": 60,
+      "soakPassed": true,
+      "imagesPort": 4191,
+      "twodartNetPort": 4608
+    },
+    "fireside": {
+      "imagesHostname": "phase5-fireside.images.twodart.localhost",
+      "imagesPort": 4448,
+      "imagesBound": true,
+      "twodartNetHostname": "phase5-fireside.twodartnet.twodart.localhost",
+      "twodartNetPort": 4448,
+      "twodartNetError": "System.IO.IOException: Failed to bind to address http://127.0.0.1:4448: address already in use.",
+      "readinessSeconds": 1200,
+      "unmetConditions": [
+        "marker:dotnet.log",
+        "probe:twodartnet-health"
+      ],
+      "browserStarted": false,
+      "soakStarted": false
+    },
+    "fullDataGateStarted": false,
+    "failedSystemdUnits": 0,
+    "currentBootOomOrResourceEvidence": 0,
+    "releaseBinarySha256": "19677fe56e511986a2bb707fc26160281ce97819c391c08064b4fcaa6998d592"
+  },
+  "portlessSourceContract": {
+    "dynamicPortRange": "4000-4999",
+    "freePortCheckPrecedesRouteLock": true,
+    "freePortCheckClosesProbeSocketBeforeChildBind": true,
+    "routeFileWritesAreLocked": true,
+    "routeLockDoesNotReserveApplicationPort": true,
+    "supportedFixedPortOption": "--app-port",
+    "sourceFiles": [
+      "src/cli-utils.ts",
+      "src/cli.ts",
+      "src/routes.ts"
+    ]
+  },
+  "contract": {
+    "applicationPortsMustBeUniqueAcrossBothStacks": true,
+    "applicationPortsMustBeIncludedInQuiescentPreflight": true,
+    "allAutostartPortlessApplicationsMustUsePinnedAppPorts": true,
+    "portlessHostnamesRemainUnchanged": true,
+    "twodartRevisionMayChange": false,
+    "phase5ManifestMayChange": false,
+    "protectedBrowserRunnerMayChange": false,
+    "phase5WorkloadOrThresholdsMayChange": false
+  }
+}
