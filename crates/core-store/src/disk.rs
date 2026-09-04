@@ -1,6 +1,6 @@
 //! Crash-safe disk persistence for the MVCC store.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::fs::{self, File, OpenOptions};
@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use bincode::{Decode, Encode, config};
 use redb::{
-    Builder, Database, Durability, ReadTransaction, ReadableDatabase, ReadableTable,
+    Builder, Database, Durability, ReadOnlyTable, ReadTransaction, ReadableDatabase, ReadableTable,
     TableDefinition,
 };
 
@@ -23,9 +23,14 @@ use super::{
     usize_to_u64,
 };
 
-const DOCUMENTS: TableDefinition<&[u8], &[u8]> = TableDefinition::new("documents_v1");
+const LEGACY_DOCUMENTS: TableDefinition<&[u8], &[u8]> = TableDefinition::new("documents_v1");
+const DOCUMENTS: TableDefinition<&[u8], &[u8]> = TableDefinition::new("documents_v2");
+const COLLECTIONS: TableDefinition<&[u8], &[u8]> = TableDefinition::new("collections_v1");
+const COLLECTION_GROUPS: TableDefinition<&[u8], &[u8]> =
+    TableDefinition::new("collection_groups_v1");
 const METADATA: TableDefinition<&str, &[u8]> = TableDefinition::new("metadata_v1");
 const STATE_KEY: &str = "state";
+const DOCUMENTS_V2_MIGRATION_KEY: &str = "documents_v2_migrated";
 const DATABASE_FILE: &str = "fireside.redb";
 const JOURNAL_FILE: &str = "fireside.wal";
 const FRAME_MAGIC: [u8; 8] = *b"FSWAL001";
@@ -299,84 +304,240 @@ impl DiskSnapshot {
         if let Some(document) = self.overlay.get(key) {
             return document.clone();
         }
-        let encoded_key = encode(key).ok()?;
+        let encoded_key = encode_document_key(key).ok()?;
         let table = self.transaction.open_table(DOCUMENTS).ok()?;
         let value = table.get(encoded_key.as_slice()).ok()??;
         decode(value.value()).ok().map(Arc::new)
     }
 
-    pub(crate) fn iter_documents(&self, database: &DatabaseName) -> Option<DiskDocumentIterator> {
-        if !self.overlay.is_empty() {
-            return None;
-        }
-        let table = self.transaction.open_table(DOCUMENTS).ok()?;
-        let range = table.range::<&[u8]>(..).ok()?;
-        Some(DiskDocumentIterator {
+    pub(crate) fn iter_documents(&self, database: &DatabaseName) -> DiskDocumentIterator {
+        let scope = DiskDocumentScope::Database(database.clone());
+        let source = database_prefix(database)
+            .ok()
+            .and_then(|prefix| bounded_range(&self.transaction, DOCUMENTS, &prefix))
+            .map_or(DiskRange::Empty, DiskRange::Documents);
+        self.iterator(scope, source)
+    }
+
+    pub(crate) fn iter_collection(
+        &self,
+        database: &DatabaseName,
+        collection_path: &str,
+    ) -> DiskDocumentIterator {
+        let scope = DiskDocumentScope::Collection {
             database: database.clone(),
-            range,
-        })
+            collection_path: collection_path.to_owned(),
+        };
+        let source = collection_index_prefix(database, collection_path)
+            .ok()
+            .and_then(|prefix| indexed_range(&self.transaction, COLLECTIONS, &prefix))
+            .unwrap_or(DiskRange::Empty);
+        self.iterator(scope, source)
+    }
+
+    pub(crate) fn iter_collection_group(
+        &self,
+        database: &DatabaseName,
+        collection_id: &str,
+        ancestor: Option<&str>,
+    ) -> DiskDocumentIterator {
+        let scope = DiskDocumentScope::CollectionGroup {
+            ancestor: ancestor.map(str::to_owned),
+            collection_id: collection_id.to_owned(),
+            database: database.clone(),
+        };
+        let source = collection_group_index_prefix(database, collection_id)
+            .ok()
+            .and_then(|prefix| indexed_range(&self.transaction, COLLECTION_GROUPS, &prefix))
+            .unwrap_or(DiskRange::Empty);
+        self.iterator(scope, source)
+    }
+
+    fn iterator(&self, scope: DiskDocumentScope, source: DiskRange) -> DiskDocumentIterator {
+        let overlay = self
+            .overlay
+            .iter()
+            .filter(|(key, _)| scope.matches(key))
+            .map(|(key, document)| (key.clone(), document.clone()))
+            .collect::<Vec<_>>()
+            .into_iter();
+        DiskDocumentIterator {
+            next_disk: None,
+            next_overlay: None,
+            overlay,
+            scope,
+            source,
+        }
     }
 
     pub(crate) fn documents(&self, database: &DatabaseName) -> Vec<(DocumentKey, Arc<Document>)> {
-        let mut documents = BTreeMap::new();
-        if let Ok(table) = self.transaction.open_table(DOCUMENTS)
-            && let Ok(entries) = table.iter()
-        {
-            for entry in entries.flatten() {
-                let (key, document) = entry;
-                let Ok(key) = decode::<DocumentKey>(key.value()) else {
-                    continue;
-                };
-                if key.database() != database {
-                    continue;
-                }
-                let Ok(document) = decode::<Document>(document.value()) else {
-                    continue;
-                };
-                documents.insert(key, Arc::new(document));
-            }
-        }
-        for (key, document) in &self.overlay {
-            if key.database() != database {
-                continue;
-            }
-            match document {
-                Some(document) => {
-                    documents.insert(key.clone(), document.clone());
-                }
-                None => {
-                    documents.remove(key);
-                }
-            }
-        }
-        documents.into_iter().collect()
+        self.iter_documents(database).collect()
     }
 }
 
 pub(crate) struct DiskDocumentIterator {
-    database: DatabaseName,
-    range: redb::Range<'static, &'static [u8], &'static [u8]>,
+    next_disk: Option<(DocumentKey, Arc<Document>)>,
+    next_overlay: Option<(DocumentKey, Option<Arc<Document>>)>,
+    overlay: std::vec::IntoIter<(DocumentKey, Option<Arc<Document>>)>,
+    scope: DiskDocumentScope,
+    source: DiskRange,
+}
+
+enum DiskRange {
+    Documents(redb::Range<'static, &'static [u8], &'static [u8]>),
+    Indexed {
+        documents: ReadOnlyTable<&'static [u8], &'static [u8]>,
+        range: redb::Range<'static, &'static [u8], &'static [u8]>,
+    },
+    Empty,
+}
+
+#[derive(Clone)]
+enum DiskDocumentScope {
+    Database(DatabaseName),
+    Collection {
+        database: DatabaseName,
+        collection_path: String,
+    },
+    CollectionGroup {
+        ancestor: Option<String>,
+        collection_id: String,
+        database: DatabaseName,
+    },
+}
+
+impl DiskDocumentScope {
+    fn matches(&self, key: &DocumentKey) -> bool {
+        match self {
+            Self::Database(database) => key.database() == database,
+            Self::Collection {
+                database,
+                collection_path,
+            } => {
+                key.database() == database && direct_collection_matches(collection_path, key.path())
+            }
+            Self::CollectionGroup {
+                ancestor,
+                collection_id,
+                database,
+            } => {
+                key.database() == database
+                    && immediate_collection_id(key.path()) == Some(collection_id.as_str())
+                    && ancestor
+                        .as_deref()
+                        .is_none_or(|ancestor| ancestor_matches(ancestor, key.path()))
+            }
+        }
+    }
 }
 
 impl Iterator for DiskDocumentIterator {
     type Item = (DocumentKey, Arc<Document>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        for entry in self.range.by_ref().flatten() {
-            let (key, document) = entry;
-            let Ok(key) = decode::<DocumentKey>(key.value()) else {
-                continue;
-            };
-            if key.database() != &self.database {
-                continue;
+        loop {
+            if self.next_disk.is_none() {
+                self.next_disk = next_disk_document(&mut self.source, &self.scope);
             }
-            let Ok(document) = decode::<Document>(document.value()) else {
-                continue;
-            };
-            return Some((key, Arc::new(document)));
+            if self.next_overlay.is_none() {
+                self.next_overlay = self.overlay.next();
+            }
+            match (&self.next_disk, &self.next_overlay) {
+                (None, None) => return None,
+                (Some(_), None) => return self.next_disk.take(),
+                (None, Some(_)) => {
+                    let (key, document) = self.next_overlay.take()?;
+                    if let Some(document) = document {
+                        return Some((key, document));
+                    }
+                }
+                (Some((disk_key, _)), Some((overlay_key, _))) => match disk_key.cmp(overlay_key) {
+                    std::cmp::Ordering::Less => return self.next_disk.take(),
+                    std::cmp::Ordering::Equal => {
+                        self.next_disk.take();
+                        let (key, document) = self.next_overlay.take()?;
+                        if let Some(document) = document {
+                            return Some((key, document));
+                        }
+                    }
+                    std::cmp::Ordering::Greater => {
+                        let (key, document) = self.next_overlay.take()?;
+                        if let Some(document) = document {
+                            return Some((key, document));
+                        }
+                    }
+                },
+            }
         }
-        None
     }
+}
+
+fn next_disk_document(
+    source: &mut DiskRange,
+    scope: &DiskDocumentScope,
+) -> Option<(DocumentKey, Arc<Document>)> {
+    loop {
+        match source {
+            DiskRange::Documents(range) => {
+                let entry = range.next()?;
+                let Ok((key, document)) = entry else {
+                    continue;
+                };
+                let Ok(key) = decode_document_key(key.value()) else {
+                    continue;
+                };
+                if !scope.matches(&key) {
+                    continue;
+                }
+                let Ok(document) = decode::<Document>(document.value()) else {
+                    continue;
+                };
+                return Some((key, Arc::new(document)));
+            }
+            DiskRange::Indexed { documents, range } => {
+                let entry = range.next()?;
+                let Ok((_, encoded_key)) = entry else {
+                    continue;
+                };
+                let Ok(key) = decode_document_key(encoded_key.value()) else {
+                    continue;
+                };
+                if !scope.matches(&key) {
+                    continue;
+                }
+                let Ok(Some(document)) = documents.get(encoded_key.value()) else {
+                    continue;
+                };
+                let Ok(document) = decode::<Document>(document.value()) else {
+                    continue;
+                };
+                return Some((key, Arc::new(document)));
+            }
+            DiskRange::Empty => return None,
+        }
+    }
+}
+
+fn bounded_range(
+    transaction: &ReadTransaction,
+    definition: TableDefinition<&'static [u8], &'static [u8]>,
+    prefix: &[u8],
+) -> Option<redb::Range<'static, &'static [u8], &'static [u8]>> {
+    let upper = prefix_successor(prefix)?;
+    let table = transaction.open_table(definition).ok()?;
+    table.range::<&[u8]>(prefix..upper.as_slice()).ok()
+}
+
+fn indexed_range(
+    transaction: &ReadTransaction,
+    definition: TableDefinition<&'static [u8], &'static [u8]>,
+    prefix: &[u8],
+) -> Option<DiskRange> {
+    let upper = prefix_successor(prefix)?;
+    let index = transaction.open_table(definition).ok()?;
+    let range = index.range::<&[u8]>(prefix..upper.as_slice()).ok()?;
+    let documents = transaction.open_table(DOCUMENTS).ok()?;
+    Some(DiskRange::Indexed { documents, range })
 }
 
 fn historical_overlay(
@@ -416,7 +577,7 @@ fn load_write_documents(
     let table = transaction.open_table(DOCUMENTS).map_err(DiskError::redb)?;
     let mut documents = im::OrdMap::new();
     for key in keys {
-        let encoded_key = encode(key)?;
+        let encoded_key = encode_document_key(key)?;
         if let Some(document) = table.get(encoded_key.as_slice()).map_err(DiskError::redb)? {
             documents.insert(key.clone(), Arc::new(decode(document.value())?));
         }
@@ -484,8 +645,72 @@ fn initialize_database(database: &Database) -> Result<(), DiskError> {
         .set_durability(Durability::Immediate)
         .map_err(DiskError::redb)?;
     {
+        transaction
+            .open_table(LEGACY_DOCUMENTS)
+            .map_err(DiskError::redb)?;
         transaction.open_table(DOCUMENTS).map_err(DiskError::redb)?;
+        transaction
+            .open_table(COLLECTIONS)
+            .map_err(DiskError::redb)?;
+        transaction
+            .open_table(COLLECTION_GROUPS)
+            .map_err(DiskError::redb)?;
         transaction.open_table(METADATA).map_err(DiskError::redb)?;
+    }
+    transaction.commit().map_err(DiskError::redb)?;
+    migrate_legacy_documents(database)
+}
+
+fn migrate_legacy_documents(database: &Database) -> Result<(), DiskError> {
+    let migrated = {
+        let transaction = database.begin_read().map_err(DiskError::redb)?;
+        let metadata = transaction.open_table(METADATA).map_err(DiskError::redb)?;
+        metadata
+            .get(DOCUMENTS_V2_MIGRATION_KEY)
+            .map_err(DiskError::redb)?
+            .is_some()
+    };
+    if migrated {
+        return Ok(());
+    }
+
+    let mut transaction = database.begin_write().map_err(DiskError::redb)?;
+    transaction
+        .set_durability(Durability::Immediate)
+        .map_err(DiskError::redb)?;
+    {
+        let legacy = transaction
+            .open_table(LEGACY_DOCUMENTS)
+            .map_err(DiskError::redb)?;
+        let mut documents = transaction.open_table(DOCUMENTS).map_err(DiskError::redb)?;
+        let mut collections = transaction
+            .open_table(COLLECTIONS)
+            .map_err(DiskError::redb)?;
+        let mut collection_groups = transaction
+            .open_table(COLLECTION_GROUPS)
+            .map_err(DiskError::redb)?;
+        for entry in legacy.iter().map_err(DiskError::redb)? {
+            let (legacy_key, document) = entry.map_err(DiskError::redb)?;
+            let key: DocumentKey = decode(legacy_key.value())?;
+            let encoded_key = encode_document_key(&key)?;
+            let collection_key = encode_collection_index_key(&key)?;
+            let collection_group_key = encode_collection_group_index_key(&key)?;
+            documents
+                .insert(encoded_key.as_slice(), document.value())
+                .map_err(DiskError::redb)?;
+            collections
+                .insert(collection_key.as_slice(), encoded_key.as_slice())
+                .map_err(DiskError::redb)?;
+            collection_groups
+                .insert(collection_group_key.as_slice(), encoded_key.as_slice())
+                .map_err(DiskError::redb)?;
+        }
+    }
+    {
+        let mut metadata = transaction.open_table(METADATA).map_err(DiskError::redb)?;
+        metadata
+            .insert(DOCUMENTS_V2_MIGRATION_KEY, &[1_u8][..])
+            .map_err(DiskError::redb)?;
     }
     transaction.commit().map_err(DiskError::redb)
 }
@@ -498,7 +723,7 @@ fn load_database(database: &Database) -> Result<LoadedDatabase, DiskError> {
         let entries = table.iter().map_err(DiskError::redb)?;
         for entry in entries {
             let (key, document) = entry.map_err(DiskError::redb)?;
-            let key: DocumentKey = decode(key.value())?;
+            let key = decode_document_key(key.value())?;
             let document: Document = decode(document.value())?;
             current_documents.entries = current_documents.entries.saturating_add(1);
             current_documents.logical_bytes = current_documents
@@ -559,16 +784,40 @@ fn persist_record(
         .map_err(DiskError::redb)?;
     {
         let mut documents = transaction.open_table(DOCUMENTS).map_err(DiskError::redb)?;
+        let mut collections = transaction
+            .open_table(COLLECTIONS)
+            .map_err(DiskError::redb)?;
+        let mut collection_groups = transaction
+            .open_table(COLLECTION_GROUPS)
+            .map_err(DiskError::redb)?;
         for mutation in &record.mutations {
-            let key = encode_write_buffer(&mutation.key, write_buffers, WriteBufferOwner::RedbKey)?;
+            let key = track_write_buffer(
+                encode_document_key(&mutation.key)?,
+                write_buffers,
+                WriteBufferOwner::RedbKey,
+            );
+            let collection_key = encode_collection_index_key(&mutation.key)?;
+            let collection_group_key = encode_collection_group_index_key(&mutation.key)?;
             if let Some(document) = &mutation.document {
                 let value =
                     encode_write_buffer(document, write_buffers, WriteBufferOwner::RedbDocument)?;
                 documents
                     .insert(key.as_slice(), value.as_slice())
                     .map_err(DiskError::redb)?;
+                collections
+                    .insert(collection_key.as_slice(), key.as_slice())
+                    .map_err(DiskError::redb)?;
+                collection_groups
+                    .insert(collection_group_key.as_slice(), key.as_slice())
+                    .map_err(DiskError::redb)?;
             } else {
                 documents.remove(key.as_slice()).map_err(DiskError::redb)?;
+                collections
+                    .remove(collection_key.as_slice())
+                    .map_err(DiskError::redb)?;
+                collection_groups
+                    .remove(collection_group_key.as_slice())
+                    .map_err(DiskError::redb)?;
             }
         }
     }
@@ -626,6 +875,140 @@ fn replay_records(
 fn encode<T: Encode>(value: &T) -> Result<Vec<u8>, DiskError> {
     bincode::encode_to_vec(value, config::standard())
         .map_err(|error| DiskError::Encoding(error.to_string()))
+}
+
+fn encode_document_key(key: &DocumentKey) -> Result<Vec<u8>, DiskError> {
+    let mut encoded = database_prefix(key.database())?;
+    encoded.extend_from_slice(key.path().as_bytes());
+    Ok(encoded)
+}
+
+fn decode_document_key(bytes: &[u8]) -> Result<DocumentKey, DiskError> {
+    let mut offset = 0;
+    let project_id = decode_length_prefixed_string(bytes, &mut offset)?;
+    let database_id = decode_length_prefixed_string(bytes, &mut offset)?;
+    let path = std::str::from_utf8(bytes.get(offset..).ok_or_else(|| {
+        DiskError::Corrupt("document key path offset is outside the encoded key".to_owned())
+    })?)
+    .map_err(|error| DiskError::Corrupt(format!("document key path is not UTF-8: {error}")))?;
+    let database = DatabaseName::new(project_id, database_id)
+        .map_err(|error| DiskError::Corrupt(error.to_string()))?;
+    DocumentKey::new(database, path).map_err(|error| DiskError::Corrupt(error.to_string()))
+}
+
+fn database_prefix(database: &DatabaseName) -> Result<Vec<u8>, DiskError> {
+    let mut encoded = Vec::with_capacity(
+        8_usize
+            .saturating_add(database.project_id().len())
+            .saturating_add(database.database_id().len()),
+    );
+    push_length_prefixed(&mut encoded, database.project_id())?;
+    push_length_prefixed(&mut encoded, database.database_id())?;
+    Ok(encoded)
+}
+
+fn collection_index_prefix(
+    database: &DatabaseName,
+    collection_path: &str,
+) -> Result<Vec<u8>, DiskError> {
+    let mut encoded = database_prefix(database)?;
+    push_length_prefixed(&mut encoded, collection_path)?;
+    Ok(encoded)
+}
+
+fn collection_group_index_prefix(
+    database: &DatabaseName,
+    collection_id: &str,
+) -> Result<Vec<u8>, DiskError> {
+    let mut encoded = database_prefix(database)?;
+    push_length_prefixed(&mut encoded, collection_id)?;
+    Ok(encoded)
+}
+
+fn encode_collection_index_key(key: &DocumentKey) -> Result<Vec<u8>, DiskError> {
+    let (collection_path, document_id) = key.path().rsplit_once('/').ok_or_else(|| {
+        DiskError::Corrupt(format!("document path has no collection: {}", key.path()))
+    })?;
+    let mut encoded = collection_index_prefix(key.database(), collection_path)?;
+    encoded.extend_from_slice(document_id.as_bytes());
+    Ok(encoded)
+}
+
+fn encode_collection_group_index_key(key: &DocumentKey) -> Result<Vec<u8>, DiskError> {
+    let collection_id = immediate_collection_id(key.path()).ok_or_else(|| {
+        DiskError::Corrupt(format!(
+            "document path has no collection group: {}",
+            key.path()
+        ))
+    })?;
+    let mut encoded = collection_group_index_prefix(key.database(), collection_id)?;
+    encoded.extend_from_slice(key.path().as_bytes());
+    Ok(encoded)
+}
+
+fn push_length_prefixed(buffer: &mut Vec<u8>, value: &str) -> Result<(), DiskError> {
+    let length = u32::try_from(value.len())
+        .map_err(|_| DiskError::Encoding("resource identifier exceeds u32 bytes".to_owned()))?;
+    buffer.extend_from_slice(&length.to_be_bytes());
+    buffer.extend_from_slice(value.as_bytes());
+    Ok(())
+}
+
+fn decode_length_prefixed_string<'a>(
+    bytes: &'a [u8],
+    offset: &mut usize,
+) -> Result<&'a str, DiskError> {
+    let length_end = offset
+        .checked_add(4)
+        .ok_or_else(|| DiskError::Corrupt("document key length offset overflowed".to_owned()))?;
+    let length_bytes: [u8; 4] = bytes
+        .get(*offset..length_end)
+        .ok_or_else(|| DiskError::Corrupt("document key length is truncated".to_owned()))?
+        .try_into()
+        .expect("four-byte slice");
+    let length = usize::try_from(u32::from_be_bytes(length_bytes))
+        .expect("u32 lengths fit supported usize targets");
+    let value_end = length_end
+        .checked_add(length)
+        .ok_or_else(|| DiskError::Corrupt("document key value offset overflowed".to_owned()))?;
+    let value = bytes
+        .get(length_end..value_end)
+        .ok_or_else(|| DiskError::Corrupt("document key value is truncated".to_owned()))?;
+    *offset = value_end;
+    std::str::from_utf8(value)
+        .map_err(|error| DiskError::Corrupt(format!("document key value is not UTF-8: {error}")))
+}
+
+fn prefix_successor(prefix: &[u8]) -> Option<Vec<u8>> {
+    let mut upper = prefix.to_vec();
+    for index in (0..upper.len()).rev() {
+        if upper[index] != u8::MAX {
+            upper[index] = upper[index].saturating_add(1);
+            upper.truncate(index + 1);
+            return Some(upper);
+        }
+    }
+    None
+}
+
+fn immediate_collection_id(document_path: &str) -> Option<&str> {
+    document_path
+        .rsplit_once('/')
+        .and_then(|(collection_path, _)| collection_path.rsplit('/').next())
+}
+
+fn direct_collection_matches(collection_path: &str, document_path: &str) -> bool {
+    document_path
+        .strip_prefix(collection_path)
+        .and_then(|suffix| suffix.strip_prefix('/'))
+        .is_some_and(|document_id| !document_id.is_empty() && !document_id.contains('/'))
+}
+
+fn ancestor_matches(ancestor: &str, document_path: &str) -> bool {
+    document_path
+        .strip_prefix(ancestor)
+        .and_then(|suffix| suffix.strip_prefix('/'))
+        .is_some_and(|descendant| descendant.split('/').count() >= 2)
 }
 
 #[derive(Clone, Copy)]
@@ -752,11 +1135,19 @@ fn encode_write_buffer<'a, T: Encode>(
     owner: WriteBufferOwner,
 ) -> Result<TrackedWriteBuffer<'a>, DiskError> {
     let bytes = encode(value)?;
+    Ok(track_write_buffer(bytes, accounting, owner))
+}
+
+fn track_write_buffer(
+    bytes: Vec<u8>,
+    accounting: &WriteBufferAccounting,
+    owner: WriteBufferOwner,
+) -> TrackedWriteBuffer<'_> {
     let registration = accounting.register(owner, bytes.capacity());
-    Ok(TrackedWriteBuffer {
+    TrackedWriteBuffer {
         bytes,
         _registration: registration,
-    })
+    }
 }
 
 struct TrackedWriteBuffer<'a> {
@@ -1175,6 +1566,147 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(paths.len(), 128);
         assert!(!paths.iter().any(|path| path == "items/later"));
+    }
+
+    #[test]
+    fn disk_snapshot_scopes_use_collection_indexes_and_merge_historical_overlays() {
+        let directory = TestDirectory::new();
+        let store = DiskStore::open(directory.path(), DiskOptions::default())
+            .expect("disk store should open");
+        let first = store
+            .commit(&[
+                Write::Create {
+                    key: key("items/one"),
+                    fields: fields(Value::Integer(1)),
+                },
+                Write::Create {
+                    key: key("items/one/children/nested"),
+                    fields: fields(Value::Integer(2)),
+                },
+                Write::Create {
+                    key: key("parents/a/tasks/first"),
+                    fields: fields(Value::Integer(3)),
+                },
+                Write::Create {
+                    key: key("parents/b/tasks/second"),
+                    fields: fields(Value::Integer(4)),
+                },
+                Write::Create {
+                    key: key("other/unrelated"),
+                    fields: fields(Value::Integer(5)),
+                },
+            ])
+            .expect("seed commit should succeed");
+        store
+            .commit(&[
+                Write::Delete {
+                    key: key("items/one"),
+                    precondition: Precondition::None,
+                },
+                Write::Create {
+                    key: key("items/two"),
+                    fields: fields(Value::Integer(6)),
+                },
+            ])
+            .expect("overlay commit should succeed");
+
+        let current = store.snapshot();
+        assert_eq!(
+            current
+                .iter_collection(&database(), "items")
+                .map(|(key, _)| key.path().to_owned())
+                .collect::<Vec<_>>(),
+            ["items/two"]
+        );
+        assert_eq!(
+            current
+                .iter_collection_group(&database(), "tasks", None)
+                .map(|(key, _)| key.path().to_owned())
+                .collect::<Vec<_>>(),
+            ["parents/a/tasks/first", "parents/b/tasks/second"]
+        );
+        assert_eq!(
+            current
+                .iter_collection_group(&database(), "tasks", Some("parents/a"))
+                .map(|(key, _)| key.path().to_owned())
+                .collect::<Vec<_>>(),
+            ["parents/a/tasks/first"]
+        );
+
+        let historical = store
+            .snapshot_at(first.revision)
+            .expect("retained historical snapshot should exist");
+        assert_eq!(
+            historical
+                .iter_collection(&database(), "items")
+                .map(|(key, _)| key.path().to_owned())
+                .collect::<Vec<_>>(),
+            ["items/one"]
+        );
+    }
+
+    #[test]
+    fn legacy_document_table_migrates_to_range_and_group_indexes() {
+        let directory = TestDirectory::new();
+        let database_path = directory.path().join(DATABASE_FILE);
+        let database_file = Builder::new()
+            .create(&database_path)
+            .expect("legacy database should be created");
+        let document_key = key("parents/legacy/tasks/migrated");
+        let timestamp = Timestamp::new(1, 0).expect("valid timestamp");
+        let document = Document {
+            fields: fields(Value::String("legacy".into())),
+            create_time: timestamp,
+            update_time: timestamp,
+        };
+        let transaction = database_file
+            .begin_write()
+            .expect("legacy write transaction should open");
+        {
+            let mut documents = transaction
+                .open_table(LEGACY_DOCUMENTS)
+                .expect("legacy table should open");
+            documents
+                .insert(
+                    encode(&document_key)
+                        .expect("legacy key should encode")
+                        .as_slice(),
+                    encode(&document)
+                        .expect("legacy document should encode")
+                        .as_slice(),
+                )
+                .expect("legacy document should insert");
+            let mut metadata = transaction
+                .open_table(METADATA)
+                .expect("metadata table should open");
+            metadata
+                .insert(
+                    STATE_KEY,
+                    encode(&PersistedState {
+                        revision: Revision(1),
+                        last_commit_time: timestamp,
+                    })
+                    .expect("state should encode")
+                    .as_slice(),
+                )
+                .expect("legacy state should insert");
+        }
+        transaction
+            .commit()
+            .expect("legacy transaction should commit");
+        drop(database_file);
+
+        let store = DiskStore::open(directory.path(), DiskOptions::default())
+            .expect("legacy store should migrate");
+        assert!(store.snapshot().get(&document_key).is_some());
+        assert_eq!(
+            store
+                .snapshot()
+                .iter_collection_group(&database(), "tasks", None)
+                .map(|(key, _)| key.path().to_owned())
+                .collect::<Vec<_>>(),
+            ["parents/legacy/tasks/migrated"]
+        );
     }
 
     #[test]

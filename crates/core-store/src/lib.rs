@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use bincode::{Decode, Encode};
-use im::OrdMap;
+use im::{OrdMap, OrdSet};
 use serde::{Deserialize, Serialize};
 pub use smol_str::SmolStr as FirestoreString;
 
@@ -875,6 +875,8 @@ impl Store {
                 Snapshot::memory(
                     state.revision,
                     state.documents.clone(),
+                    state.collections.clone().unwrap_or_default(),
+                    state.collection_groups.clone().unwrap_or_default(),
                     state.current_documents,
                 )
             }
@@ -1034,14 +1036,18 @@ pub struct Snapshot {
 
 #[derive(Clone)]
 enum SnapshotDocuments {
-    Memory(OrdMap<DocumentKey, Arc<Document>>),
+    Memory {
+        documents: OrdMap<DocumentKey, Arc<Document>>,
+        collections: CollectionIndex,
+        collection_groups: CollectionGroupIndex,
+    },
     Disk(disk::DiskSnapshot),
 }
 
 impl Debug for Snapshot {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         let backend = match self.documents {
-            SnapshotDocuments::Memory(_) => "memory",
+            SnapshotDocuments::Memory { .. } => "memory",
             SnapshotDocuments::Disk(_) => "disk",
         };
         formatter
@@ -1056,11 +1062,17 @@ impl Snapshot {
     fn memory(
         revision: Revision,
         documents: OrdMap<DocumentKey, Arc<Document>>,
+        collections: CollectionIndex,
+        collection_groups: CollectionGroupIndex,
         logical_usage: LogicalMemoryUsage,
     ) -> Self {
         Self {
             revision,
-            documents: SnapshotDocuments::Memory(documents),
+            documents: SnapshotDocuments::Memory {
+                documents,
+                collections,
+                collection_groups,
+            },
             logical_usage,
         }
     }
@@ -1093,23 +1105,97 @@ impl Snapshot {
     #[must_use]
     pub fn get(&self, key: &DocumentKey) -> Option<Arc<Document>> {
         match &self.documents {
-            SnapshotDocuments::Memory(documents) => documents.get(key).cloned(),
+            SnapshotDocuments::Memory { documents, .. } => documents.get(key).cloned(),
             SnapshotDocuments::Disk(documents) => documents.get(key),
         }
     }
 
     /// Iterates owned documents from one named database in key order.
-    pub fn iter_documents(
+    #[must_use]
+    pub fn iter_documents(&self, database: &DatabaseName) -> SnapshotDocumentIterator {
+        match &self.documents {
+            SnapshotDocuments::Memory { documents, .. } => SnapshotDocumentIterator::buffered(
+                documents
+                    .iter()
+                    .filter(|(key, _)| key.database() == database)
+                    .map(|(key, document)| (key.clone(), document.clone()))
+                    .collect::<Vec<_>>()
+                    .into_iter(),
+            ),
+            SnapshotDocuments::Disk(documents) => {
+                SnapshotDocumentIterator::disk(documents.iter_documents(database))
+            }
+        }
+    }
+
+    /// Iterates the direct documents in one collection without scanning other
+    /// collections in the named database.
+    #[must_use]
+    pub fn iter_collection(
         &self,
         database: &DatabaseName,
-    ) -> impl Iterator<Item = (DocumentKey, Arc<Document>)> {
+        collection_path: &str,
+    ) -> SnapshotDocumentIterator {
         match &self.documents {
-            SnapshotDocuments::Memory(_) => {
-                SnapshotDocumentIterator::Buffered(self.documents(database).into_iter())
+            SnapshotDocuments::Memory {
+                documents,
+                collections,
+                ..
+            } => {
+                let collection = CollectionKey {
+                    database: database.clone(),
+                    collection_path: Arc::from(collection_path),
+                };
+                let selected = collections.get(&collection).into_iter().flat_map(|keys| {
+                    keys.iter().filter_map(|key| {
+                        documents
+                            .get(key)
+                            .map(|document| (key.clone(), document.clone()))
+                    })
+                });
+                SnapshotDocumentIterator::buffered(selected.collect::<Vec<_>>().into_iter())
             }
-            SnapshotDocuments::Disk(documents) => documents.iter_documents(database).map_or_else(
-                || SnapshotDocumentIterator::Buffered(self.documents(database).into_iter()),
-                |documents| SnapshotDocumentIterator::Disk(Box::new(documents)),
+            SnapshotDocuments::Disk(documents) => {
+                SnapshotDocumentIterator::disk(documents.iter_collection(database, collection_path))
+            }
+        }
+    }
+
+    /// Iterates documents whose immediate parent collection has
+    /// `collection_id`, optionally below one document ancestor.
+    #[must_use]
+    pub fn iter_collection_group(
+        &self,
+        database: &DatabaseName,
+        collection_id: &str,
+        ancestor: Option<&str>,
+    ) -> SnapshotDocumentIterator {
+        match &self.documents {
+            SnapshotDocuments::Memory {
+                documents,
+                collection_groups,
+                ..
+            } => {
+                let group = CollectionGroupKey {
+                    database: database.clone(),
+                    collection_id: Arc::from(collection_id),
+                };
+                let selected = collection_groups.get(&group).into_iter().flat_map(|keys| {
+                    keys.iter().filter_map(|key| {
+                        ancestor
+                            .is_none_or(|ancestor| ancestor_matches(ancestor, key.path()))
+                            .then(|| {
+                                documents
+                                    .get(key)
+                                    .map(|document| (key.clone(), document.clone()))
+                            })
+                            .flatten()
+                    })
+                });
+                SnapshotDocumentIterator::buffered(selected.collect::<Vec<_>>().into_iter())
+            }
+            SnapshotDocuments::Disk(documents) => SnapshotDocumentIterator::disk(
+                documents.iter_collection_group(database, collection_id, ancestor),
             ),
         }
     }
@@ -1118,7 +1204,7 @@ impl Snapshot {
     #[must_use]
     pub fn documents(&self, database: &DatabaseName) -> Vec<(DocumentKey, Arc<Document>)> {
         match &self.documents {
-            SnapshotDocuments::Memory(documents) => documents
+            SnapshotDocuments::Memory { documents, .. } => documents
                 .iter()
                 .filter(|(key, _)| key.database() == database)
                 .map(|(key, document)| (key.clone(), document.clone()))
@@ -1166,18 +1252,44 @@ impl Snapshot {
     }
 }
 
-enum SnapshotDocumentIterator {
+/// Owned iterator over one immutable snapshot selection.
+pub struct SnapshotDocumentIterator {
+    inner: SnapshotDocumentIteratorInner,
+}
+
+enum SnapshotDocumentIteratorInner {
     Buffered(std::vec::IntoIter<(DocumentKey, Arc<Document>)>),
     Disk(Box<disk::DiskDocumentIterator>),
+}
+
+impl SnapshotDocumentIterator {
+    fn buffered(documents: std::vec::IntoIter<(DocumentKey, Arc<Document>)>) -> Self {
+        Self {
+            inner: SnapshotDocumentIteratorInner::Buffered(documents),
+        }
+    }
+
+    fn disk(documents: disk::DiskDocumentIterator) -> Self {
+        Self {
+            inner: SnapshotDocumentIteratorInner::Disk(Box::new(documents)),
+        }
+    }
+}
+
+fn ancestor_matches(ancestor: &str, document_path: &str) -> bool {
+    document_path
+        .strip_prefix(ancestor)
+        .and_then(|suffix| suffix.strip_prefix('/'))
+        .is_some_and(|descendant| descendant.split('/').count() >= 2)
 }
 
 impl Iterator for SnapshotDocumentIterator {
     type Item = (DocumentKey, Arc<Document>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            Self::Buffered(documents) => documents.next(),
-            Self::Disk(documents) => documents.next(),
+        match &mut self.inner {
+            SnapshotDocumentIteratorInner::Buffered(documents) => documents.next(),
+            SnapshotDocumentIteratorInner::Disk(documents) => documents.next(),
         }
     }
 }
@@ -1377,6 +1489,8 @@ struct State {
     revision: Revision,
     last_commit_time: Timestamp,
     documents: OrdMap<DocumentKey, Arc<Document>>,
+    collections: Option<CollectionIndex>,
+    collection_groups: Option<CollectionGroupIndex>,
     change_log: VecDeque<Change>,
     change_floor: Revision,
     commit_times: VecDeque<CommitPoint>,
@@ -1385,6 +1499,21 @@ struct State {
     replay_versions: BTreeMap<DocumentVersion, RetainedVersion>,
     replay_versions_logical_bytes: u64,
     change_log_logical_bytes: u64,
+}
+
+type CollectionIndex = OrdMap<CollectionKey, OrdSet<DocumentKey>>;
+type CollectionGroupIndex = OrdMap<CollectionGroupKey, OrdSet<DocumentKey>>;
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct CollectionKey {
+    database: DatabaseName,
+    collection_path: Arc<str>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct CollectionGroupKey {
+    database: DatabaseName,
+    collection_id: Arc<str>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1417,6 +1546,8 @@ impl State {
                 nanos: 0,
             },
             documents: OrdMap::new(),
+            collections: Some(OrdMap::new()),
+            collection_groups: Some(OrdMap::new()),
             change_log: VecDeque::new(),
             change_floor: Revision::ZERO,
             commit_times: VecDeque::new(),
@@ -1448,6 +1579,8 @@ impl State {
             revision,
             last_commit_time,
             documents,
+            collections: None,
+            collection_groups: None,
             change_log: VecDeque::new(),
             change_floor: revision,
             commit_times: VecDeque::new(),
@@ -1527,6 +1660,16 @@ impl State {
         self.revision = result.revision;
         self.last_commit_time = result.commit_time;
         for change in changes {
+            if let Some(collections) = &mut self.collections {
+                update_collection_index(collections, &change.key, change.after.is_some());
+            }
+            if let Some(collection_groups) = &mut self.collection_groups {
+                update_collection_group_index(
+                    collection_groups,
+                    &change.key,
+                    change.after.is_some(),
+                );
+            }
             apply_document_transition(&mut self.current_documents, &change);
             self.push_change(change);
         }
@@ -1551,6 +1694,16 @@ impl State {
         }
 
         let mut documents = self.documents.clone();
+        let mut collections = self
+            .collections
+            .as_ref()
+            .expect("memory stores maintain a collection index")
+            .clone();
+        let mut collection_groups = self
+            .collection_groups
+            .as_ref()
+            .expect("memory stores maintain a collection-group index")
+            .clone();
         for change in self
             .change_log
             .iter()
@@ -1565,10 +1718,18 @@ impl State {
                     documents.remove(&change.key);
                 }
             }
+            update_collection_index(&mut collections, &change.key, change.before.is_some());
+            update_collection_group_index(
+                &mut collection_groups,
+                &change.key,
+                change.before.is_some(),
+            );
         }
         Ok(Snapshot::memory(
             revision,
             documents,
+            collections,
+            collection_groups,
             self.document_usage_at_revision(revision),
         ))
     }
@@ -1756,6 +1917,64 @@ struct CommitPlan {
     result: CommitResult,
     documents: OrdMap<DocumentKey, Arc<Document>>,
     changes: Vec<Change>,
+}
+
+fn collection_key(key: &DocumentKey) -> CollectionKey {
+    let collection_path = key
+        .path()
+        .rsplit_once('/')
+        .map(|(collection_path, _)| collection_path)
+        .expect("validated document paths always have an immediate collection");
+    CollectionKey {
+        database: key.database().clone(),
+        collection_path: Arc::from(collection_path),
+    }
+}
+
+fn collection_group_key(key: &DocumentKey) -> CollectionGroupKey {
+    let collection_id = key
+        .path()
+        .rsplit_once('/')
+        .and_then(|(collection_path, _)| collection_path.rsplit('/').next())
+        .expect("validated document paths always have an immediate collection");
+    CollectionGroupKey {
+        database: key.database().clone(),
+        collection_id: Arc::from(collection_id),
+    }
+}
+
+fn update_collection_index(index: &mut CollectionIndex, key: &DocumentKey, present: bool) {
+    let collection = collection_key(key);
+    let mut keys = index.get(&collection).cloned().unwrap_or_default();
+    if present {
+        keys.insert(key.clone());
+    } else {
+        keys.remove(key);
+    }
+    if keys.is_empty() {
+        index.remove(&collection);
+    } else {
+        index.insert(collection, keys);
+    }
+}
+
+fn update_collection_group_index(
+    index: &mut CollectionGroupIndex,
+    key: &DocumentKey,
+    present: bool,
+) {
+    let group = collection_group_key(key);
+    let mut keys = index.get(&group).cloned().unwrap_or_default();
+    if present {
+        keys.insert(key.clone());
+    } else {
+        keys.remove(key);
+    }
+    if keys.is_empty() {
+        index.remove(&group);
+    } else {
+        index.insert(group, keys);
+    }
 }
 
 /// Logical bytes in a database resource name.

@@ -465,9 +465,7 @@ pub fn execute(
     validate_cursor(query.start.as_ref(), &orders)?;
     validate_cursor(query.end.as_ref(), &orders)?;
 
-    let mut documents = snapshot
-        .iter_documents(database)
-        .filter(|(key, _)| scope_matches(&query.scope, query.ancestor.as_deref(), key))
+    let candidates = scoped_documents(snapshot, database, query)
         .filter(|(key, document)| {
             query
                 .filter
@@ -479,19 +477,19 @@ pub fn execute(
                 .iter()
                 .all(|order| field_value(key, document, &order.path).is_some())
         })
-        .collect::<Vec<_>>();
+        .filter(|(key, document)| {
+            query.start.as_ref().is_none_or(|cursor| {
+                let ordering = compare_document_cursor(key, document, cursor, &orders, edition);
+                ordering == Ordering::Greater || (cursor.inclusive && ordering == Ordering::Equal)
+            }) && query.end.as_ref().is_none_or(|cursor| {
+                let ordering = compare_document_cursor(key, document, cursor, &orders, edition);
+                ordering == Ordering::Less || (cursor.inclusive && ordering == Ordering::Equal)
+            })
+        });
 
+    let mut documents = collect_bounded_candidates(candidates, query, &orders, edition);
     documents.sort_by(|(left_key, left), (right_key, right)| {
         compare_documents(left_key, left, right_key, right, &orders, edition)
-    });
-    documents.retain(|(key, document)| {
-        query.start.as_ref().is_none_or(|cursor| {
-            let ordering = compare_document_cursor(key, document, cursor, &orders, edition);
-            ordering == Ordering::Greater || (cursor.inclusive && ordering == Ordering::Equal)
-        }) && query.end.as_ref().is_none_or(|cursor| {
-            let ordering = compare_document_cursor(key, document, cursor, &orders, edition);
-            ordering == Ordering::Less || (cursor.inclusive && ordering == Ordering::Equal)
-        })
     });
 
     let after_offset = documents.into_iter().skip(query.offset);
@@ -518,6 +516,44 @@ pub fn execute(
         .collect())
 }
 
+fn collect_bounded_candidates(
+    candidates: impl Iterator<Item = (DocumentKey, Arc<Document>)>,
+    query: &Query,
+    orders: &[Order],
+    edition: DatabaseEdition,
+) -> Vec<(DocumentKey, Arc<Document>)> {
+    let Some(limit) = query.limit else {
+        return candidates.collect();
+    };
+    let limit_count = match limit {
+        Limit::First(limit) | Limit::Last(limit) => limit,
+    };
+    if limit_count == 0 {
+        return Vec::new();
+    }
+    let bound = query.offset.saturating_add(limit_count);
+    let mut selected: Vec<(DocumentKey, Arc<Document>)> = Vec::with_capacity(bound.min(4_096));
+    for candidate in candidates {
+        let insertion = selected
+            .binary_search_by(|(key, document)| {
+                compare_documents(key, document, &candidate.0, &candidate.1, orders, edition)
+            })
+            .unwrap_or_else(|index| index);
+        selected.insert(insertion, candidate);
+        if selected.len() > bound {
+            match limit {
+                Limit::First(_) => {
+                    selected.pop();
+                }
+                Limit::Last(_) => {
+                    selected.remove(0);
+                }
+            }
+        }
+    }
+    selected
+}
+
 fn execute_nearest(
     snapshot: &Snapshot,
     database: &DatabaseName,
@@ -528,9 +564,12 @@ fn execute_nearest(
     if query.start.is_some() || query.end.is_some() || matches!(query.limit, Some(Limit::Last(_))) {
         return Err(QueryError::UnsupportedVectorShape);
     }
-    let mut candidates = snapshot
-        .iter_documents(database)
-        .filter(|(key, _)| scope_matches(&query.scope, query.ancestor.as_deref(), key))
+    let limit = query.limit.map_or(nearest.limit, |limit| match limit {
+        Limit::First(limit) | Limit::Last(limit) => limit.min(nearest.limit),
+    });
+    let bound = query.offset.saturating_add(limit);
+    let mut candidates = Vec::with_capacity(bound.min(1_000));
+    for candidate in scoped_documents(snapshot, database, query)
         .filter(|(key, document)| {
             query
                 .filter
@@ -541,19 +580,15 @@ fn execute_nearest(
             let distance = vector_distance(document.fields(), nearest)?;
             threshold_matches(distance, nearest).then_some((key, document, distance))
         })
-        .collect::<Vec<_>>();
-    candidates.sort_by(|(left_key, _, left), (right_key, _, right)| {
-        let ordering = left.total_cmp(right);
-        let ordering = if nearest.distance_measure == DistanceMeasure::DotProduct {
-            ordering.reverse()
-        } else {
-            ordering
-        };
-        ordering.then_with(|| compare_resource_paths(left_key.path(), right_key.path()))
-    });
-    let limit = query.limit.map_or(nearest.limit, |limit| match limit {
-        Limit::First(limit) | Limit::Last(limit) => limit.min(nearest.limit),
-    });
+    {
+        let insertion = candidates
+            .binary_search_by(|existing| compare_nearest_candidates(existing, &candidate, nearest))
+            .unwrap_or_else(|index| index);
+        candidates.insert(insertion, candidate);
+        if candidates.len() > bound {
+            candidates.pop();
+        }
+    }
     Ok(candidates
         .into_iter()
         .skip(query.offset)
@@ -569,6 +604,20 @@ fn execute_nearest(
             document,
         })
         .collect())
+}
+
+fn compare_nearest_candidates(
+    left: &(DocumentKey, Arc<Document>, f64),
+    right: &(DocumentKey, Arc<Document>, f64),
+    nearest: &Nearest,
+) -> Ordering {
+    let ordering = left.2.total_cmp(&right.2);
+    let ordering = if nearest.distance_measure == DistanceMeasure::DotProduct {
+        ordering.reverse()
+    } else {
+        ordering
+    };
+    ordering.then_with(|| compare_resource_paths(left.0.path(), right.0.path()))
 }
 
 fn vector_distance(fields: &Fields, nearest: &Nearest) -> Option<f64> {
@@ -823,25 +872,20 @@ fn contains_field_filter(filter: &Filter, path: &FieldPath, operator: FieldOpera
     }
 }
 
-fn scope_matches(scope: &QueryScope, ancestor: Option<&str>, key: &DocumentKey) -> bool {
-    let document_segments = split_path(key.path());
-    match scope {
-        QueryScope::Collection(path) => {
-            let collection_segments = split_path(path);
-            document_segments.len() == collection_segments.len() + 1
-                && document_segments.starts_with(&collection_segments)
+fn scoped_documents(
+    snapshot: &Snapshot,
+    database: &DatabaseName,
+    query: &Query,
+) -> Box<dyn Iterator<Item = (DocumentKey, Arc<Document>)>> {
+    match &query.scope {
+        QueryScope::Collection(collection_path) => {
+            Box::new(snapshot.iter_collection(database, collection_path))
         }
-        QueryScope::CollectionGroup(collection_id) => {
-            let collection_matches = document_segments
-                .get(document_segments.len().saturating_sub(2))
-                .is_some_and(|segment| *segment == collection_id);
-            let ancestor_matches = ancestor.is_none_or(|ancestor| {
-                let ancestor_segments = split_path(ancestor);
-                document_segments.len() >= ancestor_segments.len() + 2
-                    && document_segments.starts_with(&ancestor_segments)
-            });
-            collection_matches && ancestor_matches
-        }
+        QueryScope::CollectionGroup(collection_id) => Box::new(snapshot.iter_collection_group(
+            database,
+            collection_id,
+            query.ancestor.as_deref(),
+        )),
     }
 }
 
