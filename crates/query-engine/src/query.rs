@@ -5,7 +5,8 @@ use std::fmt::{self, Display, Formatter};
 use std::sync::Arc;
 
 use fireside_core_store::{
-    DatabaseName, Document, DocumentKey, Fields, Snapshot, Value, compare_resource_paths,
+    DatabaseName, Document, DocumentKey, Fields, Snapshot, SnapshotDocumentIterator, Value,
+    compare_resource_paths,
 };
 
 use crate::{DatabaseEdition, compare_values};
@@ -449,6 +450,12 @@ impl QueryDocument {
             .as_ref()
             .unwrap_or_else(|| self.document.fields())
     }
+
+    /// Projected fields when the query selected an explicit field mask.
+    #[must_use]
+    pub const fn projected_fields(&self) -> Option<&Fields> {
+        self.projected_fields.as_ref()
+    }
 }
 
 /// Executes a structured query against one immutable store snapshot.
@@ -458,38 +465,138 @@ pub fn execute(
     query: &Query,
     edition: DatabaseEdition,
 ) -> Result<Vec<QueryDocument>, QueryError> {
+    Ok(execute_iter(snapshot, database, query, edition)?.collect())
+}
+
+/// Creates a lazy result iterator for a structured query.
+///
+/// Queries whose normalized order is ascending document name are evaluated
+/// directly over the store's ordered scope iterator. Other query shapes keep
+/// the bounded sorting implementation and expose its results through the same
+/// interface. This lets streaming transports encode and release large result
+/// sets one document at a time without changing query semantics.
+pub fn execute_iter(
+    snapshot: &Snapshot,
+    database: &DatabaseName,
+    query: &Query,
+    edition: DatabaseEdition,
+) -> Result<QueryDocumentIterator, QueryError> {
     let orders = normalized_orders(query)?;
-    if let Some(nearest) = &query.nearest {
-        return execute_nearest(snapshot, database, query, nearest, edition);
-    }
     validate_cursor(query.start.as_ref(), &orders)?;
     validate_cursor(query.end.as_ref(), &orders)?;
 
-    let candidates = scoped_documents(snapshot, database, query)
-        .filter(|(key, document)| {
-            query
-                .filter
-                .as_ref()
-                .is_none_or(|filter| filter_matches(filter, key, document, edition))
-        })
-        .filter(|(key, document)| {
-            orders
-                .iter()
-                .all(|order| field_value(key, document, &order.path).is_some())
-        })
-        .filter(|(key, document)| {
-            query.start.as_ref().is_none_or(|cursor| {
-                let ordering = compare_document_cursor(key, document, cursor, &orders, edition);
-                ordering == Ordering::Greater || (cursor.inclusive && ordering == Ordering::Equal)
-            }) && query.end.as_ref().is_none_or(|cursor| {
-                let ordering = compare_document_cursor(key, document, cursor, &orders, edition);
-                ordering == Ordering::Less || (cursor.inclusive && ordering == Ordering::Equal)
-            })
+    if query.nearest.is_none()
+        && !matches!(query.limit, Some(Limit::Last(_)))
+        && orders.as_slice()
+            == [Order {
+                path: FieldPath::DocumentId,
+                direction: Direction::Ascending,
+            }]
+    {
+        return Ok(QueryDocumentIterator {
+            inner: QueryDocumentIteratorInner::Streaming(Box::new(
+                StreamingQueryDocumentIterator {
+                    candidates: scoped_documents(snapshot, database, query),
+                    edition,
+                    orders,
+                    query: query.clone(),
+                    remaining_limit: query.limit.map(|limit| match limit {
+                        Limit::First(limit) | Limit::Last(limit) => limit,
+                    }),
+                    remaining_offset: query.offset,
+                },
+            )),
         });
+    }
 
-    let mut documents = collect_bounded_candidates(candidates, query, &orders, edition);
+    execute_buffered(snapshot, database, query, edition, &orders).map(|documents| {
+        QueryDocumentIterator {
+            inner: QueryDocumentIteratorInner::Buffered(documents.into_iter()),
+        }
+    })
+}
+
+/// Owned result iterator returned by [`execute_iter`].
+pub struct QueryDocumentIterator {
+    inner: QueryDocumentIteratorInner,
+}
+
+enum QueryDocumentIteratorInner {
+    Streaming(Box<StreamingQueryDocumentIterator>),
+    Buffered(std::vec::IntoIter<QueryDocument>),
+}
+
+impl Iterator for QueryDocumentIterator {
+    type Item = QueryDocument;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match &mut self.inner {
+            QueryDocumentIteratorInner::Streaming(documents) => documents.next(),
+            QueryDocumentIteratorInner::Buffered(documents) => documents.next(),
+        }
+    }
+}
+
+/// Lazy evaluator for queries already ordered by the store's scope index.
+struct StreamingQueryDocumentIterator {
+    candidates: SnapshotDocumentIterator,
+    edition: DatabaseEdition,
+    orders: Vec<Order>,
+    query: Query,
+    remaining_limit: Option<usize>,
+    remaining_offset: usize,
+}
+
+impl Iterator for StreamingQueryDocumentIterator {
+    type Item = QueryDocument;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.remaining_limit == Some(0) {
+            return None;
+        }
+        for (key, document) in self.candidates.by_ref() {
+            if !candidate_matches(&self.query, &self.orders, self.edition, &key, &document) {
+                continue;
+            }
+            if self.remaining_offset > 0 {
+                self.remaining_offset -= 1;
+                continue;
+            }
+            if let Some(remaining) = &mut self.remaining_limit {
+                *remaining -= 1;
+            }
+            let projected_fields = self
+                .query
+                .projection
+                .as_ref()
+                .map(|projection| project(document.fields(), projection));
+            return Some(QueryDocument {
+                key,
+                document,
+                projected_fields,
+            });
+        }
+        None
+    }
+}
+
+fn execute_buffered(
+    snapshot: &Snapshot,
+    database: &DatabaseName,
+    query: &Query,
+    edition: DatabaseEdition,
+    orders: &[Order],
+) -> Result<Vec<QueryDocument>, QueryError> {
+    if let Some(nearest) = &query.nearest {
+        return execute_nearest(snapshot, database, query, nearest, edition);
+    }
+
+    let candidates = scoped_documents(snapshot, database, query)
+        .filter(|(key, document)| candidate_matches(query, orders, edition, key, document));
+
+    let mut documents = collect_bounded_candidates(candidates, query, orders, edition);
     documents.sort_by(|(left_key, left), (right_key, right)| {
-        compare_documents(left_key, left, right_key, right, &orders, edition)
+        compare_documents(left_key, left, right_key, right, orders, edition)
     });
 
     let after_offset = documents.into_iter().skip(query.offset);
@@ -514,6 +621,30 @@ pub fn execute(
             document,
         })
         .collect())
+}
+
+fn candidate_matches(
+    query: &Query,
+    orders: &[Order],
+    edition: DatabaseEdition,
+    key: &DocumentKey,
+    document: &Document,
+) -> bool {
+    query
+        .filter
+        .as_ref()
+        .is_none_or(|filter| filter_matches(filter, key, document, edition))
+        && orders
+            .iter()
+            .all(|order| field_value(key, document, &order.path).is_some())
+        && query.start.as_ref().is_none_or(|cursor| {
+            let ordering = compare_document_cursor(key, document, cursor, orders, edition);
+            ordering == Ordering::Greater || (cursor.inclusive && ordering == Ordering::Equal)
+        })
+        && query.end.as_ref().is_none_or(|cursor| {
+            let ordering = compare_document_cursor(key, document, cursor, orders, edition);
+            ordering == Ordering::Less || (cursor.inclusive && ordering == Ordering::Equal)
+        })
 }
 
 fn collect_bounded_candidates(
@@ -876,16 +1007,14 @@ fn scoped_documents(
     snapshot: &Snapshot,
     database: &DatabaseName,
     query: &Query,
-) -> Box<dyn Iterator<Item = (DocumentKey, Arc<Document>)>> {
+) -> SnapshotDocumentIterator {
     match &query.scope {
         QueryScope::Collection(collection_path) => {
-            Box::new(snapshot.iter_collection(database, collection_path))
+            snapshot.iter_collection(database, collection_path)
         }
-        QueryScope::CollectionGroup(collection_id) => Box::new(snapshot.iter_collection_group(
-            database,
-            collection_id,
-            query.ancestor.as_deref(),
-        )),
+        QueryScope::CollectionGroup(collection_id) => {
+            snapshot.iter_collection_group(database, collection_id, query.ancestor.as_deref())
+        }
     }
 }
 
@@ -1410,6 +1539,67 @@ mod tests {
                     .to_owned()
             })
             .collect()
+    }
+
+    #[test]
+    fn ascending_name_queries_expose_a_lazy_iterator() {
+        let (database, snapshot) = seeded_snapshot();
+        let query = collection_query()
+            .offset(1)
+            .limit(Limit::First(2))
+            .select(vec![field("score")]);
+        let documents = execute_iter(&snapshot, &database, &query, DatabaseEdition::Standard)
+            .expect("query should create an iterator");
+        assert!(matches!(
+            documents.inner,
+            QueryDocumentIteratorInner::Streaming(_)
+        ));
+
+        let documents = execute_iter(&snapshot, &database, &query, DatabaseEdition::Standard)
+            .expect("query should create an iterator")
+            .collect::<Vec<_>>();
+        assert_eq!(
+            documents
+                .iter()
+                .map(|document| document.key().path().rsplit('/').next().expect("id"))
+                .collect::<Vec<_>>(),
+            ["b", "c"]
+        );
+        assert!(
+            documents
+                .iter()
+                .all(|document| document.fields().keys().eq(["score"]))
+        );
+    }
+
+    #[test]
+    fn field_ordered_queries_keep_the_bounded_sorting_path() {
+        let (database, snapshot) = seeded_snapshot();
+        let query = collection_query().order_by(field("score"), Direction::Ascending);
+        let documents = execute_iter(&snapshot, &database, &query, DatabaseEdition::Standard)
+            .expect("query should create an iterator");
+        assert!(matches!(
+            documents.inner,
+            QueryDocumentIteratorInner::Buffered(_)
+        ));
+    }
+
+    #[test]
+    fn lazy_name_order_preserves_numeric_resource_id_semantics() {
+        let database = database();
+        let store = Store::default();
+        let writes = ["ordinary", "__id7__", "__id-2__"].map(|id| Write::Create {
+            key: DocumentKey::new(database.clone(), format!("numeric/{id}"))
+                .expect("valid numeric resource key"),
+            fields: BTreeMap::new(),
+        });
+        store.commit(&writes).expect("seed should commit");
+        let query = Query::new(QueryScope::collection("numeric").expect("valid scope"));
+
+        assert_eq!(
+            ids(&database, &store.snapshot(), &query),
+            ["__id-2__", "__id7__", "ordinary"]
+        );
     }
 
     #[test]

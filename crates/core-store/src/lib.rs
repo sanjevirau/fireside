@@ -1114,14 +1114,15 @@ impl Snapshot {
     #[must_use]
     pub fn iter_documents(&self, database: &DatabaseName) -> SnapshotDocumentIterator {
         match &self.documents {
-            SnapshotDocuments::Memory { documents, .. } => SnapshotDocumentIterator::buffered(
-                documents
-                    .iter()
-                    .filter(|(key, _)| key.database() == database)
-                    .map(|(key, document)| (key.clone(), document.clone()))
-                    .collect::<Vec<_>>()
-                    .into_iter(),
-            ),
+            SnapshotDocuments::Memory { documents, .. } => {
+                let database = database.clone();
+                SnapshotDocumentIterator::memory(
+                    documents
+                        .clone()
+                        .into_iter()
+                        .filter(move |(key, _)| key.database() == &database),
+                )
+            }
             SnapshotDocuments::Disk(documents) => {
                 SnapshotDocumentIterator::disk(documents.iter_documents(database))
             }
@@ -1146,14 +1147,17 @@ impl Snapshot {
                     database: database.clone(),
                     collection_path: Arc::from(collection_path),
                 };
-                let selected = collections.get(&collection).into_iter().flat_map(|keys| {
-                    keys.iter().filter_map(|key| {
-                        documents
-                            .get(key)
-                            .map(|document| (key.clone(), document.clone()))
-                    })
-                });
-                SnapshotDocumentIterator::buffered(selected.collect::<Vec<_>>().into_iter())
+                let documents = documents.clone();
+                let mut keys = collections
+                    .get(&collection)
+                    .cloned()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .collect::<Vec<_>>();
+                keys.sort_by(|left, right| compare_resource_paths(left.path(), right.path()));
+                SnapshotDocumentIterator::memory(keys.into_iter().filter_map(move |key| {
+                    documents.get(&key).map(|document| (key, document.clone()))
+                }))
             }
             SnapshotDocuments::Disk(documents) => {
                 SnapshotDocumentIterator::disk(documents.iter_collection(database, collection_path))
@@ -1180,19 +1184,22 @@ impl Snapshot {
                     database: database.clone(),
                     collection_id: Arc::from(collection_id),
                 };
-                let selected = collection_groups.get(&group).into_iter().flat_map(|keys| {
-                    keys.iter().filter_map(|key| {
-                        ancestor
-                            .is_none_or(|ancestor| ancestor_matches(ancestor, key.path()))
-                            .then(|| {
-                                documents
-                                    .get(key)
-                                    .map(|document| (key.clone(), document.clone()))
-                            })
-                            .flatten()
-                    })
-                });
-                SnapshotDocumentIterator::buffered(selected.collect::<Vec<_>>().into_iter())
+                let ancestor = ancestor.map(str::to_owned);
+                let documents = documents.clone();
+                let mut keys = collection_groups
+                    .get(&group)
+                    .cloned()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .collect::<Vec<_>>();
+                keys.sort_by(|left, right| compare_resource_paths(left.path(), right.path()));
+                SnapshotDocumentIterator::memory(keys.into_iter().filter_map(move |key| {
+                    ancestor
+                        .as_deref()
+                        .is_none_or(|ancestor| ancestor_matches(ancestor, key.path()))
+                        .then(|| documents.get(&key).map(|document| (key, document.clone())))
+                        .flatten()
+                }))
             }
             SnapshotDocuments::Disk(documents) => SnapshotDocumentIterator::disk(
                 documents.iter_collection_group(database, collection_id, ancestor),
@@ -1258,14 +1265,16 @@ pub struct SnapshotDocumentIterator {
 }
 
 enum SnapshotDocumentIteratorInner {
-    Buffered(std::vec::IntoIter<(DocumentKey, Arc<Document>)>),
+    Memory(Box<dyn Iterator<Item = (DocumentKey, Arc<Document>)> + Send>),
     Disk(Box<disk::DiskDocumentIterator>),
 }
 
 impl SnapshotDocumentIterator {
-    fn buffered(documents: std::vec::IntoIter<(DocumentKey, Arc<Document>)>) -> Self {
+    fn memory(
+        documents: impl Iterator<Item = (DocumentKey, Arc<Document>)> + Send + 'static,
+    ) -> Self {
         Self {
-            inner: SnapshotDocumentIteratorInner::Buffered(documents),
+            inner: SnapshotDocumentIteratorInner::Memory(Box::new(documents)),
         }
     }
 
@@ -1288,7 +1297,7 @@ impl Iterator for SnapshotDocumentIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.inner {
-            SnapshotDocumentIteratorInner::Buffered(documents) => documents.next(),
+            SnapshotDocumentIteratorInner::Memory(documents) => documents.next(),
             SnapshotDocumentIteratorInner::Disk(documents) => documents.next(),
         }
     }

@@ -12,7 +12,7 @@ use fireside_core_store::{
 use fireside_query_engine::{
     DatabaseEdition, Direction as QueryDirection, FieldPath as QueryFieldPath, IndexConfigError,
     Query as StructuredQuery, QueryDocument, QueryPolicy, QueryScope, aggregate, compare_values,
-    execute, partition,
+    execute, execute_iter, partition,
 };
 use fireside_rules_runtime::{
     AtomicEvaluationResult, Authorization, EvaluationResult, RequestOperation, RulesQuery,
@@ -1084,45 +1084,97 @@ impl Firestore for FirestoreService {
                 explain_plan.expect("explain options create a plan"),
             )));
         }
+        if explain_options.is_none() {
+            let read_time = Some(encode_system_read_time(now()));
+            let mut documents =
+                execute_iter(&snapshot, &database, &query, self.query_policy.edition())
+                    .map_err(|error| query_status(&error))?
+                    .peekable();
+            let empty = documents.peek().is_none();
+            let transaction_response = new_transaction.then(|| {
+                Ok(RunQueryResponse {
+                    transaction: token.clone(),
+                    ..RunQueryResponse::default()
+                })
+            });
+            let service = self.clone();
+            let response_token = token.clone();
+            let document_responses = documents.enumerate().map(move |(index, document)| {
+                service.record_read(
+                    &response_token,
+                    document.key(),
+                    Some(document.document().as_ref()),
+                );
+                encode_query_document(&document).map(|document| RunQueryResponse {
+                    document: Some(document),
+                    read_time,
+                    skipped_results: if index == 0 { skipped_results } else { 0 },
+                    ..RunQueryResponse::default()
+                })
+            });
+            let empty_response = empty.then(|| {
+                Ok(RunQueryResponse {
+                    read_time,
+                    ..RunQueryResponse::default()
+                })
+            });
+            return Ok(Response::new(Box::pin(iter(
+                transaction_response
+                    .into_iter()
+                    .chain(document_responses)
+                    .chain(empty_response),
+            ))));
+        }
         let started = Instant::now();
         let documents = execute(&snapshot, &database, &query, self.query_policy.edition())
             .map_err(|error| query_status(&error))?;
         let execution_duration = started.elapsed();
+        let document_count = documents.len();
         let read_time = Some(encode_system_read_time(now()));
-        let mut responses = Vec::with_capacity(
-            documents.len() + usize::from(new_transaction) + usize::from(explain_options.is_some()),
-        );
-        if new_transaction {
-            responses.push(RunQueryResponse {
+        let transaction_response = new_transaction.then(|| {
+            Ok(RunQueryResponse {
                 transaction: token.clone(),
                 ..RunQueryResponse::default()
+            })
+        });
+        let service = self.clone();
+        let response_token = token.clone();
+        let document_responses = documents
+            .into_iter()
+            .enumerate()
+            .map(move |(index, document)| {
+                service.record_read(
+                    &response_token,
+                    document.key(),
+                    Some(document.document().as_ref()),
+                );
+                encode_query_document(&document).map(|document| RunQueryResponse {
+                    document: Some(document),
+                    read_time,
+                    skipped_results: if index == 0 { skipped_results } else { 0 },
+                    ..RunQueryResponse::default()
+                })
             });
-        }
-        for (index, document) in documents.iter().enumerate() {
-            self.record_read(&token, document.key(), Some(document.document().as_ref()));
-            responses.push(RunQueryResponse {
-                document: Some(encode_query_document(document)?),
+        let empty_response = (document_count == 0).then(|| {
+            Ok(RunQueryResponse {
                 read_time,
-                skipped_results: if index == 0 { skipped_results } else { 0 },
                 ..RunQueryResponse::default()
-            });
-        }
-        if documents.is_empty() {
-            responses.push(RunQueryResponse {
-                read_time,
-                ..RunQueryResponse::default()
-            });
-        }
-        if explain_options.is_some() {
-            responses.push(RunQueryResponse {
-                explain_metrics: Some(query_explain_metrics(
-                    explain_plan.expect("explain options create a plan"),
-                    Some((documents.len(), execution_duration)),
-                )),
-                ..RunQueryResponse::default()
-            });
-        }
-        Ok(Response::new(Box::pin(iter(responses.into_iter().map(Ok)))))
+            })
+        });
+        let explain_response = Some(Ok(RunQueryResponse {
+            explain_metrics: Some(query_explain_metrics(
+                explain_plan.expect("explain options create a plan"),
+                Some((document_count, execution_duration)),
+            )),
+            ..RunQueryResponse::default()
+        }));
+        Ok(Response::new(Box::pin(iter(
+            transaction_response
+                .into_iter()
+                .chain(document_responses)
+                .chain(empty_response)
+                .chain(explain_response),
+        ))))
     }
 
     type ExecutePipelineStream = ResponseStream<ExecutePipelineResponse>;
@@ -2813,6 +2865,64 @@ mod tests {
         assert!(first.name.ends_with("/cities/penang"));
         assert!(query_stream.next().await.is_some());
         assert!(query_stream.next().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn run_query_records_large_name_ordered_results_as_the_stream_is_consumed() {
+        use tokio_stream::StreamExt as _;
+
+        let service = seeded_query_service().await;
+        let mut query_stream = service
+            .run_query(Request::new(RunQueryRequest {
+                parent: format!("{DATABASE}/documents"),
+                query_type: Some(run_query_request::QueryType::StructuredQuery(
+                    StructuredQuery {
+                        from: vec![CollectionSelector {
+                            collection_id: "cities".to_owned(),
+                            all_descendants: false,
+                        }],
+                        ..StructuredQuery::default()
+                    },
+                )),
+                consistency_selector: Some(run_query_request::ConsistencySelector::NewTransaction(
+                    TransactionOptions::default(),
+                )),
+                ..RunQueryRequest::default()
+            }))
+            .await
+            .expect("query should start")
+            .into_inner();
+
+        let before_poll = service.store().memory_usage().transactions;
+        assert_eq!(before_poll.transactions, 1);
+        assert_eq!(before_poll.read_entries, 0);
+
+        let transaction = query_stream
+            .next()
+            .await
+            .expect("transaction response should exist")
+            .expect("transaction response should succeed")
+            .transaction;
+        assert!(!transaction.is_empty());
+        assert_eq!(service.store().memory_usage().transactions.read_entries, 0);
+
+        let first_document = query_stream
+            .next()
+            .await
+            .expect("first document response should exist")
+            .expect("first document response should succeed");
+        assert!(first_document.document.is_some());
+        assert_eq!(service.store().memory_usage().transactions.read_entries, 1);
+
+        drop(query_stream);
+        service
+            .rollback(Request::new(RollbackRequest {
+                database: DATABASE.to_owned(),
+                transaction,
+                ..RollbackRequest::default()
+            }))
+            .await
+            .expect("transaction should roll back");
     }
 
     #[tokio::test]

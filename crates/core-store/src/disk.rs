@@ -19,18 +19,19 @@ use super::{
     Change, CommitError, CommitPlan, CommitResult, DatabaseName, DiskCacheMemoryUsage,
     DiskWriteBufferMemoryUsage, Document, DocumentKey, ListenerMemoryUsage, LogicalMemoryUsage,
     ResetRequired, Revision, Snapshot, SnapshotError, State, StoreMemoryUsage, StoreOptions,
-    Timestamp, TransactionMemoryUsage, Write, WriteBufferMemoryUsage, document_entry_logical_bytes,
-    usize_to_u64,
+    Timestamp, TransactionMemoryUsage, Write, WriteBufferMemoryUsage, compare_resource_paths,
+    document_entry_logical_bytes, numeric_resource_id, usize_to_u64,
 };
 
 const LEGACY_DOCUMENTS: TableDefinition<&[u8], &[u8]> = TableDefinition::new("documents_v1");
 const DOCUMENTS: TableDefinition<&[u8], &[u8]> = TableDefinition::new("documents_v2");
-const COLLECTIONS: TableDefinition<&[u8], &[u8]> = TableDefinition::new("collections_v1");
+const COLLECTIONS: TableDefinition<&[u8], &[u8]> = TableDefinition::new("collections_v2");
 const COLLECTION_GROUPS: TableDefinition<&[u8], &[u8]> =
-    TableDefinition::new("collection_groups_v1");
+    TableDefinition::new("collection_groups_v2");
 const METADATA: TableDefinition<&str, &[u8]> = TableDefinition::new("metadata_v1");
 const STATE_KEY: &str = "state";
 const DOCUMENTS_V2_MIGRATION_KEY: &str = "documents_v2_migrated";
+const ORDERED_SCOPE_INDEX_MIGRATION_KEY: &str = "ordered_scope_indexes_v2_migrated";
 const DATABASE_FILE: &str = "fireside.redb";
 const JOURNAL_FILE: &str = "fireside.wal";
 const FRAME_MAGIC: [u8; 8] = *b"FSWAL001";
@@ -354,17 +355,17 @@ impl DiskSnapshot {
     }
 
     fn iterator(&self, scope: DiskDocumentScope, source: DiskRange) -> DiskDocumentIterator {
-        let overlay = self
+        let mut overlay = self
             .overlay
             .iter()
             .filter(|(key, _)| scope.matches(key))
             .map(|(key, document)| (key.clone(), document.clone()))
-            .collect::<Vec<_>>()
-            .into_iter();
+            .collect::<Vec<_>>();
+        overlay.sort_by(|(left, _), (right, _)| scope.compare_keys(left, right));
         DiskDocumentIterator {
             next_disk: None,
             next_overlay: None,
-            overlay,
+            overlay: overlay.into_iter(),
             scope,
             source,
         }
@@ -429,6 +430,15 @@ impl DiskDocumentScope {
             }
         }
     }
+
+    fn compare_keys(&self, left: &DocumentKey, right: &DocumentKey) -> std::cmp::Ordering {
+        match self {
+            Self::Database(_) => left.cmp(right),
+            Self::Collection { .. } | Self::CollectionGroup { .. } => {
+                compare_resource_paths(left.path(), right.path())
+            }
+        }
+    }
 }
 
 impl Iterator for DiskDocumentIterator {
@@ -451,22 +461,24 @@ impl Iterator for DiskDocumentIterator {
                         return Some((key, document));
                     }
                 }
-                (Some((disk_key, _)), Some((overlay_key, _))) => match disk_key.cmp(overlay_key) {
-                    std::cmp::Ordering::Less => return self.next_disk.take(),
-                    std::cmp::Ordering::Equal => {
-                        self.next_disk.take();
-                        let (key, document) = self.next_overlay.take()?;
-                        if let Some(document) = document {
-                            return Some((key, document));
+                (Some((disk_key, _)), Some((overlay_key, _))) => {
+                    match self.scope.compare_keys(disk_key, overlay_key) {
+                        std::cmp::Ordering::Less => return self.next_disk.take(),
+                        std::cmp::Ordering::Equal => {
+                            self.next_disk.take();
+                            let (key, document) = self.next_overlay.take()?;
+                            if let Some(document) = document {
+                                return Some((key, document));
+                            }
+                        }
+                        std::cmp::Ordering::Greater => {
+                            let (key, document) = self.next_overlay.take()?;
+                            if let Some(document) = document {
+                                return Some((key, document));
+                            }
                         }
                     }
-                    std::cmp::Ordering::Greater => {
-                        let (key, document) = self.next_overlay.take()?;
-                        if let Some(document) = document {
-                            return Some((key, document));
-                        }
-                    }
-                },
+                }
             }
         }
     }
@@ -658,7 +670,8 @@ fn initialize_database(database: &Database) -> Result<(), DiskError> {
         transaction.open_table(METADATA).map_err(DiskError::redb)?;
     }
     transaction.commit().map_err(DiskError::redb)?;
-    migrate_legacy_documents(database)
+    migrate_legacy_documents(database)?;
+    migrate_ordered_scope_indexes(database)
 }
 
 fn migrate_legacy_documents(database: &Database) -> Result<(), DiskError> {
@@ -710,6 +723,53 @@ fn migrate_legacy_documents(database: &Database) -> Result<(), DiskError> {
         let mut metadata = transaction.open_table(METADATA).map_err(DiskError::redb)?;
         metadata
             .insert(DOCUMENTS_V2_MIGRATION_KEY, &[1_u8][..])
+            .map_err(DiskError::redb)?;
+    }
+    transaction.commit().map_err(DiskError::redb)
+}
+
+fn migrate_ordered_scope_indexes(database: &Database) -> Result<(), DiskError> {
+    let migrated = {
+        let transaction = database.begin_read().map_err(DiskError::redb)?;
+        let metadata = transaction.open_table(METADATA).map_err(DiskError::redb)?;
+        metadata
+            .get(ORDERED_SCOPE_INDEX_MIGRATION_KEY)
+            .map_err(DiskError::redb)?
+            .is_some()
+    };
+    if migrated {
+        return Ok(());
+    }
+
+    let mut transaction = database.begin_write().map_err(DiskError::redb)?;
+    transaction
+        .set_durability(Durability::Immediate)
+        .map_err(DiskError::redb)?;
+    {
+        let documents = transaction.open_table(DOCUMENTS).map_err(DiskError::redb)?;
+        let mut collections = transaction
+            .open_table(COLLECTIONS)
+            .map_err(DiskError::redb)?;
+        let mut collection_groups = transaction
+            .open_table(COLLECTION_GROUPS)
+            .map_err(DiskError::redb)?;
+        for entry in documents.iter().map_err(DiskError::redb)? {
+            let (encoded_key, _) = entry.map_err(DiskError::redb)?;
+            let key = decode_document_key(encoded_key.value())?;
+            let collection_key = encode_collection_index_key(&key)?;
+            let collection_group_key = encode_collection_group_index_key(&key)?;
+            collections
+                .insert(collection_key.as_slice(), encoded_key.value())
+                .map_err(DiskError::redb)?;
+            collection_groups
+                .insert(collection_group_key.as_slice(), encoded_key.value())
+                .map_err(DiskError::redb)?;
+        }
+    }
+    {
+        let mut metadata = transaction.open_table(METADATA).map_err(DiskError::redb)?;
+        metadata
+            .insert(ORDERED_SCOPE_INDEX_MIGRATION_KEY, &[1_u8][..])
             .map_err(DiskError::redb)?;
     }
     transaction.commit().map_err(DiskError::redb)
@@ -930,7 +990,7 @@ fn encode_collection_index_key(key: &DocumentKey) -> Result<Vec<u8>, DiskError> 
         DiskError::Corrupt(format!("document path has no collection: {}", key.path()))
     })?;
     let mut encoded = collection_index_prefix(key.database(), collection_path)?;
-    encoded.extend_from_slice(document_id.as_bytes());
+    push_ordered_resource_id(&mut encoded, document_id);
     Ok(encoded)
 }
 
@@ -942,8 +1002,28 @@ fn encode_collection_group_index_key(key: &DocumentKey) -> Result<Vec<u8>, DiskE
         ))
     })?;
     let mut encoded = collection_group_index_prefix(key.database(), collection_id)?;
-    encoded.extend_from_slice(key.path().as_bytes());
+    for segment in key.path().split('/') {
+        push_ordered_resource_id(&mut encoded, segment);
+    }
     Ok(encoded)
+}
+
+fn push_ordered_resource_id(buffer: &mut Vec<u8>, resource_id: &str) {
+    if let Some(numeric) = numeric_resource_id(resource_id) {
+        buffer.push(0);
+        let sortable = u64::from_be_bytes(numeric.to_be_bytes()) ^ (1_u64 << 63);
+        buffer.extend_from_slice(&sortable.to_be_bytes());
+        return;
+    }
+    buffer.push(1);
+    for byte in resource_id.bytes() {
+        if byte == 0 {
+            buffer.extend_from_slice(&[0, u8::MAX]);
+        } else {
+            buffer.push(byte);
+        }
+    }
+    buffer.extend_from_slice(&[0, 0]);
 }
 
 fn push_length_prefixed(buffer: &mut Vec<u8>, value: &str) -> Result<(), DiskError> {
@@ -1642,6 +1722,61 @@ mod tests {
                 .map(|(key, _)| key.path().to_owned())
                 .collect::<Vec<_>>(),
             ["items/one"]
+        );
+    }
+
+    #[test]
+    fn ordered_scope_indexes_preserve_numeric_resource_id_order() {
+        let directory = TestDirectory::new();
+        let store = DiskStore::open(directory.path(), DiskOptions::default())
+            .expect("disk store should open");
+        store
+            .commit(&[
+                Write::Create {
+                    key: key("items/ordinary"),
+                    fields: fields(Value::Integer(1)),
+                },
+                Write::Create {
+                    key: key("items/__id7__"),
+                    fields: fields(Value::Integer(2)),
+                },
+                Write::Create {
+                    key: key("items/__id-2__"),
+                    fields: fields(Value::Integer(3)),
+                },
+                Write::Create {
+                    key: key("parents/ordinary/tasks/last"),
+                    fields: fields(Value::Integer(4)),
+                },
+                Write::Create {
+                    key: key("parents/__id7__/tasks/second"),
+                    fields: fields(Value::Integer(5)),
+                },
+                Write::Create {
+                    key: key("parents/__id-2__/tasks/first"),
+                    fields: fields(Value::Integer(6)),
+                },
+            ])
+            .expect("numeric ids should commit");
+
+        let snapshot = store.snapshot();
+        assert_eq!(
+            snapshot
+                .iter_collection(&database(), "items")
+                .map(|(key, _)| key.path().to_owned())
+                .collect::<Vec<_>>(),
+            ["items/__id-2__", "items/__id7__", "items/ordinary"]
+        );
+        assert_eq!(
+            snapshot
+                .iter_collection_group(&database(), "tasks", None)
+                .map(|(key, _)| key.path().to_owned())
+                .collect::<Vec<_>>(),
+            [
+                "parents/__id-2__/tasks/first",
+                "parents/__id7__/tasks/second",
+                "parents/ordinary/tasks/last",
+            ]
         );
     }
 

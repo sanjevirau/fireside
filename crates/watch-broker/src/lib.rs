@@ -9,7 +9,7 @@ use fireside_core_store::{
     DatabaseName, Document, DocumentKey, Fields, LogicalMemoryUsage, Revision, Snapshot,
     database_name_logical_bytes, document_key_logical_bytes, fields_logical_bytes,
 };
-use fireside_query_engine::{DatabaseEdition, Query, QueryError, execute};
+use fireside_query_engine::{DatabaseEdition, Query, QueryError, execute_iter};
 
 /// A query or explicit document set attached to a listen target.
 #[derive(Debug, Clone)]
@@ -25,7 +25,7 @@ pub enum TargetSpec {
 pub struct WatchDocument {
     key: DocumentKey,
     document: Arc<Document>,
-    fields: Fields,
+    projected_fields: Option<Fields>,
 }
 
 impl WatchDocument {
@@ -43,8 +43,11 @@ impl WatchDocument {
 
     /// Fields visible through the target projection.
     #[must_use]
-    pub const fn fields(&self) -> &Fields {
-        &self.fields
+    pub fn fields(&self) -> &Fields {
+        match &self.projected_fields {
+            Some(fields) => fields,
+            None => self.document.fields(),
+        }
     }
 }
 
@@ -155,7 +158,7 @@ impl WatchTarget {
         let visible_bytes = self.documents.values().fold(0_u64, |total, document| {
             total
                 .saturating_add(document_key_logical_bytes(&document.key))
-                .saturating_add(fields_logical_bytes(&document.fields))
+                .saturating_add(fields_logical_bytes(document.fields()))
         });
         LogicalMemoryUsage::new(
             u64::try_from(self.documents.len()).unwrap_or(u64::MAX),
@@ -215,27 +218,28 @@ fn evaluate(
     edition: DatabaseEdition,
 ) -> Result<BTreeMap<DocumentKey, WatchDocument>, QueryError> {
     match spec {
-        TargetSpec::Query(query) => execute(snapshot, database, query, edition).map(|documents| {
-            documents
-                .into_iter()
-                .map(|document| {
-                    let visible = WatchDocument {
-                        key: document.key().clone(),
-                        document: document.document().clone(),
-                        fields: document.fields().clone(),
-                    };
-                    (visible.key.clone(), visible)
-                })
-                .collect()
-        }),
+        TargetSpec::Query(query) => {
+            execute_iter(snapshot, database, query, edition).map(|documents| {
+                documents
+                    .map(|document| {
+                        let visible = WatchDocument {
+                            key: document.key().clone(),
+                            document: document.document().clone(),
+                            projected_fields: document.projected_fields().cloned(),
+                        };
+                        (visible.key.clone(), visible)
+                    })
+                    .collect()
+            })
+        }
         TargetSpec::Documents(keys) => Ok(keys
             .iter()
             .filter_map(|key| {
                 snapshot.get(key).map(|document| {
                     let visible = WatchDocument {
                         key: key.clone(),
-                        fields: document.fields().clone(),
                         document,
+                        projected_fields: None,
                     };
                     (key.clone(), visible)
                 })

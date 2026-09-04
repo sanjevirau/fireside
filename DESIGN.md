@@ -2602,6 +2602,12 @@ kernel OOM events. The frozen observation is
 Naturally ordered collection and collection-group queries must therefore expose
 a lazy execution path: scope selection, filtering, offset, first-limit, optional
 projection, protobuf encoding, and stream release happen one document at a time.
+The disk scope indexes use a memcomparable resource-path encoding in their v2
+tables, including signed numeric Datastore IDs ordered before ordinary string
+IDs. Existing stores rebuild those key-only indexes from the document table on
+first open. Historical overlays are sorted by the same comparator before their
+bounded ordered merge. Memory snapshots may retain a result-sized vector of
+scope keys to preserve that ordering, but do not clone the selected documents.
 Queries requiring a non-key sort, a last-limit, vector ranking, aggregation, or
 an analyzed explain result may retain only their bounded/scoped result set. The
 gRPC adapter must not build a second result-sized response vector for any query.

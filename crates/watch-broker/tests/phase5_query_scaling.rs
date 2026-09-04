@@ -12,11 +12,14 @@ use fireside_core_store::{
 };
 use fireside_query_engine::{
     DatabaseEdition, Direction, FieldFilter, FieldOperator, FieldPath, Filter, Limit, Query,
-    QueryScope, execute,
+    QueryScope, execute, execute_iter,
 };
 use fireside_watch_broker::{ChangeKind, TargetSpec, WatchTarget};
 
 const DATASET_DOCUMENTS: usize = 200_000;
+const R36_CACHE_DOCUMENTS: usize = 11_379;
+const PRESENTATION_DOCUMENTS: usize = 100;
+const COLLECTION_GROUP_DOCUMENTS: usize = 1_000;
 const MAX_SINGLE_QUERY_MILLISECONDS: u128 = 2_000;
 const MAX_PARALLEL_QUERY_MILLISECONDS: u128 = 5_000;
 const MAX_LISTEN_FANOUT_MILLISECONDS: u128 = 5_000;
@@ -115,11 +118,11 @@ fn measure_single_collection(
 ) -> Measurement {
     let single_query = Query::new(QueryScope::collection("colors").expect("valid scope"));
     let (single_count, single) = measure(|| {
-        execute(snapshot, database, &single_query, DatabaseEdition::Standard)
+        execute_iter(snapshot, database, &single_query, DatabaseEdition::Standard)
             .expect("single collection query should execute")
-            .len()
+            .count()
     });
-    assert_eq!(single_count, 100);
+    assert_eq!(single_count, 1_035);
     assert_measurement(
         "single collection query",
         &single,
@@ -151,9 +154,9 @@ fn measure_parallel_collections(
                                 value: Value::Null,
                             }));
                         }
-                        execute(&snapshot, &database, &query, DatabaseEdition::Standard)
+                        execute_iter(&snapshot, &database, &query, DatabaseEdition::Standard)
                             .expect("parallel cache query should execute")
-                            .len()
+                            .count()
                     })
                 })
                 .collect::<Vec<_>>()
@@ -166,7 +169,7 @@ fn measure_parallel_collections(
                 .sum::<usize>()
         })
     });
-    assert_eq!(parallel_count, 1_100);
+    assert_eq!(parallel_count, R36_CACHE_DOCUMENTS);
     assert_measurement(
         "eleven parallel collection queries",
         &parallel,
@@ -265,7 +268,7 @@ fn measure_listener_fanout(
                 .sum::<usize>()
         })
     });
-    assert_eq!(listen_documents, 1_100);
+    assert_eq!(listen_documents, R36_CACHE_DOCUMENTS);
     assert_measurement(
         "eleven-listener fan-out",
         &listen,
@@ -278,7 +281,7 @@ fn measure_listener_fanout(
 fn seed_dataset(store: &Store, database: &DatabaseName) {
     let mut writes = Vec::with_capacity(5_000);
     for index in 0..DATASET_DOCUMENTS {
-        let (path, fields) = if index < 1_100 {
+        let (path, fields) = if index < R36_CACHE_DOCUMENTS {
             let collection = CACHE_COLLECTIONS[index % CACHE_COLLECTIONS.len()];
             let mut fields = BTreeMap::from([("rank".to_owned(), index_value(index))]);
             if collection == "slidesCore" {
@@ -288,13 +291,13 @@ fn seed_dataset(store: &Store, database: &DatabaseName) {
                 );
             }
             (format!("{collection}/doc-{index:06}"), fields)
-        } else if index < 1_200 {
-            let id = if index == 1_100 {
+        } else if index < R36_CACHE_DOCUMENTS + PRESENTATION_DOCUMENTS {
+            let id = if index == R36_CACHE_DOCUMENTS {
                 "oracle".to_owned()
             } else {
                 format!("presentation-{index:06}")
             };
-            let owner = if index == 1_100 {
+            let owner = if index == R36_CACHE_DOCUMENTS {
                 "phase5-scaling-owner"
             } else {
                 "another-owner"
@@ -307,7 +310,8 @@ fn seed_dataset(store: &Store, database: &DatabaseName) {
                     ("updatedAt".to_owned(), index_value(index)),
                 ]),
             )
-        } else if index < 2_200 {
+        } else if index < R36_CACHE_DOCUMENTS + PRESENTATION_DOCUMENTS + COLLECTION_GROUP_DOCUMENTS
+        {
             (
                 format!("parents/p-{index:06}/events/event-{index:06}"),
                 BTreeMap::from([("rank".to_owned(), index_value(index))]),
