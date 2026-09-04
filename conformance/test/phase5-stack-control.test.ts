@@ -20,6 +20,7 @@ import {
   phase5CommandLaunchPathMatches,
   phase5EmulatorProcessMatches,
   phase5ProcessIdentityFromStat,
+  phase5ProcKilobytes,
   phase5ReadinessConditions,
   phase5StorageAliasRegistered,
   renderPhase5MprocsControlCommand,
@@ -225,6 +226,24 @@ test("Phase 5 process identities include PID reuse protection", () => {
     ),
     { pid: 42, procStatStartTimeTicks: "987654" },
   );
+});
+
+test("Phase 5 lifecycle sampling records every scoped process at ten-second intervals", async () => {
+  assert.equal(phase5ProcKilobytes("Name:\tnode\nVmRSS:\t1234 kB\n", "VmRSS"), 1_263_616);
+  assert.equal(phase5ProcKilobytes("Rss: 42 kB\nPss: 31 kB\n", "Pss"), 31_744);
+  assert.equal(phase5ProcKilobytes("VmSize: 9 kB\n", "VmRSS"), null);
+
+  const source = await readFile(controlUrl, "utf8");
+  const launchSampler = source.indexOf("const processSampler = startPhase5ProcessSampler(input)");
+  const readiness = source.indexOf("await waitForPhase5Readiness", launchSampler);
+  assert.ok(launchSampler >= 0 && readiness > launchSampler);
+  assert.match(source, /intervalSeconds: 10/u);
+  assert.match(source, /await Promise\.race\(\[delay\(10_000\), stopSignal\]\)/u);
+  assert.match(source, /smaps_rollup/u);
+  assert.match(source, /processPeaks/u);
+  assert.match(source, /peakAggregatePssBytes/u);
+  assert.match(source, /peakAggregateRssBytes/u);
+  assert.match(source, /await running\.processSampler\.stop\(\)/u);
 });
 
 test("directory ownership accepts launch paths but rejects mere argument references", () => {

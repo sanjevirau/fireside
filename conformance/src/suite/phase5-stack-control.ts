@@ -2,10 +2,12 @@ import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   access,
+  appendFile,
   mkdir,
   readFile,
   readdir,
   readlink,
+  writeFile,
 } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
@@ -70,9 +72,33 @@ export interface RunningPhase5Stack {
   readonly label: string;
   readonly launchLog: string;
   readonly ports: Phase5StackPorts;
+  readonly processSampler: Phase5ProcessSampler;
   readonly stack: Phase5StackName;
   readonly tmuxSession: string;
   readonly twodartNetUrl: string;
+}
+
+export interface Phase5ProcessSampler {
+  stop(): Promise<void>;
+}
+
+interface Phase5ProcessMeasurement {
+  readonly command: string;
+  readonly pid: number;
+  readonly procStatStartTimeTicks: string;
+  readonly pssBytes: number | null;
+  readonly rssBytes: number;
+}
+
+interface Phase5ProcessPeak {
+  command: string;
+  firstObservedAt: string;
+  lastObservedAt: string;
+  pid: number;
+  procStatStartTimeTicks: string;
+  pssBytes: number | null;
+  rssBytes: number;
+  samples: number;
 }
 
 export interface StoppedPhase5Stack {
@@ -230,6 +256,7 @@ export async function startPhase5Stack(
     ["send-keys", "-t", input.tmuxSession, "Enter"],
     "execute Phase 5 launch command",
   );
+  const processSampler = startPhase5ProcessSampler(input);
 
   try {
     const env = await readPhase5PortEnvironment(input.directory);
@@ -309,12 +336,14 @@ export async function startPhase5Stack(
       label: input.label,
       launchLog,
       ports: input.ports,
+      processSampler,
       stack: input.stack,
       tmuxSession: input.tmuxSession,
       twodartNetUrl,
     };
   } catch (error: unknown) {
     try {
+      await processSampler.stop();
       await cleanupFailedStart(input);
     } catch (cleanupError: unknown) {
       throw new AggregateError(
@@ -326,10 +355,153 @@ export async function startPhase5Stack(
   }
 }
 
+function startPhase5ProcessSampler(input: StackLaunchInput): Phase5ProcessSampler {
+  const ledgerPath = path.join(
+    input.evidenceDirectory,
+    `${input.stack}-${input.label}-process-memory.jsonl`,
+  );
+  const summaryPath = path.join(
+    input.evidenceDirectory,
+    `${input.stack}-${input.label}-process-memory.json`,
+  );
+  const peaks = new Map<string, Phase5ProcessPeak>();
+  let peakAggregatePssBytes: number | null = 0;
+  let peakAggregateRssBytes = 0;
+  let sampleCount = 0;
+  let stopRequested = false;
+  let resolveStopSignal: () => void = () => undefined;
+  const stopSignal = new Promise<void>((resolve) => {
+    resolveStopSignal = resolve;
+  });
+
+  const loop = (async (): Promise<void> => {
+    while (!stopRequested) {
+      const observedAt = new Date().toISOString();
+      const processes = await measurePhase5DirectoryProcesses(input.directory);
+      const aggregateRssBytes = processes.reduce(
+        (total, process) => total + process.rssBytes,
+        0,
+      );
+      const aggregatePssBytes = processes.every((process) => process.pssBytes !== null)
+        ? processes.reduce((total, process) => total + (process.pssBytes ?? 0), 0)
+        : null;
+      peakAggregateRssBytes = Math.max(peakAggregateRssBytes, aggregateRssBytes);
+      if (aggregatePssBytes === null) peakAggregatePssBytes = null;
+      else if (peakAggregatePssBytes !== null) {
+        peakAggregatePssBytes = Math.max(peakAggregatePssBytes, aggregatePssBytes);
+      }
+      for (const process of processes) {
+        const key = phase5ProcessIdentityKey(process);
+        const existing = peaks.get(key);
+        if (existing === undefined) {
+          peaks.set(key, {
+            ...process,
+            firstObservedAt: observedAt,
+            lastObservedAt: observedAt,
+            samples: 1,
+          });
+        } else {
+          existing.lastObservedAt = observedAt;
+          existing.samples += 1;
+          existing.rssBytes = Math.max(existing.rssBytes, process.rssBytes);
+          if (process.pssBytes === null) existing.pssBytes = null;
+          else if (existing.pssBytes !== null) {
+            existing.pssBytes = Math.max(existing.pssBytes, process.pssBytes);
+          }
+        }
+      }
+      sampleCount += 1;
+      await appendFile(
+        ledgerPath,
+        `${JSON.stringify({
+          aggregatePssBytes,
+          aggregateRssBytes,
+          observedAt,
+          processes,
+          schemaVersion: 1,
+          stack: input.stack,
+        })}\n`,
+        "utf8",
+      );
+      if (!stopRequested) {
+        await Promise.race([delay(10_000), stopSignal]);
+      }
+    }
+  })();
+  let completion: Promise<void> | null = null;
+  return {
+    stop(): Promise<void> {
+      stopRequested = true;
+      resolveStopSignal();
+      completion ??= loop.then(async () => {
+        await writeFile(
+          summaryPath,
+          `${JSON.stringify({
+            completedAt: new Date().toISOString(),
+            intervalSeconds: 10,
+            peakAggregatePssBytes,
+            peakAggregateRssBytes,
+            processPeaks: [...peaks.values()].sort((left, right) => left.pid - right.pid),
+            sampleCount,
+            schemaVersion: 1,
+            stack: input.stack,
+          }, null, 2)}\n`,
+          { encoding: "utf8", flag: "wx" },
+        );
+      });
+      return completion;
+    },
+  };
+}
+
+async function measurePhase5DirectoryProcesses(
+  directory: string,
+): Promise<readonly Phase5ProcessMeasurement[]> {
+  const identities = await phase5DirectoryProcesses(directory);
+  const measurements = await Promise.all(
+    identities.map(async (identity): Promise<Phase5ProcessMeasurement | null> => {
+      try {
+        const [commandBytes, status, smaps] = await Promise.all([
+          readFile(`/proc/${String(identity.pid)}/cmdline`),
+          readFile(`/proc/${String(identity.pid)}/status`, "utf8"),
+          readFile(`/proc/${String(identity.pid)}/smaps_rollup`, "utf8"),
+        ]);
+        const current = phase5ProcessIdentityFromStat(
+          identity.pid,
+          await readFile(`/proc/${String(identity.pid)}/stat`, "utf8"),
+        );
+        if (current.procStatStartTimeTicks !== identity.procStatStartTimeTicks) return null;
+        const command = commandBytes.toString("utf8").split("\0")[0] ?? "";
+        return {
+          command: path.basename(command),
+          pid: identity.pid,
+          procStatStartTimeTicks: identity.procStatStartTimeTicks,
+          pssBytes: phase5ProcKilobytes(smaps, "Pss"),
+          rssBytes: phase5ProcKilobytes(status, "VmRSS") ?? 0,
+        };
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return measurements
+    .filter((measurement): measurement is Phase5ProcessMeasurement => measurement !== null)
+    .sort((left, right) => left.pid - right.pid);
+}
+
+export function phase5ProcKilobytes(content: string, field: string): number | null {
+  const prefix = `${field}:`;
+  const line = content.split("\n").find((candidate) => candidate.startsWith(prefix));
+  if (line === undefined) return null;
+  const kilobytes = Number(line.slice(prefix.length).trim().split(/\s+/u)[0]);
+  return Number.isFinite(kilobytes) ? kilobytes * 1_024 : null;
+}
+
 export async function stopPhase5Stack(
   running: RunningPhase5Stack,
   maximumShutdownSeconds: number,
 ): Promise<StoppedPhase5Stack> {
+  await running.processSampler.stop();
   const started = performance.now();
   const deadline = Date.now() + maximumShutdownSeconds * 1_000;
   const exportMetadata = path.join(running.exportPath, "firebase-export-metadata.json");
