@@ -209,6 +209,17 @@ const collectionIds = [
   "featureFlags",
   "appAnnouncements",
   "sharedLinks",
+  "aiEvalRuns",
+  "aiGatewayGrants",
+  "aiGatewayJobs",
+  "aiGatewayPairings",
+  "aiGatewayWorkers",
+  "aiPresentationConversations",
+  "cases",
+  "events",
+  "materializedSlides",
+  "messages",
+  "payloadChunks",
 ] as const;
 const buckets = ["demo-twodart-local.appspot.com", "assets-local.twodart.com"] as const;
 

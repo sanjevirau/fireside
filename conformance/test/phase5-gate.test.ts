@@ -28,6 +28,37 @@ const officialExportIdentityGuardFixtureUrl = new URL(
   "../fixtures/phase5/official-export-identity-guard-r36.json",
   import.meta.url,
 );
+const fullDataCollectionInventoryR41Url = new URL(
+  "../fixtures/phase5/full-data-collection-inventory-r41/fixture.json",
+  import.meta.url,
+);
+
+test("Phase 5 state accounting covers the complete r41 collection inventory", async () => {
+  const fixture = JSON.parse(
+    await readFile(fullDataCollectionInventoryR41Url, "utf8"),
+  ) as {
+    readonly oracle: { readonly existingInventoryCollectionGroups: number };
+    readonly omittedCollectionGroups: readonly { readonly collectionId: string }[];
+  };
+  const source = await readFile(runnerUrl, "utf8");
+  const start = source.indexOf("const collectionIds = [");
+  const end = source.indexOf("] as const;", start);
+  assert.ok(start >= 0 && end > start);
+  const configured = Array.from(
+    source.slice(start, end).matchAll(/"(?<collectionId>[^"]+)"/gu),
+    (match) => match.groups?.collectionId,
+  ).filter((value): value is string => value !== undefined);
+
+  assert.equal(new Set(configured).size, configured.length);
+  assert.equal(
+    configured.length,
+    fixture.oracle.existingInventoryCollectionGroups +
+      fixture.omittedCollectionGroups.length,
+  );
+  for (const { collectionId } of fixture.omittedCollectionGroups) {
+    assert.ok(configured.includes(collectionId), collectionId);
+  }
+});
 
 test("r36 official-export guard failure is frozen before the typed-field repair", async () => {
   const fixture = JSON.parse(
