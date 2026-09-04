@@ -2552,6 +2552,38 @@ proof branches: the eleven-call control performs at most ten document reads.
 Crate replay consumes both committed JAR verdicts with no child rows available;
 native and real-browser replay covers both corpora in memory and disk/WAL.
 
+### Phase 5 full-data query scaling (r36)
+
+R36 exposed a Fireside product defect rather than a host-limit continuation:
+collection queries scanned and decoded all 211,202 imported documents before
+testing their scope, and historical overlays disabled disk iteration and fell
+back to a database-wide `BTreeMap` plus `Vec` copy. Parallel cache reads could
+therefore hold several dataset copies while unrelated raw Firestore, Auth, and
+Storage requests stalled.
+
+The pre-fix fixture in `conformance/fixtures/phase5/query-scaling-v1/` freezes
+the official Java and Fireside measurements for the four Twodart operation
+shapes before implementation. Collection reads must use a contiguous encoded
+key range. Collection-group reads use a maintained secondary index. Disk rows
+and snapshot overlay entries are merged in key order without materializing the
+database; key/scope selection precedes document decoding. Offset and limit are
+applied during streaming whenever the query's ordering permits it. Otherwise,
+only the scoped candidate set may be collected for sorting. Query memory is
+bounded by scoped results plus the overlay, not database cardinality.
+
+The 64 MiB redb cache remains the production default. Its bound is separate
+from query result allocation and must be recorded by the 200,000-document
+quality gate. The gate covers direct collection range reads, collection-group
+index reads, eleven parallel collection queries, and listener fan-out including
+a document leaving a result set. These are correctness and scaling bounds; the
+official measurement does not create a performance-winner requirement or alter
+the immutable Phase 5 workload and thresholds.
+
+During Phase 5 readiness and browser journeys, a diagnostic sampler outside the
+protected browser runner records every stack process's RSS and PSS every ten
+seconds and preserves per-process peaks. It adds attribution evidence only and
+does not change browser actions or verdicts.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.

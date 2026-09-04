@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "oracle": "firebase-tools-15.22.0-firestore-emulator-1.21.0",
+  "capturedBeforeProductChange": true,
+  "candidateCommit": "3b210d5e962b93cf8190438295133840a29adab2",
+  "dataset": {
+    "documents": 211202,
+    "exportMetadataSha256": "24e82558ff6e114a2749c74ec96781511ac01f006fd022936670ea20994e4aa7"
+  },
+  "environment": {
+    "cpu": "AMD Ryzen 5 2600 Six-Core Processor",
+    "logicalCpus": 12,
+    "memoryBytes": 16146870272,
+    "operatingSystem": "Ubuntu 26.04",
+    "kernel": "7.0.0-30-generic",
+    "java": "OpenJDK 26.0.2.1",
+    "node": "24.20.0",
+    "firesideBinarySha256": "e0c4842e0659a65493aebb26168502b4f97cdf21b270b05990acabb547942821",
+    "officialJarSha256": "c3d3680a89d946a90a027365ea14c26c6472a162bcf37f099bbb1ebd66d25e8e",
+    "firesideRedbCacheBytes": 67108864
+  },
+  "operations": [
+    {
+      "name": "cache-watcher-parallel",
+      "shape": "eleven Twodart collection reads issued in parallel",
+      "returnedDocuments": 11379,
+      "official": {
+        "durationMilliseconds": 20649,
+        "startPssBytes": 7531827200,
+        "peakPssBytes": 9041154048
+      },
+      "firesideBeforeFix": {
+        "durationMilliseconds": 28340,
+        "startPssBytes": 204809216,
+        "peakPssBytes": 5126018048
+      }
+    },
+    {
+      "name": "dashboard-presentations",
+      "shape": "createdBy equality, updatedAt descending, limit 12",
+      "returnedDocuments": 1,
+      "official": {
+        "durationMilliseconds": 450,
+        "startPssBytes": 9041154048,
+        "peakPssBytes": 9041248256
+      },
+      "firesideBeforeFix": {
+        "durationMilliseconds": 3612,
+        "startPssBytes": 482931712,
+        "peakPssBytes": 482931712
+      }
+    },
+    {
+      "name": "editor-listener-set",
+      "shape": "one presentation document listener plus its slides collection listener",
+      "returnedDocuments": 2,
+      "official": {
+        "durationMilliseconds": 471,
+        "startPssBytes": 9041248256,
+        "peakPssBytes": 9042092032
+      },
+      "firesideBeforeFix": {
+        "durationMilliseconds": 3701,
+        "startPssBytes": 347345920,
+        "peakPssBytes": 379073536
+      }
+    },
+    {
+      "name": "listen-document-leaves-result-set",
+      "shape": "collection listener observes a matching document leave after an update",
+      "returnedDocuments": 1,
+      "official": {
+        "durationMilliseconds": 465,
+        "startPssBytes": 9042124800,
+        "peakPssBytes": 9042276352
+      },
+      "firesideBeforeFix": {
+        "durationMilliseconds": 6885,
+        "startPssBytes": 341660672,
+        "peakPssBytes": 378987520
+      }
+    }
+  ],
+  "contract": {
+    "collectionQueriesReadOnlyTheirKeyRange": true,
+    "collectionGroupQueriesUseASecondaryIndex": true,
+    "diskAndOverlayResultsAreMergedInKeyOrder": true,
+    "documentsAreDecodedOnlyAfterKeyScopeSelection": true,
+    "queryMemoryIsBoundedByScopedResultsAndOverlay": true,
+    "correctnessRequiresLeaveResultSetNotification": true,
+    "performanceWinnerRequired": false,
+    "phase5WorkloadOrThresholdsChanged": false
+  },
+  "privacy": {
+    "credentialsStored": false,
+    "documentContentsStored": false,
+    "realDocumentIdsStored": false,
+    "realUserIdentifiersStored": false,
+    "syntheticOnlyMutations": true
+  },
+  "rawEvidence": {
+    "officialJsonSha256": "b4bd0995bbc1a377dfe81c57ffc7dfa1c1e3d96e819d8a84a926e977bd525801",
+    "firesideBeforeFixJsonSha256": "4935c28da510293dcbd4c0ac13b9e2f40905a122f228108265e127116a9710d0"
+  }
+}
