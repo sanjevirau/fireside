@@ -2589,6 +2589,26 @@ revision and the current manifest before it may continue against the banked r36
 official evidence. The continuation never substitutes r36's older smoke for an
 exact-candidate smoke and never reruns the official full-data stage.
 
+R37 proved that bounded disk selection alone is insufficient when a streaming
+RPC materializes its output twice. The exact repaired-candidate smoke passed,
+but the full-data cache-reader and browser overlap drove Fireside from 228 MiB
+PSS to 9.09 GB while `RunQuery` retained every decoded `QueryDocument` and then
+built a second protobuf response `Vec` before tonic could send the first item.
+Four browser journeys completed before unrelated raw and proxied requests
+stalled; there were no page errors, gating request failures, failed units, or
+kernel OOM events. The frozen observation is
+`conformance/fixtures/phase5/fireside-full-data-response-materialization-r37.json`.
+
+Naturally ordered collection and collection-group queries must therefore expose
+a lazy execution path: scope selection, filtering, offset, first-limit, optional
+projection, protobuf encoding, and stream release happen one document at a time.
+Queries requiring a non-key sort, a last-limit, vector ranking, aggregation, or
+an analyzed explain result may retain only their bounded/scoped result set. The
+gRPC adapter must not build a second result-sized response vector for any query.
+This is a transport-memory correction; query results, ordering, transaction read
+tracking, skipped-result metadata, and the immutable Phase 5 criteria remain
+unchanged.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.

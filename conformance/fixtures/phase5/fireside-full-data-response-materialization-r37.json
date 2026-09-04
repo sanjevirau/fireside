@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "gateResult": "failed",
+  "attribution": "fireside-query-response-materialization",
+  "candidateRevision": "48b4887f1cdb24438f14589cfdcfd99fe80ca53b",
+  "candidateCiRun": 33877161699,
+  "manifestSha256": "48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e",
+  "observation": {
+    "exactCandidateSmokePassed": true,
+    "preflightPassed": true,
+    "preflightResidualSwapBytesAfterDrain": 0,
+    "readinessPassed": true,
+    "emulatorReadyMilliseconds": 158564,
+    "applicationReadyMilliseconds": 449041,
+    "completedJourneys": [
+      "otp-auth-login",
+      "dashboard-and-deck-list",
+      "existing-deck-and-listener-edit",
+      "catalog-slide-add"
+    ],
+    "failedJourney": "image-upload-readback",
+    "failedWait": "waitForStorageDifference",
+    "waitTimeoutMilliseconds": 300000,
+    "pageErrors": 0,
+    "gatingRequestFailures": 0,
+    "pendingRequestsAtFailure": 12,
+    "oldestPendingRequestMilliseconds": 431317,
+    "peakFiresidePssBytes": 9088097280,
+    "peakNextPssBytes": 8441436160,
+    "peakCacheWatcherNodePssBytes": 2955527168,
+    "firesidePssBeforeFirstFullDataReadBytes": 228051968,
+    "broadRawAndProxiedRequestStall": true,
+    "failedSystemdUnits": 0,
+    "kernelOomOrResourceEvidence": 0,
+    "soakStarted": false,
+    "restartStarted": false,
+    "parityStarted": false,
+    "freshColleagueStarted": false,
+    "regressionsStarted": false
+  },
+  "oracle": {
+    "officialInitialJourneysPassed": 9,
+    "officialSoakSecondsPassed": 7200,
+    "officialPeakJavaPssBytes": 9342156800,
+    "officialRestartClassification": "host-limited",
+    "officialStageMustNotBeRerun": true
+  },
+  "diagnosis": {
+    "scopedDiskRangeFixPresent": true,
+    "collectionReadsReturnedDocuments": 11379,
+    "grpcRunQueryRetainsDecodedResultVector": true,
+    "grpcRunQueryBuildsSecondEncodedResponseVector": true,
+    "parallelRunQueryResponsesReleaseOnlyAfterBothVectorsComplete": true,
+    "requiredFix": "stream naturally ordered query results and encode each gRPC response lazily"
+  },
+  "contract": {
+    "firesideCriteriaChanged": false,
+    "failureMayBeSilentlyRerun": false,
+    "phase5MayPass": false,
+    "performanceWinnerMayBeClaimed": false,
+    "phase5TagMayBeCreated": false,
+    "phase6MayStart": false
+  },
+  "evidenceDirectory": "reports/phase-5-metrics/failed-full-gate-v3-20260904-48b4887-r36-fireside-repair"
+}

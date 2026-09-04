@@ -79,6 +79,55 @@ const firesideInitialHostStallR36Url = new URL(
   "../fixtures/phase5/fireside-initial-host-stall-r36.json",
   import.meta.url,
 );
+const firesideFullDataResponseMaterializationR37Url = new URL(
+  "../fixtures/phase5/fireside-full-data-response-materialization-r37.json",
+  import.meta.url,
+);
+
+test("r37 freezes the remaining full-data RunQuery materialization defect", async () => {
+  const fixture = JSON.parse(
+    await readFile(firesideFullDataResponseMaterializationR37Url, "utf8"),
+  ) as {
+    readonly schemaVersion: number;
+    readonly gateResult: string;
+    readonly observation: {
+      readonly exactCandidateSmokePassed: boolean;
+      readonly completedJourneys: readonly string[];
+      readonly failedJourney: string;
+      readonly pageErrors: number;
+      readonly gatingRequestFailures: number;
+      readonly peakFiresidePssBytes: number;
+      readonly firesidePssBeforeFirstFullDataReadBytes: number;
+      readonly failedSystemdUnits: number;
+      readonly kernelOomOrResourceEvidence: number;
+      readonly soakStarted: boolean;
+    };
+    readonly diagnosis: Readonly<Record<string, boolean | number | string>>;
+    readonly contract: Readonly<Record<string, boolean>>;
+  };
+
+  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.gateResult, "failed");
+  assert.equal(fixture.observation.exactCandidateSmokePassed, true);
+  assert.deepEqual(fixture.observation.completedJourneys, [
+    "otp-auth-login",
+    "dashboard-and-deck-list",
+    "existing-deck-and-listener-edit",
+    "catalog-slide-add",
+  ]);
+  assert.equal(fixture.observation.failedJourney, "image-upload-readback");
+  assert.equal(fixture.observation.pageErrors, 0);
+  assert.equal(fixture.observation.gatingRequestFailures, 0);
+  assert.ok(fixture.observation.peakFiresidePssBytes > 9_000_000_000);
+  assert.ok(fixture.observation.firesidePssBeforeFirstFullDataReadBytes < 256 * 1024 * 1024);
+  assert.equal(fixture.observation.failedSystemdUnits, 0);
+  assert.equal(fixture.observation.kernelOomOrResourceEvidence, 0);
+  assert.equal(fixture.observation.soakStarted, false);
+  assert.equal(fixture.diagnosis.scopedDiskRangeFixPresent, true);
+  assert.equal(fixture.diagnosis.grpcRunQueryRetainsDecodedResultVector, true);
+  assert.equal(fixture.diagnosis.grpcRunQueryBuildsSecondEncodedResponseVector, true);
+  for (const value of Object.values(fixture.contract)) assert.equal(value, false);
+});
 
 test("the r36 Fireside initial failure remains strict despite the host-wide stall", async () => {
   const fixture = JSON.parse(
