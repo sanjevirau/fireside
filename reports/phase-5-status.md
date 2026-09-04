@@ -12,7 +12,10 @@ single-sample quiescence check caught a transient checkout-owned process without
 recording its identity. R35 passed the full official cheap lifecycle but the
 Fireside stack could not start TwodartNet because two concurrent Portless
 wrappers selected port 4448. The r35 evidence is frozen before assigning unique
-fixed application ports.
+fixed application ports. R36 passed the full cheap tier and measured the complete
+official full-data initial/soak baseline; its official restart then became
+host-limited across raw emulator, proxied Storage, and Next.js paths. That exact
+evidence is frozen before the official-only continuation amendment.
 
 ## Current loop
 
@@ -29,6 +32,7 @@ fixed application ports.
 | [r33](phase-5-full-gate-20260904-r33.md) (attempt 3/8 after reset) | Both smoke stacks 9/9 + 60 s soak; automatic full gate reached official Storage import | Harness: firebase-tools copied the 8.18 GB input into quota-constrained `/tmp`; Linux `EDQUOT` stopped official readiness | `official-storage-runtime-capacity-r33` fixture | `72a5c49` | [33826287482](https://github.com/sanjevirau/fireside/actions/runs/33826287482), 7/7 green after one infrastructure-only cell rerun | Cheap tier passed completely; full gate invalid-harness before journeys/soak; Fireside full stack not started |
 | [r34](phase-5-smoke-20260904-r34.md) (attempt 4/8 after reset) | Preflight only; no stack or journey started | Harness: one `/proc` scan caught a transient process at `stack-official` but did not retain command identity or establish stable quiescence | `swap-preflight-transient-process-r34` fixture | `74113ad` | [33834124800](https://github.com/sanjevirau/fireside/actions/runs/33834124800), 7/7 green | Fresh build passed; swap drain did not start; later inspections found zero matching processes/listeners; full gate absent |
 | [r35](phase-5-smoke-20260904-r35.md) (attempt 5/8 after reset) | Official 9/9 + 60 s soak; Fireside readiness only | Harness: concurrent Portless wrappers assigned port 4448 to both Images and TwodartNet; Images bound first and Kestrel failed | `portless-concurrent-port-allocation-r35` fixture | `27e96b6` | [33838985452](https://github.com/sanjevirau/fireside/actions/runs/33838985452), 7/7 green | Fireside emulator/cache/frontend ready but TwodartNet never ready; no Fireside browser/soak; full gate absent |
+| [r36](phase-5-full-gate-20260904-r36.md) (attempt 6/8 after reset) | Both smoke stacks 9/9 + 60 s soak; official full readiness + 9/9 + 7,200 s soak; official restart 3 journeys then host stall | Infrastructure: whole-host exhaustion under the official baseline; raw Firestore, proxied Storage, Next.js, and cleanup requests stalled together with zero page/gating request errors | `official-restart-host-exhaustion-r36` fixture | `30e0d25` | [33844348621](https://github.com/sanjevirau/fireside/actions/runs/33844348621), 7/7 green | Official initial/soak remains baseline; official restart host-limited; Fireside full-data stage not started; official-only continuation amendment pending |
 
 R25 failure evidence is published in `b79750636e1666e1d097b341b7cc9f85ba74d28c`;
 [evidence CI 33748445917](https://github.com/sanjevirau/fireside/actions/runs/33748445917)
@@ -257,15 +261,19 @@ original evidence and verdicts remain unchanged.
 - Twodart remains `6bda5bf29b2399017d2a872e8f3fc1a15d073a54`; do not edit it.
 - Protected runner SHA-256 remains
   `ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc`.
-- Frozen schema-v3 manifest SHA-256 remains
+- The r36 official baseline used schema-v3 manifest SHA-256
   `fe9d44c1edb6105d6edc9f0ab3b3251cb34929b7b6113e559ff9a2558ad7b957`.
+  The next commit must amend it before any Fireside full-data measurement and
+  record that hash as the previous manifest.
 - Every product correction needs the committed official fixture first, crate and
   conformance regressions, all seven CI jobs green on the exact candidate, and
   the fresh Linux release binary hash before smoke.
-- Still required: both complete cheap-smoke lifecycles; immutable full-data
-  acceptance with sequential two-hour soaks; fresh-colleague documented-command
-  and official-fallback acceptance; full-data parity; regression checks; final
-  side-by-side evidence/report and exact evidence-commit CI.
+- The r36 cheap-smoke prerequisite is complete and the official full-data
+  initial/soak result is banked. Still required: the strict Fireside full-data
+  readiness, initial journeys, two-hour soak, export/restart journeys, parity,
+  fresh-colleague documented-command and official-fallback acceptance,
+  regressions, and the final side-by-side evidence/report plus exact
+  evidence-commit CI.
 - Stop on an app/rules/seed defect in Twodart, the same journey/root cause after
   a fix, a required protected-runner/threshold/workload/duration change, oracle
   divergence, hardware errors, or the attempt bound. Infrastructure gets only

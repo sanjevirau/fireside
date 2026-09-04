@@ -2433,6 +2433,37 @@ set in the quiescent-listener preflight, and records the mapping. It does not
 change Portless hostnames, Twodart, the schema-v3 manifest, the protected
 browser runner, workload, duration, threshold, or emulator-product behavior.
 
+### Phase 5 r36 official restart host-capacity oracle
+
+R36 passed the full cheap tier on both stacks, then measured the official
+full-data baseline. The official stack passed readiness, all nine initial
+browser journeys, and the complete 7,200-second soak with every frozen workload
+count and zero correctness or host-health failure. It peaked at 13,905,681,408
+PSS bytes, including 9,342,156,800 PSS bytes for the primary Java process, on a
+host with 16,146,870,272 total bytes. Residual swap remained between
+13,496,057,856 and 12,597,698,560 bytes during the measured window.
+
+After export and a fresh quiescent restart preflight, the official stack again
+passed readiness. Three browser journeys completed before `catalog-slide-add`
+timed out in `hoverCatalogSlideCard`. At the failure boundary, eight attempts to
+read two Storage-alias catalogue chunks, a raw Firestore Listen POST, a Next.js
+static image, and three application cleanup pings had all remained pending for
+roughly 187–240 seconds without response or request-failed events. Browser page
+errors and gating request failures were zero; failed units, kernel OOM/resource
+evidence, and journal errors were also zero. Because raw emulator, proxied
+Storage, and Next.js paths stopped making progress together, this is a
+whole-host capacity stall rather than a single proxy, emulator-product, or
+Twodart application path.
+
+The exact original evidence tree remains checksum-verified and immutable. An
+official-only amendment may preserve that initial/soak baseline and continue
+with the not-yet-started Fireside stage after a fresh swap-drained quiescent
+preflight. This exception must not generalize to Fireside: every Fireside
+readiness, journey, soak, lifecycle, parity, fresh-colleague, and regression
+criterion remains required. The final report labels the official restart
+host-limited, shows resource measurements side by side, and chooses no
+performance winner.
+
 ### Auth refresh grant reuse (r24 follow-up oracle)
 
 `auth-refresh-reuse` freezes 28 direct HTTP observations against firebase-tools

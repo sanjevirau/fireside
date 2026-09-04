@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "kind": "exact checksummed Phase 5 r36 official firebase-tools 15.22.0 full-data lifecycle evidence",
+    "candidateRevision": "30e0d25d262a903738f2ff008402ce82fec33611",
+    "twodartRevision": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54",
+    "diagnostic": "full-gate-v3-20260904-30e0d25-r36",
+    "manifestSha256": "fe9d44c1edb6105d6edc9f0ab3b3251cb34929b7b6113e559ff9a2558ad7b957",
+    "protectedRunnerSha256": "ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc",
+    "evidenceChecksumsSha256": "a9aa4df4f37b535ba429bdcc8da3b863f0d608eaee96883de3a6b45112a18a95",
+    "restartDiagnosticsSha256": "225a7228a8d74cd347f5360e7ae3fd45cee9b066d47ef92dac2dfe9c6d382e01",
+    "restartBrowserSummarySha256": "41f04b158bf0468b4feea214a317f7e9832e31cefca70eecb856b41d06bbadbd",
+    "officialSoakSha256": "6ab4eca8f39ca7946d75da2fc2f8876f7efb79111f44fcfad9dac1cc1d982685",
+    "candidateCiRun": 33844348621,
+    "releaseBinarySha256": "31d87f534d51a792741f8c47d02764f35067288ca8f5d18760474dc889fc1186"
+  },
+  "observation": {
+    "officialInitial": {
+      "readinessPassed": true,
+      "journeysPassed": 9,
+      "pageErrors": 0,
+      "gatingRequestFailures": 0
+    },
+    "officialSoak": {
+      "durationSeconds": 7200,
+      "passed": true,
+      "samples": 241,
+      "peakPssBytes": 13905681408,
+      "peakJavaPssBytes": 9342156800,
+      "swapInPagesDelta": 499591,
+      "swapOutPagesDelta": 438844,
+      "residualSwapBytesAtStart": 13496057856,
+      "residualSwapBytesAtEnd": 12597698560,
+      "counts": {
+        "catalogReads": 480,
+        "functionDispatches": 240,
+        "gatewayWrites": 1440,
+        "runAndCaseWrites": 960,
+        "storageCycles": 240,
+        "tokenBatches": 2880,
+        "tokenWrites": 57600
+      },
+      "listenerDeliveriesExpected": 60000,
+      "listenerDeliveriesObserved": 60000,
+      "errors": 0,
+      "stalls": 0,
+      "listenerGaps": 0,
+      "acknowledgedStateMismatches": 0,
+      "duplicateObservableEffects": 0,
+      "failedUnits": 0,
+      "oomOrResourceEvidence": 0
+    },
+    "officialRestart": {
+      "preflightPassed": true,
+      "readinessPassed": true,
+      "completedJourneyIds": [
+        "otp-auth-login",
+        "dashboard-and-deck-list",
+        "existing-deck-and-listener-edit"
+      ],
+      "failedJourneyId": "catalog-slide-add",
+      "failureSite": "hoverCatalogSlideCard",
+      "timeoutMilliseconds": 180000,
+      "pageErrors": 0,
+      "gatingRequestFailures": 0,
+      "allowlistedFirestoreLongPollAborts": true,
+      "pendingRequests": {
+        "storageAliasCatalogueChunkGets": {
+          "count": 8,
+          "oldestAgeMilliseconds": 230058,
+          "objects": [
+            "themes/modern/chunks/modern-quotes-1784251534673.json",
+            "themes/modern/chunks/modern-mindmap-1784251534673.json"
+          ],
+          "retryAttemptsPerObject": 4
+        },
+        "rawFirestoreListenPost": {
+          "count": 1,
+          "oldestAgeMilliseconds": 239508,
+          "host": "127.0.0.1:23000"
+        },
+        "nextStaticImageGet": {
+          "count": 1,
+          "ageMilliseconds": 238949,
+          "path": "/assets/video-announcement.jpg"
+        },
+        "cleanupUserPings": {
+          "count": 3,
+          "oldestAgeMilliseconds": 207700
+        },
+        "rawAndProxiedPathsStalledTogether": true
+      },
+      "failedSystemdUnits": 0,
+      "currentBootOomOrResourceEvidence": 0,
+      "kernelJournalClean": true
+    },
+    "firesideFullDataStageStarted": false,
+    "bothStacksRanConcurrently": false,
+    "privateDatasetContentStored": false
+  },
+  "classification": {
+    "result": "official-baseline-host-limited-at-restart",
+    "notPortless": true,
+    "notFireside": true,
+    "notTwodartApplicationLogic": true,
+    "basis": "Multiple unrelated raw-emulator, proxied Storage, and Next.js requests remained pending together without response or request-failed events after the official stack plus Chrome exceeded the 15 GiB host's practical resident-memory capacity."
+  },
+  "contract": {
+    "officialInitialAndSoakRemainBaselineMeasurements": true,
+    "officialStageMustNotBeRerun": true,
+    "officialExceptionScope": "post-restart host exhaustion only",
+    "officialEvidenceMustRemainImmutableAndChecksumVerified": true,
+    "continueWithFiresideAfterFreshQuiescentPreflight": true,
+    "firesideCriteriaChanged": false,
+    "firesideReadinessRequired": true,
+    "firesideInitialJourneysRequired": 9,
+    "firesideSoakSecondsRequired": 7200,
+    "firesideExportRestartRequired": true,
+    "firesideRestartJourneysRequired": 9,
+    "fullDataParityRequired": true,
+    "freshColleagueAcceptanceRequired": true,
+    "regressionsRequired": true,
+    "performanceWinnerRequired": false,
+    "finalReportMustMarkOfficialRestartHostLimited": true,
+    "phase6MayStart": false
+  }
+}

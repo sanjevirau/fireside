@@ -71,6 +71,169 @@ const portlessConcurrentPortAllocationR35Url = new URL(
   "../fixtures/phase5/portless-concurrent-port-allocation-r35.json",
   import.meta.url,
 );
+const officialRestartHostExhaustionR36Url = new URL(
+  "../fixtures/phase5/official-restart-host-exhaustion-r36.json",
+  import.meta.url,
+);
+
+test("the r36 official restart freezes the narrowly scoped host-limit boundary", async () => {
+  const fixture = JSON.parse(
+    await readFile(officialRestartHostExhaustionR36Url, "utf8"),
+  ) as {
+    readonly schemaVersion: number;
+    readonly observation: {
+      readonly officialInitial: {
+        readonly readinessPassed: boolean;
+        readonly journeysPassed: number;
+        readonly pageErrors: number;
+        readonly gatingRequestFailures: number;
+      };
+      readonly officialSoak: {
+        readonly durationSeconds: number;
+        readonly passed: boolean;
+        readonly samples: number;
+        readonly peakPssBytes: number;
+        readonly peakJavaPssBytes: number;
+        readonly counts: Readonly<Record<string, number>>;
+        readonly listenerDeliveriesExpected: number;
+        readonly listenerDeliveriesObserved: number;
+        readonly errors: number;
+        readonly stalls: number;
+        readonly listenerGaps: number;
+        readonly acknowledgedStateMismatches: number;
+        readonly duplicateObservableEffects: number;
+        readonly failedUnits: number;
+        readonly oomOrResourceEvidence: number;
+      };
+      readonly officialRestart: {
+        readonly preflightPassed: boolean;
+        readonly readinessPassed: boolean;
+        readonly completedJourneyIds: readonly string[];
+        readonly failedJourneyId: string;
+        readonly failureSite: string;
+        readonly pageErrors: number;
+        readonly gatingRequestFailures: number;
+        readonly pendingRequests: {
+          readonly storageAliasCatalogueChunkGets: {
+            readonly count: number;
+            readonly retryAttemptsPerObject: number;
+          };
+          readonly rawFirestoreListenPost: { readonly count: number };
+          readonly nextStaticImageGet: { readonly count: number };
+          readonly cleanupUserPings: { readonly count: number };
+          readonly rawAndProxiedPathsStalledTogether: boolean;
+        };
+        readonly failedSystemdUnits: number;
+        readonly currentBootOomOrResourceEvidence: number;
+      };
+      readonly firesideFullDataStageStarted: boolean;
+      readonly bothStacksRanConcurrently: boolean;
+    };
+    readonly classification: {
+      readonly result: string;
+      readonly notPortless: boolean;
+      readonly notFireside: boolean;
+      readonly notTwodartApplicationLogic: boolean;
+      readonly basis: string;
+    };
+    readonly contract: {
+      readonly officialInitialAndSoakRemainBaselineMeasurements: boolean;
+      readonly officialStageMustNotBeRerun: boolean;
+      readonly officialExceptionScope: string;
+      readonly officialEvidenceMustRemainImmutableAndChecksumVerified: boolean;
+      readonly continueWithFiresideAfterFreshQuiescentPreflight: boolean;
+      readonly firesideCriteriaChanged: boolean;
+      readonly firesideReadinessRequired: boolean;
+      readonly firesideInitialJourneysRequired: number;
+      readonly firesideSoakSecondsRequired: number;
+      readonly firesideExportRestartRequired: boolean;
+      readonly firesideRestartJourneysRequired: number;
+      readonly fullDataParityRequired: boolean;
+      readonly freshColleagueAcceptanceRequired: boolean;
+      readonly regressionsRequired: boolean;
+      readonly performanceWinnerRequired: boolean;
+      readonly finalReportMustMarkOfficialRestartHostLimited: boolean;
+      readonly phase6MayStart: boolean;
+    };
+  };
+
+  assert.equal(fixture.schemaVersion, 1);
+  assert.deepEqual(fixture.observation.officialInitial, {
+    readinessPassed: true,
+    journeysPassed: 9,
+    pageErrors: 0,
+    gatingRequestFailures: 0,
+  });
+  assert.equal(fixture.observation.officialSoak.durationSeconds, 7_200);
+  assert.equal(fixture.observation.officialSoak.passed, true);
+  assert.equal(fixture.observation.officialSoak.samples, 241);
+  assert.equal(fixture.observation.officialSoak.peakPssBytes, 13_905_681_408);
+  assert.equal(fixture.observation.officialSoak.peakJavaPssBytes, 9_342_156_800);
+  assert.deepEqual(fixture.observation.officialSoak.counts, {
+    catalogReads: 480,
+    functionDispatches: 240,
+    gatewayWrites: 1_440,
+    runAndCaseWrites: 960,
+    storageCycles: 240,
+    tokenBatches: 2_880,
+    tokenWrites: 57_600,
+  });
+  assert.equal(fixture.observation.officialSoak.listenerDeliveriesExpected, 60_000);
+  assert.equal(fixture.observation.officialSoak.listenerDeliveriesObserved, 60_000);
+  for (const field of [
+    "errors", "stalls", "listenerGaps", "acknowledgedStateMismatches",
+    "duplicateObservableEffects", "failedUnits", "oomOrResourceEvidence",
+  ] as const) {
+    assert.equal(fixture.observation.officialSoak[field], 0);
+  }
+  assert.equal(fixture.observation.officialRestart.preflightPassed, true);
+  assert.equal(fixture.observation.officialRestart.readinessPassed, true);
+  assert.deepEqual(fixture.observation.officialRestart.completedJourneyIds, [
+    "otp-auth-login",
+    "dashboard-and-deck-list",
+    "existing-deck-and-listener-edit",
+  ]);
+  assert.equal(fixture.observation.officialRestart.failedJourneyId, "catalog-slide-add");
+  assert.equal(fixture.observation.officialRestart.failureSite, "hoverCatalogSlideCard");
+  assert.equal(fixture.observation.officialRestart.pageErrors, 0);
+  assert.equal(fixture.observation.officialRestart.gatingRequestFailures, 0);
+  assert.equal(fixture.observation.officialRestart.pendingRequests.storageAliasCatalogueChunkGets.count, 8);
+  assert.equal(fixture.observation.officialRestart.pendingRequests.storageAliasCatalogueChunkGets.retryAttemptsPerObject, 4);
+  assert.equal(fixture.observation.officialRestart.pendingRequests.rawFirestoreListenPost.count, 1);
+  assert.equal(fixture.observation.officialRestart.pendingRequests.nextStaticImageGet.count, 1);
+  assert.equal(fixture.observation.officialRestart.pendingRequests.cleanupUserPings.count, 3);
+  assert.equal(fixture.observation.officialRestart.pendingRequests.rawAndProxiedPathsStalledTogether, true);
+  assert.equal(fixture.observation.officialRestart.failedSystemdUnits, 0);
+  assert.equal(fixture.observation.officialRestart.currentBootOomOrResourceEvidence, 0);
+  assert.equal(fixture.observation.firesideFullDataStageStarted, false);
+  assert.equal(fixture.observation.bothStacksRanConcurrently, false);
+  assert.deepEqual(fixture.classification, {
+    result: "official-baseline-host-limited-at-restart",
+    notPortless: true,
+    notFireside: true,
+    notTwodartApplicationLogic: true,
+    basis: "Multiple unrelated raw-emulator, proxied Storage, and Next.js requests remained pending together without response or request-failed events after the official stack plus Chrome exceeded the 15 GiB host's practical resident-memory capacity.",
+  });
+  assert.deepEqual(fixture.contract, {
+    officialInitialAndSoakRemainBaselineMeasurements: true,
+    officialStageMustNotBeRerun: true,
+    officialExceptionScope: "post-restart host exhaustion only",
+    officialEvidenceMustRemainImmutableAndChecksumVerified: true,
+    continueWithFiresideAfterFreshQuiescentPreflight: true,
+    firesideCriteriaChanged: false,
+    firesideReadinessRequired: true,
+    firesideInitialJourneysRequired: 9,
+    firesideSoakSecondsRequired: 7_200,
+    firesideExportRestartRequired: true,
+    firesideRestartJourneysRequired: 9,
+    fullDataParityRequired: true,
+    freshColleagueAcceptanceRequired: true,
+    regressionsRequired: true,
+    performanceWinnerRequired: false,
+    finalReportMustMarkOfficialRestartHostLimited: true,
+    phase6MayStart: false,
+  });
+});
 
 test("the r33 official Storage import freezes the runtime-filesystem capacity failure", async () => {
   const fixture = JSON.parse(
