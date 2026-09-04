@@ -2584,6 +2584,11 @@ protected browser runner records every stack process's RSS and PSS every ten
 seconds and preserves per-process peaks. It adds attribution evidence only and
 does not change browser actions or verdicts.
 
+Any repaired product candidate must pass the cheap two-stack smoke at that exact
+revision and the current manifest before it may continue against the banked r36
+official evidence. The continuation never substitutes r36's older smoke for an
+exact-candidate smoke and never reruns the official full-data stage.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.

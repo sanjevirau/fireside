@@ -465,4 +465,13 @@ test("r36 continuation reuses only the exact official baseline and keeps Firesid
   assert.match(source, /Host-limited during catalog-slide-add/u);
   assert.match(source, /No performance winner is claimed/u);
   assert.doesNotMatch(source, /catch[^}]*host-limited/isu);
+
+  const prerequisite = source.slice(
+    source.indexOf("async function validateSmokePrerequisite("),
+    source.indexOf("async function preserveOfficialBaselineEvidence("),
+  );
+  assert.match(prerequisite, /const expectedManifestSha256 = PHASE5_MANIFEST_SHA256/u);
+  assert.match(prerequisite, /const expectedCandidateRevision = currentRevision/u);
+  assert.doesNotMatch(prerequisite, /expectedCandidateRevision = continuingR36/u);
+  assert.doesNotMatch(prerequisite, /expectedManifestSha256 = continuingR36/u);
 });

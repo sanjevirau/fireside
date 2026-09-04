@@ -500,12 +500,8 @@ async function validateSmokePrerequisite(
   const smokeEvidence = args.smokeEvidence;
   const currentRevision = await capture("git", ["rev-parse", "HEAD"], repositoryRoot);
   const continuingR36 = args.officialBaselineEvidence !== null;
-  const expectedManifestSha256 = continuingR36
-    ? manifest.officialRestartHostLimitAmendment.previousManifestSha256
-    : PHASE5_MANIFEST_SHA256;
-  const expectedCandidateRevision = continuingR36
-    ? manifest.officialRestartHostLimitAmendment.sourceCandidateRevision
-    : currentRevision;
+  const expectedManifestSha256 = PHASE5_MANIFEST_SHA256;
+  const expectedCandidateRevision = currentRevision;
   const [result, environment, lifecycle, dataset, soakOfficial, soakFireside] =
     await Promise.all([
       readJsonRecord(path.join(smokeEvidence, "result.json")),
