@@ -1,0 +1,16 @@
+npm notice run fireside-conformance@0.0.1 test:suite:phase5-gate
+npm notice run node --import tsx src/suite/run-phase5-gate.ts --smoke --fireside-binary /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/target-585f588/release/fireside --fireside-dir /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/stack-fireside --fresh-dir /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/fresh-colleague --java-home /home/sanjevi/.local/share/mise/installs/java/26.0.2.1 --node-binary /home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node --official-dir /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/stack-official --project-id demo-twodart-local --runtime-assets-root /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/inputs/Assets --twodart-revision 6bda5bf29b2399017d2a872e8f3fc1a15d073a54 --full-data /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/inputs/full-data --output-dir /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/diagnostics/two-tier-smoke-v3-20260904-585f588-r32 --report-path /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/diagnostics/two-tier-smoke-v3-20260904-585f588-r32.md
+(node:539175) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+Error: Phase 5 cross-stack observation 2 generated cache logical values diverged: {"left":{"decodedBytes":107473,"normalizedSha256":"0693e47b94929662c55a27e463f8936103a09d5bcd25d14eb6c9dcb7c3da1722","physicalBytes":12436},"right":{"decodedBytes":107473,"normalizedSha256":"a21578e94a87912030f0aef7a5231618e290d8a0c8e6b78b5c6916bb8d3d8a22","physicalBytes":12436}}
+    at assertPhase5GeneratedCacheParity (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-585f588/conformance/src/suite/phase5-cache-state-parity.ts:91:11)
+    at assertCacheParity (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-585f588/conformance/src/suite/run-phase5-gate.ts:975:5)
+    at main (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-585f588/conformance/src/suite/run-phase5-gate.ts:309:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async <anonymous> (/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/harness-585f588/conformance/src/suite/run-phase5-gate.ts:1707:1)
+
+Node.js v24.20.0

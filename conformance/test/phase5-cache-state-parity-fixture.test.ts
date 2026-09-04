@@ -16,7 +16,7 @@ const fixtureUrl = new URL(
 );
 
 interface Observation {
-  readonly attempt: "r29" | "r31";
+  readonly attempt: "r29" | "r31" | "r32";
   readonly decodedBytes: number;
   readonly decodedSha256: string;
   readonly gzipBytes: number;
@@ -51,15 +51,21 @@ test("generated Phase 5 cache bytes vary while normalized oracle values match", 
   assert.deepEqual(fixture.dynamicPaths, [
     "metadata.buildTimestamp",
     "data.general.slideThemeData[].chunkedJsonLink",
+    "data.themeMetadataData.slides[].slideThemeData[].chunkedJsonLink",
   ]);
-  assert.equal(fixture.observations.length, 4);
+  assert.equal(fixture.observations.length, 6);
   assert.deepEqual(new Set(fixture.observations.map(({ decodedBytes }) => decodedBytes)), new Set([107_473]));
-  assert.equal(new Set(fixture.observations.map(({ normalizedSha256 }) => normalizedSha256)).size, 1);
-  assert.equal(new Set(fixture.observations.map(({ decodedSha256 }) => decodedSha256)).size, 4);
-  assert.equal(new Set(fixture.observations.map(({ gzipSha256 }) => gzipSha256)).size, 4);
+  assert.equal(new Set(fixture.observations.map(({ decodedSha256 }) => decodedSha256)).size, 6);
+  assert.equal(new Set(fixture.observations.map(({ gzipSha256 }) => gzipSha256)).size, 6);
+  for (const attempt of ["r29", "r31", "r32"] as const) {
+    const normalized = fixture.observations
+      .filter((observation) => observation.attempt === attempt)
+      .map(({ normalizedSha256 }) => normalizedSha256);
+    assert.equal(new Set(normalized).size, 1);
+  }
 
   const official = fixture.observations.filter(({ stack }) => stack === "official");
-  assert.deepEqual(official.map(({ gzipBytes }) => gzipBytes), [12_436, 12_437]);
+  assert.deepEqual(official.map(({ gzipBytes }) => gzipBytes), [12_436, 12_437, 12_437]);
   for (const attempt of ["r29", "r31"] as const) {
     const sizes = fixture.observations
       .filter((observation) => observation.attempt === attempt)

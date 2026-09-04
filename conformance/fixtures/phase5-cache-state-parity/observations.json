@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "syntheticOnly": true,
   "oracle": "firebase-tools 15.22.0 Storage emulator running the pinned Twodart cache watcher",
   "twodartRevision": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54",
@@ -10,7 +10,8 @@
   },
   "dynamicPaths": [
     "metadata.buildTimestamp",
-    "data.general.slideThemeData[].chunkedJsonLink"
+    "data.general.slideThemeData[].chunkedJsonLink",
+    "data.themeMetadataData.slides[].slideThemeData[].chunkedJsonLink"
   ],
   "observations": [
     {
@@ -60,8 +61,49 @@
       "gzipSha256": "71b4de56dd525ca18fdf30d4afc3df7ba79f0422ba1d3c31eab78eae1f145495",
       "decodedSha256": "2e7e90c87a501518b1ecbb104398b3f50830a54e9aafbb48b9734eb994297349",
       "normalizedSha256": "7fa220c07566d5c1b93d4f0d63764db0d4a5323095869eef37c83adc8605e9a4"
+    },
+    {
+      "attempt": "r32",
+      "candidateRevision": "585f588f5d6d420b057e472cfe08567b00e56d5a",
+      "stack": "official",
+      "storagePort": 23002,
+      "buildTimestamp": 1788483796244,
+      "gzipBytes": 12437,
+      "decodedBytes": 107473,
+      "gzipSha256": "70bcec8f4bebcb748ccf8042814c3cc1ceb1e5de58c51b35cc687631c1bee808",
+      "decodedSha256": "d967881f932a3bde18fa26632241a2969ed3315c1c824c64a9cd89279e8affea",
+      "normalizedSha256": "291180b23b28d456dc410de736a8381f4dedd934af0ffe56c6cfdc2b7e8a0a9f"
+    },
+    {
+      "attempt": "r32",
+      "candidateRevision": "585f588f5d6d420b057e472cfe08567b00e56d5a",
+      "stack": "fireside",
+      "storagePort": 23102,
+      "buildTimestamp": 1788484033434,
+      "gzipBytes": 12436,
+      "decodedBytes": 107473,
+      "gzipSha256": "98500075fa04842cb87b74d62e975dc01c512ead8da95268d1864772ca49ff64",
+      "decodedSha256": "b69583a05497ee316f208d260f783f5ec796355d28892fc4cdfe65b152fc58ab",
+      "normalizedSha256": "291180b23b28d456dc410de736a8381f4dedd934af0ffe56c6cfdc2b7e8a0a9f"
     }
   ],
+  "r32Observation2Failure": {
+    "capturedBeforeExportFirstShutdown": true,
+    "official": {
+      "decodedBytes": 107473,
+      "incompleteNormalizedSha256": "0693e47b94929662c55a27e463f8936103a09d5bcd25d14eb6c9dcb7c3da1722",
+      "physicalBytes": 12436
+    },
+    "fireside": {
+      "decodedBytes": 107473,
+      "incompleteNormalizedSha256": "a21578e94a87912030f0aef7a5231618e290d8a0c8e6b78b5c6916bb8d3d8a22",
+      "physicalBytes": 12436
+    },
+    "exportedDecodedValuesDifferOnlyAt": [
+      "metadata.buildTimestamp",
+      "data.themeMetadataData.slides[0].slideThemeData[0].chunkedJsonLink"
+    ]
+  },
   "r31InitialStateFailure": {
     "official": {
       "authUsers": 0,
