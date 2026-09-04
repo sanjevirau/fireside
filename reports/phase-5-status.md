@@ -20,9 +20,14 @@ SHA-256 `48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e`.
 Its first candidate passed all seven CI jobs, then a property-order-sensitive
 identity guard stopped before any Fireside measurement despite an exact export
 match. That failure is preserved. The typed-field repair passed the full
-seven-job matrix, but the immutable Fireside continuation then failed during
-its third initial browser journey under a host-wide request stall. Phase 5 is
-failed and stopped for review.
+seven-job matrix, but the first immutable Fireside continuation then failed
+during its third initial browser journey under a host-wide request stall.
+Scoped query streaming and Storage pagination repairs subsequently passed the
+full matrix and the r39 cheap smoke. The next Fireside continuation cleared
+full-data readiness and completed five journeys, then exposed an ordered
+Write-stream response defect. Its exact failure evidence and Java six-write
+oracle are preserved; the bounded overnight repair loop is active and Phase 5
+remains incomplete.
 
 ## Current loop
 
@@ -40,6 +45,7 @@ failed and stopped for review.
 | [r34](phase-5-smoke-20260904-r34.md) (attempt 4/8 after reset) | Preflight only; no stack or journey started | Harness: one `/proc` scan caught a transient process at `stack-official` but did not retain command identity or establish stable quiescence | `swap-preflight-transient-process-r34` fixture | `74113ad` | [33834124800](https://github.com/sanjevirau/fireside/actions/runs/33834124800), 7/7 green | Fresh build passed; swap drain did not start; later inspections found zero matching processes/listeners; full gate absent |
 | [r35](phase-5-smoke-20260904-r35.md) (attempt 5/8 after reset) | Official 9/9 + 60 s soak; Fireside readiness only | Harness: concurrent Portless wrappers assigned port 4448 to both Images and TwodartNet; Images bound first and Kestrel failed | `portless-concurrent-port-allocation-r35` fixture | `27e96b6` | [33838985452](https://github.com/sanjevirau/fireside/actions/runs/33838985452), 7/7 green | Fireside emulator/cache/frontend ready but TwodartNet never ready; no Fireside browser/soak; full gate absent |
 | [r36](phase-5-full-gate-20260904-r36.md) (attempt 6/8 after reset) | Both smoke stacks 9/9 + 60 s; official full readiness + 9/9 + 7,200 s soak; official restart host-limited after 3 journeys; Fireside continuation readiness + 2 journeys, then third journey failed | Official host exhaustion; first continuation guard bug before measurement; final continuation observed a host-wide raw/proxied/application request stall but retained the strict Fireside failure | `official-restart-host-exhaustion-r36`, `official-export-identity-guard-r36`, and `fireside-initial-host-stall-r36` fixtures | `30e0d25`; `b6c2309`; final `3a5644f` | [33844348621](https://github.com/sanjevirau/fireside/actions/runs/33844348621), [33861280726](https://github.com/sanjevirau/fireside/actions/runs/33861280726), and [33863537340](https://github.com/sanjevirau/fireside/actions/runs/33863537340), all 7/7 green | **Phase 5 failed**; exact Fireside evidence preserved; no rerun, performance winner, tag, or Phase 6 |
+| [r40](phase-5-full-gate-20260905-r40.md) (overnight attempt 1/6) | r39 cheap smoke passed both stacks 9/9 + 60 s; Fireside full readiness + first 5 journeys | Fireside product: overlapping Write forward maps reached the shared stream out of absolute order, so the SDK matched a one-result response to a six-mutation batch | `33279fa` (Java v1.22.0 six-write batch, both variants) | repair in progress after `c955d30` | pending | Failed strict initial browser stage; exact evidence preserved; soak/restart/parity not started |
 
 R25 failure evidence is published in `b79750636e1666e1d097b341b7cc9f85ba74d28c`;
 [evidence CI 33748445917](https://github.com/sanjevirau/fireside/actions/runs/33748445917)
