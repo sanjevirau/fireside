@@ -1,0 +1,47 @@
+diff --git a/scripts/dev/mprocs/js-dotnet.yaml b/scripts/dev/mprocs/js-dotnet.yaml
+index e282232d..88408304 100644
+--- a/scripts/dev/mprocs/js-dotnet.yaml
++++ b/scripts/dev/mprocs/js-dotnet.yaml
+@@ -22,7 +22,7 @@ procs:
+   # process group so Next.js shuts down gracefully. Same fix as the dotnet pane
+   # below.
+   templates:
+-    shell: "bunx portless run --name templates.twodart -- bash -c 'cd apps/templates && exec bun run dev -- --port=$PORT'"
++    shell: "bunx portless run --name templates.twodart --app-port 23113 -- bash -c 'cd apps/templates && exec bun run dev -- --port=$PORT'"
+     ready:
+       pattern: 'Ready in'
+       timeout: 10m
+@@ -30,13 +30,13 @@ procs:
+       send-keys: ['<C-c>']
+ 
+   templates-python:
+-    shell: 'bunx portless run --name papi.twodart -- bun run firebase-templates:python:start'
++    shell: 'bunx portless run --name papi.twodart --app-port 23114 -- bun run firebase-templates:python:start'
+     ready:
+       pattern: 'Running on'
+       timeout: 2m
+ 
+   images:
+-    shell: "bunx portless run --name images.twodart -- bash -c 'HOST=127.0.0.1 PORT=$PORT bun --filter @twodart/images-express dev'"
++    shell: "bunx portless run --name images.twodart --app-port 23115 -- bash -c 'HOST=127.0.0.1 PORT=$PORT bun --filter @twodart/images-express dev'"
+     ready:
+       pattern: 'Server successfully started'
+       timeout: 2m
+@@ -86,7 +86,7 @@ procs:
+   # `bunx portless run` wrapper here masks the issue partially but doesn't
+   # solve it — same `exec` + `send-keys ^C` treatment is needed.
+   dotnet:
+-    shell: "bunx portless run --name twodartnet.twodart --force -- bash -c 'set -a; [ -f engines/twodartnet/.env ] && . engines/twodartnet/.env; export ASPNETCORE_ENVIRONMENT=Development FONTCONFIG_PATH=/opt/homebrew/etc/fonts/; set +a; cd engines/twodartnet && exec dotnet watch --no-hot-reload --non-interactive run --project TwodartNet/TwodartNet.csproj --urls http://127.0.0.1:$PORT'"
++    shell: "bunx portless run --name twodartnet.twodart --app-port 23116 --force -- bash -c 'set -a; [ -f engines/twodartnet/.env ] && . engines/twodartnet/.env; export ASPNETCORE_ENVIRONMENT=Development FONTCONFIG_PATH=/opt/homebrew/etc/fonts/; set +a; cd engines/twodartnet && exec dotnet watch --no-hot-reload --non-interactive run --project TwodartNet/TwodartNet.csproj --urls http://127.0.0.1:$PORT'"
+     stop:
+       send-keys: ['<C-c>']
+     ready:
+@@ -110,7 +110,7 @@ procs:
+   # signals the leader PID.
+   cf-worker:
+     autostart: false
+-    shell: "bunx portless run --name ingest-ph.twodart -- bash -c 'cd apps/cf-workers && exec bunx wrangler dev --ip 127.0.0.1 --port $PORT'"
++    shell: "bunx portless run --name ingest-ph.twodart --app-port 23117 -- bash -c 'cd apps/cf-workers && exec bunx wrangler dev --ip 127.0.0.1 --port $PORT'"
+     stop: SIGINT
+     ready:
+       pattern: 'Ready on'
