@@ -1,0 +1,122 @@
+[0m[2m[35m$[0m [2m[1mbash scripts/dev/start-firebase-emulator.sh[0m
+Firebase emulator runtime: Node 24.20.0 (/home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node)
+Local Functions use an isolated demo credential; firebase-tools may report ADC detected.
+🫙 Emulator JVM: HotSpot (/home/sanjevi/.local/share/mise/installs/java/26.0.2.1/bin/java); untuned
+🔒 External-isolation mode: Extensions disabled; custom Functions and Pub/Sub enabled.
+[36m[1mi  emulators:[22m[39m Starting emulators: auth, functions, firestore, pubsub, storage
+[36m[1mi  emulators:[22m[39m Detected demo project ID "demo-twodart-local", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+[33m[1m⚠  functions:[22m[39m Application Default Credentials detected. Non-emulated services will access production using these credentials. Be careful!
+[36m[1mi  firestore:[22m[39m Importing data from /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/stack-official/apps/templates-firebase/loadData/datasets/phase5-smoke-3736859d75de5038/firestore_export/firestore_export.overall_export_metadata
+[36m[1mi  firestore:[22m[39m Firestore Emulator logging to [1mfirestore-debug.log[22m
+[32m[1m✔  firestore:[22m[39m Firestore Emulator was started in standard edition.
+[32m[1m✔  firestore:[22m[39m Firestore Emulator UI websocket is running on 23007.
+[36m[1mi  pubsub:[22m[39m Pub/Sub Emulator logging to [1mpubsub-debug.log[22m
+[33m[1m⚠ [22m[39m Unexpected rules runtime error: Picked up JAVA_TOOL_OPTIONS: 
+
+[33m[1m⚠ [22m[39m Unexpected rules runtime error: WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.google.protobuf.UnsafeUtil$MemoryAccessor (file:/home/sanjevi/.cache/firebase/emulators/cloud-storage-rules-runtime-v1.1.3.jar)
+WARNING: Please consider reporting this to the maintainers of class com.google.protobuf.UnsafeUtil$MemoryAccessor
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+
+[36m[1mi  functions:[22m[39m Watching "/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/stack-official/dist/apps/templates-firebase/functions" for Cloud Functions...
+[32m[1m✔  functions:[22m[39m Using node@24 from host.
+[36m[1mi [22m[39m [36m[1mfunctions: [22m[39mLoaded environment variables from .env.demo-twodart-local.
+Serving at port 8275
+
+[32m[1m✔  functions:[22m[39m Loaded functions definitions from source: onAcceptRetentionOffer, onCancelStripeSubscription, onDeleteUserFontDoc, onGetProratedInvoice, onGetRetentionOffer, onPresentationDeleted, onReactivateSubscription, onReceiveStripeWebhook, onRunCronBackupAuth, onRunCronResetCredits, onUpdateInvitedLicenseUserDoc, onUpdateStripeSubscription, onUpdateUserDoc, onWriteInitiateCheckoutSession, onWriteLicenseDoc, onWriteSubscriptionDoc.
+[32m[1m✔  functions[us-central1-onAcceptRetentionOffer]:[22m[39m [1mhttp[22m function initialized (http://127.0.0.1:23003/demo-twodart-local/us-central1/onAcceptRetentionOffer).
+[32m[1m✔  functions[us-central1-onCancelStripeSubscription]:[22m[39m [1mhttp[22m function initialized (http://127.0.0.1:23003/demo-twodart-local/us-central1/onCancelStripeSubscription).
+[32m[1m✔  functions[us-central1-onDeleteUserFontDoc]:[22m[39m [1mfirestore[22m function initialized.
+[32m[1m✔  functions[us-central1-onGetProratedInvoice]:[22m[39m [1mhttp[22m function initialized (http://127.0.0.1:23003/demo-twodart-local/us-central1/onGetProratedInvoice).
+[32m[1m✔  functions[us-central1-onGetRetentionOffer]:[22m[39m [1mhttp[22m function initialized (http://127.0.0.1:23003/demo-twodart-local/us-central1/onGetRetentionOffer).
+[32m[1m✔  functions[us-central1-onPresentationDeleted]:[22m[39m [1mfirestore[22m function initialized.
+[32m[1m✔  functions[us-central1-onReactivateSubscription]:[22m[39m [1mhttp[22m function initialized (http://127.0.0.1:23003/demo-twodart-local/us-central1/onReactivateSubscription).
+[32m[1m✔  functions[us-central1-onReceiveStripeWebhook]:[22m[39m [1mhttp[22m function initialized (http://127.0.0.1:23003/demo-twodart-local/us-central1/onReceiveStripeWebhook).
+[32m[1m✔  functions[us-central1-onRunCronBackupAuth]:[22m[39m [1mpubsub[22m function initialized.
+[32m[1m✔  functions[us-central1-onRunCronResetCredits]:[22m[39m [1mpubsub[22m function initialized.
+[32m[1m✔  functions[us-central1-onUpdateInvitedLicenseUserDoc]:[22m[39m [1mfirestore[22m function initialized.
+[32m[1m✔  functions[us-central1-onUpdateStripeSubscription]:[22m[39m [1mhttp[22m function initialized (http://127.0.0.1:23003/demo-twodart-local/us-central1/onUpdateStripeSubscription).
+[32m[1m✔  functions[us-central1-onUpdateUserDoc]:[22m[39m [1mfirestore[22m function initialized.
+[32m[1m✔  functions[us-central1-onWriteInitiateCheckoutSession]:[22m[39m [1mfirestore[22m function initialized.
+[32m[1m✔  functions[us-central1-onWriteLicenseDoc]:[22m[39m [1mfirestore[22m function initialized.
+[32m[1m✔  functions[us-central1-onWriteSubscriptionDoc]:[22m[39m [1mfirestore[22m function initialized.
+
+[90m┌─────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [32m✔[39m  [1mAll emulators ready! It is now safe to connect your app.[22m [90m│[39m
+[90m│[39m [36mi[39m  View Emulator UI at [4m[1mhttp://127.0.0.1:23006/[22m[24m              [90m│[39m
+[90m└─────────────────────────────────────────────────────────────┘[39m
+
+[90m┌────────────────[39m[90m┬─────────────────[39m[90m┬──────────────────────────────────┐[39m
+[90m│[39m[33m Emulator       [39m[90m│[39m[33m Host:Port       [39m[90m│[39m[33m View in Emulator UI              [39m[90m│[39m
+[90m├────────────────[39m[90m┼─────────────────[39m[90m┼──────────────────────────────────┤[39m
+[90m│[39m Authentication [90m│[39m 127.0.0.1:23001 [90m│[39m [4m[1mhttp://127.0.0.1:23006/auth[22m[24m      [90m│[39m
+[90m├────────────────[39m[90m┼─────────────────[39m[90m┼──────────────────────────────────┤[39m
+[90m│[39m Functions      [90m│[39m 127.0.0.1:23003 [90m│[39m [4m[1mhttp://127.0.0.1:23006/functions[22m[24m [90m│[39m
+[90m├────────────────[39m[90m┼─────────────────[39m[90m┼──────────────────────────────────┤[39m
+[90m│[39m Firestore      [90m│[39m 127.0.0.1:23000 [90m│[39m [4m[1mhttp://127.0.0.1:23006/firestore[22m[24m [90m│[39m
+[90m├────────────────[39m[90m┼─────────────────[39m[90m┼──────────────────────────────────┤[39m
+[90m│[39m Pub/Sub        [90m│[39m 127.0.0.1:23004 [90m│[39m n/a                              [90m│[39m
+[90m├────────────────[39m[90m┼─────────────────[39m[90m┼──────────────────────────────────┤[39m
+[90m│[39m Storage        [90m│[39m 127.0.0.1:23002 [90m│[39m [4m[1mhttp://127.0.0.1:23006/storage[22m[24m   [90m│[39m
+[90m└────────────────[39m[90m┴─────────────────[39m[90m┴──────────────────────────────────┘[39m
+[90m  Emulator Hub host: 127.0.0.1 port: 23005[39m
+[90m  Other reserved ports:[39m 23008, 23007
+
+Issues? Report them at [4m[1mhttps://github.com/firebase/firebase-tools/issues[22m[24m and attach the *-debug.log files.
+ 
+[32m[1m✔  functions:[22m[39m Using node@24 from host.
+[36m[1mi [22m[39m [36m[1mfunctions: [22m[39mLoaded environment variables from .env.demo-twodart-local.
+Serving at port 8187
+
+[32m[1m✔  functions:[22m[39m Loaded functions definitions from source: onAcceptRetentionOffer, onCancelStripeSubscription, onDeleteUserFontDoc, onGetProratedInvoice, onGetRetentionOffer, onPresentationDeleted, onReactivateSubscription, onReceiveStripeWebhook, onRunCronBackupAuth, onRunCronResetCredits, onUpdateInvitedLicenseUserDoc, onUpdateStripeSubscription, onUpdateUserDoc, onWriteInitiateCheckoutSession, onWriteLicenseDoc, onWriteSubscriptionDoc.
+[36m[1mi [22m[39m [36m[1mfunctions: [22m[39mLoaded environment variables from .env.demo-twodart-local.
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-onWriteLicenseDoc"
+[36m[1mi  functions:[22m[39m Finished "us-central1-onWriteLicenseDoc" in 22.7182ms
+[36m[1mi [22m[39m [36m[1mfunctions: [22m[39mLoaded environment variables from .env.demo-twodart-local.
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-onUpdateUserDoc"
+[90m> [39m No premade templates to copy for user phase5-smoke-user
+[90m> [39m No brandings to copy for user phase5-smoke-user
+[36m[1mi  functions:[22m[39m Finished "us-central1-onUpdateUserDoc" in 153.762918ms
+[36m[1mi [22m[39m [36m[1mfunctions: [22m[39mLoaded environment variables from .env.demo-twodart-local.
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-onUpdateInvitedLicenseUserDoc"
+[36m[1mi  functions:[22m[39m Finished "us-central1-onUpdateInvitedLicenseUserDoc" in 19.968299ms
+[36m[1mi [22m[39m [36m[1mfunctions: [22m[39mLoaded environment variables from .env.demo-twodart-local.
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-onPresentationDeleted"
+[90m> [39m No active share links to retire for deleted presentation IPmPdtZRQEYamiXrjFkk
+[36m[1mi  functions:[22m[39m Finished "us-central1-onPresentationDeleted" in 127.464828ms
+[36m[1mi [22m[39m [36m[1mfunctions: [22m[39mLoaded environment variables from .env.demo-twodart-local.
+[36m[1mi [22m[39m [36m[1mfunctions: [22m[39mLoaded environment variables from .env.demo-twodart-local.
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-onWriteInitiateCheckoutSession"
+[36m[1mi  functions:[22m[39m Finished "us-central1-onWriteInitiateCheckoutSession" in 10.51367ms
+[36m[1mi  functions:[22m[39m Beginning execution of "us-central1-onWriteInitiateCheckoutSession"
+[36m[1mi  functions:[22m[39m Finished "us-central1-onWriteInitiateCheckoutSession" in 2.60251ms
+ 
+[36m[1mi  emulators:[22m[39m Received SIGINT (Ctrl-C) for the first time. Starting a clean shutdown.
+[36m[1mi  emulators:[22m[39m Please wait for a clean shutdown or send the SIGINT (Ctrl-C) signal again to stop right now.
+[36m[1mi [22m[39m Automatically exporting data using --export-on-exit "/srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/exports/official/smoke/two-tier-smoke-v3-20260905-9756be6-r43" please wait for the export to finish...
+[36m[1mi [22m[39m Found running emulator hub for project [1mdemo-twodart-local[22m at http://127.0.0.1:23005
+[36m[1mi [22m[39m Exporting data to: /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/exports/official/smoke/two-tier-smoke-v3-20260905-9756be6-r43
+[36m[1mi  emulators:[22m[39m Received export request. Exporting data to /srv/dev-fast/runtime-data/fireside-phase5-20260902T1417+0800-5b51e4d/exports/official/smoke/two-tier-smoke-v3-20260905-9756be6-r43.
+[36m[1mi  emulators:[22m[39m Exporting Firestore...
+[32m[1m✔  emulators:[22m[39m Firestore export complete in 0s.
+[36m[1mi  emulators:[22m[39m Exporting Authentication...
+[32m[1m✔  emulators:[22m[39m Authentication export complete in 0s.
+[36m[1mi  emulators:[22m[39m Exporting Cloud Storage...
+[36m[1mi  storage:[22m[39m Exported 1/2 files, 12.1 KB/12.6 KB (96%).
+[36m[1mi  storage:[22m[39m Exported 2/2 files, 12.6 KB/12.6 KB (100%).
+[32m[1m✔  emulators:[22m[39m Cloud Storage export complete in 0s.
+[36m[1mi  emulators:[22m[39m Finalizing emulator export...
+[32m[1m✔  emulators:[22m[39m All emulator data exported in 0s.
+[32m[1m✔  emulators:[22m[39m Export complete.
+[32m[1m✔ [22m[39m Export complete
+[36m[1mi  emulators:[22m[39m Shutting down emulators.
+[36m[1mi  ui:[22m[39m Stopping Emulator UI
+[36m[1mi  functions:[22m[39m Stopping Functions Emulator
+[36m[1mi  firestore:[22m[39m Stopping Firestore Emulator
+[36m[1mi  pubsub:[22m[39m Stopping Pub/Sub Emulator
+[36m[1mi  auth:[22m[39m Stopping Authentication Emulator
+[36m[1mi  storage:[22m[39m Stopping Storage Emulator
+[36m[1mi  eventarc:[22m[39m Stopping Eventarc Emulator
+[36m[1mi  tasks:[22m[39m Stopping Cloud Tasks Emulator
+[36m[1mi  hub:[22m[39m Stopping emulator hub
+[36m[1mi  logging:[22m[39m Stopping Logging Emulator

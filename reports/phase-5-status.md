@@ -38,8 +38,15 @@ then stopped before restart because the reusable checkout still contained the
 literal `phase5-lifecycle-export` staging name from an earlier attempt. The
 overwrite guard behaved correctly; the lifecycle name was not attempt-scoped.
 That checksum-verified failure and its diagnostic amendment are preserved before
-the harness correction. The bounded overnight loop remains active and Phase 5
-remains incomplete.
+the harness correction. The attempt-scoped correction then passed full CI, a
+fresh build, the r43 two-stack smoke, full-data readiness, 9/9 initial journeys,
+and the 7,200-second soak. R43 stopped only at the post-export restart preflight:
+75,874,926,592 available bytes were below the frozen 80,000,000,000-byte floor.
+The exact evidence is preserved, stale failed-attempt payload copies were
+removed without touching the banked official baseline, and the host now has
+126,171,009,024 available bytes. The single authorized fresh-preflight retry for
+this infrastructure kind is next. The bounded overnight loop remains active and
+Phase 5 remains incomplete.
 
 ## Current loop
 
@@ -60,6 +67,7 @@ remains incomplete.
 | [r40](phase-5-full-gate-20260905-r40.md) (overnight attempt 1/6) | r39 cheap smoke passed both stacks 9/9 + 60 s; Fireside full readiness + first 5 journeys | Fireside product: overlapping Write forward maps reached the shared stream out of absolute order, so the SDK matched a one-result response to a six-mutation batch | `33279fa` (Java v1.22.0 six-write batch, both variants) | `aab4a56` | [33906402165](https://github.com/sanjevirau/fireside/actions/runs/33906402165), 7/7 green | Failed strict initial browser stage; exact evidence preserved; repaired behavior passed r41 initial and restart browser runs |
 | [r41](phase-5-full-gate-20260905-r41.md) (overnight attempt 2/6) | Exact-candidate cheap smoke passed both stacks 9/9 + 60 s; Fireside full initial 9/9 + 7,200 s soak + restart 9/9 | Harness: frozen-state accounting covered only 47 collection groups (15,383 documents) and omitted 11 groups (195,819); official and Fireside both total the exact frozen 211,202 | `full-data-collection-inventory-r41` fixture, captured before correction | pending | `aab4a56` source [33906402165](https://github.com/sanjevirau/fireside/actions/runs/33906402165), 7/7 green; correction pending | Failed after second export-first shutdown and before parity; product stages passed; official baseline remains banked |
 | [r42](phase-5-full-gate-20260905-r42.md) (overnight attempt 3/6) | Exact-candidate cheap smoke passed both stacks 9/9 + 60 s; Fireside full readiness + initial 9/9 + 7,200 s soak | Harness: lifecycle export destination used one literal name in the persistent Twodart checkout, colliding with an earlier attempt; overwrite guard correctly refused replacement | `lifecycle-export-staging-r42` fixture, captured before correction | pending | `74097c9` [33924570756](https://github.com/sanjevirau/fireside/actions/runs/33924570756), 7/7 green; correction pending | Failed before restart staging; no Fireside criterion failed, but restart/parity/acceptance/regressions did not run; official baseline remains banked |
+| [r43](phase-5-full-gate-20260905-r43.md) (overnight attempt 4/6) | Exact-candidate cheap smoke passed both stacks 9/9 + 60 s; Fireside full readiness + initial 9/9 + 7,200 s soak | Infrastructure capacity: post-export restart preflight had 75,874,926,592 available bytes versus the frozen 80,000,000,000-byte floor; every other health check passed | r42 lifecycle fixture remains the last behavioral fixture; r43 is infrastructure-only | `9756be6` | [33936118925](https://github.com/sanjevirau/fireside/actions/runs/33936118925), 7/7 green | Failed before restart only; exact evidence preserved; stale generated failed-attempt payloads removed, banked official baseline retained, one fresh-preflight retry authorized |
 
 R25 failure evidence is published in `b79750636e1666e1d097b341b7cc9f85ba74d28c`;
 [evidence CI 33748445917](https://github.com/sanjevirau/fireside/actions/runs/33748445917)

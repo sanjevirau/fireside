@@ -1,0 +1,86 @@
+{
+  "label": "fireside-soak",
+  "startedAt": "2026-09-05T01:55:55.481Z",
+  "passed": true,
+  "processQuiescence": {
+    "startedAt": "2026-09-05T01:55:55.481Z",
+    "completedAt": "2026-09-05T01:55:56.076Z",
+    "maximumWaitMilliseconds": 30000,
+    "sampleIntervalMilliseconds": 250,
+    "requiredConsecutiveEmptySamples": 3,
+    "samples": [
+      {
+        "observedAt": "2026-09-05T01:55:55.502Z",
+        "activeProcesses": []
+      },
+      {
+        "observedAt": "2026-09-05T01:55:55.791Z",
+        "activeProcesses": []
+      },
+      {
+        "observedAt": "2026-09-05T01:55:56.076Z",
+        "activeProcesses": []
+      }
+    ],
+    "passed": true
+  },
+  "swapDrain": {
+    "startedAt": "2026-09-05T01:55:56.112Z",
+    "completedAt": "2026-09-05T01:56:02.876Z",
+    "authorization": "phase-5-schema-v3-quiescent-preflight",
+    "invocationPrefix": "sudo -n",
+    "before": {
+      "residualSwapBytes": 611745792,
+      "vmSwappiness": 30,
+      "configuredSwap": "Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n/swap.img                               file\t\t4194300\t\t311832\t\t-1\n/srv/dev-fast/.swap/devhost.swap        file\t\t16777212\t285576\t\t-1\n"
+    },
+    "after": {
+      "residualSwapBytes": 1081344,
+      "vmSwappiness": 30,
+      "configuredSwap": "Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n/swap.img                               file\t\t4194300\t\t1056\t\t-1\n/srv/dev-fast/.swap/devhost.swap        file\t\t16777212\t0\t\t-1\n"
+    },
+    "commands": [
+      {
+        "command": "swapoff",
+        "args": [
+          "-a"
+        ],
+        "exitCode": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "command": "swapon",
+        "args": [
+          "-a"
+        ],
+        "exitCode": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "swappinessChanged": false,
+    "passed": true
+  },
+  "hostHealth": {
+    "availableDiskBytes": 93185101824,
+    "conflictingListeners": 0,
+    "failedUnits": 0,
+    "oomOrResourceEvidence": 0,
+    "sshState": "active",
+    "steadyVmstatSamples": 3,
+    "swapInPagesPerSecond": [
+      0,
+      0,
+      0
+    ],
+    "swapOutPagesPerSecond": [
+      0,
+      0,
+      0
+    ],
+    "vmstatActivityUnit": "KiB/second (legacy field names retained; required value is zero)",
+    "systemState": "running"
+  },
+  "completedAt": "2026-09-05T01:56:05.965Z"
+}

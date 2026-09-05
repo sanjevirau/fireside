@@ -1,0 +1,31 @@
+
+╔════════════════════════════════════════════════════════════╗
+║                  💻 DESKTOP DEV MODE                       ║
+╠════════════════════════════════════════════════════════════╣
+║  Branch / prefix: (main clone — no prefix)
+║  Dataset:         phase5-smoke-3736859d75de5038
+║                                                            ║
+║  Open in browser (HTTPS via portless):                     ║
+║  ─────────────────────────────────────                     ║
+║  Templates:        https://templates.twodart.localhost
+║  Twodartnet API:   https://twodartnet.twodart.localhost
+║  Images API:       https://images.twodart.localhost
+║  PAPI:             https://papi.twodart.localhost
+║  CF worker:        https://ingest-ph.twodart.localhost  (proc off by default)
+║  Firebase Storage: https://storage.twodart.localhost
+║  Firebase UI:      https://emulator.twodart.localhost  (overview/logs only*)
+║                                                            ║
+║  Local-only (raw ports — bypass portless):                 ║
+║  ─────────────────────────────────────                     ║
+║  Firebase UI:      http://127.0.0.1:23006  ← Firestore/Storage data
+║  Firestore:        http://127.0.0.1:23000
+║  Auth:             http://127.0.0.1:23001
+║  Functions:        http://127.0.0.1:23003
+║  mprocs control:   127.0.0.1:23011
+╚════════════════════════════════════════════════════════════╝
+
+  * The Emulator UI's Firestore/Storage data tabs make direct
+    browser→backend calls to raw HTTP ports, so they fail over the
+    HTTPS proxy with ERR_SSL_PROTOCOL_ERROR (blank page). Browse data
+    via the http://127.0.0.1:23006 URL instead.
+
