@@ -1,7 +1,28 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { BASELINE_SUMS, CANDIDATE, INPUTS, ROOT, journalErrors, processConflict, steadySwapSamples, validateInputReceipt, validateRaid, validateSmart } from './hetzner-preflight.mjs';
+import { BASELINE_SUMS, CANDIDATE, INPUTS, ROOT, journalErrors, processConflict, steadySwapSamples, validateCandidate, validateInputReceipt, validateRaid, validateSmart } from './hetzner-preflight.mjs';
+
+test('corrected-candidate preflight retains the historical input receipt identity', () => {
+  assert.equal(validateCandidate('abf4df4c396010f7970b3e0091df3a6ed103cba9'), 'abf4df4c396010f7970b3e0091df3a6ed103cba9');
+  for (const invalid of ['', 'HEAD', 'main', 'a'.repeat(39), 'a'.repeat(41), undefined, null]) assert.throws(() => validateCandidate(invalid));
+  assert.doesNotThrow(() => validateInputReceipt(receipt()));
+  assert.throws(() => validateInputReceipt({ ...receipt(), candidate: 'abf4df4c396010f7970b3e0091df3a6ed103cba9' }));
+});
+
+test('corrected-candidate controller keeps seven-job CI and all launch interlocks', async () => {
+  const launcher = await readFile(new URL('./deploy-templates-candidate-then-r36.sh', import.meta.url), 'utf8');
+  for (const required of ['phase5_candidate="$3"', 'ci.headSha !== candidate', 'ci.jobs.length !== 7',
+    'test -d "$phase5_fresh/.git"', 'test ! -e "$phase5_fresh/apps/templates-firebase/loadData/datasets/full-data"',
+    'fresh-acceptance/$1/fresh-colleague', '--fresh-dir "$phase5_fresh"', 'cargo build --release --locked',
+    'phase5_manifest=c281263a95cadb7ba254d9b9355bd00808c6054865853158adc54a9886b683aa',
+    'phase5_runner=ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc']) assert.ok(launcher.includes(required), required);
+  for (const stage of ['build', 'smoke', 'full']) assert.ok(launcher.includes(`preflight-before-${stage}" "$phase5_candidate"`));
+  assert.ok(launcher.indexOf('preflight-before-build') < launcher.indexOf('cargo build --release --locked'));
+  assert.ok(launcher.indexOf('preflight-before-smoke') < launcher.indexOf('-- --smoke'));
+  assert.ok(launcher.indexOf('preflight-before-full') < launcher.indexOf('--official-baseline-evidence "$phase5_baseline"'));
+  assert.ok(launcher.includes('Cheap smoke failed; stopping without a full-data run or silent retry.'));
+});
 
 const raid = () => [0, 1, 2].map((index) => ({ name: `md${index}`, level: 'raid1', raidDisks: '2', degraded: '0', syncAction: 'idle', state: 'clean', members: [`nvme0n1p${index + 1}`, `nvme1n1p${index + 1}`], memberStates: ['in_sync', 'in_sync'] }));
 const smart = () => ({ device: { name: '/dev/nvme0n1' }, smartctl: { exit_status: 0 }, smart_status: { passed: true }, nvme_smart_health_information_log: { critical_warning: 0, media_errors: 0, num_err_log_entries: 0 } });

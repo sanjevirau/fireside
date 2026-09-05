@@ -98,12 +98,18 @@ export function processConflict(commandName, command, directory) {
   return scopedDirectory || gateCommand || runtimeBinary || transfer;
 }
 
-export async function preflight(evidenceDirectory) {
+export function validateCandidate(candidate) {
+  if (typeof candidate !== 'string' || !/^[a-f0-9]{40}$/u.test(candidate)) throw new Error('Exact 40-character candidate commit required');
+  return candidate;
+}
+
+export async function preflight(evidenceDirectory, candidate = CANDIDATE) {
+  validateCandidate(candidate);
   const resolved = path.resolve(evidenceDirectory);
   if (!resolved.startsWith(`${ROOT}/attempts/`) || resolved.includes('\n')) throw new Error('Evidence must be a new directory under ROOT/attempts');
   await mkdir(resolved, { recursive: false });
   const files = [];
-  const result = { startedAt: new Date().toISOString(), candidate: CANDIDATE, root: ROOT, passed: false, failures: [] };
+  const result = { startedAt: new Date().toISOString(), candidate, inputReceiptCandidate: CANDIDATE, root: ROOT, passed: false, failures: [] };
   let sequence = 0;
   async function save(name, value) {
     const content = typeof value === 'string' ? value : `${JSON.stringify(value, null, 2)}\n`;
@@ -236,8 +242,8 @@ export async function preflight(evidenceDirectory) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  if (process.argv.length !== 3) throw new Error('Usage: node hetzner-preflight.mjs NEW_EVIDENCE_DIRECTORY');
-  const result = await preflight(process.argv[2]);
+  if (![3, 4].includes(process.argv.length)) throw new Error('Usage: node hetzner-preflight.mjs NEW_EVIDENCE_DIRECTORY [EXACT_CANDIDATE]');
+  const result = await preflight(process.argv[2], process.argv[3]);
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   if (!result.passed) process.exitCode = 1;
 }
