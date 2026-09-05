@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-05T13:51:07.144Z",
+  "capturedBeforeAssertionCorrection": true,
+  "classification": "randomized-test-assumes-bloom-filters-have-no-false-positives",
+  "capture": {
+    "kind": "offline-official-client-oracle",
+    "cloudRequests": 0,
+    "emulatorWorkloads": 0,
+    "syntheticNamesOnly": true,
+    "command": "cd conformance && node --import tsx --test test/bloom-nonmember-oracle.test.ts",
+    "method": "Verify the installed official package and source hashes, extract its unmodified MAX_64_BIT_UNSIGNED_INTEGER-through-BloomFilterError block, execute that block with its actual pinned bloom-blob dependency in an isolated JavaScript context, and call BloomFilter.create(53, 18, members) and mightContain(name). No Fireside Bloom implementation participates in the oracle."
+  },
+  "oracle": {
+    "firebaseVersion": "12.18.0",
+    "firestorePackageVersion": "4.17.1",
+    "firestorePackageIntegrity": "sha512-8lqPNf2w10CtYG+tayVjZO1pSyQpnhztQRudeD109VtXDzNbASTaYdO43sj5PMsDcWq0aOYY3RmJOUlXu9++jw==",
+    "firestoreSource": "node_modules/@firebase/firestore/dist/common-DW1GwHx2.node.cjs.js",
+    "firestoreSourceSha256": "a443c80cde7b8367383057dc4f15918a7fc2f9e5a9d75463752e683410a0de9a",
+    "extractionStart": "const MAX_64_BIT_UNSIGNED_INTEGER =",
+    "extractionEndClass": "class BloomFilterError extends Error",
+    "extractionEnd": "the next newline followed by /** after BloomFilterError",
+    "extractedSourceSha256": "0648ae28400707852bfbaa08c27976a15eba85fe2a940904d87f3f93e0e6ebd2",
+    "bloomPackageVersion": "1.0.7",
+    "bloomPackageIntegrity": "sha512-phBFwieDLvkZGYN9CE9ZFNEIoBVksprzsnCzQejCmCHtgwCXReeuRpoEGN9C4EbhONztv8NRV1tau6Rb9pONwQ==",
+    "bloomBlobSource": "node_modules/@firebase/webchannel-wrapper/dist/bloom-blob/bloom_blob_es2018.js",
+    "bloomBlobSourceSha256": "3dbf2d4b1eb8f0bd3a61fb828791ef054594831fc6f8fa04e8e8c0c08012170c"
+  },
+  "protocol": {
+    "bloomSource": "crates/grpc-front/proto/google/firestore/v1/bloom_filter.proto",
+    "bloomSourceSha256": "f7d44387d5ace96b6f76d03e092ac0e0e9f916f0342698ce4d064a0dac60401a",
+    "existenceFilterSource": "crates/grpc-front/proto/google/firestore/v1/write.proto",
+    "existenceFilterSourceSha256": "192793a66f4762b4c2e96e9b983a4644acd55558fdf322319f648d8584ac8045",
+    "negativeMeansNotInTarget": true,
+    "positiveProvesTargetMembership": false,
+    "actualMemberFalseNegativesAllowed": false,
+    "semanticsEvidence": "The vendored ExistenceFilter comments state the one-way negative guarantee. The actual official client reproduces the positive result for a synthetic name absent from its members."
+  },
+  "deterministicReproduction": {
+    "originalCiInput": false,
+    "resourcePrefix": "projects/demo-fireside-fireside/databases/(default)/documents/runs/00000000-0000-4000-8000-000000000005/fireside_conformance",
+    "memberIds": ["alpha", "beta"],
+    "bitCount": 53,
+    "hashCount": 18,
+    "bitmapBase64": "57XW81ipFQ==",
+    "padding": 3,
+    "membership": [
+      { "id": "alpha", "actualMember": true, "mightContain": true },
+      { "id": "beta", "actualMember": true, "mightContain": true },
+      { "id": "missing", "actualMember": false, "mightContain": true },
+      { "id": "not-present", "actualMember": false, "mightContain": false }
+    ],
+    "missingBitIndices": [13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13]
+  },
+  "ciFailure": {
+    "candidateRevision": "690925c0c1a52d859b09d10e768c010e5d842b22",
+    "runId": 33969616317,
+    "jobId": 101315720932,
+    "jobName": "Differential harness",
+    "url": "https://github.com/sanjevirau/fireside/actions/runs/33969616317/job/101315720932",
+    "backend": "fireside-disk",
+    "test": "raw Listen resumes after a CURRENT checkpoint without replaying prior documents",
+    "failedAt": "2026-09-05T13:46:28.3718370Z",
+    "testDurationMilliseconds": 85.952064,
+    "assertionLocation": "conformance/test/listen.test.ts:300:12",
+    "assertion": "bloomMightContain(filter, `${database}/documents/${collection.path}/missing`) === false",
+    "errorCode": "ERR_ASSERTION",
+    "actual": true,
+    "expected": false,
+    "verbatimErrorExcerpt": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\ntrue !== false\n\n    at TestContext.<anonymous> (/home/runner/work/fireside/fireside/conformance/test/listen.test.ts:300:12)",
+    "originalRandomUuidAvailable": false,
+    "originalFilterBitmapAvailable": false,
+    "exactOriginalInputReproduced": false,
+    "earlierAssertionsPassed": ["resumed documents", "target changes", "filter dimensions and actual count", "alpha membership", "beta membership"],
+    "originalTestSha256": "07f4f3b8d62db41b5791a362100ba52a8442a288c301a5e39ac22bc030ac585b",
+    "assertionIntroducedBy": "e729875673796077fa7409106615f16b0643b0d4"
+  },
+  "correctionBoundary": {
+    "productChangeEstablished": false,
+    "resumeOrReadTimeRaceEstablished": false,
+    "resumeAssertionsMustRemain": true,
+    "filterDimensionsMustRemain": true,
+    "memberNoFalseNegativeAssertionsMustRemain": true,
+    "returnedFilterMayNotBeSearchedForConvenientNegative": true,
+    "fixtureCommitMustPrecedeAssertionCorrection": true
+  }
+}

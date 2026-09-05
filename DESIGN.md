@@ -2250,6 +2250,28 @@ confidence intervals are published with the README summary. The expected design
 goal is graceful degradation or paging for fireside rather than an out-of-memory
 crash, but the README states measured outcomes only.
 
+### Listen Bloom nonmember false-positive oracle (2026-09-05)
+
+An evidence-only CI run (`33969616317`, job `101315720932`) failed the disk
+Listen test's assertion that a randomly named missing document must test
+negative in an existence-filter Bloom bitmap. Its preceding resume-document,
+target-change, shape/count and actual-member checks passed. Google's
+ExistenceFilter contract guarantees that a negative excludes a name, not that
+every absent name is negative.
+
+`conformance/fixtures/firestore-bloom-nonmember-false-positive` preserves that
+CI failure and a separate deterministic official-client reproduction. The
+installed, hash-verified Firebase 12.18.0 Bloom implementation produces
+`57XW81ipFQ==` for the fixture's two members, 53 bits and 18 hashes. Both
+members are positive; absent `missing` is legally positive and absent
+`not-present` negative. The original CI UUID/bitmap was not logged, so this
+reproduces the assertion class, not its exact random input. No cloud traffic
+or emulator workload was needed; no product resume/read-time defect is
+established. Commit this fixture before correcting the assertion. Keep every
+resume, dimension/count and no-false-negative check, and compare returned
+bitmaps with the independently verified official-client construction instead
+of assuming or searching for an arbitrary nonmember negative.
+
 ### Phase 5 fresh-backend service-log oracle (r46)
 
 The pinned Twodart mprocs launch has two distinct output surfaces: the tmux

@@ -1,0 +1,44 @@
+2026-09-05T13:46:28.3716650Z ✖ failing tests:
+2026-09-05T13:46:28.3716782Z 
+2026-09-05T13:46:28.3716959Z test at test/listen.test.ts:1:2802
+2026-09-05T13:46:28.3718370Z ✖ raw Listen resumes after a CURRENT checkpoint without replaying prior documents (85.952064ms)
+2026-09-05T13:46:28.3719036Z   AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+2026-09-05T13:46:28.3719426Z   
+2026-09-05T13:46:28.3719620Z   true !== false
+2026-09-05T13:46:28.3719821Z   
+2026-09-05T13:46:28.3720353Z       at TestContext.<anonymous> (/home/runner/work/fireside/fireside/conformance/test/listen.test.ts:300:12)
+2026-09-05T13:46:28.3721086Z       at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+2026-09-05T13:46:28.3721638Z       at async Test.run (node:internal/test_runner/test:1404:7)
+2026-09-05T13:46:28.3722197Z       at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+2026-09-05T13:46:28.3722642Z     generatedMessage: true,
+2026-09-05T13:46:28.3722904Z     code: 'ERR_ASSERTION',
+2026-09-05T13:46:28.3723153Z     actual: true,
+2026-09-05T13:46:28.3723372Z     expected: false,
+2026-09-05T13:46:28.3723610Z     operator: 'strictEqual',
+2026-09-05T13:46:28.3723866Z     diff: 'simple'
+2026-09-05T13:46:28.3724071Z   }
+2026-09-05T13:46:28.3829287Z /home/runner/work/fireside/fireside/conformance/src/run-fireside.ts:109
+2026-09-05T13:46:28.3830308Z         new Error(
+2026-09-05T13:46:28.3830824Z         ^
+2026-09-05T13:46:28.3831133Z 
+2026-09-05T13:46:28.3832127Z Error: fireside conformance exited with code 1 and signal null
+2026-09-05T13:46:28.3833566Z     at ChildProcess.<anonymous> (/home/runner/work/fireside/fireside/conformance/src/run-fireside.ts:109:9)
+2026-09-05T13:46:28.3834688Z     at ChildProcess.wrapper (node:events:639:12)
+2026-09-05T13:46:28.3835276Z     at ChildProcess.emit (node:events:514:28)
+2026-09-05T13:46:28.3835991Z     at ChildProcess._handle.onexit (node:internal/child_process:295:12)
+2026-09-05T13:46:28.3836483Z 
+2026-09-05T13:46:28.3836647Z Node.js v24.20.0
+2026-09-05T13:46:28.3961706Z ##[error]Process completed with exit code 1.
+2026-09-05T13:46:28.4129435Z Post job cleanup.
+2026-09-05T13:46:28.5020175Z Post job cleanup.
+2026-09-05T13:46:28.5887053Z [command]/usr/bin/git version
+2026-09-05T13:46:28.5940307Z git version 2.55.0
+2026-09-05T13:46:28.5990361Z Temporarily overriding HOME='/home/runner/work/_temp/88cf8eea-99eb-4fb5-9f76-dda6be5aa7f8' before making global git config changes
+2026-09-05T13:46:28.5994727Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-05T13:46:28.5996251Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/fireside/fireside
+2026-09-05T13:46:28.6033183Z Removing SSH command configuration
+2026-09-05T13:46:28.6042682Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-05T13:46:28.6095087Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-05T13:46:28.6370870Z Removing HTTP extra header
+2026-09-05T13:46:28.6378815Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-05T13:46:28.6426847Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
