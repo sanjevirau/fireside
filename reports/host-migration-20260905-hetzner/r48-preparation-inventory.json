@@ -1,0 +1,30 @@
+{
+  "at": "2026-09-05T16:07:11.280Z",
+  "active": [],
+  "listeners": [],
+  "tmux": {
+    "status": 1,
+    "stdout": "",
+    "stderr": "no server running on /tmp/tmux-1000/default\n"
+  },
+  "requiredAbsent": [
+    "deployment-3407c65",
+    "preparation-r48",
+    "fresh-acceptance/r48",
+    "attempts/r48",
+    "attempts/r48-preparation-preflight"
+  ],
+  "stacks": {
+    "official": {
+      "revision": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54",
+      "status": " M scripts/dev/mprocs/js-dotnet.yaml\n"
+    },
+    "fireside": {
+      "revision": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54",
+      "status": " M scripts/dev/mprocs/js-dotnet.yaml\n"
+    }
+  },
+  "mdstat": "Personalities : [raid1] [raid0] [raid6] [raid5] [raid4] [raid10] \nmd0 : active raid1 nvme1n1p1[1] nvme0n1p1[0]\n      33520640 blocks super 1.2 [2/2] [UU]\n      \nmd2 : active raid1 nvme1n1p3[1] nvme0n1p3[0]\n      465370432 blocks super 1.2 [2/2] [UU]\n      bitmap: 2/4 pages [8KB], 65536KB chunk\n\nmd1 : active raid1 nvme1n1p2[1] nvme0n1p2[0]\n      1046528 blocks super 1.2 [2/2] [UU]\n      \nunused devices: <none>\n",
+  "swaps": "Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n/dev/md0                                partition\t33520636\t0\t\t-2\n",
+  "disk": "Filesystem        1B-blocks         Used    Available Use% Mounted on\n/dev/md2       467909804032 119538409472 324527652864  27% /\n"
+}
