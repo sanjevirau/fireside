@@ -2754,6 +2754,14 @@ unchanged. A required live process in fresh-backend acceptance is not made optio
 This is a harness contract, not a Rust product change or a gate-threshold amendment.
 R48 stays failed; it must not be resumed or presented as a full pass.
 
+The correction applies that disappearance rule to emulator scope, directory scope
+and identity-liveness reads. Their production I/O remains procfs reads plus the
+existing per-PID signal; an injected I/O boundary permits deterministic tests of
+every read and signal race without signaling real processes. Cleanup continues
+to later identities after disappearance, while permission/I/O errors, PID reuse
+and scope mismatches retain their original refusal behavior. All other cleanup
+sequencing and final orphan checks remain unchanged.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.

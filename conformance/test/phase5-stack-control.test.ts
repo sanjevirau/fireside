@@ -8,6 +8,8 @@ import { gzipSync } from "node:zlib";
 import "./phase5-fresh-backend.test.ts";
 
 import {
+  assertPhase5DirectoryProcessScope,
+  assertPhase5EmulatorProcessScope,
   cacheOutputDigest,
   PHASE5_DIAGNOSTIC_DEFINITIVE_ERROR_SAMPLES,
   PHASE5_DIRECTORY_EMPTY_SCANS,
@@ -21,11 +23,15 @@ import {
   phase5CommandLaunchPathMatches,
   phase5EmulatorProcessMatches,
   phase5ProcessIdentityFromStat,
+  phase5ProcessIdentityAlive,
   phase5ProcKilobytes,
   phase5ReadinessConditions,
   phase5StorageAliasRegistered,
   renderPhase5MprocsControlCommand,
   renderPhase5StackCommand,
+  signalPhase5DirectoryProcesses,
+  type Phase5ProcessControlIo,
+  type Phase5ProcessIdentity,
   type StackLaunchInput,
 } from "../src/suite/phase5-stack-control.ts";
 import {
@@ -388,9 +394,174 @@ test("directory cleanup converges across reparenting and revalidates every signa
   const signalStart = source.indexOf("async function signalPhase5DirectoryProcesses");
   const signalEnd = source.indexOf("async function assertPhase5DirectoryProcessScope", signalStart);
   const signalSource = source.slice(signalStart, signalEnd);
-  assert.match(signalSource, /assertPhase5DirectoryProcessScope\(identity, directory\)/u);
-  assert.match(signalSource, /process\.kill\(identity\.pid, signal\)/u);
+  assert.match(signalSource, /assertPhase5DirectoryProcessScope\(identity, directory, io\)/u);
+  assert.match(signalSource, /io\.signal\(identity\.pid, signal\)/u);
   assert.doesNotMatch(signalSource, /process\.kill\(-/u);
+});
+
+const cleanupIdentity: Phase5ProcessIdentity = { pid: 42, procStatStartTimeTicks: "987654" };
+const cleanupDirectory = "/gate/stack-fireside";
+const cleanupBinary = "/gate/bin/fireside";
+const cleanupScopeChecks = [
+  {
+    name: "directory",
+    check: (identity: Phase5ProcessIdentity, io: Phase5ProcessControlIo) =>
+      assertPhase5DirectoryProcessScope(identity, cleanupDirectory, io),
+  },
+  {
+    name: "emulator",
+    check: (identity: Phase5ProcessIdentity, io: Phase5ProcessControlIo) =>
+      assertPhase5EmulatorProcessScope(identity, cleanupDirectory, "fireside", cleanupBinary, io),
+  },
+];
+const cleanupScopeReads = ["readCommand", "readCwd", "readStat"] as const;
+
+function cleanupStat(pid: number, ticks = cleanupIdentity.procStatStartTimeTicks): string {
+  return `${String(pid)} (firebase process) S 1 42 42 0 -1 0 0 0 0 0 0 0 0 0 20 0 1 0 ${ticks} 0 0`;
+}
+
+function cleanupIo(overrides: Partial<Phase5ProcessControlIo> = {}): {
+  io: Phase5ProcessControlIo;
+  signals: { pid: number; signal: NodeJS.Signals }[];
+} {
+  const signals: { pid: number; signal: NodeJS.Signals }[] = [];
+  return {
+    signals,
+    io: {
+      readCommand: async () => Buffer.from(`${cleanupBinary}\0suite\0`),
+      readCwd: async () => cleanupDirectory,
+      readStat: async (pid) => cleanupStat(pid),
+      signal: (pid, signal) => { signals.push({ pid, signal }); },
+      ...overrides,
+    },
+  };
+}
+
+for (const scope of cleanupScopeChecks) {
+  for (const read of cleanupScopeReads) {
+    for (const code of ["ENOENT", "ESRCH"]) {
+      test(`${scope.name} cleanup tolerates ${code} at ${read} without signaling`, async () => {
+        const { io, signals } = cleanupIo({
+          [read]: async () => { throw Object.assign(new Error("process disappeared"), { code }); },
+        });
+        assert.equal(await scope.check(cleanupIdentity, io), false);
+        assert.deepEqual(signals, []);
+      });
+    }
+    for (const code of ["EACCES", "EPERM", "EIO"]) {
+      test(`${scope.name} cleanup propagates ${code} at ${read}`, async () => {
+        const failure = Object.assign(new Error("procfs read failed"), { code });
+        const { io, signals } = cleanupIo({ [read]: async () => { throw failure; } });
+        await assert.rejects(scope.check(cleanupIdentity, io), (error) => error === failure);
+        assert.deepEqual(signals, []);
+      });
+    }
+  }
+
+  test(`${scope.name} cleanup retains identity, scope, and stat validation`, async () => {
+    assert.equal(await scope.check(cleanupIdentity, cleanupIo().io), true);
+    assert.equal(await scope.check(cleanupIdentity, cleanupIo({
+      readStat: async (pid) => cleanupStat(pid, "987655"),
+    }).io), false, "reused PID must not identify the original process");
+    await assert.rejects(scope.check(cleanupIdentity, cleanupIo({
+      readCwd: async () => `${cleanupDirectory}-unrelated`,
+    }).io), /refusing to signal .*outside/u);
+    await assert.rejects(scope.check(cleanupIdentity, cleanupIo({
+      readStat: async () => "malformed stat",
+    }).io), /invalid \/proc stat record/u);
+    for (const failure of [new Error("unexpected read failure"), null]) {
+      await assert.rejects(scope.check(cleanupIdentity, cleanupIo({
+        readStat: async () => { throw failure; },
+      }).io), (error) => error === failure);
+    }
+  });
+}
+
+test("emulator cleanup retains exact backend launch-command guards", async () => {
+  const officialCommand = `${cleanupDirectory}/node_modules/.bin/firebase\0emulators:start\0`;
+  const officialIo = cleanupIo({ readCommand: async () => Buffer.from(officialCommand) }).io;
+  assert.equal(await assertPhase5EmulatorProcessScope(
+    cleanupIdentity, cleanupDirectory, "official", cleanupBinary, officialIo,
+  ), true);
+  await assert.rejects(assertPhase5EmulatorProcessScope(
+    cleanupIdentity, cleanupDirectory, "official", cleanupBinary, cleanupIo().io,
+  ), /no longer matches its launch command/u);
+  await assert.rejects(assertPhase5EmulatorProcessScope(
+    cleanupIdentity, cleanupDirectory, "fireside", cleanupBinary, officialIo,
+  ), /no longer matches its launch command/u);
+});
+
+test("identity liveness tolerates disappearance but not read or stat corruption", async () => {
+  assert.equal(await phase5ProcessIdentityAlive(cleanupIdentity, cleanupIo().io), true);
+  assert.equal(await phase5ProcessIdentityAlive(cleanupIdentity, cleanupIo({
+    readStat: async (pid) => cleanupStat(pid, "987655"),
+  }).io), false);
+  for (const code of ["ENOENT", "ESRCH", "EACCES", "EPERM", "EIO"]) {
+    const failure = Object.assign(new Error("stat unavailable"), { code });
+    const result = phase5ProcessIdentityAlive(cleanupIdentity, cleanupIo({
+      readStat: async () => { throw failure; },
+    }).io);
+    if (code === "ENOENT" || code === "ESRCH") assert.equal(await result, false);
+    else await assert.rejects(result, (error) => error === failure);
+  }
+  await assert.rejects(phase5ProcessIdentityAlive(cleanupIdentity, cleanupIo({
+    readStat: async () => "malformed stat",
+  }).io), /invalid \/proc stat record/u);
+});
+
+for (const read of cleanupScopeReads) {
+  for (const code of ["ENOENT", "ESRCH"]) {
+    test(`directory signaling skips ${read} ${code} and still handles another identity`, async () => {
+      const otherIdentity = { ...cleanupIdentity, pid: 43 };
+      const fake = cleanupIo();
+      const originalRead = fake.io[read];
+      const io = {
+        ...fake.io,
+        [read]: async (pid: number) => {
+          if (pid === cleanupIdentity.pid) throw Object.assign(new Error("gone"), { code });
+          return originalRead(pid);
+        },
+      };
+      await signalPhase5DirectoryProcesses([cleanupIdentity, otherIdentity], cleanupDirectory, "SIGINT", io);
+      assert.deepEqual(fake.signals, [{ pid: otherIdentity.pid, signal: "SIGINT" }]);
+    });
+  }
+}
+
+test("directory signaling preserves identity guards and both cleanup signals", async () => {
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    const valid = cleanupIo();
+    await signalPhase5DirectoryProcesses([cleanupIdentity], cleanupDirectory, signal, valid.io);
+    assert.deepEqual(valid.signals, [{ pid: cleanupIdentity.pid, signal }]);
+    const reused = cleanupIo({ readStat: async (pid) => cleanupStat(pid, "987655") });
+    await signalPhase5DirectoryProcesses([cleanupIdentity], cleanupDirectory, signal, reused.io);
+    assert.deepEqual(reused.signals, []);
+    const outside = cleanupIo({ readCwd: async () => `${cleanupDirectory}-unrelated` });
+    await assert.rejects(signalPhase5DirectoryProcesses(
+      [cleanupIdentity], cleanupDirectory, signal, outside.io,
+    ), /refusing to signal .*outside/u);
+    assert.deepEqual(outside.signals, []);
+  }
+});
+
+test("directory signaling tolerates only ESRCH after scope validation", async () => {
+  for (const code of ["ESRCH", "ENOENT", "EACCES", "EPERM", "EIO"]) {
+    const failure = Object.assign(new Error("signal failed"), { code });
+    const attempts: number[] = [];
+    const otherIdentity = { ...cleanupIdentity, pid: 43 };
+    const { io } = cleanupIo({ signal: (pid) => {
+      attempts.push(pid);
+      if (pid === cleanupIdentity.pid) throw failure;
+    } });
+    const result = signalPhase5DirectoryProcesses([cleanupIdentity, otherIdentity], cleanupDirectory, "SIGINT", io);
+    if (code === "ESRCH") {
+      await result;
+      assert.deepEqual(attempts, [cleanupIdentity.pid, otherIdentity.pid]);
+    } else {
+      await assert.rejects(result, (error) => error === failure);
+      assert.deepEqual(attempts, [cleanupIdentity.pid]);
+    }
+  }
 });
 
 test("diagnostic readiness fails fast only after healthy process and listener gates", async () => {

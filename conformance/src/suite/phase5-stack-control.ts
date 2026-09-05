@@ -117,6 +117,20 @@ export interface Phase5ProcessIdentity {
   readonly procStatStartTimeTicks: string;
 }
 
+export interface Phase5ProcessControlIo {
+  readCommand(pid: number): Promise<Buffer>;
+  readCwd(pid: number): Promise<string>;
+  readStat(pid: number): Promise<string>;
+  signal(pid: number, signal: NodeJS.Signals): void;
+}
+
+const phase5ProcessControlIo: Phase5ProcessControlIo = {
+  readCommand: (pid) => readFile(`/proc/${String(pid)}/cmdline`),
+  readCwd: (pid) => readlink(`/proc/${String(pid)}/cwd`),
+  readStat: (pid) => readFile(`/proc/${String(pid)}/stat`, "utf8"),
+  signal: (pid, signal) => { process.kill(pid, signal); },
+};
+
 export interface Phase5FrontendReadiness {
   readonly readyMilliseconds: number;
   readonly status: number;
@@ -733,17 +747,18 @@ export async function phase5EmulatorProcesses(
   return processes.sort((left, right) => left.pid - right.pid);
 }
 
-async function assertPhase5EmulatorProcessScope(
+export async function assertPhase5EmulatorProcessScope(
   identity: Phase5ProcessIdentity,
   directory: string,
   stack: Phase5StackName,
   firesideBinary: string,
+  io: Phase5ProcessControlIo = phase5ProcessControlIo,
 ): Promise<boolean> {
   try {
     const [commandBytes, cwdValue, stat] = await Promise.all([
-      readFile(`/proc/${String(identity.pid)}/cmdline`),
-      readlink(`/proc/${String(identity.pid)}/cwd`),
-      readFile(`/proc/${String(identity.pid)}/stat`, "utf8"),
+      io.readCommand(identity.pid),
+      io.readCwd(identity.pid),
+      io.readStat(identity.pid),
     ]);
     const current = phase5ProcessIdentityFromStat(identity.pid, stat);
     if (current.procStatStartTimeTicks !== identity.procStatStartTimeTicks) return false;
@@ -764,20 +779,23 @@ async function assertPhase5EmulatorProcessScope(
     }
     return true;
   } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    if (phase5ProcessDisappeared(error)) return false;
     throw error;
   }
 }
 
-async function phase5ProcessIdentityAlive(identity: Phase5ProcessIdentity): Promise<boolean> {
+export async function phase5ProcessIdentityAlive(
+  identity: Phase5ProcessIdentity,
+  io: Phase5ProcessControlIo = phase5ProcessControlIo,
+): Promise<boolean> {
   try {
     const current = phase5ProcessIdentityFromStat(
       identity.pid,
-      await readFile(`/proc/${String(identity.pid)}/stat`, "utf8"),
+      await io.readStat(identity.pid),
     );
     return current.procStatStartTimeTicks === identity.procStatStartTimeTicks;
   } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    if (phase5ProcessDisappeared(error)) return false;
     throw error;
   }
 }
@@ -865,31 +883,33 @@ async function phase5DirectoryProcesses(
   return processes.sort((left, right) => right.pid - left.pid);
 }
 
-async function signalPhase5DirectoryProcesses(
+export async function signalPhase5DirectoryProcesses(
   identities: readonly Phase5ProcessIdentity[],
   directory: string,
   signal: NodeJS.Signals,
+  io: Phase5ProcessControlIo = phase5ProcessControlIo,
 ): Promise<void> {
   for (const identity of identities) {
-    if (!(await assertPhase5DirectoryProcessScope(identity, directory))) continue;
+    if (!(await assertPhase5DirectoryProcessScope(identity, directory, io))) continue;
     try {
-      process.kill(identity.pid, signal);
+      io.signal(identity.pid, signal);
     } catch (error: unknown) {
       if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
     }
   }
 }
 
-async function assertPhase5DirectoryProcessScope(
+export async function assertPhase5DirectoryProcessScope(
   identity: Phase5ProcessIdentity,
   directory: string,
+  io: Phase5ProcessControlIo = phase5ProcessControlIo,
 ): Promise<boolean> {
   const resolvedDirectory = path.resolve(directory);
   try {
     const [commandBytes, cwdValue, stat] = await Promise.all([
-      readFile(`/proc/${String(identity.pid)}/cmdline`),
-      readlink(`/proc/${String(identity.pid)}/cwd`),
-      readFile(`/proc/${String(identity.pid)}/stat`, "utf8"),
+      io.readCommand(identity.pid),
+      io.readCwd(identity.pid),
+      io.readStat(identity.pid),
     ]);
     const current = phase5ProcessIdentityFromStat(identity.pid, stat);
     if (current.procStatStartTimeTicks !== identity.procStatStartTimeTicks) {
@@ -908,9 +928,15 @@ async function assertPhase5DirectoryProcessScope(
     }
     return true;
   } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    if (phase5ProcessDisappeared(error)) return false;
     throw error;
   }
+}
+
+function phase5ProcessDisappeared(error: unknown): boolean {
+  // A discovered task may exit before any of the scope-revalidation procfs reads.
+  return typeof error === "object" && error !== null && "code" in error &&
+    (error.code === "ENOENT" || error.code === "ESRCH");
 }
 
 function phase5ProcessIdentityKey(identity: Phase5ProcessIdentity): string {

@@ -1,0 +1,99 @@
+{
+  "at": "2026-09-05T19:20:34.358Z",
+  "failedUnits": {
+    "code": 0,
+    "out": "",
+    "err": ""
+  },
+  "tmux": {
+    "code": 1,
+    "out": "",
+    "err": "no server running on /tmp/tmux-1000/default\n"
+  },
+  "swappiness": {
+    "code": 0,
+    "out": "vm.swappiness = 60\n",
+    "err": ""
+  },
+  "swap": {
+    "code": 0,
+    "out": "               total        used        free      shared  buff/cache   available\nMem:     67343601664  1627947008 13762236416     4112384 52710027264 65715654656\nSwap:    34325131264           0 34325131264\n",
+    "err": ""
+  },
+  "ssh": {
+    "code": 0,
+    "out": "active\n",
+    "err": ""
+  },
+  "system": {
+    "code": 0,
+    "out": "running\n",
+    "err": ""
+  },
+  "processes": {
+    "code": 0,
+    "out": "",
+    "err": ""
+  },
+  "listeners": {
+    "code": 0,
+    "out": "State  Recv-Q Send-Q Local Address:Port Peer Address:PortProcess\nLISTEN 0      4096         0.0.0.0:22        0.0.0.0:*          \nLISTEN 0      4096   127.0.0.53%lo:53        0.0.0.0:*          \nLISTEN 0      4096      127.0.0.54:53        0.0.0.0:*          \nLISTEN 0      511                *:443             *:*          \nLISTEN 0      511                *:80              *:*          \nLISTEN 0      4096            [::]:22           [::]:*          \n",
+    "err": ""
+  },
+  "kernel": {
+    "code": 0,
+    "out": "2026-09-05T10:09:25+02:00 Ubuntu-noble-latest-amd64-base.zst kernel: nvme nvme0: Shutdown timeout set to 10 seconds\n2026-09-05T10:09:25+02:00 Ubuntu-noble-latest-amd64-base.zst kernel: nvme nvme1: Shutdown timeout set to 10 seconds",
+    "err": ""
+  },
+  "resources": {
+    "code": 1,
+    "out": "-- No entries --\n",
+    "err": ""
+  },
+  "vmstat": {
+    "code": 0,
+    "out": "--procs-- -----------------------memory---------------------- ---swap-- -----io---- -system-- ----------cpu----------\n   r    b         swpd         free         buff        cache   si   so    bi    bo   in   cs  us  sy  id  wa  st  gu\n   2    0            0     13438680       748308     50726328    0    0   225  5426 7452    4   9   1  89   0   0   0\n   0    0            0     13438280       748308     50726328    0    0     0     0  676  542   1   0  99   0   0   0\n   0    0            0     13438280       748308     50726328    0    0     0     0   83  102   0   0 100   0   0   0\n   0    0            0     13440872       748308     50726328    0    0     0     0  246  142   0   0 100   0   0   0\n",
+    "err": ""
+  },
+  "attempts/r48/controller.exit": "1\n",
+  "attempts/r48/full/run.exit": "1\n",
+  "attempts/r48/full/evidence/fireside-initial.exit": "0\n",
+  "attempts/r48/full/evidence/failure.json": "{\n  \"candidateIdentityStored\": false,\n  \"datasetIdentityStored\": false,\n  \"errorHash\": \"24d660bf5bbc2128c991c9bfdd5e3405ac636390b6d9f163fc8726f363eca989\",\n  \"failedAt\": \"2026-09-05T18:33:53.019Z\",\n  \"manifestSha256\": \"c281263a95cadb7ba254d9b9355bd00808c6054865853158adc54a9886b683aa\",\n  \"privateContentStored\": false,\n  \"schemaVersion\": 1,\n  \"smoke\": false\n}\n",
+  "raid": "Personalities : [raid1] [raid0] [raid6] [raid5] [raid4] [raid10] \nmd0 : active raid1 nvme1n1p1[1] nvme0n1p1[0]\n      33520640 blocks super 1.2 [2/2] [UU]\n      \nmd2 : active raid1 nvme1n1p3[1] nvme0n1p3[0]\n      465370432 blocks super 1.2 [2/2] [UU]\n      bitmap: 2/4 pages [8KB], 65536KB chunk\n\nmd1 : active raid1 nvme1n1p2[1] nvme0n1p2[0]\n      1046528 blocks super 1.2 [2/2] [UU]\n      \nunused devices: <none>\n",
+  "officialTrackedStatus": {
+    "code": 0,
+    "out": " M scripts/dev/mprocs/js-dotnet.yaml\n",
+    "err": ""
+  },
+  "firesideTrackedStatus": {
+    "code": 0,
+    "out": " M scripts/dev/mprocs/js-dotnet.yaml\n",
+    "err": ""
+  },
+  "attempts/r49": {
+    "exists": false,
+    "error": "ENOENT"
+  },
+  "preparation-r49": {
+    "exists": false,
+    "error": "ENOENT"
+  },
+  "fresh-acceptance/r49": {
+    "exists": false,
+    "error": "ENOENT"
+  },
+  "exports/official/smoke/smoke": {
+    "exists": true,
+    "directory": true,
+    "symlink": false
+  },
+  "exports/fireside/smoke/smoke": {
+    "exists": true,
+    "directory": true,
+    "symlink": false
+  },
+  "stack-fireside/apps/templates-firebase/loadData/datasets/phase5-r36-official-export": {
+    "exists": false,
+    "error": "ENOENT"
+  }
+}

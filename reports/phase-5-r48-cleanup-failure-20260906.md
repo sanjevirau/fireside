@@ -92,7 +92,10 @@ The preserved
 [cache-watcher log](phase-5-metrics/hetzner-r48-20260905/completed-attempt/full/service-logs/stack-fireside/firebase-cache-watch.log)
 contains two 300-second DEADLINE_EXCEEDED rebuild errors and an expired Listen
 resume token, alongside initial/later build durations of 269,067/278,237 ms.
-These lines lack timestamps, so their exact phase attribution is unresolved.
+The individual errors lack timestamps. A subsequent
+[cache-watcher audit](phase-5-r48-cache-watcher-audit-20260906.md) uses the two
+host-local success messages and minute-status sequence to place these problems
+in early soak, not in the later cleanup; exact per-error times remain reconstructed.
 A privately retained .NET log also records a caught image 404 before export
 completion. The fixed synthetic-soak pass does not erase these diagnostics.
 They require investigation before Templates-ready and efficiency qualification.
