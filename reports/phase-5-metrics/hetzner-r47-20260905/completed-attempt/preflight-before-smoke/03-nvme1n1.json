@@ -1,0 +1,12 @@
+{
+  "startedAt": "2026-09-05T14:34:28.814Z",
+  "executable": "/usr/bin/sudo",
+  "args": [
+    "-n",
+    "/usr/local/sbin/fireside-hetzner-smart-read",
+    "nvme1n1"
+  ],
+  "code": 0,
+  "stdout": "{\n  \"json_format_version\": [\n    1,\n    0\n  ],\n  \"smartctl\": {\n    \"version\": [\n      7,\n      4\n    ],\n    \"pre_release\": false,\n    \"svn_revision\": \"5530\",\n    \"platform_info\": \"x86_64-linux-6.8.0-138-generic\",\n    \"build_info\": \"(local build)\",\n    \"argv\": [\n      \"smartctl\",\n      \"-j\",\n      \"-H\",\n      \"-A\",\n      \"-l\",\n      \"error\",\n      \"/dev/nvme1n1\"\n    ],\n    \"exit_status\": 0\n  },\n  \"local_time\": {\n    \"time_t\": 1788618868,\n    \"asctime\": \"Sat Sep  5 16:34:28 2026 CEST\"\n  },\n  \"device\": {\n    \"name\": \"/dev/nvme1n1\",\n    \"info_name\": \"/dev/nvme1n1\",\n    \"type\": \"nvme\",\n    \"protocol\": \"NVMe\"\n  },\n  \"smart_status\": {\n    \"passed\": true,\n    \"nvme\": {\n      \"value\": 0\n    }\n  },\n  \"nvme_smart_health_information_log\": {\n    \"critical_warning\": 0,\n    \"temperature\": 38,\n    \"available_spare\": 100,\n    \"available_spare_threshold\": 10,\n    \"percentage_used\": 64,\n    \"data_units_read\": 54227756,\n    \"data_units_written\": 132675985,\n    \"host_reads\": 708661999,\n    \"host_writes\": 5334670247,\n    \"controller_busy_time\": 72608,\n    \"power_cycles\": 33,\n    \"power_on_hours\": 16791,\n    \"unsafe_shutdowns\": 13,\n    \"media_errors\": 0,\n    \"num_err_log_entries\": 0,\n    \"warning_temp_time\": 0,\n    \"critical_comp_time\": 0,\n    \"temperature_sensors\": [\n      38,\n      53\n    ]\n  },\n  \"temperature\": {\n    \"current\": 38\n  },\n  \"power_cycle_count\": 33,\n  \"power_on_time\": {\n    \"hours\": 16791\n  },\n  \"nvme_error_information_log\": {\n    \"size\": 64,\n    \"read\": 16,\n    \"unread\": 0\n  }\n}\n",
+  "stderr": ""
+}

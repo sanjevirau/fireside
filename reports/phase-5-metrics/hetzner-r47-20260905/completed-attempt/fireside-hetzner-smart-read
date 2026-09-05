@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Install root:root 0755 at /usr/local/sbin/fireside-hetzner-smart-read.
+# This helper performs fixed read-only NVMe queries; it accepts no smartctl flags.
+set -euo pipefail
+if [[ "$EUID" -ne 0 || "$#" -ne 1 ]]; then
+  printf 'Requires root and exactly one allowlisted NVMe device name.\n' >&2
+  exit 64
+fi
+case "$1" in
+  nvme0n1|nvme1n1) exec /usr/sbin/smartctl -j -H -A -l error "/dev/$1" ;;
+  *) printf 'Device not allowlisted.\n' >&2; exit 64 ;;
+esac

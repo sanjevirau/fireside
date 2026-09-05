@@ -29,6 +29,13 @@ const smart = () => ({ device: { name: '/dev/nvme0n1' }, smartctl: { exit_status
 const receipt = () => ({ root: ROOT, candidate: CANDIDATE, completed: true, allTransfersComplete: true, verifiedAtIso: '2026-09-05T10:00:00Z', bankedEvidenceChecksumsSha256: BASELINE_SUMS, trees: Object.fromEntries(Object.entries(INPUTS).map(([name, [files, bytes, sha256]]) => [name, { files, bytes, sha256 }])) });
 
 test('all three expected complete idle RAID1 arrays pass', () => assert.doesNotThrow(() => validateRaid(raid())));
+test('r47 exact write-pending capture remains a rejected readiness state', async () => {
+  const fixture = JSON.parse(await readFile(new URL('../../conformance/fixtures/phase5/raid-write-pending-r47.json', import.meta.url), 'utf8'));
+  const captured = JSON.parse(await readFile(new URL('../phase-5-metrics/hetzner-r47-20260905/completed-attempt/preflight-before-full/raid.json', import.meta.url), 'utf8'));
+  assert.equal(fixture.observed.fullWorkloadStarted, false);
+  assert.equal(captured[2].state, 'write-pending');
+  assert.throws(() => validateRaid(captured), /write-pending/u);
+});
 test('resync, degraded, inactive, unexpected or missing RAID members block', () => {
   for (const [field, value] of [['syncAction', 'resync'], ['syncAction', 'check'], ['degraded', '1'], ['state', 'inactive'], ['raidDisks', '1'], ['level', 'raid0'], ['members', ['nvme0n1p1']], ['memberStates', ['in_sync', 'faulty']]]) {
     const arrays = raid(); arrays[0][field] = value;

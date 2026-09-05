@@ -1,0 +1,86 @@
+{
+  "label": "official-soak",
+  "startedAt": "2026-09-05T14:34:37.002Z",
+  "passed": true,
+  "processQuiescence": {
+    "startedAt": "2026-09-05T14:34:37.002Z",
+    "completedAt": "2026-09-05T14:34:37.536Z",
+    "maximumWaitMilliseconds": 30000,
+    "sampleIntervalMilliseconds": 250,
+    "requiredConsecutiveEmptySamples": 3,
+    "samples": [
+      {
+        "observedAt": "2026-09-05T14:34:37.010Z",
+        "activeProcesses": []
+      },
+      {
+        "observedAt": "2026-09-05T14:34:37.273Z",
+        "activeProcesses": []
+      },
+      {
+        "observedAt": "2026-09-05T14:34:37.536Z",
+        "activeProcesses": []
+      }
+    ],
+    "passed": true
+  },
+  "swapDrain": {
+    "startedAt": "2026-09-05T14:34:37.564Z",
+    "completedAt": "2026-09-05T14:34:37.628Z",
+    "authorization": "phase-5-schema-v3-quiescent-preflight",
+    "invocationPrefix": "sudo -n",
+    "before": {
+      "residualSwapBytes": 0,
+      "vmSwappiness": 60,
+      "configuredSwap": "Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n/dev/md0                                partition\t33520636\t0\t\t-2\n"
+    },
+    "after": {
+      "residualSwapBytes": 0,
+      "vmSwappiness": 60,
+      "configuredSwap": "Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n/dev/md0                                partition\t33520636\t0\t\t-2\n"
+    },
+    "commands": [
+      {
+        "command": "swapoff",
+        "args": [
+          "-a"
+        ],
+        "exitCode": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "command": "swapon",
+        "args": [
+          "-a"
+        ],
+        "exitCode": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "swappinessChanged": false,
+    "passed": true
+  },
+  "hostHealth": {
+    "availableDiskBytes": 324623998976,
+    "conflictingListeners": 0,
+    "failedUnits": 0,
+    "oomOrResourceEvidence": 0,
+    "sshState": "active",
+    "steadyVmstatSamples": 3,
+    "swapInPagesPerSecond": [
+      0,
+      0,
+      0
+    ],
+    "swapOutPagesPerSecond": [
+      0,
+      0,
+      0
+    ],
+    "vmstatActivityUnit": "KiB/second (legacy field names retained; required value is zero)",
+    "systemState": "running"
+  },
+  "completedAt": "2026-09-05T14:34:40.658Z"
+}

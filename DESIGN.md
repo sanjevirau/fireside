@@ -2306,6 +2306,29 @@ workload or the browser runner. Both captured paths and negative cases have
 fixture-backed local tests; seven-job CI and the complete real gate remain
 required before an acceptance claim.
 
+### Replacement-host RAID readiness observation (r47)
+
+R47 passed both complete cheap-smoke stacks, then the deployment controller
+rejected one `md2` `write-pending` sample before the full workload started.
+All members were in sync, degraded was zero and sync action idle. Exact raw
+evidence is preserved under `reports/phase-5-metrics/hetzner-r47-20260905`;
+`conformance/fixtures/phase5/raid-write-pending-r47.json` precedes correction.
+This remains a stopped attempt, never a retroactive full-gate pass.
+
+Linux 6.8 `array_state_show` exposes `MD_SB_CHANGE_PENDING` as write-pending;
+`md_write_start` sets it while the clean-to-dirty metadata update completes.
+See the [kernel implementation](https://raw.githubusercontent.com/torvalds/linux/v6.8/drivers/md/md.c)
+and [MD sysfs documentation](https://docs.kernel.org/6.8/admin-guide/md.html).
+The safe deployment correction is a bounded read-only settling observation,
+not acceptance of write-pending or a write to sysfs: require three consecutive
+original healthy active/clean observations, 250 ms apart, within 10 seconds.
+Only structurally healthy write-pending/active-idle states may wait; degraded,
+resync, missing/incorrect members, unknown states and unreadable evidence fail
+closed. Save every sample after collection, including failures, to avoid the
+ledger's own writes inside the sampling loop. Retain the original SMART,
+journal, quiescence and zero-swap preflight checks. No product, manifest,
+protected browser runner, workload, duration or soak threshold changes.
+
 ### Phase 5 r22 diagnostic readiness attribution and amendment
 
 The preserved r22 attempt remains a failed cheap smoke, not a product failure

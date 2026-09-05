@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "capturedBeforeHarnessChange": true,
+  "classification": "deployment-preflight-single-RAID-state-sample-rejection",
+  "candidate": "473d883fcb502612b89dcc304206bf1a83aa3f31",
+  "manifestSha256": "c281263a95cadb7ba254d9b9355bd00808c6054865853158adc54a9886b683aa",
+  "runnerSha256": "ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc",
+  "observed": {
+    "smokePassed": true,
+    "controllerExit": 1,
+    "fullWorkloadStarted": false,
+    "rejectedAt": "2026-09-05T14:42:39.188Z",
+    "array": "md2",
+    "state": "write-pending",
+    "degraded": "0",
+    "syncAction": "idle",
+    "memberStates": [
+      "in_sync",
+      "in_sync"
+    ]
+  },
+  "source": {
+    "path": "reports/phase-5-metrics/hetzner-r47-20260905/completed-attempt/preflight-before-full/raid.json",
+    "sha256": "b58d0df8c4fae3f57aecf85ffe97b5488f7dfc271ab84a3020f18dec37be4bbc"
+  },
+  "oracle": {
+    "documentation": "https://docs.kernel.org/6.8/admin-guide/md.html",
+    "implementation": "https://raw.githubusercontent.com/torvalds/linux/v6.8/drivers/md/md.c",
+    "functions": [
+      "array_state_show",
+      "md_write_start"
+    ],
+    "interpretation": "MD_SB_CHANGE_PENDING is exposed as write-pending while metadata transition writes complete. It is not proof of degraded members, but must not be accepted as ready. Wait read-only for the original active/clean predicate; preserve timeout or any unhealthy observation."
+  },
+  "contract": {
+    "deploymentReadinessOnly": true,
+    "maximumWaitMilliseconds": 10000,
+    "sampleIntervalMilliseconds": 250,
+    "consecutiveHealthySamples": 3,
+    "acceptedStates": [
+      "active",
+      "clean"
+    ],
+    "waitableStates": [
+      "write-pending",
+      "active-idle"
+    ],
+    "failImmediatelyForDegradedResyncMissingMembersOrUnknownStates": true,
+    "recordEverySample": true,
+    "noWritesToSysfs": true,
+    "noHealthThresholdChange": true,
+    "noManifestChange": true,
+    "noProtectedRunnerChange": true,
+    "noWorkloadChange": true,
+    "noR47Resume": true
+  }
+}

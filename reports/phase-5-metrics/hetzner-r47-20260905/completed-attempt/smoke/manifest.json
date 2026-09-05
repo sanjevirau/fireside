@@ -1,0 +1,607 @@
+{
+  "schemaVersion": 3,
+  "name": "phase-5-twodart-acceptance",
+  "frozen": true,
+  "frozenAt": "2026-09-03T13:40:00+08:00",
+  "hostMigrationAmendment": {
+    "previousManifestSha256": "48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e",
+    "amendedBeforeMeasurement": true,
+    "criteriaWeakened": false,
+    "reason": "R44 was rejected before any release build, smoke, or gate workload because sanjevi-linux reported an NVMe read I/O Error and critical medium error on its root drive. Read-only attribution mapped the affected block to the pinned Node 24.20.0 executable, and SMART reported 30,026 cumulative media errors. The user provisioned the Hetzner replacement for the Templates-first release. Migrate the unchanged acceptance workload to the healthy replacement without restarting the old official r36 stage or treating different-host measurements as a performance comparison.",
+    "report": "reports/phase-5-host-migration-20260905.md",
+    "fixture": "conformance/fixtures/phase5/host-migration-20260905-contract.json",
+    "hostEvidenceDirectory": "reports/host-migration-20260905-hetzner",
+    "sourceHost": "sanjevi-linux",
+    "destinationHost": {
+      "sshAlias": "fireside-hetzner",
+      "operatingSystem": "Ubuntu 24.04.4 LTS",
+      "kernel": "6.8.0-138-generic",
+      "architecture": "x86_64",
+      "cpuModel": "AMD Ryzen 5 3600 6-Core Processor",
+      "logicalCpuCount": 12,
+      "totalMemoryBytes": 67343601664,
+      "storage": "RAID1 across two 512 GB NVMe devices"
+    },
+    "launcherPreflight": {
+      "raidAllMembersHealthyRequired": true,
+      "raidDegradedDevicesAllowed": 0,
+      "raidSyncActionRequired": "idle",
+      "currentBootHardwareOrIoErrorsAllowed": 0,
+      "recordRaidAndStorageHealthBeforeMeasurement": true,
+      "measurementWhileRaidSyncActiveAllowed": false
+    },
+    "workloadChanged": false,
+    "durationsChanged": false,
+    "thresholdsChanged": false,
+    "datasetChanged": false,
+    "browserRunnerChanged": false,
+    "gateToolchainPinsChanged": false,
+    "bankedOfficialR36EvidencePreserved": true,
+    "bankedOfficialR36StageRerun": false,
+    "crossHostPerformanceWinnerClaimsAllowed": false,
+    "separateSameHealthyHostComparisonRequiredBeforeEfficiencyClaims": true,
+    "ciJobCountCorrection": {
+      "previousDocumentedCount": 6,
+      "requiredCount": 7,
+      "reason": "Correct stale manifest bookkeeping to the already-mandatory seven-job matrix; no required job is removed or waived."
+    },
+    "applicationSetup": {
+      "twodartRevision": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54",
+      "additionalDotnetSdk": "10.0.100",
+      "reason": "TwodartNet global.json requires SDK 10.0.100 with latestPatch while the gate's top-level SDK pin remains 10.0.301; install the additional application SDK without changing the application or gate toolchain pins."
+    },
+    "phase6MayStart": false
+  },
+  "officialRestartHostLimitAmendment": {
+    "previousManifestSha256": "fe9d44c1edb6105d6edc9f0ab3b3251cb34929b7b6113e559ff9a2558ad7b957",
+    "amendedBeforeFiresideMeasurement": true,
+    "criteriaWeakened": true,
+    "scope": "official-baseline-only",
+    "reason": "Official full-data evidence stands: readiness passed, all nine initial journeys passed, and the 7,200-second soak passed with every workload count, zero errors, stalls, listener gaps, or mismatches, 241 memory samples, peak PSS 12.95 GiB with Java at 8.6 GiB, and 11.7 to 13.5 GB of swap in use throughout. Keep it as the baseline measurement.\n\nThe restart-phase failure is host exhaustion under the official baseline, classified as infrastructure. Evidence in evidence/browser-official-restart.json.diagnostics.jsonl: journeys 1 and 2 passed after restart; journey 3 timed out in hoverCatalogSlideCard because the pending-requests-at-journey-failure record shows every in-flight request stalled with no error: the two catalogue chunk JSON GETs through the Storage alias pending over 230 seconds across four retries, the Firestore Listen open POST on the raw port 127.0.0.1:23000 pending 239 seconds, the static /assets/video-announcement.jpg from the Next.js server pending 239 seconds, and the cleanupUser pings pending. Zero page errors, zero failed units, no kernel OOM, journal clean. Raw-port and proxied requests stalled together, so this is not Portless and not a product path. It is the same class as r30. A strict rerun would meet the same physics, because the official stack plus Chrome exceeds the 15 GB host and the restart is its heaviest moment.",
+    "attributionFixture": "conformance/fixtures/phase5/official-restart-host-exhaustion-r36.json",
+    "sourceEvidenceChecksumsSha256": "a9aa4df4f37b535ba429bdcc8da3b863f0d608eaee96883de3a6b45112a18a95",
+    "sourceCandidateRevision": "30e0d25d262a903738f2ff008402ce82fec33611",
+    "sourceOfficialExport": {
+      "fileCount": 66756,
+      "fileBytes": 8180612785,
+      "treeSha256": "c1a1451827c326fb680b2133b0a2c42b79302f1fb89febfb02228ad056b619ca"
+    },
+    "normalizedEvidenceCorrection": "The checksum-verified browser summary records three completed journeys; catalog-slide-add, the fourth journey, timed out in hoverCatalogSlideCard.",
+    "qualifyingConditions": {
+      "stack": "official",
+      "stage": "post-restart-browser-journeys",
+      "pageErrors": 0,
+      "gatingRequestFailures": 0,
+      "pendingRawEmulatorRequestsRequired": true,
+      "pendingProxiedAliasRequestsRequired": true,
+      "sourceEvidenceChecksumVerificationRequired": true
+    },
+    "officialInitialAndSoakRemainBaselineMeasurements": true,
+    "officialStageRerun": false,
+    "continueWithFireside": true,
+    "freshQuiescentPreflightBeforeFireside": true,
+    "firesideCriteriaChanged": false,
+    "firesideWorkloadChanged": false,
+    "firesideDurationsChanged": false,
+    "firesideThresholdsChanged": false,
+    "bothStacksMayRunConcurrently": false,
+    "performanceWinnerRequired": false,
+    "finalReportMarksOfficialRestartHostLimited": true,
+    "phase6MayStart": false
+  },
+  "diagnosticReadinessAmendment": {
+    "previousManifestSha256": "e5d43e4f41f7d2276754468e04b4131f76076e37aeb5afd536b6ce9c8d5b77ca",
+    "amendedBeforeMeasurement": true,
+    "scope": "diagnostic-tier readiness attribution and probe budgets, identical for both stacks",
+    "reason": "R22's emulator suite became ready about 17 seconds after launch. The frontend login probe missed the shared 60-second deadline while a cold Turbopack compile and first SSR were repeatedly cut off by curl --max-time 8. The official checkout was warm. An unchanged retry on the now-warm Fireside checkout would not verify the correction.",
+    "attributionFixture": "conformance/fixtures/phase5/r22-readiness-attribution-contract.json",
+    "smokeApplicationReadinessAllowanceChanged": true,
+    "fullGateReadinessAllowanceChanged": false,
+    "browserRunnerChanged": false,
+    "workloadChanged": false,
+    "durationsChanged": false,
+    "soakThresholdsChanged": false
+  },
+  "amendment": {
+    "previousManifestSha256": "27f643a6e6b5b060bb548359584a133e1bec937b06eb3b3f91982910a985faaa",
+    "reason": "Evidence from r20: preflight showed 374 MiB residual swap with 11.7 GB free. During stack boot and the nine journeys, before the soak window opened, the kernel swapped out about 765 MiB while free memory never approached zero and no OOM occurred. The 64.7 MiB swapped in during the 60-second window was those pages returning; swap-out in the window was 0 and residual swap fell from 1139 MiB to 1073 MiB. The dominant consumer was the Next.js dev server at 7.24 GiB PSS. The official Java emulator was 0.59 GiB on the tiny dataset and reaches about 6.9 GB on the full dataset, so the official full-data stack is about 16 GiB PSS on a 15 GiB host. A zero-swap soak gate is therefore unpassable for the official baseline by physics, and a gate the baseline cannot pass proves nothing about Fireside. My earlier instruction not to weaken the zero-swap rule was wrong for the soak; the rule stays only for the quiescent preflight.",
+    "criteriaWeakened": true,
+    "thresholdsChanged": true,
+    "workloadChanged": false,
+    "amendedBeforeMeasurement": true
+  },
+  "objective": "Prove that the real Twodart application on the dev-based Fireside cutover branch behaves the same against Fireside and the official Firebase Emulator Suite on a clean Linux host using the frozen full Twodart dataset.",
+  "phase4Baseline": {
+    "tag": "phase-4",
+    "taggedRevision": "d488d386b5929844346e6679feaa9c9ad7c0a281",
+    "measuredCandidateRevision": "b53f37966b39540bf6defb9a6031d045607d630b",
+    "gateEvidenceCommit": "0aefd100fdfcf12f949d7543480e3d91cf628125",
+    "gateReport": "reports/phase-4-gate.md",
+    "manifest": "benchmarks/phase-4-twodart-suite.json",
+    "manifestSha256": "38697418c65d667dfcc64480e8b05ff4d16ed0f330beb19c64e9da04508dd3d2",
+    "evidenceDirectory": "reports/phase-4-metrics/full-gate-20260902T0502+0800-b53f3796",
+    "greenGithubCiRun": 33564179240
+  },
+  "twodartSource": {
+    "repository": "git@github.com:sanjevirau/twodart.git",
+    "branch": "feature/san/fireside-emulator",
+    "baselineRevision": "90881bf9611c9de09bcfc326943494bc28fcd1bd",
+    "originDevBase": "724367b6149e09d4366bdb2568e7617c949509e9",
+    "measuredRevisionPolicy": "Both stacks and the fresh-colleague clone must use one exact final revision descended from baselineRevision; record it in the evidence before launch.",
+    "allowedPhase5ChangeScope": [
+      "safe local external-provider disablement",
+      "Linux and fresh-colleague setup documentation",
+      "isolated Phase 5 acceptance hooks that do not alter production behavior"
+    ],
+    "pullRequestBody": ".github/pull_request_fireside_emulator.md",
+    "pullRequestMustRemainUnopened": true,
+    "configurationChecksums": {
+      "scripts/dev/start-firebase-emulator.sh": "176144b1092f80b0a3ed72979b0f66e73936e06cdae1436291e4d000d8eb971c",
+      "scripts/dev/start-firebase-emulator-official.sh": "b654477b288aae4e2d1f146c9d80df15eccb361ffbcef020e96c42a2771c6754",
+      "scripts/dev/dev-mprocs.sh": "64c2303000f1b13ce00cf9671565691cbe2d0c958b206813d0cb08bddfaffc52",
+      "scripts/dev/mprocs/js-dotnet.yaml": "5d774ea98e8814cd9e49cf96f1cc6559ae086aac18fea17054856e012e3296a6",
+      ".github/pull_request_fireside_emulator.md": "dd47c4bc7d1b2c147e3eb6c840e73d85f800c3d2c1bd1c51249da08db845115c"
+    }
+  },
+  "dataset": {
+    "name": "full-data",
+    "sourceEnvironmentVariable": "TWODART_PHASE5_FULL_DATA_SOURCE",
+    "destinationEnvironmentVariable": "TWODART_PHASE5_FULL_DATA",
+    "transfer": "rsync over the existing multiplexed SSH connection with content checksums",
+    "treeHashAlgorithm": "SHA-256 of the lexicographically sorted per-file SHA-256 manifest with ./-relative paths",
+    "treeSha256": "3505b5fd24dc4e8fb1f9925b5201c6e28dbb993c7a0a2bebb34cb70d13d91fc7",
+    "fileCount": 66758,
+    "fileBytes": 8180616677,
+    "filesystemKiB": 8180780,
+    "logicalCounts": {
+      "firestoreDocuments": 211202,
+      "authUsers": 1,
+      "storageObjects": 33353,
+      "storageObjectBytes": 6689692200
+    },
+    "requiredComponents": [
+      "firebase-export-metadata.json",
+      "firestore_export",
+      "auth_export/accounts.json",
+      "auth_export/config.json",
+      "storage_export/buckets.json",
+      "storage_export/blobs",
+      "storage_export/metadata"
+    ],
+    "realDataMayAppearInEvidence": false,
+    "piiMayAppearInEvidence": false
+  },
+  "diagnosticSmoke": {
+    "requiredBeforeEveryFullDataAttempt": true,
+    "dataset": {
+      "path": "conformance/fixtures/official-export-v1.22.0",
+      "syntheticOnly": true,
+      "baseFirestoreDocuments": 4,
+      "fileCount": 5,
+      "fileBytes": 163041,
+      "treeSha256": "e3a9bca45b0a70942922cc6690f5fbf277bd48ad213840b6981c5fd9ae68ff04",
+      "applicationSeed": "deterministic synthetic Auth, Firestore, and Storage state sufficient for all nine browser journeys"
+    },
+    "maximumReadySeconds": 60,
+    "maximumReadySecondsScope": "emulator-suite",
+    "applicationMaximumReadySecondsFrom": "cacheWatcher.maximumReadySeconds",
+    "shortSoakSecondsPerStack": 60,
+    "executionOrder": [
+      "official",
+      "fireside"
+    ],
+    "requirements": {
+      "bothStacks": true,
+      "allNineBrowserJourneys": true,
+      "exportFirstShutdown": true,
+      "cleanup": true,
+      "orphanCheck": true,
+      "fullDataForbiddenUntilPass": true
+    },
+    "readinessFailurePolicy": "Fail fast on three identical definitive probe errors while all required log markers and ports are healthy. Emulator-suite conditions retain 60 seconds; frontend, TwodartNet, cache-watcher and mprocs control use cacheWatcher.maximumReadySeconds. Unavailable or transient responses continue polling within the applicable deadline.",
+    "immutableGateInterventionAllowed": false
+  },
+  "readinessEvidence": {
+    "ledgerRequired": true,
+    "checksumsRequiredOnPassAndFailure": true,
+    "perConditionReadyTimesRequired": true,
+    "deadlineOrigin": "stack launch",
+    "emulatorConditions": ["All emulators ready", "emulator ports", "hub probe", "functions inventory probe"],
+    "applicationConditions": ["frontend", "TwodartNet", "cache-watcher", "mprocs control"],
+    "frontendCurlMaximumSeconds": 30,
+    "frontendCurlConnectTimeoutSeconds": 3,
+    "twodartNetCurlMaximumSeconds": 8,
+    "hubProbeMaximumSeconds": 5,
+    "functionsProbeMaximumSeconds": 5,
+    "definitiveErrorSamples": 3
+  },
+  "twodartRuntimeAssets": {
+    "sourceEnvironmentVariable": "TWODART_PHASE5_RUNTIME_ASSETS_SOURCE",
+    "transfer": "rsync over the existing multiplexed SSH connection with content checksums",
+    "treeHashAlgorithm": "SHA-256 of the lexicographically sorted per-file SHA-256 manifest with ./-relative paths",
+    "filesMayAppearInEvidence": false,
+    "trees": [
+      {
+        "path": "engines/twodartnet/TwodartNet/Assets/globalFonts",
+        "fileCount": 46,
+        "fileBytes": 14315300,
+        "treeSha256": "415edbf85ef3d09789b3a64bf14eb65550e8876915d892c0018b7ec96b8a40cf"
+      },
+      {
+        "path": "engines/twodartnet/TwodartNet/Assets/masterSlidesBase",
+        "fileCount": 3,
+        "fileBytes": 93371,
+        "treeSha256": "27dd0b395aee2f557a90c7b8cb58fbdd2b1dd4fd2b0861cc76911d34ba7685a8"
+      },
+      {
+        "path": "engines/twodartnet/TwodartNet/Assets/slides",
+        "fileCount": 10918,
+        "fileBytes": 522696779,
+        "treeSha256": "b1ecdef81da630d286fabcc5f6973b5544c09e3f381f9c29ffef1b93e543fd63"
+      }
+    ]
+  },
+  "host": {
+    "sshAlias": "fireside-hetzner",
+    "hostname": "fireside-hetzner",
+    "operatingSystem": "Ubuntu 24.04.4 LTS; Linux 6.8.0-138-generic x86_64",
+    "worktreePolicy": "fresh isolated checkout; do not modify any existing checkout or session",
+    "minimumAvailableDiskBytes": 80000000000,
+    "preflight": {
+      "systemState": "running",
+      "sshState": "active",
+      "failedUnits": 0,
+      "currentBootOomOrResourceKills": 0,
+      "steadyVmstatSamples": 3,
+      "maximumSwapInPagesPerSecond": 0,
+      "maximumSwapOutPagesPerSecond": 0,
+      "residualSwapBytesAllowedWhenInactive": true,
+      "swapDrain": {
+        "requiredBeforeEachStack": true,
+        "commands": ["swapoff -a", "swapon -a"],
+        "onlyWhenNoGateStackIsRunning": true,
+        "recordInEnvironment": true,
+        "recordVmSwappiness": true,
+        "changeVmSwappinessAllowed": false
+      },
+      "conflictingGateProcesses": 0,
+      "conflictingGateListeners": 0
+    }
+  },
+  "toolchain": {
+    "mise": "2026.7.6",
+    "node": "24.20.0",
+    "npm": "12.0.2",
+    "bun": "1.3.14",
+    "rust": "1.98.0",
+    "java": "26.0.2.1",
+    "dotnet": "10.0.301",
+    "python": "3.14.6",
+    "chrome": "150.0.7871.124",
+    "firebaseTools": "15.22.0",
+    "officialFirestoreEmulatorResolvedByTwodart": "1.21.0",
+    "storageRulesRuntime": "1.1.3",
+    "firebaseEmulatorUi": "1.15.0",
+    "firesideBuild": {
+      "sourceTag": "phase-4",
+      "profile": "release",
+      "allocatorOverridesAllowed": false,
+      "redbCacheOverridesAllowed": false
+    }
+  },
+  "safety": {
+    "liveMacMprocsMustRemainUntouched": true,
+    "devhostSshBridgeMustRemainDisabled": true,
+    "onlyMultiplexedSshPathAllowed": true,
+    "productionSecretsAllowed": false,
+    "externalProviderMutationsAllowed": false,
+    "allowedGcpProject": "fireside-conformance",
+    "cloudTrafficRequired": false,
+    "safeDemoCredentialsOnly": true,
+    "providersThatMustBeDisabledOrLocallyStubbed": [
+      "Stripe",
+      "Algolia",
+      "Postmark",
+      "PostHog",
+      "Cloudflare"
+    ],
+    "customEmulatorUiAllowed": false,
+    "evalLabRunsAllowed": false
+  },
+  "stacks": {
+    "simultaneous": false,
+    "executionOrder": [
+      "official",
+      "fireside"
+    ],
+    "sameDataset": true,
+    "sameSourceRevision": true,
+    "sameToolchain": true,
+    "sameFunctionsBuild": true,
+    "sameFirebaseTools": true,
+    "official": {
+      "backendEnvironment": "TWODART_FIREBASE_BACKEND=official",
+      "portBlock": {
+        "firestore": 23000,
+        "auth": 23001,
+        "storage": 23002,
+        "functions": 23003,
+        "pubsub": 23004,
+        "hub": 23005,
+        "ui": 23006,
+        "firestoreWebsocket": 23007,
+        "logging": 23008,
+        "eventarc": 23009,
+        "tasks": 23010,
+        "mprocsControl": 23011
+      }
+    },
+    "fireside": {
+      "backendEnvironment": "TWODART_FIREBASE_BACKEND=fireside",
+      "portBlock": {
+        "firestore": 23100,
+        "auth": 23101,
+        "storage": 23102,
+        "functions": 23103,
+        "pubsub": 23104,
+        "hub": 23105,
+        "ui": 23106,
+        "firestoreWebsocket": 23107,
+        "logging": 23108,
+        "eventarc": 23109,
+        "tasks": 23110,
+        "mprocsControl": 23111
+      }
+    }
+  },
+  "differentialJourneys": {
+    "ordered": true,
+    "journeys": [
+      {
+        "id": "otp-auth-login",
+        "requirements": [
+          "request an OTP through the rendered login UI",
+          "obtain the local-only OTP through the Auth/Firestore admin test path without persisting PII",
+          "complete custom-token sign-in through the Auth emulator",
+          "assert rendered authenticated state, HTTP responses, Auth user identity, and session persistence"
+        ]
+      },
+      {
+        "id": "dashboard-and-deck-list",
+        "requirements": [
+          "load the dashboard and deck list",
+          "assert rendered deck rows, successful network responses, and matching Firestore query results"
+        ]
+      },
+      {
+        "id": "existing-deck-and-listener-edit",
+        "requirements": [
+          "open an existing deck selected deterministically from the dataset",
+          "edit a synthetic sentinel text field without recording private deck content",
+          "assert the Firestore write and listener echo in the editor",
+          "restore the original field before the journey completes"
+        ]
+      },
+      {
+        "id": "catalog-slide-add",
+        "requirements": [
+          "add a slide from the template catalog",
+          "assert cache-watcher chunks, catalog Firestore reads, Storage reads, rendered slide, and resulting deck state",
+          "remove the synthetic added slide during cleanup"
+        ]
+      },
+      {
+        "id": "deck-image-upload",
+        "requirements": [
+          "upload a generated non-private image to the deck",
+          "assert Storage rules, upload response, metadata, download token, rendered image, and byte-for-byte download",
+          "delete the synthetic object during cleanup"
+        ]
+      },
+      {
+        "id": "duplicate-and-delete-deck",
+        "requirements": [
+          "duplicate a deterministically selected deck through the real Twodart function path",
+          "assert callable response, trigger effects, rendered duplicate, and Firestore/Storage state",
+          "delete only the duplicate and assert complete cleanup"
+        ]
+      },
+      {
+        "id": "dotnet-deck-export",
+        "requirements": [
+          "export the selected deck through the .NET API path",
+          "assert rendered completion, successful network response, non-empty generated artifact, and no backend mutation"
+        ]
+      },
+      {
+        "id": "dev-admin-pages",
+        "requirements": [
+          "visit every admin page reachable in the dev navigation for the dataset user",
+          "assert each rendered page, successful required network responses, and absence of unexpected backend writes"
+        ]
+      },
+      {
+        "id": "sign-out-and-sign-in",
+        "requirements": [
+          "sign out through the rendered UI",
+          "assert cleared browser and Auth session state",
+          "repeat local OTP sign-in and assert the same user and deck access"
+        ]
+      }
+    ],
+    "assertionLayers": [
+      "rendered UI",
+      "network request and response",
+      "Firestore/Auth/Storage backend state"
+    ],
+    "rerunAfterLifecycleRestart": true,
+    "allowedFunctionalDivergences": 0,
+    "javaDeviationExceptionRequiresCapturedEvidence": true
+  },
+  "cacheWatcher": {
+    "measureInitialBuild": true,
+    "completionPattern": "Smart watcher started successfully",
+    "maximumReadySeconds": 1200,
+    "measurements": [
+      "wall-clock completion time",
+      "process peak RSS and PSS",
+      "input document count",
+      "output chunk and document counts",
+      "errors"
+    ],
+    "officialAndFiresideOutputsMustMatch": true
+  },
+  "lifecycle": {
+    "gracefulStopRequired": true,
+    "exportOnExitRequired": true,
+    "restartFromExactExportRequired": true,
+    "rerunAllJourneysRequired": true,
+    "countsCompared": [
+      "Firestore documents",
+      "Auth users",
+      "Storage objects",
+      "Storage object bytes"
+    ],
+    "allowedCountMismatch": 0,
+    "acknowledgedWriteLossAllowed": 0,
+    "syntheticJourneyArtifactsRemainingAllowed": 0
+  },
+  "soak": {
+    "durationSeconds": 7200,
+    "simultaneousBackends": false,
+    "executionOrder": [
+      "official",
+      "fireside"
+    ],
+    "freshQuiescentPreflightBeforeEachBackend": true,
+    "identicalConditions": true,
+    "editorSessionsPerBackend": 2,
+    "memorySampleIntervalSeconds": 30,
+    "minimumSteadyMemorySamplesPerBackend": 240,
+    "activeListenersPerEditorSession": 1,
+    "workload": {
+      "tokenBatch": {
+        "intervalSecondsPerSession": 5,
+        "writesPerBatch": 20,
+        "expectedBatchesPerSession": 1440,
+        "expectedTokenWritesPerBackend": 57600
+      },
+      "gatewayJob": {
+        "intervalSecondsPerSession": 10,
+        "expectedWritesPerBackend": 1440
+      },
+      "runAndCaseStatus": {
+        "intervalSecondsPerSession": 15,
+        "expectedWritesPerBackend": 960
+      },
+      "catalogRead": {
+        "intervalSecondsPerSession": 30,
+        "expectedReadsPerBackend": 480
+      },
+      "storageCycle": {
+        "intervalSecondsPerSession": 60,
+        "payloadBytes": 65536,
+        "operations": [
+          "upload",
+          "metadata",
+          "download",
+          "delete"
+        ],
+        "expectedCyclesPerBackend": 240
+      },
+      "twodartFunctionTrigger": {
+        "intervalSecondsPerSession": 60,
+        "expectedDispatchesPerBackend": 240,
+        "externalSideEffects": "disabled or routed to local deterministic stubs"
+      }
+    },
+    "measurements": [
+      "entire stack process-tree RSS and PSS",
+      "per-process RSS and PSS",
+      "RSS peak and least-squares steady slope",
+      "write latency p50 and p99",
+      "listener delivery latency p50 and p99",
+      "Storage cycle latency p50 and p99",
+      "function delivery latency p50 and p99",
+      "errors, stalls, listener gaps, and acknowledged-state mismatches",
+      "swap usage and swap-in/swap-out activity",
+      "top processes ranked by sampled peak PSS per stack",
+      "current-boot OOM/resource evidence"
+    ],
+    "swapActivityPolicy": {
+      "gating": false,
+      "requiredMeasurement": true,
+      "reportSideBySide": true,
+      "winnerRequired": false,
+      "fields": ["swapInPagesDelta", "swapOutPagesDelta", "residualSwapBytesAtStart", "residualSwapBytesAtEnd"]
+    },
+    "thresholds": {
+      "errors": 0,
+      "stalls": 0,
+      "listenerGaps": 0,
+      "acknowledgedStateMismatches": 0,
+      "duplicateObservableEffects": 0,
+      "oomOrResourceKills": 0,
+      "failedUnits": 0,
+      "syntheticArtifactsRemaining": 0
+    },
+    "performanceIsReportedSideBySideWithoutAWinnerRequirement": true
+  },
+  "freshColleague": {
+    "freshCloneRequired": true,
+    "documentedStepsOnly": true,
+    "command": "bun dev:mprocs",
+    "backendExpected": "fireside",
+    "hiddenSessionKnowledgeAllowed": false,
+    "missingStepRequiresDocsFixOnTwodartBranch": true,
+    "officialFallbackMustRemainDocumentedAndWorking": true
+  },
+  "regression": {
+    "completePhase4EvidenceRequired": true,
+    "existingFiresideGithubCiRequired": true,
+    "twodartFunctionsBuildRequired": true,
+    "twodartApplicationBuildOrTypecheckRequired": true,
+    "fullJourneyRerunAfterRestartRequired": true
+  },
+  "ciGating": {
+    "harnessOnlyScope": [
+      "conformance TypeScript used only by Phase 5",
+      "Phase 5 fixtures",
+      "Phase 5 launcher scripts"
+    ],
+    "harnessOnlyPreSmokeRequiredJobs": [
+      "Phase 5 harness",
+      "Rust quality gate"
+    ],
+    "fullMatrixRequiredScopes": [
+      "product changes under crates/",
+      "WebChannel harness changes",
+      "Firebase JS SDK harness changes",
+      "final immutable Phase 5 candidate"
+    ],
+    "fullMatrixJobCount": 7,
+    "finalCandidateRequiresFullMatrix": true
+  },
+  "deliverables": {
+    "report": "reports/phase-5-twodart-acceptance.md",
+    "evidenceRoot": "reports/phase-5-metrics",
+    "checksumsRequired": true,
+    "exactReproductionStepsRequired": true,
+    "exactMacStartCommandRequired": true,
+    "morningCanaryPreparedButNotRun": [
+      "bun ai:eval status",
+      "mini-2 on Fireside",
+      "freeze-candidate 200-case run",
+      "official-emulator fallback command"
+    ]
+  },
+  "releaseBoundary": {
+    "manifestMustPrecedeHarnessImplementation": true,
+    "evidenceCommitRequired": true,
+    "greenGithubCiOnExactEvidenceCommitRequired": true,
+    "thresholdWeakeningForbidden": true,
+    "silentRerunForbidden": true,
+    "unrelatedIntegrationForbidden": true,
+    "doNotStartPhase6UntilPhase5Passes": true
+  }
+}
