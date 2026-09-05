@@ -42,3 +42,12 @@ the official SDK reproduces a legal false positive. Preserve that failure and
 its separate oracle fixture before any assertion correction. A green diagnostic
 retry alone would not remove the unsound test. No new gate starts until the
 evidence and final corrected candidate satisfy their CI requirements.
+
+The original failure is retained in `ci-690925c-attempt1.json`. A single
+diagnostic rerun of the failed Differential job completed successfully in
+run `33969616317`; the other six successful jobs were not rerun. The complete
+seven-job successful receipt for exact evidence commit `690925c` is
+`reports/phase-5-metrics/hetzner-r46-20260905/ci-690925c-attempt2-green.json`.
+This qualifies that evidence publication, not a product change or r46 gate pass.
+The unsound Bloom assertion has separately been corrected after its official
+client fixture, so a lucky retry is not relied upon for the next candidate.
