@@ -36,3 +36,17 @@ returned server filter would conceal malformed filters and is not acceptable.
 
 The CI failure remains a failed run. This fixture does not establish a Fireside
 resume defect, a timing race, a successful CI retry, or a completed Phase 5 gate.
+
+After fixture commit `d9f31ee`, the Listen assertion is corrected to compare
+both the one-member and two-member returned bitmaps with the independently
+verified official-client construction. The arbitrary missing-name result must
+match that oracle, whether positive or negative. Existing shape/count, actual
+member and resume assertions are unchanged. The fixed known-positive,
+known-negative and legal-false-positive fixture cases remain in ordinary CI.
+
+Local diagnostic validation used Node 24.20.0 and Rust 1.98.0 on macOS: memory
+and disk/WAL conformance each passed 34 backend plus 2 control tests, with no
+skips. This is not a Linux acceptance or performance result. The failed CI
+attempt is preserved separately; one failed-job diagnostic retry was requested
+on the unchanged evidence commit, without treating that retry as a test fix.
+The corrected candidate still needs its own full seven-job CI before smoke.

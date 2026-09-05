@@ -3,6 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import test from "node:test";
 
 import type { DocumentChange, QuerySnapshot } from "@google-cloud/firestore";
+import { loadPinnedFirebaseBloomOracle } from "./helpers/firebase-bloom-oracle.ts";
 
 import {
   createFirestore,
@@ -243,6 +244,9 @@ test("raw Listen resumes after a CURRENT checkpoint without replaying prior docu
       : ["ADD", "CURRENT"],
   );
   if (configuration.name !== "java") {
+    const BloomFilter = await loadPinnedFirebaseBloomOracle();
+    const expected = BloomFilter.create(29, 20, [`${database}/documents/${alpha.path}`]);
+    assert.deepEqual(Buffer.from(mismatch.filters[0]!.bitmap), Buffer.from(expected.bitmap));
     assert.equal(
       bloomMightContain(mismatch.filters[0], `${database}/documents/${alpha.path}`),
       true,
@@ -289,6 +293,11 @@ test("raw Listen resumes after a CURRENT checkpoint without replaying prior docu
   );
   if (configuration.name !== "java") {
     const filter = resumed.filters[0];
+    const BloomFilter = await loadPinnedFirebaseBloomOracle();
+    const expected = BloomFilter.create(53, 18, [
+      `${database}/documents/${alpha.path}`, `${database}/documents/${beta.path}`,
+    ]);
+    assert.deepEqual(Buffer.from(filter!.bitmap), Buffer.from(expected.bitmap));
     assert.equal(
       bloomMightContain(filter, `${database}/documents/${alpha.path}`),
       true,
@@ -299,7 +308,7 @@ test("raw Listen resumes after a CURRENT checkpoint without replaying prior docu
     );
     assert.equal(
       bloomMightContain(filter, `${database}/documents/${collection.path}/missing`),
-      false,
+      expected.mightContain(`${database}/documents/${collection.path}/missing`),
     );
   }
 });
