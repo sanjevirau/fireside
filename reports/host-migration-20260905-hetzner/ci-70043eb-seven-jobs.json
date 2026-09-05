@@ -1,0 +1,894 @@
+{
+  "conclusion": "success",
+  "databaseId": 33989307469,
+  "headSha": "70043eb700ac82b6084a314cc1e972afa4345464",
+  "jobs": [
+    {
+      "completedAt": "2026-09-05T20:13:19Z",
+      "conclusion": "success",
+      "databaseId": 101368546855,
+      "name": "Rust quality gate",
+      "startedAt": "2026-09-05T20:10:33Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-09-05T20:10:34Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-09-05T20:10:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:43Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 2,
+          "startedAt": "2026-09-05T20:10:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:51Z",
+          "conclusion": "success",
+          "name": "Install latest stable Rust components",
+          "number": 3,
+          "startedAt": "2026-09-05T20:10:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:51Z",
+          "conclusion": "success",
+          "name": "Check formatting",
+          "number": 4,
+          "startedAt": "2026-09-05T20:10:51Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:31Z",
+          "conclusion": "success",
+          "name": "Deny Clippy warnings",
+          "number": 5,
+          "startedAt": "2026-09-05T20:10:51Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:13:17Z",
+          "conclusion": "success",
+          "name": "Run Rust tests",
+          "number": 6,
+          "startedAt": "2026-09-05T20:11:31Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:13:18Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 12,
+          "startedAt": "2026-09-05T20:13:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:13:18Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 13,
+          "startedAt": "2026-09-05T20:13:18Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/sanjevirau/fireside/actions/runs/33989307469/job/101368546855"
+    },
+    {
+      "completedAt": "2026-09-05T20:16:34Z",
+      "conclusion": "success",
+      "databaseId": 101368546918,
+      "name": "Differential harness",
+      "startedAt": "2026-09-05T20:10:33Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-09-05T20:10:35Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-09-05T20:10:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:43Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 2,
+          "startedAt": "2026-09-05T20:10:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:47Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "number": 3,
+          "startedAt": "2026-09-05T20:10:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:52Z",
+          "conclusion": "success",
+          "name": "Install current npm",
+          "number": 4,
+          "startedAt": "2026-09-05T20:10:47Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:55Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c",
+          "number": 5,
+          "startedAt": "2026-09-05T20:10:52Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:05Z",
+          "conclusion": "success",
+          "name": "Install latest stable Rust",
+          "number": 6,
+          "startedAt": "2026-09-05T20:10:55Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:16Z",
+          "conclusion": "success",
+          "name": "Install pinned harness dependencies",
+          "number": 7,
+          "startedAt": "2026-09-05T20:11:05Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:17Z",
+          "conclusion": "success",
+          "name": "Type-check harness",
+          "number": 8,
+          "startedAt": "2026-09-05T20:11:16Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:12:58Z",
+          "conclusion": "success",
+          "name": "Run harness unit tests",
+          "number": 9,
+          "startedAt": "2026-09-05T20:11:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:12:58Z",
+          "conclusion": "success",
+          "name": "Verify query rules oracle fixtures",
+          "number": 10,
+          "startedAt": "2026-09-05T20:12:58Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:12:59Z",
+          "conclusion": "success",
+          "name": "Verify document-map serialization oracle fixtures",
+          "number": 11,
+          "startedAt": "2026-09-05T20:12:58Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:13:51Z",
+          "conclusion": "success",
+          "name": "Replay document-map serialization in memory and disk/WAL",
+          "number": 12,
+          "startedAt": "2026-09-05T20:12:59Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:14:12Z",
+          "conclusion": "success",
+          "name": "Replay query rules through native and browser transports",
+          "number": 13,
+          "startedAt": "2026-09-05T20:13:51Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:14:42Z",
+          "conclusion": "success",
+          "name": "Run WebChannel browser demo",
+          "number": 14,
+          "startedAt": "2026-09-05T20:14:12Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:14:54Z",
+          "conclusion": "success",
+          "name": "Run WebChannel browser demo in disk/WAL mode",
+          "number": 15,
+          "startedAt": "2026-09-05T20:14:42Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:15:07Z",
+          "conclusion": "success",
+          "name": "Run Fireside conformance",
+          "number": 16,
+          "startedAt": "2026-09-05T20:14:54Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:15:20Z",
+          "conclusion": "success",
+          "name": "Run Fireside disk-mode conformance",
+          "number": 17,
+          "startedAt": "2026-09-05T20:15:07Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:15:43Z",
+          "conclusion": "success",
+          "name": "Run Fireside strict-index conformance",
+          "number": 18,
+          "startedAt": "2026-09-05T20:15:20Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:15:44Z",
+          "conclusion": "success",
+          "name": "Run Fireside Enterprise pipeline conformance",
+          "number": 19,
+          "startedAt": "2026-09-05T20:15:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:15:45Z",
+          "conclusion": "success",
+          "name": "Run Fireside Enterprise pipeline conformance in disk mode",
+          "number": 20,
+          "startedAt": "2026-09-05T20:15:44Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:15:46Z",
+          "conclusion": "success",
+          "name": "Prove disk recovery across SIGKILL",
+          "number": 21,
+          "startedAt": "2026-09-05T20:15:45Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:15:48Z",
+          "conclusion": "success",
+          "name": "Import an official export into Fireside",
+          "number": 22,
+          "startedAt": "2026-09-05T20:15:46Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:16:07Z",
+          "conclusion": "success",
+          "name": "Download and test the official Java emulator",
+          "number": 23,
+          "startedAt": "2026-09-05T20:15:48Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:16:14Z",
+          "conclusion": "success",
+          "name": "Test the official Java emulator in Enterprise mode",
+          "number": 24,
+          "startedAt": "2026-09-05T20:16:07Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:16:27Z",
+          "conclusion": "success",
+          "name": "Re-import a Fireside-written export into Java",
+          "number": 25,
+          "startedAt": "2026-09-05T20:16:14Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:16:33Z",
+          "conclusion": "success",
+          "name": "Export through Fireside and import into Java",
+          "number": 26,
+          "startedAt": "2026-09-05T20:16:27Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:16:33Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c",
+          "number": 50,
+          "startedAt": "2026-09-05T20:16:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:16:33Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "number": 51,
+          "startedAt": "2026-09-05T20:16:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:16:33Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 52,
+          "startedAt": "2026-09-05T20:16:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:16:33Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 53,
+          "startedAt": "2026-09-05T20:16:33Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/sanjevirau/fireside/actions/runs/33989307469/job/101368546918"
+    },
+    {
+      "completedAt": "2026-09-05T20:21:42Z",
+      "conclusion": "success",
+      "databaseId": 101368546925,
+      "name": "Firebase JS SDK browser integration (disk-wal, client persistence)",
+      "startedAt": "2026-09-05T20:10:34Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-09-05T20:10:35Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-09-05T20:10:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:45Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 2,
+          "startedAt": "2026-09-05T20:10:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:48Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 3,
+          "startedAt": "2026-09-05T20:10:45Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:59Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "number": 4,
+          "startedAt": "2026-09-05T20:10:48Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:05Z",
+          "conclusion": "success",
+          "name": "Install pinned npm and Yarn",
+          "number": 5,
+          "startedAt": "2026-09-05T20:10:59Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:16Z",
+          "conclusion": "success",
+          "name": "Install latest stable Rust",
+          "number": 6,
+          "startedAt": "2026-09-05T20:11:05Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:29Z",
+          "conclusion": "success",
+          "name": "Install Fireside conformance dependencies",
+          "number": 7,
+          "startedAt": "2026-09-05T20:11:16Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:12:09Z",
+          "conclusion": "success",
+          "name": "Install pinned Firebase JS SDK dependencies",
+          "number": 8,
+          "startedAt": "2026-09-05T20:11:29Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:21:38Z",
+          "conclusion": "success",
+          "name": "Run Google's Firestore browser integration bootstrap",
+          "number": 9,
+          "startedAt": "2026-09-05T20:12:09Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:21:38Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "number": 16,
+          "startedAt": "2026-09-05T20:21:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:21:38Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 17,
+          "startedAt": "2026-09-05T20:21:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:21:38Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 18,
+          "startedAt": "2026-09-05T20:21:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:21:38Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 19,
+          "startedAt": "2026-09-05T20:21:38Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/sanjevirau/fireside/actions/runs/33989307469/job/101368546925"
+    },
+    {
+      "completedAt": "2026-09-05T20:21:48Z",
+      "conclusion": "success",
+      "databaseId": 101368546932,
+      "name": "Firebase JS SDK browser integration (memory, client persistence)",
+      "startedAt": "2026-09-05T20:10:33Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-09-05T20:10:34Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-09-05T20:10:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:43Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 2,
+          "startedAt": "2026-09-05T20:10:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:45Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 3,
+          "startedAt": "2026-09-05T20:10:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:53Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "number": 4,
+          "startedAt": "2026-09-05T20:10:45Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:57Z",
+          "conclusion": "success",
+          "name": "Install pinned npm and Yarn",
+          "number": 5,
+          "startedAt": "2026-09-05T20:10:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:06Z",
+          "conclusion": "success",
+          "name": "Install latest stable Rust",
+          "number": 6,
+          "startedAt": "2026-09-05T20:10:57Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:18Z",
+          "conclusion": "success",
+          "name": "Install Fireside conformance dependencies",
+          "number": 7,
+          "startedAt": "2026-09-05T20:11:06Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:51Z",
+          "conclusion": "success",
+          "name": "Install pinned Firebase JS SDK dependencies",
+          "number": 8,
+          "startedAt": "2026-09-05T20:11:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:21:46Z",
+          "conclusion": "success",
+          "name": "Run Google's Firestore browser integration bootstrap",
+          "number": 9,
+          "startedAt": "2026-09-05T20:11:51Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:21:46Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "number": 16,
+          "startedAt": "2026-09-05T20:21:46Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:21:46Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 17,
+          "startedAt": "2026-09-05T20:21:46Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:21:46Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 18,
+          "startedAt": "2026-09-05T20:21:46Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:21:46Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 19,
+          "startedAt": "2026-09-05T20:21:46Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/sanjevirau/fireside/actions/runs/33989307469/job/101368546932"
+    },
+    {
+      "completedAt": "2026-09-05T20:11:08Z",
+      "conclusion": "success",
+      "databaseId": 101368546958,
+      "name": "Phase 5 harness",
+      "startedAt": "2026-09-05T20:10:33Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-09-05T20:10:35Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-09-05T20:10:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:43Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 2,
+          "startedAt": "2026-09-05T20:10:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:45Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "number": 3,
+          "startedAt": "2026-09-05T20:10:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:49Z",
+          "conclusion": "success",
+          "name": "Install current npm",
+          "number": 4,
+          "startedAt": "2026-09-05T20:10:45Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:59Z",
+          "conclusion": "success",
+          "name": "Install pinned harness dependencies",
+          "number": 5,
+          "startedAt": "2026-09-05T20:10:49Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:01Z",
+          "conclusion": "success",
+          "name": "Type-check harness",
+          "number": 6,
+          "startedAt": "2026-09-05T20:10:59Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:05Z",
+          "conclusion": "success",
+          "name": "Run Phase 5 harness tests",
+          "number": 7,
+          "startedAt": "2026-09-05T20:11:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:05Z",
+          "conclusion": "success",
+          "name": "Verify replacement-host deployment preflight fixtures",
+          "number": 8,
+          "startedAt": "2026-09-05T20:11:05Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:05Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "number": 15,
+          "startedAt": "2026-09-05T20:11:05Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:05Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 16,
+          "startedAt": "2026-09-05T20:11:05Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:05Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 17,
+          "startedAt": "2026-09-05T20:11:05Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/sanjevirau/fireside/actions/runs/33989307469/job/101368546958"
+    },
+    {
+      "completedAt": "2026-09-05T20:19:28Z",
+      "conclusion": "success",
+      "databaseId": 101368546989,
+      "name": "Firebase JS SDK browser integration (memory, client memory)",
+      "startedAt": "2026-09-05T20:10:33Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-09-05T20:10:34Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-09-05T20:10:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:43Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 2,
+          "startedAt": "2026-09-05T20:10:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:45Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 3,
+          "startedAt": "2026-09-05T20:10:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:52Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "number": 4,
+          "startedAt": "2026-09-05T20:10:45Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:57Z",
+          "conclusion": "success",
+          "name": "Install pinned npm and Yarn",
+          "number": 5,
+          "startedAt": "2026-09-05T20:10:52Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:06Z",
+          "conclusion": "success",
+          "name": "Install latest stable Rust",
+          "number": 6,
+          "startedAt": "2026-09-05T20:10:57Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:19Z",
+          "conclusion": "success",
+          "name": "Install Fireside conformance dependencies",
+          "number": 7,
+          "startedAt": "2026-09-05T20:11:06Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:53Z",
+          "conclusion": "success",
+          "name": "Install pinned Firebase JS SDK dependencies",
+          "number": 8,
+          "startedAt": "2026-09-05T20:11:19Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:19:26Z",
+          "conclusion": "success",
+          "name": "Run Google's Firestore browser integration bootstrap",
+          "number": 9,
+          "startedAt": "2026-09-05T20:11:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:19:26Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "number": 16,
+          "startedAt": "2026-09-05T20:19:26Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:19:27Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 17,
+          "startedAt": "2026-09-05T20:19:26Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:19:27Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 18,
+          "startedAt": "2026-09-05T20:19:27Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:19:27Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 19,
+          "startedAt": "2026-09-05T20:19:27Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/sanjevirau/fireside/actions/runs/33989307469/job/101368546989"
+    },
+    {
+      "completedAt": "2026-09-05T20:19:42Z",
+      "conclusion": "success",
+      "databaseId": 101368547080,
+      "name": "Firebase JS SDK browser integration (disk-wal, client memory)",
+      "startedAt": "2026-09-05T20:10:33Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-09-05T20:10:34Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-09-05T20:10:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:43Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 2,
+          "startedAt": "2026-09-05T20:10:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:45Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 3,
+          "startedAt": "2026-09-05T20:10:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:53Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "number": 4,
+          "startedAt": "2026-09-05T20:10:45Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:10:58Z",
+          "conclusion": "success",
+          "name": "Install pinned npm and Yarn",
+          "number": 5,
+          "startedAt": "2026-09-05T20:10:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:07Z",
+          "conclusion": "success",
+          "name": "Install latest stable Rust",
+          "number": 6,
+          "startedAt": "2026-09-05T20:10:58Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:20Z",
+          "conclusion": "success",
+          "name": "Install Fireside conformance dependencies",
+          "number": 7,
+          "startedAt": "2026-09-05T20:11:07Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:11:56Z",
+          "conclusion": "success",
+          "name": "Install pinned Firebase JS SDK dependencies",
+          "number": 8,
+          "startedAt": "2026-09-05T20:11:20Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:19:40Z",
+          "conclusion": "success",
+          "name": "Run Google's Firestore browser integration bootstrap",
+          "number": 9,
+          "startedAt": "2026-09-05T20:11:56Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:19:41Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "number": 16,
+          "startedAt": "2026-09-05T20:19:40Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:19:41Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 17,
+          "startedAt": "2026-09-05T20:19:41Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:19:41Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 18,
+          "startedAt": "2026-09-05T20:19:41Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-09-05T20:19:41Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 19,
+          "startedAt": "2026-09-05T20:19:41Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/sanjevirau/fireside/actions/runs/33989307469/job/101368547080"
+    }
+  ],
+  "status": "completed",
+  "url": "https://github.com/sanjevirau/fireside/actions/runs/33989307469"
+}

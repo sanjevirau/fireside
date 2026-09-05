@@ -2783,6 +2783,15 @@ itself cannot launch or signal servers. Its reattachment outcome is frozen befor
 owned cleanup, while all later lifecycle events remain in the raw records.
 Actual captured contracts and regression fixtures must precede any product fix.
 
+The separately captured Java binding oracle uses the explicit loopback listener
+`[::ffff:127.0.0.1]`. The diagnostic launcher accepts that literal spelling,
+`127.0.0.1` and `[::1]`, but still requires exactly one listener on the requested
+port with one known owner, no duplicate owned addresses, and no wildcard or
+non-loopback owned listeners. Each readiness sample is flushed before these
+assertions, including rejected samples. The launcher-only r1 rejection remains
+preserved; corrected diagnostics use a new attempt directory. This is not a
+Firestore wire-contract change or an immutable-gate amendment.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.

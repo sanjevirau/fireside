@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { ROOT } from './hetzner-preflight.mjs';
-import { CASES, PINS, TOOLING_FILES, assertSameIdentity, captureBudget, diagnosticConflict, establishIdentity, listenerOwned, parseArguments, procIdentity,
+import { CASES, PINS, TOOLING_FILES, assertSameIdentity, captureBudget, checkReadinessSample, diagnosticConflict, establishIdentity, listenerOwned, parseArguments, procIdentity,
   serverCommand, validateReceipt } from './run-idle-listen-diagnostic.mjs';
 
 const values = ['--output', ROOT + '/attempts/idle-listen-20260906-r1', '--conformance-dir',
@@ -103,4 +104,54 @@ test('readiness requires a sole known PID on the explicit loopback port', () => 
   assert.equal(listenerOwned(good, 999, 23200), false);
   assert.equal(listenerOwned(good + '\n' + good, 123, 23200), false);
   assert.equal(listenerOwned(good.replace('pid=123,', 'pid=123, pid=999,'), 123, 23200), false);
+});
+
+test('committed official binding oracle passes with all four mapped-loopback listeners', async () => {
+  const fixture = JSON.parse(await readFile(new URL('../../conformance/fixtures/phase5/idle-listen-binding-oracle.json', import.meta.url), 'utf8'));
+  assert.equal(fixture.oracle.jarSha256, PINS.jarSha256);
+  const { sample } = fixture.observed;
+  const identity = { startTicks: '1000' };
+  const handle = { child: { pid: sample.pid, exitCode: null, signalCode: null }, identity };
+  const ledger = [];
+  const ready = await checkReadinessSample(handle, 23200, sample.ss, async entry => { ledger.push(entry); }, async () => identity);
+  assert.equal(ready.listeners.length, 4);
+  assert.equal(ledger.length, 1); assert.equal(ledger[0].ss, sample.ss); assert.equal(ledger[0].pid, sample.pid);
+  assert(Number.isFinite(Date.parse(ledger[0].at)));
+});
+
+test('only the three literal loopback forms pass; wildcard and lookalikes do not', () => {
+  const line = address => `LISTEN 0 4096 ${address}:23200 *:* users:(("java",pid=123,fd=10))`;
+  for (const address of ['127.0.0.1', '[::1]', '[::ffff:127.0.0.1]']) assert.equal(listenerOwned(line(address), 123, 23200), true);
+  for (const address of ['0.0.0.0', '*', '[::]', '192.0.2.1', '127.0.0.10', '1127.0.0.1',
+    '[::ffff:127.0.0.10]', '[::ffff:192.0.2.1]', '[::ffff:127.0.0.1]suffix', '[::1]suffix', '127.0.0.1%lo']) {
+    assert.equal(listenerOwned(line(address), 123, 23200), false, address);
+  }
+  assert.equal(listenerOwned(line('[::ffff:127.0.0.1]') + '\n' + line('127.0.0.1'), 123, 23200), false);
+  assert.equal(listenerOwned(line('[::ffff:127.0.0.1]').replace('pid=123,', 'pid=123, pid=999,'), 123, 23200), false);
+});
+
+test('failed readiness preserves exact ss before assertions or process identity reads', async () => {
+  const handle = { child: { pid: 123, exitCode: null, signalCode: null }, identity: {} };
+  const line = 'LISTEN 0 4096 [::ffff:127.0.0.1]:23200 *:* users:(("java",pid=123,fd=10))';
+  for (const ss of [line.replace('[::ffff:127.0.0.1]', '[::]'), line.replace('pid=123,', 'pid=999,'),
+    line + '\n' + line.replace(':23200', ':30000').replace('[::ffff:127.0.0.1]', '0.0.0.0'),
+    line + '\n' + line.replace(':23200', ':30000').replace('pid=123,', 'pid=123, pid=999,'),
+    line + '\n' + line]) {
+    const order = [];
+    await assert.rejects(checkReadinessSample(handle, 23200, ss, async entry => {
+      await Promise.resolve(); order.push('persisted'); assert.equal(entry.ss, ss);
+    }, async () => { order.push('identity'); return handle.identity; }));
+    assert.deepEqual(order, ['persisted']);
+  }
+  const order = [];
+  await assert.rejects(checkReadinessSample(handle, 23200, line, async () => { throw Error('ledger unavailable'); },
+    async () => { order.push('identity'); return handle.identity; }), /ledger unavailable/);
+  assert.deepEqual(order, []);
+  const waiting = [];
+  assert.equal(await checkReadinessSample(handle, 23200, '', async entry => { waiting.push(entry.ss); }), null);
+  assert.deepEqual(waiting, ['']);
+  const exited = [];
+  await assert.rejects(checkReadinessSample({ ...handle, child: { ...handle.child, exitCode: 1 } }, 23200, '',
+    async entry => { exited.push(entry.ss); }), /exited before readiness/);
+  assert.deepEqual(exited, ['']);
 });

@@ -90,10 +90,31 @@ export function assertSameIdentity(expected, actual) {
   assert.deepEqual(actual, expected, 'Owned child PID identity changed: do not signal it');
 }
 
+const localAddress = line => line.trim().split(/\s+/u)[3] ?? '';
+const listenerPids = line => [...line.matchAll(/pid=(\d+)/gu)].map(match => match[1]);
+const solePid = (line, pid) => { const pids = listenerPids(line); return pids.length === 1 && pids[0] === String(pid); };
+const loopbackAddress = address => /^(?:127\.0\.0\.1|\[::1\]|\[::ffff:127\.0\.0\.1\]):\d+$/u.test(address);
+const portListeners = (lines, port) => lines.split('\n').filter(line => localAddress(line).endsWith(':' + port));
+
 export function listenerOwned(lines, pid, port) {
-  const relevant = lines.split('\n').filter(line => new RegExp(`:${port}\\s`, 'u').test(line));
-  return relevant.length === 1 && new RegExp(`\\s127\\.0\\.0\\.1:${port}\\s`, 'u').test(relevant[0]) &&
-    [...relevant[0].matchAll(/pid=(\d+)/gu)].length === 1 && relevant[0].includes(`pid=${pid},`);
+  const relevant = portListeners(lines, port);
+  return relevant.length === 1 && loopbackAddress(localAddress(relevant[0])) && solePid(relevant[0], pid);
+}
+
+export async function checkReadinessSample(handle, port, stdout, record, read = readIdentity) {
+  const observation = { at: new Date().toISOString(), pid: handle.child.pid, ss: stdout };
+  // Preserve even a failed assertion's exact ss output before interpreting it.
+  await record(observation);
+  assert(handle.child.exitCode === null && handle.child.signalCode === null, 'Owned server exited before readiness');
+  const ownedLines = stdout.split('\n').filter(line => listenerPids(line).includes(String(handle.child.pid)));
+  assert(ownedLines.every(line => loopbackAddress(localAddress(line)) && solePid(line, handle.child.pid)), 'Owned server exposed a non-loopback or shared listener');
+  assert.equal(new Set(ownedLines.map(localAddress)).size, ownedLines.length, 'Owned server has duplicate listener addresses');
+  if (listenerOwned(stdout, handle.child.pid, port)) {
+    assertSameIdentity(handle.identity, await read(handle.child.pid));
+    return { at: observation.at, pid: handle.child.pid, listeners: ownedLines };
+  }
+  assert.equal(portListeners(stdout, port).length, 0, 'Diagnostic listener is not exclusively owned loopback server');
+  return null;
 }
 
 export function diagnosticConflict(name, command) {
@@ -211,22 +232,24 @@ async function stopOwned(handle, record) {
   return { identityChecked: true, ...exited };
 }
 
-async function waitReady(handle, port) {
+async function waitReady(handle, port, record) {
   const deadline = performance.now() + PINS.readyMilliseconds;
   while (performance.now() < deadline) {
-    assert(handle.child.exitCode === null && handle.child.signalCode === null, 'Owned server exited before readiness');
-    const { stdout } = await execute('/usr/bin/ss', ['-H', '-ltnp'], { timeout: 5000 });
-    if (listenerOwned(stdout, handle.child.pid, port)) {
-      assertSameIdentity(handle.identity, await readIdentity(handle.child.pid));
-      const ownedLines = stdout.split('\n').filter(line => line.includes(`pid=${handle.child.pid},`));
-      assert(ownedLines.every(line => /\s(?:127\.0\.0\.1|\[::1\]):\d+\s/u.test(line)), 'Owned server exposed a non-loopback listener');
+    let stdout;
+    try { ({ stdout } = await execute('/usr/bin/ss', ['-H', '-ltnp'], { timeout: 5000 })); }
+    catch (error) {
+      await record({ at: new Date().toISOString(), pid: handle.child.pid, ss: error.stdout ?? null, error: describe(error) });
+      throw error;
+    }
+    const ready = await checkReadinessSample(handle, port, stdout, record);
+    if (ready !== null) {
       const connected = await new Promise(resolve => {
         const socket = createConnection({ host: '127.0.0.1', port });
         const finish = value => { socket.destroy(); resolve(value); };
         socket.setTimeout(1000, () => finish(false)); socket.once('connect', () => finish(true)); socket.once('error', () => finish(false));
       });
-      if (connected) return { at: new Date().toISOString(), pid: handle.child.pid, listeners: ownedLines };
-    } else if (new RegExp(`:${port}\\s`, 'u').test(stdout)) throw Error('Diagnostic listener is not exclusively owned loopback server');
+      if (connected) return ready;
+    }
     await delay(100);
   }
   throw Error('Owned server readiness deadline exceeded');
@@ -328,7 +351,8 @@ export async function main(options) {
         server = startChild(serverCommand(item.stack, options, directory), directory, environment, path.join(directory, 'server.log'));
         await record('server-spawn', { pid: server.child.pid, command: server.command, directory: server.directory });
         await json(path.join(directory, 'server-identity.json'), await establishIdentity(server));
-        await json(path.join(directory, 'server-readiness.json'), await waitReady(server, options.port));
+        const recordReadiness = sample => appendFile(path.join(directory, 'server-readiness.jsonl'), JSON.stringify(sample) + '\n', { mode: 0o600, flush: true });
+        await json(path.join(directory, 'server-readiness.json'), await waitReady(server, options.port, recordReadiness));
         const command = { executable: PINS.node, args: ['--import', 'tsx', 'src/suite/capture-phase5-idle-listen.ts',
           '--host', `127.0.0.1:${options.port}`, '--project-id', PINS.project, '--stack', item.stack, '--case', item.caseName,
           '--sdk-root', PINS.sdkRoot, '--output', path.join(directory, 'capture'), '--server-pid', String(server.child.pid)] };
