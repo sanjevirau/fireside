@@ -14,7 +14,8 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const TWODART_CANDIDATE = "daa55b893ab0564f558b3f4116c102762e964aeb";
+export const PHASE5_PREPARED_TWODART_REVISION =
+  "6bda5bf29b2399017d2a872e8f3fc1a15d073a54";
 
 export type Phase5StackName = "official" | "fireside";
 
@@ -330,7 +331,7 @@ async function main(): Promise<void> {
   await assertDirectory(path.join(inputRoot, "full-data"));
   await assertDirectory(path.join(inputRoot, "Assets"));
   const revision = (await capture("git", ["-C", stackRoot, "rev-parse", "HEAD"])).trim();
-  if (revision !== TWODART_CANDIDATE) {
+  if (revision !== PHASE5_PREPARED_TWODART_REVISION) {
     throw new Error(`Twodart candidate mismatch: ${revision}`);
   }
 

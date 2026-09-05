@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -9,6 +10,7 @@ import {
   PHASE5_TWODART_REVISION,
   type Phase5Manifest,
 } from "../src/suite/phase5-acceptance-plan.ts";
+import { PHASE5_PREPARED_TWODART_REVISION } from "../src/suite/phase5-host-prepare.ts";
 
 const manifestUrl = new URL(
   "../../benchmarks/phase-5-twodart-acceptance.json",
@@ -31,7 +33,7 @@ test("the immutable Phase 5 manifest freezes the full Twodart differential gate"
     storageObjects: 33_353,
     storageObjectBytes: 6_689_692_200,
   });
-  assert.equal(manifest.host.sshAlias, "sanjevi-linux");
+  assert.equal(manifest.host.sshAlias, "fireside-hetzner");
   assert.equal(manifest.host.minimumAvailableDiskBytes, 80_000_000_000);
   assert.equal(manifest.schemaVersion, 3);
   assert.equal(manifest.amendment.criteriaWeakened, true);
@@ -166,4 +168,57 @@ test("the Phase 5 manifest rejects byte drift before any measurement", async () 
 
   assert.equal(PHASE5_MANIFEST_SHA256.length, 64);
   assert.throws(() => assertPhase5Manifest(manifest, drifted), /SHA-256 mismatch/u);
+});
+
+test("host migration preserves every existing criterion except declared host identity and CI bookkeeping", async () => {
+  const manifest = JSON.parse(await readFile(manifestUrl, "utf8"));
+  const fixture = JSON.parse(await readFile(new URL(
+    "../fixtures/phase5/host-migration-20260905-contract.json", import.meta.url,
+  ), "utf8"));
+  const amendment = manifest.hostMigrationAmendment;
+  assert.equal(amendment.previousManifestSha256, fixture.previousManifestSha256);
+  assert.equal(amendment.amendedBeforeMeasurement, true);
+  assert.equal(amendment.criteriaWeakened, false);
+  assert.equal(manifest.ciGating.fullMatrixJobCount, fixture.requiredCiJobCount);
+  assert.equal(amendment.ciJobCountCorrection.previousDocumentedCount, fixture.previousCiJobCount);
+  assert.equal(manifest.officialRestartHostLimitAmendment.sourceEvidenceChecksumsSha256,
+    fixture.historicalOfficialEvidenceChecksumManifestSha256);
+
+  const previousContract = structuredClone(manifest);
+  delete previousContract.hostMigrationAmendment;
+  Object.assign(previousContract.host, fixture.previousHostIdentity);
+  previousContract.ciGating.fullMatrixJobCount = fixture.previousCiJobCount;
+  assert.equal(createHash("sha256").update(JSON.stringify(previousContract)).digest("hex"),
+    fixture.previousParsedContractSha256);
+  assert.equal(createHash("sha256").update(await readFile(new URL(
+    "../src/suite/run-phase5-browser-journeys.ts", import.meta.url,
+  ))).digest("hex"), fixture.browserRunnerSha256);
+  assert.equal(PHASE5_PREPARED_TWODART_REVISION, fixture.measuredTwodartRevision);
+  assert.equal(amendment.applicationSetup.twodartRevision, fixture.measuredTwodartRevision);
+  assert.equal(amendment.applicationSetup.additionalDotnetSdk, "10.0.100");
+  assert.equal(manifest.toolchain.dotnet, "10.0.301");
+});
+
+test("host migration rejects relaxed RAID health, cross-host winner claims, and old official reruns", async () => {
+  const bytes = await readFile(manifestUrl);
+  const original = JSON.parse(bytes.toString("utf8"));
+  const mutations = [
+    (value: typeof original) => { value.hostMigrationAmendment.amendedBeforeMeasurement = false; },
+    (value: typeof original) => { value.hostMigrationAmendment.criteriaWeakened = true; },
+    (value: typeof original) => { value.hostMigrationAmendment.launcherPreflight.raidAllMembersHealthyRequired = false; },
+    (value: typeof original) => { value.hostMigrationAmendment.launcherPreflight.raidDegradedDevicesAllowed = 1; },
+    (value: typeof original) => { value.hostMigrationAmendment.launcherPreflight.raidSyncActionRequired = "resync"; },
+    (value: typeof original) => { value.hostMigrationAmendment.launcherPreflight.measurementWhileRaidSyncActiveAllowed = true; },
+    (value: typeof original) => { value.hostMigrationAmendment.crossHostPerformanceWinnerClaimsAllowed = true; },
+    (value: typeof original) => { value.hostMigrationAmendment.separateSameHealthyHostComparisonRequiredBeforeEfficiencyClaims = false; },
+    (value: typeof original) => { value.hostMigrationAmendment.bankedOfficialR36StageRerun = true; },
+  ];
+  for (const mutate of mutations) {
+    const changed = structuredClone(original);
+    mutate(changed);
+    assert.throws(() => assertPhase5Manifest(changed, bytes), /host migration contract diverged/u);
+  }
+  const sixJobs = structuredClone(original);
+  sixJobs.ciGating.fullMatrixJobCount = 6;
+  assert.throws(() => assertPhase5Manifest(sixJobs, bytes), /tiered CI contract diverged/u);
 });

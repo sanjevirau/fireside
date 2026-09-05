@@ -3,6 +3,55 @@
   "name": "phase-5-twodart-acceptance",
   "frozen": true,
   "frozenAt": "2026-09-03T13:40:00+08:00",
+  "hostMigrationAmendment": {
+    "previousManifestSha256": "48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e",
+    "amendedBeforeMeasurement": true,
+    "criteriaWeakened": false,
+    "reason": "R44 was rejected before any release build, smoke, or gate workload because sanjevi-linux reported an NVMe read I/O Error and critical medium error on its root drive. Read-only attribution mapped the affected block to the pinned Node 24.20.0 executable, and SMART reported 30,026 cumulative media errors. The user provisioned the Hetzner replacement for the Templates-first release. Migrate the unchanged acceptance workload to the healthy replacement without restarting the old official r36 stage or treating different-host measurements as a performance comparison.",
+    "report": "reports/phase-5-host-migration-20260905.md",
+    "fixture": "conformance/fixtures/phase5/host-migration-20260905-contract.json",
+    "hostEvidenceDirectory": "reports/host-migration-20260905-hetzner",
+    "sourceHost": "sanjevi-linux",
+    "destinationHost": {
+      "sshAlias": "fireside-hetzner",
+      "operatingSystem": "Ubuntu 24.04.4 LTS",
+      "kernel": "6.8.0-138-generic",
+      "architecture": "x86_64",
+      "cpuModel": "AMD Ryzen 5 3600 6-Core Processor",
+      "logicalCpuCount": 12,
+      "totalMemoryBytes": 67343601664,
+      "storage": "RAID1 across two 512 GB NVMe devices"
+    },
+    "launcherPreflight": {
+      "raidAllMembersHealthyRequired": true,
+      "raidDegradedDevicesAllowed": 0,
+      "raidSyncActionRequired": "idle",
+      "currentBootHardwareOrIoErrorsAllowed": 0,
+      "recordRaidAndStorageHealthBeforeMeasurement": true,
+      "measurementWhileRaidSyncActiveAllowed": false
+    },
+    "workloadChanged": false,
+    "durationsChanged": false,
+    "thresholdsChanged": false,
+    "datasetChanged": false,
+    "browserRunnerChanged": false,
+    "gateToolchainPinsChanged": false,
+    "bankedOfficialR36EvidencePreserved": true,
+    "bankedOfficialR36StageRerun": false,
+    "crossHostPerformanceWinnerClaimsAllowed": false,
+    "separateSameHealthyHostComparisonRequiredBeforeEfficiencyClaims": true,
+    "ciJobCountCorrection": {
+      "previousDocumentedCount": 6,
+      "requiredCount": 7,
+      "reason": "Correct stale manifest bookkeeping to the already-mandatory seven-job matrix; no required job is removed or waived."
+    },
+    "applicationSetup": {
+      "twodartRevision": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54",
+      "additionalDotnetSdk": "10.0.100",
+      "reason": "TwodartNet global.json requires SDK 10.0.100 with latestPatch while the gate's top-level SDK pin remains 10.0.301; install the additional application SDK without changing the application or gate toolchain pins."
+    },
+    "phase6MayStart": false
+  },
   "officialRestartHostLimitAmendment": {
     "previousManifestSha256": "fe9d44c1edb6105d6edc9f0ab3b3251cb34929b7b6113e559ff9a2558ad7b957",
     "amendedBeforeFiresideMeasurement": true,
@@ -193,9 +242,9 @@
     ]
   },
   "host": {
-    "sshAlias": "sanjevi-linux",
-    "hostname": "sanjevi-linux",
-    "operatingSystem": "Ubuntu Linux 7.0.0-30-generic x86_64",
+    "sshAlias": "fireside-hetzner",
+    "hostname": "fireside-hetzner",
+    "operatingSystem": "Ubuntu 24.04.4 LTS; Linux 6.8.0-138-generic x86_64",
     "worktreePolicy": "fresh isolated checkout; do not modify any existing checkout or session",
     "minimumAvailableDiskBytes": 80000000000,
     "preflight": {
@@ -530,7 +579,7 @@
       "Firebase JS SDK harness changes",
       "final immutable Phase 5 candidate"
     ],
-    "fullMatrixJobCount": 6,
+    "fullMatrixJobCount": 7,
     "finalCandidateRequiresFullMatrix": true
   },
   "deliverables": {

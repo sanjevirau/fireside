@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 export const PHASE5_MANIFEST_SHA256 =
-  "48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e";
+  "c281263a95cadb7ba254d9b9355bd00808c6054865853158adc54a9886b683aa";
 
 export const PHASE5_TWODART_REVISION =
   "90881bf9611c9de09bcfc326943494bc28fcd1bd";
@@ -10,6 +10,49 @@ export const PHASE5_DATASET_TREE_SHA256 =
   "3505b5fd24dc4e8fb1f9925b5201c6e28dbb993c7a0a2bebb34cb70d13d91fc7";
 
 export interface Phase5Manifest {
+  readonly hostMigrationAmendment: {
+    readonly previousManifestSha256: string;
+    readonly amendedBeforeMeasurement: boolean;
+    readonly criteriaWeakened: boolean;
+    readonly sourceHost: string;
+    readonly destinationHost: {
+      readonly sshAlias: string;
+      readonly operatingSystem: string;
+      readonly kernel: string;
+      readonly architecture: string;
+      readonly cpuModel: string;
+      readonly logicalCpuCount: number;
+      readonly totalMemoryBytes: number;
+      readonly storage: string;
+    };
+    readonly launcherPreflight: {
+      readonly raidAllMembersHealthyRequired: boolean;
+      readonly raidDegradedDevicesAllowed: number;
+      readonly raidSyncActionRequired: string;
+      readonly currentBootHardwareOrIoErrorsAllowed: number;
+      readonly recordRaidAndStorageHealthBeforeMeasurement: boolean;
+      readonly measurementWhileRaidSyncActiveAllowed: boolean;
+    };
+    readonly workloadChanged: boolean;
+    readonly durationsChanged: boolean;
+    readonly thresholdsChanged: boolean;
+    readonly datasetChanged: boolean;
+    readonly browserRunnerChanged: boolean;
+    readonly gateToolchainPinsChanged: boolean;
+    readonly bankedOfficialR36EvidencePreserved: boolean;
+    readonly bankedOfficialR36StageRerun: boolean;
+    readonly crossHostPerformanceWinnerClaimsAllowed: boolean;
+    readonly separateSameHealthyHostComparisonRequiredBeforeEfficiencyClaims: boolean;
+    readonly ciJobCountCorrection: {
+      readonly previousDocumentedCount: number;
+      readonly requiredCount: number;
+    };
+    readonly applicationSetup: {
+      readonly twodartRevision: string;
+      readonly additionalDotnetSdk: string;
+    };
+    readonly phase6MayStart: boolean;
+  };
   readonly officialRestartHostLimitAmendment: {
     readonly previousManifestSha256: string;
     readonly amendedBeforeFiresideMeasurement: boolean;
@@ -129,6 +172,8 @@ export interface Phase5Manifest {
   };
   readonly frozen: boolean;
   readonly host: {
+    readonly hostname: string;
+    readonly operatingSystem: string;
     readonly minimumAvailableDiskBytes: number;
     readonly preflight: {
       readonly currentBootOomOrResourceKills: number;
@@ -293,6 +338,45 @@ export function assertPhase5Manifest(
   assertEfficiencyCorrection(manifest);
   assertSwapBoundary(manifest);
   assertOfficialRestartHostLimitAmendment(manifest);
+  assertHostMigrationAmendment(manifest);
+}
+
+function assertHostMigrationAmendment(manifest: Phase5Manifest): void {
+  const amendment = manifest.hostMigrationAmendment;
+  const destination = amendment.destinationHost;
+  const preflight = amendment.launcherPreflight;
+  if (
+    amendment.previousManifestSha256 !==
+      "48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e" ||
+    !amendment.amendedBeforeMeasurement || amendment.criteriaWeakened ||
+    amendment.sourceHost !== "sanjevi-linux" ||
+    destination.sshAlias !== "fireside-hetzner" ||
+    manifest.host.sshAlias !== destination.sshAlias ||
+    manifest.host.hostname !== destination.sshAlias ||
+    destination.operatingSystem !== "Ubuntu 24.04.4 LTS" ||
+    destination.kernel !== "6.8.0-138-generic" ||
+    destination.architecture !== "x86_64" ||
+    destination.cpuModel !== "AMD Ryzen 5 3600 6-Core Processor" ||
+    destination.logicalCpuCount !== 12 || destination.totalMemoryBytes !== 67_343_601_664 ||
+    destination.storage !== "RAID1 across two 512 GB NVMe devices" ||
+    manifest.host.operatingSystem !== "Ubuntu 24.04.4 LTS; Linux 6.8.0-138-generic x86_64" ||
+    !preflight.raidAllMembersHealthyRequired || preflight.raidDegradedDevicesAllowed !== 0 ||
+    preflight.raidSyncActionRequired !== "idle" ||
+    preflight.currentBootHardwareOrIoErrorsAllowed !== 0 ||
+    !preflight.recordRaidAndStorageHealthBeforeMeasurement ||
+    preflight.measurementWhileRaidSyncActiveAllowed ||
+    amendment.workloadChanged || amendment.durationsChanged || amendment.thresholdsChanged ||
+    amendment.datasetChanged || amendment.browserRunnerChanged || amendment.gateToolchainPinsChanged ||
+    !amendment.bankedOfficialR36EvidencePreserved || amendment.bankedOfficialR36StageRerun ||
+    amendment.crossHostPerformanceWinnerClaimsAllowed ||
+    !amendment.separateSameHealthyHostComparisonRequiredBeforeEfficiencyClaims ||
+    amendment.ciJobCountCorrection.previousDocumentedCount !== 6 ||
+    amendment.ciJobCountCorrection.requiredCount !== 7 ||
+    amendment.applicationSetup.twodartRevision !== "6bda5bf29b2399017d2a872e8f3fc1a15d073a54" ||
+    amendment.applicationSetup.additionalDotnetSdk !== "10.0.100" || amendment.phase6MayStart
+  ) {
+    throw new Error("Phase 5 before-measurement host migration contract diverged");
+  }
 }
 
 function assertOfficialRestartHostLimitAmendment(manifest: Phase5Manifest): void {
@@ -455,7 +539,7 @@ function assertEfficiencyCorrection(manifest: Phase5Manifest): void {
   if (
     JSON.stringify(manifest.ciGating.harnessOnlyPreSmokeRequiredJobs) !==
       JSON.stringify(["Phase 5 harness", "Rust quality gate"]) ||
-    manifest.ciGating.fullMatrixJobCount !== 6 ||
+    manifest.ciGating.fullMatrixJobCount !== 7 ||
     manifest.ciGating.fullMatrixRequiredScopes.length !== 4 ||
     !manifest.ciGating.finalCandidateRequiresFullMatrix
   ) {
