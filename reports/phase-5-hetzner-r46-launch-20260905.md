@@ -260,3 +260,11 @@ Fireside full-data criterion. Official fallback and regressions remain unrun.
 The passing functional milestones do not satisfy the substantial efficiency
 goal: the measured Fireside soak peak is about 5.59 GiB PSS. Matched healthy-host
 comparison and efficiency qualification still follow compatibility closure.
+
+Publication audit caught the local Git `core.autocrlf=input` setting normalizing
+service-log CRLF bytes in initial evidence commit `c5dfdb1`. The original local
+and remote bytes remained intact. A scoped `.gitattributes` correction restores
+those exact blobs without rewriting history or the raw files, and verifies the
+entire 283-file committed inventory against the source hashes. Only the corrected
+evidence commit's green CI can qualify publication; `c5dfdb1` is not treated as
+a verified evidence receipt.
