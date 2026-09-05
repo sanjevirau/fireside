@@ -1,0 +1,328 @@
+{
+  "applicationUrls": {
+    "official": {
+      "CF_WORKER_URL": "https://ingest-ph.twodart.localhost",
+      "FE_URL": "https://templates.twodart.localhost",
+      "FIREBASE_STORAGE_EMULATOR_URL": "https://storage.twodart.localhost",
+      "PAPI_URL": "https://papi.twodart.localhost",
+      "TWODART_IMAGES_API": "https://images.twodart.localhost",
+      "TWODARTNET_API_URL": "https://twodartnet.twodart.localhost"
+    },
+    "fireside": {
+      "CF_WORKER_URL": "https://phase5-fireside.ingest-ph.twodart.localhost",
+      "FE_URL": "https://phase5-fireside.templates.twodart.localhost",
+      "FIREBASE_STORAGE_EMULATOR_URL": "https://phase5-fireside.storage.twodart.localhost",
+      "PAPI_URL": "https://phase5-fireside.papi.twodart.localhost",
+      "TWODART_IMAGES_API": "https://phase5-fireside.images.twodart.localhost",
+      "TWODARTNET_API_URL": "https://phase5-fireside.twodartnet.twodart.localhost"
+    }
+  },
+  "portlessApplicationConfigs": {
+    "official": {
+      "path": "scripts/dev/mprocs/js-dotnet.yaml",
+      "ports": {
+        "templates": 23013,
+        "papi": 23014,
+        "images": 23015,
+        "twodartNet": 23016,
+        "cfWorker": 23017
+      },
+      "sha256": "1da71801901385e5208141905756ad187db499bbac5ab997362bfe40029ec17e"
+    },
+    "fireside": {
+      "path": "scripts/dev/mprocs/js-dotnet.yaml",
+      "ports": {
+        "templates": 23113,
+        "papi": 23114,
+        "images": 23115,
+        "twodartNet": 23116,
+        "cfWorker": 23117
+      },
+      "sha256": "687ce96479ea67a385780996c7c26dfabd7c8252ea03859904764cd9b2694a00"
+    },
+    "fresh": {
+      "path": "scripts/dev/mprocs/js-dotnet.yaml",
+      "ports": {
+        "templates": 23113,
+        "papi": 23114,
+        "images": 23115,
+        "twodartNet": 23116,
+        "cfWorker": 23117
+      },
+      "sha256": "687ce96479ea67a385780996c7c26dfabd7c8252ea03859904764cd9b2694a00"
+    }
+  },
+  "portlessPrefixes": {
+    "official": "",
+    "fireside": "phase5-fireside."
+  },
+  "candidateRevision": "b5fe1d51ea1fd0b5912cab0ae2d4f1d4d1f0987d",
+  "capturedAt": "2026-09-05T10:14:31.192Z",
+  "cpuCount": 12,
+  "cpuModel": "AMD Ryzen 5 3600 6-Core Processor",
+  "dataset": {
+    "fileBytes": 8180616677,
+    "fileCount": 66758,
+    "treeSha256": "3505b5fd24dc4e8fb1f9925b5201c6e28dbb993c7a0a2bebb34cb70d13d91fc7"
+  },
+  "host": "fireside-hetzner",
+  "manifestSha256": "c281263a95cadb7ba254d9b9355bd00808c6054865853158adc54a9886b683aa",
+  "os": {
+    "arch": "x64",
+    "platform": "linux",
+    "release": "6.8.0-138-generic"
+  },
+  "projectId": "demo-twodart-local",
+  "officialJavaComparison": {
+    "defaultHeapFixture": "conformance/fixtures/phase5/official-java-default-heap-import.json",
+    "fullDatasetRetryJavaToolOptions": "-Xmx8g",
+    "retryReportedSeparately": true
+  },
+  "runtimeAssets": [
+    {
+      "path": "engines/twodartnet/TwodartNet/Assets/globalFonts",
+      "fileBytes": 14315300,
+      "fileCount": 46,
+      "treeSha256": "415edbf85ef3d09789b3a64bf14eb65550e8876915d892c0018b7ec96b8a40cf"
+    },
+    {
+      "path": "engines/twodartnet/TwodartNet/Assets/masterSlidesBase",
+      "fileBytes": 93371,
+      "fileCount": 3,
+      "treeSha256": "27dd0b395aee2f557a90c7b8cb58fbdd2b1dd4fd2b0861cc76911d34ba7685a8"
+    },
+    {
+      "path": "engines/twodartnet/TwodartNet/Assets/slides",
+      "fileBytes": 522696779,
+      "fileCount": 10918,
+      "treeSha256": "b1ecdef81da630d286fabcc5f6973b5544c09e3f381f9c29ffef1b93e543fd63"
+    }
+  ],
+  "runtimeFilesystem": {
+    "availableBytes": 399244369920,
+    "maximumUnixSocketPathBytes": 107,
+    "minimumAvailableBytes": 80000000000,
+    "passed": true,
+    "root": "/srv/dev-fast/p5-runtime",
+    "socketSuffixBytes": 31,
+    "totalBytes": 467909804032
+  },
+  "schemaVersion": 1,
+  "smoke": false,
+  "stagedDatasets": {
+    "official": {
+      "importRoot": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/stack-official/apps/templates-firebase/loadData/datasets/full-data",
+      "fileBytes": 8180616677,
+      "fileCount": 66758,
+      "treeSha256": "3505b5fd24dc4e8fb1f9925b5201c6e28dbb993c7a0a2bebb34cb70d13d91fc7"
+    },
+    "fireside": {
+      "importRoot": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/stack-fireside/apps/templates-firebase/loadData/datasets/full-data",
+      "fileBytes": 8180616677,
+      "fileCount": 66758,
+      "treeSha256": "3505b5fd24dc4e8fb1f9925b5201c6e28dbb993c7a0a2bebb34cb70d13d91fc7"
+    }
+  },
+  "totalMemoryBytes": 67343601664,
+  "toolchain": {
+    "bun": "1.3.14",
+    "chrome": "Google Chrome 150.0.7871.124",
+    "dotnet": "10.0.301",
+    "firebaseTools": "15.22.0",
+    "java": "openjdk 26.0.2.1 2026-08-18\nOpenJDK Runtime Environment (build 26.0.2.1+1-7)\nOpenJDK 64-Bit Server VM (build 26.0.2.1+1-7, mixed mode, sharing)",
+    "mise": "2026.7.6 linux-x64 (2026-07-14)",
+    "node": "v24.20.0",
+    "npm": "12.0.2",
+    "python": "Python 3.14.6",
+    "rust": "rustc 1.98.0 (88d9e12ae 2026-08-18)"
+  },
+  "preflights": {
+    "fireside-soak": {
+      "label": "fireside-soak",
+      "startedAt": "2026-09-05T10:14:32.369Z",
+      "passed": true,
+      "processQuiescence": {
+        "startedAt": "2026-09-05T10:14:32.370Z",
+        "completedAt": "2026-09-05T10:14:32.902Z",
+        "maximumWaitMilliseconds": 30000,
+        "sampleIntervalMilliseconds": 250,
+        "requiredConsecutiveEmptySamples": 3,
+        "samples": [
+          {
+            "observedAt": "2026-09-05T10:14:32.378Z",
+            "activeProcesses": []
+          },
+          {
+            "observedAt": "2026-09-05T10:14:32.638Z",
+            "activeProcesses": []
+          },
+          {
+            "observedAt": "2026-09-05T10:14:32.902Z",
+            "activeProcesses": []
+          }
+        ],
+        "passed": true
+      },
+      "swapDrain": {
+        "startedAt": "2026-09-05T10:14:32.932Z",
+        "completedAt": "2026-09-05T10:14:32.980Z",
+        "authorization": "phase-5-schema-v3-quiescent-preflight",
+        "invocationPrefix": "sudo -n",
+        "before": {
+          "residualSwapBytes": 0,
+          "vmSwappiness": 60,
+          "configuredSwap": "Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n/dev/md0                                partition\t33520636\t0\t\t-2\n"
+        },
+        "after": {
+          "residualSwapBytes": 0,
+          "vmSwappiness": 60,
+          "configuredSwap": "Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n/dev/md0                                partition\t33520636\t0\t\t-2\n"
+        },
+        "commands": [
+          {
+            "command": "swapoff",
+            "args": [
+              "-a"
+            ],
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "command": "swapon",
+            "args": [
+              "-a"
+            ],
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": ""
+          }
+        ],
+        "swappinessChanged": false,
+        "passed": true
+      },
+      "hostHealth": {
+        "availableDiskBytes": 399244394496,
+        "conflictingListeners": 0,
+        "failedUnits": 0,
+        "oomOrResourceEvidence": 0,
+        "sshState": "active",
+        "steadyVmstatSamples": 3,
+        "swapInPagesPerSecond": [
+          0,
+          0,
+          0
+        ],
+        "swapOutPagesPerSecond": [
+          0,
+          0,
+          0
+        ],
+        "vmstatActivityUnit": "KiB/second (legacy field names retained; required value is zero)",
+        "systemState": "running"
+      },
+      "completedAt": "2026-09-05T10:14:36.013Z"
+    },
+    "fireside-restart": {
+      "label": "fireside-restart",
+      "startedAt": "2026-09-05T12:26:27.141Z",
+      "passed": true,
+      "processQuiescence": {
+        "startedAt": "2026-09-05T12:26:27.142Z",
+        "completedAt": "2026-09-05T12:26:27.684Z",
+        "maximumWaitMilliseconds": 30000,
+        "sampleIntervalMilliseconds": 250,
+        "requiredConsecutiveEmptySamples": 3,
+        "samples": [
+          {
+            "observedAt": "2026-09-05T12:26:27.158Z",
+            "activeProcesses": []
+          },
+          {
+            "observedAt": "2026-09-05T12:26:27.421Z",
+            "activeProcesses": []
+          },
+          {
+            "observedAt": "2026-09-05T12:26:27.684Z",
+            "activeProcesses": []
+          }
+        ],
+        "passed": true
+      },
+      "swapDrain": {
+        "startedAt": "2026-09-05T12:26:27.713Z",
+        "completedAt": "2026-09-05T12:26:27.776Z",
+        "authorization": "phase-5-schema-v3-quiescent-preflight",
+        "invocationPrefix": "sudo -n",
+        "before": {
+          "residualSwapBytes": 0,
+          "vmSwappiness": 60,
+          "configuredSwap": "Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n/dev/md0                                partition\t33520636\t0\t\t-2\n"
+        },
+        "after": {
+          "residualSwapBytes": 0,
+          "vmSwappiness": 60,
+          "configuredSwap": "Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n/dev/md0                                partition\t33520636\t0\t\t-2\n"
+        },
+        "commands": [
+          {
+            "command": "swapoff",
+            "args": [
+              "-a"
+            ],
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "command": "swapon",
+            "args": [
+              "-a"
+            ],
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": ""
+          }
+        ],
+        "swappinessChanged": false,
+        "passed": true
+      },
+      "hostHealth": {
+        "availableDiskBytes": 381846315008,
+        "conflictingListeners": 0,
+        "failedUnits": 0,
+        "oomOrResourceEvidence": 0,
+        "sshState": "active",
+        "steadyVmstatSamples": 3,
+        "swapInPagesPerSecond": [
+          0,
+          0,
+          0
+        ],
+        "swapOutPagesPerSecond": [
+          0,
+          0,
+          0
+        ],
+        "vmstatActivityUnit": "KiB/second (legacy field names retained; required value is zero)",
+        "systemState": "running"
+      },
+      "completedAt": "2026-09-05T12:26:30.812Z"
+    }
+  },
+  "vmSwappiness": 60,
+  "twodartRevision": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54",
+  "twodartRevisions": {
+    "official": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54",
+    "fireside": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54",
+    "fresh": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54"
+  },
+  "generatedCacheContract": {
+    "bucket": "assets-local.twodart.com",
+    "frozenPhysicalBytes": 752169,
+    "name": "cache/main-cache-local.json",
+    "normalizedLogicalParityRequired": true,
+    "physicalBytesMeasurementOnly": true,
+    "stableStorageCountsExact": true
+  }
+}

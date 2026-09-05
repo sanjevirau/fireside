@@ -3,6 +3,40 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+test("r46 captures fresh-backend service output independently of the tmux display", async () => {
+  const fixture = JSON.parse(await readFile(new URL(
+    "../fixtures/phase5/fresh-backend-service-log-r46.json", import.meta.url,
+  ), "utf8"));
+  const root = new URL("../../reports/phase-5-metrics/hetzner-r46-20260905/completed-attempt/", import.meta.url);
+  const sha256 = (value: string | Buffer): string => createHash("sha256").update(value).digest("hex");
+  assert.equal(fixture.capturedBeforeHarnessChange, true);
+  assert.equal(fixture.classification, "phase5-harness-fresh-backend-log-selection-defect");
+  for (const [name, expected] of Object.entries(fixture.sources)) {
+    const bytes = await readFile(new URL(name, root));
+    assert.equal(sha256(bytes), (expected as { sha256: string }).sha256, name);
+  }
+  const log = await readFile(new URL("full/run.log", root), "utf8");
+  assert.ok(log.includes(fixture.error.text));
+  assert.equal(sha256(fixture.error.text), fixture.error.sha256);
+  const failure = JSON.parse(await readFile(new URL("full/evidence/failure.json", root), "utf8"));
+  assert.equal(fixture.error.sha256, failure.errorHash);
+  const tmux = await readFile(new URL("full/evidence/fireside-fresh-default-tmux.log", root), "utf8");
+  const fireside = await readFile(new URL("full/service-logs/fresh-colleague/firebase-emulator.log", root), "utf8");
+  const official = await readFile(new URL("smoke-service-logs/official/firebase-emulator.log", root), "utf8");
+  assert.doesNotMatch(tmux, /Fireside suite:|official Firebase Emulator Suite/u);
+  assert.match(fireside, /Fireside suite:.*\/target\/release\/fireside/u);
+  assert.match(fireside, /All emulators ready/u);
+  assert.match(official, /Firebase emulator runtime: Node 24\.20\.0/u);
+  assert.match(official, /All emulators ready/u);
+  assert.doesNotMatch(official, /official Firebase Emulator Suite/u);
+  assert.equal(fixture.observation.fullGatePassed, false);
+  assert.equal(fixture.observation.freshOfficialFallbackStarted, false);
+  assert.equal(fixture.observation.regressionsStarted, false);
+  for (const key of ["manifestChanged", "protectedBrowserRunnerChanged", "criteriaWeakened", "fullDataDurationsChanged", "officialBaselineMayBeRerun", "phase6MayStart"]) {
+    assert.equal(fixture.contract[key], false, key);
+  }
+});
+
 test("diagnostic Auth query must use the working gate request without limit", async () => {
   const fixture = JSON.parse(await readFile(new URL(
     "../fixtures/phase5/diagnostic-auth-query-contract.json", import.meta.url,

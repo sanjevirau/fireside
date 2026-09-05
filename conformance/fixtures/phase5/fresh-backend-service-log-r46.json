@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "capturedBeforeHarnessChange": true,
+  "classification": "phase5-harness-fresh-backend-log-selection-defect",
+  "candidate": "b5fe1d51ea1fd0b5912cab0ae2d4f1d4d1f0987d",
+  "twodartRevision": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54",
+  "manifestSha256": "c281263a95cadb7ba254d9b9355bd00808c6054865853158adc54a9886b683aa",
+  "runnerSha256": "ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc",
+  "observation": {
+    "freshReadinessPassed": true,
+    "tmuxContainsBackendMarker": false,
+    "serviceLogContainsFiresideMarker": true,
+    "officialServiceLogContainsOldExpectedMarker": false,
+    "firesideSuiteProcessObserved": true,
+    "defaultBackendOverrideObserved": false,
+    "initialJourneysPassed": 9,
+    "restartJourneysPassed": 9,
+    "soakSeconds": 7200,
+    "soakPassed": true,
+    "officialExportParityPassed": true,
+    "fullGatePassed": false,
+    "freshOfficialFallbackStarted": false,
+    "regressionsStarted": false
+  },
+  "error": {
+    "text": "Error: Fresh documented command did not select Fireside by default\n    at runFreshColleague (/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r46/harness/conformance/src/suite/run-phase5-gate.ts:1453:13)\n    at async main (/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r46/harness/conformance/src/suite/run-phase5-gate.ts:396:7)\n    at async <anonymous> (/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r46/harness/conformance/src/suite/run-phase5-gate.ts:2168:1)",
+    "sha256": "a8b9feaa2c3f1857b7998a2c52dd96be5256356a625e871676cf3ca3117a198c"
+  },
+  "sources": {
+    "full/run.log": {
+      "sha256": "9d4479507942685ecf623953c100d49ce27e23847ddcdec1cffbb438ad15bece",
+      "bytes": 2231,
+      "markers": []
+    },
+    "full/evidence/failure.json": {
+      "sha256": "28d1bba52c59df214996a6ab1a7cb8e9c3ac2c0a60715971a2114c70a10c02d1",
+      "bytes": 359,
+      "markers": []
+    },
+    "full/evidence/fireside-fresh-default-readiness.json": {
+      "sha256": "80e10e4c5816f207f11574c14816289c3227c295f223e234379125452e7e332f",
+      "bytes": 12965,
+      "markers": [
+        "      \"target\": \"All emulators ready\","
+      ]
+    },
+    "full/evidence/fireside-fresh-default-tmux.log": {
+      "sha256": "d6cdd1ba9b3a9483c35b16031cdc7d24aa32a3fcdbf3d54ca28fce510753140d",
+      "bytes": 46307,
+      "markers": []
+    },
+    "full/service-logs/fresh-colleague/firebase-emulator.log": {
+      "sha256": "e218bca5b299e88a027c26bc5f13cad3ebb15c8428d001ca03fc78fe09e8ae9f",
+      "bytes": 1046,
+      "markers": [
+        "Fireside suite: /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r46/target/release/fireside",
+        "All emulators ready"
+      ]
+    },
+    "smoke-service-logs/official/firebase-emulator.log": {
+      "sha256": "6b1c32c094fae956440570d452cb3114d5ff96d946b2375c4bb66961420b3105",
+      "bytes": 14012,
+      "markers": [
+        "Firebase emulator runtime: Node 24.20.0 (/home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node)",
+        "\u001b[90m│\u001b[39m \u001b[32m✔\u001b[39m  \u001b[1mAll emulators ready! It is now safe to connect your app.\u001b[22m \u001b[90m│\u001b[39m"
+      ]
+    }
+  },
+  "contract": {
+    "backendServiceLogMustBeCurrent": true,
+    "backendServiceLogPreservedBeforeNextStart": true,
+    "actualCheckoutScopedProcessRequired": true,
+    "defaultBackendOverrideMustBeAbsent": true,
+    "explicitOfficialFallbackMustSelectOfficial": true,
+    "tmuxDisplayIsNotServiceOutput": true,
+    "wrongBackendMustStillFail": true,
+    "missingBackendMustStillFail": true,
+    "manifestChanged": false,
+    "protectedBrowserRunnerChanged": false,
+    "criteriaWeakened": false,
+    "fullDataDurationsChanged": false,
+    "officialBaselineMayBeRerun": false,
+    "phase6MayStart": false
+  }
+}

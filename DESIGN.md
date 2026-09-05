@@ -2250,6 +2250,29 @@ confidence intervals are published with the README summary. The expected design
 goal is graceful degradation or paging for fireside rather than an out-of-memory
 crash, but the README states measured outcomes only.
 
+### Phase 5 fresh-backend service-log oracle (r46)
+
+The pinned Twodart mprocs launch has two distinct output surfaces: the tmux
+display, initially focused on dev-info, and per-service `.logs` files. R46's
+fresh default selected the exact Fireside suite binary without a backend
+override, passed readiness, and printed `Fireside suite:` in
+`.logs/firebase-emulator.log`. The tmux display did not contain that marker.
+The gate incorrectly read the display and failed after readiness. Its final
+error stack and original checksums are preserved in
+`reports/phase-5-metrics/hetzner-r46-20260905/completed-attempt`.
+
+The same attempt's official cheap-smoke service log demonstrates another
+incorrect assumption: the pinned launcher prints `Firebase emulator runtime:`
+and normal emulator readiness, not `official Firebase Emulator Suite`.
+`conformance/fixtures/phase5/fresh-backend-service-log-r46.json` captures both
+observations before any correction. Fresh acceptance must read and preserve
+the current emulator service output before mprocs truncates it for the next
+backend, verify a live exact checkout-scoped backend process, and distinguish
+an absent default override from an explicit official override. A stale log,
+tmux-only marker, wrong/missing process, or wrong override cannot pass. The
+default/fallback criteria, protected runner and all workload thresholds remain
+unchanged; r46 is a failed gate, not a product default-selection failure.
+
 ### Phase 5 r22 diagnostic readiness attribution and amendment
 
 The preserved r22 attempt remains a failed cheap smoke, not a product failure
