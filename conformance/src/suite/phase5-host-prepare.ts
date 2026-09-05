@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   cp,
   lstat,
@@ -198,6 +199,14 @@ export function phase5DatasetPaths(
     importPath: path.resolve(gateRoot, "inputs/full-data"),
     exportPath: path.resolve(gateRoot, "exports", stack, "full-data"),
   };
+}
+
+export function phase5LifecycleDatasetName(outputDirectory: string): string {
+  const attempt = createHash("sha256")
+    .update(path.resolve(outputDirectory))
+    .digest("hex")
+    .slice(0, 16);
+  return `phase5-lifecycle-export-${attempt}`;
 }
 
 export function renderSafeTwodartEnvironment(): string {

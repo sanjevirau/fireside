@@ -32,6 +32,7 @@ import {
   PHASE5_APPLICATION_URL_KEYS,
   PHASE5_MPROCS_APPLICATION_CONFIG,
   PHASE5_STACK_PORTS,
+  phase5LifecycleDatasetName,
   phase5ReservedPorts,
   stageHardlinkedDirectoryTree,
   type Phase5StackName,
@@ -1271,7 +1272,7 @@ async function stageLifecycleExport(
   args: Arguments,
   stack: Phase5StackName,
 ): Promise<string> {
-  const name = "phase5-lifecycle-export";
+  const name = phase5LifecycleDatasetName(args.outputDirectory);
   const directory = stack === "official" ? args.officialDirectory : args.firesideDirectory;
   const source = path.join(
     path.dirname(path.dirname(args.fullData)),

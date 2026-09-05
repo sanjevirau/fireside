@@ -21,6 +21,7 @@ import {
   PHASE5_APPLICATION_PORTS,
   PHASE5_APPLICATION_URL_KEYS,
   PHASE5_MPROCS_APPLICATION_CONFIG,
+  phase5LifecycleDatasetName,
   phase5PortEnvironment,
   phase5ReservedPorts,
   phase5DatasetPaths,
@@ -212,6 +213,15 @@ test("Phase 5 input staging is immutable and uses distinct lifecycle exports", (
   assert.notEqual(fireside.importPath, fireside.exportPath);
 });
 
+test("Phase 5 lifecycle dataset names are deterministic and attempt-scoped", () => {
+  const first = phase5LifecycleDatasetName("/gate/attempt-one/evidence");
+  const same = phase5LifecycleDatasetName("/gate/attempt-one/./evidence");
+  const second = phase5LifecycleDatasetName("/gate/attempt-two/evidence");
+  assert.match(first, /^phase5-lifecycle-export-[0-9a-f]{16}$/u);
+  assert.equal(first, same);
+  assert.notEqual(first, second);
+});
+
 test("Phase 5 application URL namespaces must be distinct", () => {
   const official = applicationUrls("phase5-official");
   const fireside = applicationUrls("phase5-fireside");
@@ -247,6 +257,10 @@ test("Phase 5 directory staging keeps a real tree with hardlinked files", async 
     assert.equal(destinationFile.dev, sourceFile.dev);
     assert.equal(destinationFile.ino, sourceFile.ino);
     assert.equal(await readlink(path.join(destination, "entry.js")), "package/index.js");
+    await assert.rejects(
+      stageHardlinkedDirectoryTree(source, destination),
+      /Refusing to replace hardlinked staging path/u,
+    );
   } finally {
     await rm(root, { force: true, recursive: true });
   }
