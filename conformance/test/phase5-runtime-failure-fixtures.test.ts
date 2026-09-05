@@ -92,6 +92,79 @@ const fullDataCollectionInventoryR41Url = new URL(
   "../fixtures/phase5/full-data-collection-inventory-r41/fixture.json",
   import.meta.url,
 );
+const lifecycleExportStagingR42Url = new URL(
+  "../fixtures/phase5/lifecycle-export-staging-r42.json",
+  import.meta.url,
+);
+
+test("r42 freezes the attempt-colliding lifecycle export staging defect", async () => {
+  const fixture = JSON.parse(
+    await readFile(lifecycleExportStagingR42Url, "utf8"),
+  ) as {
+    readonly schemaVersion: number;
+    readonly capturedBeforeHarnessChange: boolean;
+    readonly classification: string;
+    readonly observation: Readonly<Record<string, boolean | number | string>>;
+    readonly diagnosis: Readonly<Record<string, boolean>>;
+    readonly rawEvidence: Readonly<Record<string, string>>;
+    readonly amendment: Readonly<Record<string, boolean | string>>;
+    readonly contract: Readonly<Record<string, boolean>>;
+    readonly privacy: Readonly<Record<string, boolean>>;
+  };
+
+  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.capturedBeforeHarnessChange, true);
+  assert.equal(fixture.classification, "phase5-harness-lifecycle-staging-defect");
+  assert.equal(fixture.observation.twoStackSmokePassed, true);
+  assert.equal(fixture.observation.firesideReadinessPassed, true);
+  assert.equal(fixture.observation.firesideInitialJourneysPassed, 9);
+  assert.equal(fixture.observation.firesideSoakPassed, true);
+  assert.equal(fixture.observation.firesideSoakSeconds, 7_200);
+  assert.equal(fixture.observation.restartStarted, false);
+  assert.equal(fixture.observation.failedOperation, "stageLifecycleExport");
+  assert.equal(fixture.diagnosis.lifecycleImportDestinationWasLiteralAcrossAttempts, true);
+  assert.equal(fixture.diagnosis.overwriteSafetyGuardWorkedAsDesigned, true);
+  assert.equal(fixture.diagnosis.firesideProductCriterionFailed, false);
+  for (const digest of Object.values(fixture.rawEvidence)) {
+    assert.match(digest, /^[0-9a-f]{64}$/u);
+  }
+  assert.equal(fixture.amendment.amendedBeforeNextMeasurement, true);
+  for (const field of [
+    "criteriaWeakened",
+    "manifestChanged",
+    "workloadChanged",
+    "durationsChanged",
+    "thresholdsChanged",
+    "protectedBrowserRunnerChanged",
+    "twodartRevisionChanged",
+    "officialBaselineMayBeRerun",
+  ]) {
+    assert.equal(fixture.amendment[field], false);
+  }
+  for (const [key, value] of Object.entries(fixture.contract)) {
+    assert.equal(value, key !== "phase6MayStart");
+  }
+  for (const value of Object.values(fixture.privacy)) assert.equal(value, false);
+
+  const evidenceRoot = new URL(
+    "../../reports/phase-5-metrics/failed-full-gate-v3-20260905-74097c9-r42-retry4-r36-fireside-repair/",
+    import.meta.url,
+  );
+  const files: Readonly<Record<string, string>> = {
+    runLogSha256: "run.log",
+    runExitSha256: "run.exit",
+    failureSha256: "evidence/failure.json",
+    environmentSha256: "evidence/environment.json",
+    readinessSha256: "evidence/fireside-initial-readiness.json",
+    browserSha256: "evidence/browser-fireside-initial.json",
+    soakSha256: "evidence/soak-fireside.json",
+    evidenceChecksumsSha256: "evidence/checksums.sha256",
+  };
+  for (const [key, relative] of Object.entries(files)) {
+    const bytes = await readFile(new URL(relative, evidenceRoot));
+    assert.equal(createHash("sha256").update(bytes).digest("hex"), fixture.rawEvidence[key]);
+  }
+});
 
 test("r41 freezes the complete official and Fireside collection inventory", async () => {
   const fixtureText = await readFile(fullDataCollectionInventoryR41Url, "utf8");

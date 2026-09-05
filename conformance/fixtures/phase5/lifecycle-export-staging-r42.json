@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "capturedBeforeHarnessChange": true,
+  "classification": "phase5-harness-lifecycle-staging-defect",
+  "candidateCommit": "74097c9d82edf6d24f6acf711a87df5e5a7baa43",
+  "candidateCiRun": 33924570756,
+  "manifestSha256": "48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e",
+  "protectedBrowserRunnerSha256": "ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc",
+  "observation": {
+    "twoStackSmokePassed": true,
+    "firesideReadinessPassed": true,
+    "firesideReadinessMilliseconds": 450900,
+    "firesideInitialJourneysPassed": 9,
+    "firesideInitialPageErrors": 0,
+    "firesideInitialGatingRequestFailures": 0,
+    "firesideSoakPassed": true,
+    "firesideSoakSeconds": 7200,
+    "firesideSoakSamples": 241,
+    "firesidePeakPssBytes": 12317094912,
+    "firesidePeakRssBytes": 13406441472,
+    "firesidePssSlopeBytesPerHour": -520328464.6173826,
+    "firesideRssSlopeBytesPerHour": -486882495.7197595,
+    "restartStarted": false,
+    "failedOperation": "stageLifecycleExport",
+    "errorText": "Refusing to replace hardlinked staging path: <fireside-checkout>/apps/templates-firebase/loadData/datasets/phase5-lifecycle-export"
+  },
+  "diagnosis": {
+    "fullAttemptOutputDirectoryWasUnique": true,
+    "lifecycleExportSourceWasUniquePerAttempt": true,
+    "lifecycleImportDestinationWasLiteralAcrossAttempts": true,
+    "persistentTwodartCheckoutWasReused": true,
+    "overwriteSafetyGuardWorkedAsDesigned": true,
+    "firesideProductCriterionFailed": false
+  },
+  "rawEvidence": {
+    "runLogSha256": "f3c818b1710669f268796e523b40f80f3a9b5e203157e182c4135f64990c2d5a",
+    "runExitSha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "failureSha256": "68a6e2d9abc0c6fe2c90008677557ec67be8e0e83ce60136566101cf1e933230",
+    "environmentSha256": "01a19fe25046d6610efb0d8f1a99859f9d0ac79087356e589a627fb4ae8f34af",
+    "readinessSha256": "e9f77b3fd1086ccab49927e6ea09b1c2a76e9354f080a3e933868bd1e616d753",
+    "browserSha256": "2b5f9154d77fb29a0359ca9fbc2054c4a1626bea6620663e1604e381a2653b71",
+    "soakSha256": "495ebb8b1c6c8b8461856acfe1efc9f5fa1755e1ae315f5696be581511521c75",
+    "evidenceChecksumsSha256": "9dbc6a1ab444f2d0f7742db4ce73899194073d76d703fda8fd870ecf1c6ef179"
+  },
+  "amendment": {
+    "amendedBeforeNextMeasurement": true,
+    "criteriaWeakened": false,
+    "manifestChanged": false,
+    "workloadChanged": false,
+    "durationsChanged": false,
+    "thresholdsChanged": false,
+    "protectedBrowserRunnerChanged": false,
+    "twodartRevisionChanged": false,
+    "officialBaselineMayBeRerun": false,
+    "requiredCorrection": "Derive the lifecycle import dataset name from the unique gate output directory while retaining refusal to overwrite any existing staging path."
+  },
+  "contract": {
+    "lifecycleDatasetNameMustBeAttemptSpecific": true,
+    "existingStagingPathMustStillBeRejected": true,
+    "exactSourceTreeMustStillBeHardlinked": true,
+    "freshSevenJobCiRequiredBeforeSmoke": true,
+    "freshLinuxBuildRequiredBeforeSmoke": true,
+    "twoStackSmokeRequiredBeforeContinuation": true,
+    "firesideFullStageMustPassFromReadinessThroughRegressions": true,
+    "phase6MayStart": false
+  },
+  "privacy": {
+    "credentialsStored": false,
+    "documentContentsStored": false,
+    "documentIdsStored": false,
+    "realUserIdentifiersStored": false
+  }
+}

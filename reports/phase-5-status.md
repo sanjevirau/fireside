@@ -31,8 +31,15 @@ complete r41 cheap tier. R41 passed both Fireside 9/9 browser lifecycles and the
 7,200-second soak, then exposed a Phase 5 harness inventory omission before
 parity. The official emulator and Fireside agree on all 11 omitted collection
 groups and the exact 211,202-document total. That oracle and failure evidence
-are preserved before the harness correction; the bounded overnight loop remains
-active and Phase 5 remains incomplete.
+are preserved before the harness correction. The corrected inventory candidate
+passed full CI, a fresh build, and the r42 two-stack smoke. Its Fireside
+continuation passed readiness, 9/9 initial journeys, and the 7,200-second soak,
+then stopped before restart because the reusable checkout still contained the
+literal `phase5-lifecycle-export` staging name from an earlier attempt. The
+overwrite guard behaved correctly; the lifecycle name was not attempt-scoped.
+That checksum-verified failure and its diagnostic amendment are preserved before
+the harness correction. The bounded overnight loop remains active and Phase 5
+remains incomplete.
 
 ## Current loop
 
@@ -52,6 +59,7 @@ active and Phase 5 remains incomplete.
 | [r36](phase-5-full-gate-20260904-r36.md) (attempt 6/8 after reset) | Both smoke stacks 9/9 + 60 s; official full readiness + 9/9 + 7,200 s soak; official restart host-limited after 3 journeys; Fireside continuation readiness + 2 journeys, then third journey failed | Official host exhaustion; first continuation guard bug before measurement; final continuation observed a host-wide raw/proxied/application request stall but retained the strict Fireside failure | `official-restart-host-exhaustion-r36`, `official-export-identity-guard-r36`, and `fireside-initial-host-stall-r36` fixtures | `30e0d25`; `b6c2309`; final `3a5644f` | [33844348621](https://github.com/sanjevirau/fireside/actions/runs/33844348621), [33861280726](https://github.com/sanjevirau/fireside/actions/runs/33861280726), and [33863537340](https://github.com/sanjevirau/fireside/actions/runs/33863537340), all 7/7 green | **Phase 5 failed**; exact Fireside evidence preserved; no rerun, performance winner, tag, or Phase 6 |
 | [r40](phase-5-full-gate-20260905-r40.md) (overnight attempt 1/6) | r39 cheap smoke passed both stacks 9/9 + 60 s; Fireside full readiness + first 5 journeys | Fireside product: overlapping Write forward maps reached the shared stream out of absolute order, so the SDK matched a one-result response to a six-mutation batch | `33279fa` (Java v1.22.0 six-write batch, both variants) | `aab4a56` | [33906402165](https://github.com/sanjevirau/fireside/actions/runs/33906402165), 7/7 green | Failed strict initial browser stage; exact evidence preserved; repaired behavior passed r41 initial and restart browser runs |
 | [r41](phase-5-full-gate-20260905-r41.md) (overnight attempt 2/6) | Exact-candidate cheap smoke passed both stacks 9/9 + 60 s; Fireside full initial 9/9 + 7,200 s soak + restart 9/9 | Harness: frozen-state accounting covered only 47 collection groups (15,383 documents) and omitted 11 groups (195,819); official and Fireside both total the exact frozen 211,202 | `full-data-collection-inventory-r41` fixture, captured before correction | pending | `aab4a56` source [33906402165](https://github.com/sanjevirau/fireside/actions/runs/33906402165), 7/7 green; correction pending | Failed after second export-first shutdown and before parity; product stages passed; official baseline remains banked |
+| [r42](phase-5-full-gate-20260905-r42.md) (overnight attempt 3/6) | Exact-candidate cheap smoke passed both stacks 9/9 + 60 s; Fireside full readiness + initial 9/9 + 7,200 s soak | Harness: lifecycle export destination used one literal name in the persistent Twodart checkout, colliding with an earlier attempt; overwrite guard correctly refused replacement | `lifecycle-export-staging-r42` fixture, captured before correction | pending | `74097c9` [33924570756](https://github.com/sanjevirau/fireside/actions/runs/33924570756), 7/7 green; correction pending | Failed before restart staging; no Fireside criterion failed, but restart/parity/acceptance/regressions did not run; official baseline remains banked |
 
 R25 failure evidence is published in `b79750636e1666e1d097b341b7cc9f85ba74d28c`;
 [evidence CI 33748445917](https://github.com/sanjevirau/fireside/actions/runs/33748445917)
