@@ -2826,6 +2826,23 @@ not require every retained resume or subsequent change to reset, do not cover
 WebChannel transport, and do not explain the separate large cache-query
 timeouts. Product regressions and a new live verification remain required.
 
+The revision-only correction now represents the reset explicitly as
+`InitialMode::Reset`, separate from existence-filter behavior. `ResetRequired`
+initializes the current scoped target through the normal query engine and sends
+ADD, target-local RESET with a current token/read time, all current documents,
+CURRENT and the existing checkpoint. Authorization still precedes initialization;
+only the unavailable-history case changes. Retained snapshots and both read-time
+paths remain in normal initialization mode. Neither core-store retention nor
+transport framing is changed. Unit/router regressions are not a substitute for
+the pending fresh Linux real-SDK verification and complete acceptance gate.
+
+A separate source-review hazard remains open: initial `NO_CHANGE[]` can expose
+a new target's snapshot revision before older sibling targets have emitted all
+changes up to that revision. This predates the reset correction; target-reset
+isolation tests do not prove reconnect safety across that checkpoint. Capture
+and test the multi-target interleaving separately before release qualification,
+without silently changing the pinned incremental or global checkpoint contract.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.

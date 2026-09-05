@@ -1141,6 +1141,9 @@ fn mutex_lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 #[cfg(test)]
+mod expired_listen_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use axum::http::Request;

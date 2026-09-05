@@ -55,10 +55,17 @@ enum InitialFilter {
     CountOnly,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum InitialMode {
+    Normal,
+    Reset,
+}
+
 struct InitialTarget {
     watch: WatchTarget,
     changes: ChangeBatch,
     filter: InitialFilter,
+    mode: InitialMode,
 }
 
 struct ActiveTarget {
@@ -357,20 +364,36 @@ fn initialize_target(
         resume_point,
         expected_count,
     } = initialization;
+    let mut mode = InitialMode::Normal;
     let (watch, changes, filter) = match resume_point.as_ref() {
         Some(ResumePoint::Revision(revision)) => {
-            let baseline = store
-                .snapshot_at(*revision)
-                .map_err(resume_snapshot_status)?;
-            resumed_target(
-                id,
-                database,
-                spec,
-                query_policy,
-                &baseline,
-                snapshot,
-                expected_count,
-            )?
+            match store.snapshot_at(*revision) {
+                Ok(baseline) => resumed_target(
+                    id,
+                    database,
+                    spec,
+                    query_policy,
+                    &baseline,
+                    snapshot,
+                    expected_count,
+                )?,
+                Err(SnapshotError::ResetRequired(_)) => {
+                    // The local replay floor is a bounded-memory policy, not a
+                    // terminal subscription error. Explicitly discard the
+                    // unavailable baseline before replaying this target only.
+                    mode = InitialMode::Reset;
+                    let (watch, initial) = WatchTarget::initialize(
+                        id,
+                        database,
+                        spec,
+                        query_policy.edition(),
+                        snapshot,
+                    )
+                    .map_err(|error| query_status(&error))?;
+                    (watch, initial, InitialFilter::None)
+                }
+                Err(error) => return Err(resume_snapshot_status(error)),
+            }
         }
         Some(ResumePoint::ReadTime(read_time)) => {
             let baseline = store
@@ -403,6 +426,7 @@ fn initialize_target(
         watch,
         changes,
         filter,
+        mode,
     })
 }
 
@@ -412,6 +436,16 @@ async fn send_initial_target(
     initial: &InitialTarget,
 ) -> Result<(), Status> {
     send_target_change(sender, TargetChangeType::Add, vec![id], None, None).await?;
+    if initial.mode == InitialMode::Reset {
+        send_target_change(
+            sender,
+            TargetChangeType::Reset,
+            vec![id],
+            Some(resume_token(initial.changes.revision)),
+            Some(now()),
+        )
+        .await?;
+    }
     if initial.filter == InitialFilter::CountOnly {
         send_target_change(
             sender,
@@ -869,6 +903,9 @@ fn now() -> fireside_core_store::Timestamp {
     )
     .expect("system time is a valid timestamp")
 }
+
+#[cfg(test)]
+mod resume_tests;
 
 #[cfg(test)]
 mod tests {
