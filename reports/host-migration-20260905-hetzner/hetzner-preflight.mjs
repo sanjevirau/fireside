@@ -55,6 +55,75 @@ export function validateRaid(arrays) {
   }
 }
 
+// A state transition is waitable, never ready. All structural health checks
+// remain fail-closed, and every accepted snapshot still uses validateRaid.
+export async function waitForRaidReady(sample, { now = () => performance.now(), sleep = delay } = {}) {
+  const maximumWaitMilliseconds = 10000;
+  const sampleIntervalMilliseconds = 250;
+  const consecutiveHealthySamples = 3;
+  const started = now();
+  const result = { passed: false, maximumWaitMilliseconds, sampleIntervalMilliseconds, consecutiveHealthySamples, samples: [] };
+  let consecutive = 0;
+  while (true) {
+    const observation = { at: new Date().toISOString(), elapsedMilliseconds: now() - started, ready: false };
+    result.samples.push(observation);
+    try {
+      let deadline;
+      try {
+        observation.arrays = await Promise.race([
+          sample(),
+          new Promise((_, reject) => {
+            deadline = setTimeout(() => reject(new Error('RAID sysfs observation exceeded readiness deadline')),
+              Math.max(0, maximumWaitMilliseconds - (now() - started)));
+          }),
+        ]);
+      } finally {
+        clearTimeout(deadline);
+      }
+      observation.elapsedMilliseconds = now() - started;
+      try {
+        validateRaid(observation.arrays);
+        observation.ready = true;
+      } catch (error) {
+        observation.validationError = error.message;
+        // Check everything except the two documented transition states. Never
+        // mask degradation, resync, missing members, or an unknown state.
+        validateRaid(observation.arrays.map((array) => ({ ...array,
+          state: ['write-pending', 'active-idle'].includes(array.state) ? 'clean' : array.state,
+        })));
+      }
+    } catch (error) {
+      observation.elapsedMilliseconds = now() - started;
+      observation.error = error.message;
+      result.failure = `RAID observation failed: ${error.message}`;
+      return result;
+    }
+    consecutive = observation.ready ? consecutive + 1 : 0;
+    observation.consecutiveHealthySamples = consecutive;
+    if (observation.elapsedMilliseconds >= maximumWaitMilliseconds) {
+      result.failure = 'RAID did not settle to three consecutive healthy active/clean snapshots within 10000 ms';
+      return result;
+    }
+    if (consecutive === consecutiveHealthySamples) {
+      result.passed = true;
+      return result;
+    }
+    await sleep(Math.min(sampleIntervalMilliseconds, maximumWaitMilliseconds - observation.elapsedMilliseconds));
+  }
+}
+
+async function sampleRaid() {
+  const arrays = [];
+  for (const name of (await readdir('/sys/block')).filter((item) => /^md\d+$/u.test(item)).sort()) {
+    const base = `/sys/block/${name}`;
+    const members = (await readdir(`${base}/slaves`)).sort();
+    arrays.push({ name, members, level: await read(`${base}/md/level`), raidDisks: await read(`${base}/md/raid_disks`),
+      degraded: await read(`${base}/md/degraded`), syncAction: await read(`${base}/md/sync_action`), state: await read(`${base}/md/array_state`),
+      memberStates: await Promise.all(members.map((member) => read(`${base}/md/dev-${member}/state`))) });
+  }
+  return arrays;
+}
+
 export function validateSmart(device, report) {
   const health = report.nvme_smart_health_information_log;
   if (report.smartctl?.exit_status !== 0 || report.smart_status?.passed !== true ||
@@ -177,16 +246,12 @@ export async function preflight(evidenceDirectory, candidate = CANDIDATE) {
     });
     await check('raid', async () => {
       await save('mdstat.txt', await readFile('/proc/mdstat', 'utf8'));
-      const arrays = [];
-      for (const name of (await readdir('/sys/block')).filter((item) => /^md\d+$/u.test(item)).sort()) {
-        const base = `/sys/block/${name}`;
-        const members = (await readdir(`${base}/slaves`)).sort();
-        arrays.push({ name, members, level: await read(`${base}/md/level`), raidDisks: await read(`${base}/md/raid_disks`),
-          degraded: await read(`${base}/md/degraded`), syncAction: await read(`${base}/md/sync_action`), state: await read(`${base}/md/array_state`),
-          memberStates: await Promise.all(members.map((member) => read(`${base}/md/dev-${member}/state`))) });
-      }
-      await save('raid.json', arrays);
-      validateRaid(arrays);
+      // Accumulate in memory, then persist: avoid our own evidence writes in
+      // the settling loop. No sysfs write or workload retry is performed.
+      const observation = await waitForRaidReady(sampleRaid);
+      await save('raid-readiness.json', observation);
+      await save('raid.json', observation.samples.at(-1)?.arrays ?? []);
+      if (!observation.passed) throw new Error(observation.failure);
     });
     for (const device of ['nvme0n1', 'nvme1n1']) await check(device, async () => {
       const output = await command(device, '/usr/bin/sudo', ['-n', '/usr/local/sbin/fireside-hetzner-smart-read', device]);

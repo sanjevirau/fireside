@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { BASELINE_SUMS, CANDIDATE, INPUTS, ROOT, journalErrors, processConflict, steadySwapSamples, validateCandidate, validateInputReceipt, validateRaid, validateSmart } from './hetzner-preflight.mjs';
+import { BASELINE_SUMS, CANDIDATE, INPUTS, ROOT, journalErrors, processConflict, steadySwapSamples, validateCandidate, validateInputReceipt, validateRaid, validateSmart, waitForRaidReady } from './hetzner-preflight.mjs';
 
 test('corrected-candidate preflight retains the historical input receipt identity', () => {
   assert.equal(validateCandidate('abf4df4c396010f7970b3e0091df3a6ed103cba9'), 'abf4df4c396010f7970b3e0091df3a6ed103cba9');
@@ -31,10 +32,98 @@ const receipt = () => ({ root: ROOT, candidate: CANDIDATE, completed: true, allT
 test('all three expected complete idle RAID1 arrays pass', () => assert.doesNotThrow(() => validateRaid(raid())));
 test('r47 exact write-pending capture remains a rejected readiness state', async () => {
   const fixture = JSON.parse(await readFile(new URL('../../conformance/fixtures/phase5/raid-write-pending-r47.json', import.meta.url), 'utf8'));
-  const captured = JSON.parse(await readFile(new URL('../phase-5-metrics/hetzner-r47-20260905/completed-attempt/preflight-before-full/raid.json', import.meta.url), 'utf8'));
+  const raw = await readFile(new URL('../phase-5-metrics/hetzner-r47-20260905/completed-attempt/preflight-before-full/raid.json', import.meta.url));
+  assert.equal(createHash('sha256').update(raw).digest('hex'), fixture.source.sha256);
+  const captured = JSON.parse(raw);
   assert.equal(fixture.observed.fullWorkloadStarted, false);
   assert.equal(captured[2].state, 'write-pending');
   assert.throws(() => validateRaid(captured), /write-pending/u);
+});
+
+function raidSequence(sequence, readMilliseconds = 0) {
+  let index = 0;
+  let milliseconds = 0;
+  return waitForRaidReady(async () => {
+    milliseconds += readMilliseconds;
+    const value = sequence[Math.min(index++, sequence.length - 1)];
+    if (value instanceof Error) throw value;
+    return structuredClone(value);
+  }, { now: () => milliseconds, sleep: async (duration) => { milliseconds += duration; } });
+}
+
+test('r47 captured pending state must settle to three original healthy samples', async () => {
+  const captured = JSON.parse(await readFile(new URL('../phase-5-metrics/hetzner-r47-20260905/completed-attempt/preflight-before-full/raid.json', import.meta.url), 'utf8'));
+  const result = await raidSequence([captured, raid()]);
+  assert.equal(result.passed, true);
+  assert.equal(result.samples.length, 4);
+  assert.equal(result.samples[0].ready, false);
+  assert.match(result.samples[0].validationError, /write-pending/u);
+  assert.equal(captured[2].state, 'write-pending');
+  assert.equal(result.samples.at(-1).elapsedMilliseconds, 750);
+  result.samples.slice(-3).forEach((sample) => assert.doesNotThrow(() => validateRaid(sample.arrays)));
+});
+
+test('RAID settling values are pinned before measurement and healthy input still requires three reads', async () => {
+  const fixture = JSON.parse(await readFile(new URL('../../conformance/fixtures/phase5/raid-write-pending-r47.json', import.meta.url), 'utf8'));
+  const result = await raidSequence([raid()]);
+  for (const field of ['maximumWaitMilliseconds', 'sampleIntervalMilliseconds', 'consecutiveHealthySamples']) assert.equal(result[field], fixture.contract[field]);
+  assert.equal(result.samples.length, 3);
+  assert.equal(result.samples.at(-1).elapsedMilliseconds, 500);
+  assert.equal(result.passed, true);
+  for (const state of fixture.contract.acceptedStates) {
+    const arrays = raid().map((array) => ({ ...array, state }));
+    assert.doesNotThrow(() => validateRaid(arrays));
+    assert.equal((await raidSequence([arrays])).passed, true);
+  }
+});
+
+test('pending or active-idle recurrence resets the steady count and persistent transitions time out', async () => {
+  for (const state of ['write-pending', 'active-idle']) {
+    const pending = raid(); pending[2].state = state;
+    const result = await raidSequence([raid(), raid(), pending, raid()]);
+    assert.equal(result.passed, true);
+    assert.equal(result.samples.length, 6);
+    assert.equal(result.samples[2].consecutiveHealthySamples, 0);
+    const stuck = await raidSequence([pending]);
+    assert.equal(stuck.passed, false);
+    assert.equal(stuck.samples.length, 41);
+    assert.equal(stuck.samples.at(-1).elapsedMilliseconds, 10000);
+    assert.match(stuck.failure, /did not settle/u);
+  }
+});
+
+test('pending state cannot conceal structural RAID faults or unreadable evidence', async () => {
+  for (const [field, value] of [['syncAction', 'resync'], ['syncAction', 'check'], ['degraded', '1'], ['members', []], ['memberStates', ['faulty', 'in_sync']], ['state', 'broken'], ['state', 'unknown'], ['state', undefined]]) {
+    const pending = raid(); pending[2].state = 'write-pending'; pending[0][field] = value;
+    const result = await raidSequence([pending, raid()]);
+    assert.equal(result.passed, false, field);
+    assert.equal(result.samples.length, 1, field);
+    assert.match(result.failure, /RAID observation failed/u);
+  }
+  for (const invalid of [[], raid().slice(1), new Error('EACCES reading sysfs')]) {
+    const result = await raidSequence([invalid, raid()]);
+    assert.equal(result.passed, false);
+    assert.equal(result.samples.length, 1);
+    assert.ok(result.samples[0].error);
+  }
+});
+
+test('a third healthy read at or beyond the deadline cannot rescue expired readiness', async () => {
+  const result = await raidSequence([raid()], 3500);
+  assert.equal(result.passed, false);
+  assert.equal(result.samples.length, 3);
+  assert.match(result.failure, /did not settle/u);
+});
+
+test('an unreadable never-resolving sysfs sample returns a persisted timeout result', async (context) => {
+  context.mock.timers.enable({ apis: ['setTimeout'] });
+  const pending = waitForRaidReady(() => new Promise(() => {}));
+  context.mock.timers.tick(10000);
+  const result = await pending;
+  assert.equal(result.passed, false);
+  assert.equal(result.samples.length, 1);
+  assert.match(result.samples[0].error, /exceeded readiness deadline/u);
+  assert.match(result.failure, /RAID observation failed/u);
 });
 test('resync, degraded, inactive, unexpected or missing RAID members block', () => {
   for (const [field, value] of [['syncAction', 'resync'], ['syncAction', 'check'], ['degraded', '1'], ['state', 'inactive'], ['raidDisks', '1'], ['level', 'raid0'], ['members', ['nvme0n1p1']], ['memberStates', ['in_sync', 'faulty']]]) {

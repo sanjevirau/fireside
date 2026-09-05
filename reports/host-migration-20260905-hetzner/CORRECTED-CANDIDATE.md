@@ -1,4 +1,4 @@
-# Guarded continuation after the r46 harness failure
+# Guarded continuation after the r46 and r47 harness failures
 
 R46 exited 1 and is preserved. Do not modify its checkout, logs, exports, or
 fresh-colleague directory; do not resume its controller. The fresh-backend and
@@ -19,9 +19,21 @@ Preflight now accepts an optional exact candidate argument, recording it
 separately from the original input receipt's candidate (`b5fe1d5`). The receipt,
 input hashes and banked official evidence are unchanged. Legacy launchers retain
 their default identity. All hardware, RAID, SMART, journal, quiescence, disk-floor
-and swap-drain checks remain unchanged and precede release build, smoke and full
-continuation independently. The 12 pure deployment tests cover the updated
-candidate/receipt distinction and the new launcher's unchanged interlocks.
+and swap-drain checks precede release build, smoke and full continuation
+independently. R47 passed the complete two-stack smoke but its pre-full
+deployment preflight stopped on a single structurally healthy `write-pending`
+RAID sample. Evidence/fixture commit `49b9b3a` preserves that failed attempt
+before the next correction. Do not resume r47 or reuse its attempt directory.
+
+The deployment-only observer now waits at most 10 seconds for three consecutive
+samples, 250 ms apart, to satisfy the **unchanged** active/clean RAID health
+predicate. Only otherwise healthy write-pending/active-idle transitions can
+wait. Persistent transitions time out; degraded/resync/missing members or
+unreadable/unknown states fail immediately. All sample outcomes are saved to
+`raid-readiness.json` after observation, included in checksums on pass/failure;
+no sysfs writes occur. The 19 pure deployment tests include exact r47 capture,
+steady-state reset, timeout, late and never-resolving reads, and structural-health
+negatives.
 
 Before launch, stage the reviewed controller and preflight byte-for-byte only
 after their candidate CI is green; preserve their SHA-256 values. Use a new
@@ -36,6 +48,6 @@ stops and preserves evidence. The final report must identify the two different
 hosts and make no cross-host performance or memory-reduction claim. Efficiency
 qualification remains a separately frozen matched healthy-host comparison.
 
-This document and launcher preparation are not a launch result. Fresh clone
-preparation, exact candidate CI, hardware preflight and the new gate remain
-pending until actual evidence exists.
+This document is not a new launch result. Each corrected candidate still needs
+its own exact seven-job CI pass, isolated fresh clone, hardware preflight,
+fresh release build, and complete two-stack smoke before the full continuation.
