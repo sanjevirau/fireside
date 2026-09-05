@@ -1,0 +1,136 @@
+{
+  "at": "2026-09-05T20:14:50.362Z",
+  "setupExit": "0\n",
+  "setupTail": "ℹ suites 0\nℹ pass 204\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 830.571949\n2026-09-05T22:13:58+02:00\nStarted bounded six-case diagnostic controller PID 84752. No gate launched.\n",
+  "controllerPid": "84752\n",
+  "controllerLog": "",
+  "inputs": {
+    "at": "2026-09-05T20:13:59.040Z",
+    "receipt": {
+      "baseCommit": "70043eb700ac82b6084a314cc1e972afa4345464",
+      "preparedAt": "2026-09-05T20:13:58.831Z",
+      "cleanGitCheckout": true,
+      "files": [
+        {
+          "path": "src/suite/capture-phase5-idle-listen.ts",
+          "sha256": "8e6a195b13e64f5b6b6a15449af24bf889e83571e7e10de83b1464ce66d3db1d"
+        },
+        {
+          "path": "src/target.ts",
+          "sha256": "7b27aea7dccf8ef6f9def8c267538d6a6a615c742ee1a5cb017447d0ce9cc6dd"
+        },
+        {
+          "path": "fixtures/phase5/idle-listen-diagnostic-plan.json",
+          "sha256": "401e08f0a5e5d02ffc3bf4d92b0f42e8d91e8e2c78836c2dfbd7800dcce542b3"
+        },
+        {
+          "path": "package.json",
+          "sha256": "a52cd558a6a5db46cebc10bf9394798d507ec79859f2846b69f8854a9c78154f"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "197c5f8dbfe23b3c484577f4de8cf31917606be58602a7923d1e30ca45c2d967"
+        }
+      ],
+      "launcherSha256": "8f53dcaa617e0dd4e3c9db3a135172f02d6d5cf2b131c26f2b7cc5f23ba0d7ef",
+      "preflightSha256": "678ca5e7e0f82acde59c473c8f5e9de5badc23ee8ce77981f996d5754ac12382"
+    },
+    "receiptSha256": "97a27141c517c3939f64d8c8d61abfa99352e627e2542b62f0d977bcc3670a4a",
+    "pins": {
+      "java": "/home/sanjevi/.local/share/mise/installs/java/26.0.2.1/bin/java",
+      "node": "/home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node",
+      "fireside": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/target/release/fireside",
+      "firesideSha256": "e37ef066c45b53a85a13b16c8b1652df6400e9256fc1e4797d602c637dec8df9",
+      "firesideCommit": "3407c658d31fbedc35fced8670a6afffd2943e97",
+      "jarVersion": "1.21.0",
+      "jarSha256": "c3d3680a89d946a90a027365ea14c26c6472a162bcf37f099bbb1ebd66d25e8e",
+      "sdkRoot": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/stack-official/node_modules/@google-cloud/firestore",
+      "watchSha256": "5c13770ba52f95cd7508b05eefed7f558edd1ce36f62cd689211cdeed35742d0",
+      "project": "demo-phase5-idle-listen",
+      "readyMilliseconds": 60000,
+      "stopMilliseconds": 30000
+    },
+    "jar": "/home/sanjevi/.cache/firebase/emulators/cloud-firestore-emulator-v1.21.0.jar",
+    "nodeVersion": "v24.20.0",
+    "javaVersion": "openjdk version \"26.0.2.1\" 2026-08-18\nOpenJDK Runtime Environment (build 26.0.2.1+1-7)\nOpenJDK 64-Bit Server VM (build 26.0.2.1+1-7, mixed mode, sharing)\n",
+    "javaExecutableSha256": "230b75e6f8d94db77da2065820dc0d044086d94a1f20adcafc273915efdc594f",
+    "nodeExecutableSha256": "89af8424dd53e560b1933f87ba650d8bf57c83ca5a04600eefb31f416aabbae7",
+    "launcherSha256": "8f53dcaa617e0dd4e3c9db3a135172f02d6d5cf2b131c26f2b7cc5f23ba0d7ef",
+    "preflightSha256": "678ca5e7e0f82acde59c473c8f5e9de5badc23ee8ce77981f996d5754ac12382",
+    "captureMaximumMilliseconds": 1080000,
+    "measuredProductIsR48NotToolingBaseCommit": true
+  },
+  "summary": {
+    "at": "2026-09-05T20:14:06.219Z",
+    "sixCasesCompleted": false,
+    "outcomes": [
+      {
+        "stack": "official",
+        "caseName": "idle-control",
+        "directory": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/idle-listen-20260906-r1/01-official-idle-control",
+        "captureExit": null,
+        "captureCompleted": false,
+        "serverStop": {
+          "identityChecked": true,
+          "code": 143,
+          "signal": null
+        },
+        "captureStop": null,
+        "failure": {
+          "message": "Diagnostic listener is not exclusively owned loopback server",
+          "stack": "Error: Diagnostic listener is not exclusively owned loopback server\n    at waitReady (file:///srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/diagnostic-idle-listen-20260906/tooling/reports/host-migration-20260905-hetzner/run-idle-listen-diagnostic.mjs:229:67)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async main (file:///srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/diagnostic-idle-listen-20260906/tooling/reports/host-migration-20260905-hetzner/run-idle-listen-diagnostic.mjs:331:67)"
+        },
+        "cleanupFailures": []
+      }
+    ],
+    "failure": {
+      "message": "Diagnostic case stopped sequence: official/idle-control",
+      "stack": "Error: Diagnostic case stopped sequence: official/idle-control\n    at main (file:///srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/diagnostic-idle-listen-20260906/tooling/reports/host-migration-20260905-hetzner/run-idle-listen-diagnostic.mjs:354:43)"
+    },
+    "productGatePassClaimed": false,
+    "performanceWinnerClaimed": false,
+    "gateAttemptLaunched": false,
+    "sourceInputTreesModified": false,
+    "checksumExclusions": [
+      "*/state/**",
+      "*/tmp/**"
+    ],
+    "checksumsAreSnapshotOnFailure": true
+  },
+  "cases": [
+    {
+      "name": "01-official-idle-control",
+      "preflight": {
+        "startedAt": "2026-09-05T20:13:59.252Z",
+        "candidate": "70043eb700ac82b6084a314cc1e972afa4345464",
+        "inputReceiptCandidate": "b5fe1d51ea1fd0b5912cab0ae2d4f1d4d1f0987d",
+        "root": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905",
+        "passed": true,
+        "failures": [],
+        "finishedAt": "2026-09-05T20:14:04.617Z"
+      },
+      "readiness": null,
+      "outcome": {
+        "stack": "official",
+        "caseName": "idle-control",
+        "directory": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/idle-listen-20260906-r1/01-official-idle-control",
+        "captureExit": null,
+        "captureCompleted": false,
+        "serverStop": {
+          "identityChecked": true,
+          "code": 143,
+          "signal": null
+        },
+        "captureStop": null,
+        "failure": {
+          "message": "Diagnostic listener is not exclusively owned loopback server",
+          "stack": "Error: Diagnostic listener is not exclusively owned loopback server\n    at waitReady (file:///srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/diagnostic-idle-listen-20260906/tooling/reports/host-migration-20260905-hetzner/run-idle-listen-diagnostic.mjs:229:67)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async main (file:///srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/diagnostic-idle-listen-20260906/tooling/reports/host-migration-20260905-hetzner/run-idle-listen-diagnostic.mjs:331:67)"
+        },
+        "cleanupFailures": []
+      },
+      "result": null,
+      "captureLog": null,
+      "serverLogTail": "   export DATASTORE_EMULATOR_HOST=127.0.0.1:23200\n\nNote: Support for Datastore Mode is in preview. If you encounter any bugs please file at https://github.com/firebase/firebase-tools/issues.\nDev App Server is now running.\n\n*** shutting down gRPC server since JVM is shutting down\n*** server shut down\n"
+    }
+  ]
+}
