@@ -44,9 +44,14 @@ and the 7,200-second soak. R43 stopped only at the post-export restart preflight
 75,874,926,592 available bytes were below the frozen 80,000,000,000-byte floor.
 The exact evidence is preserved, stale failed-attempt payload copies were
 removed without touching the banked official baseline, and the host now has
-126,171,009,024 available bytes. The single authorized fresh-preflight retry for
-this infrastructure kind is next. The bounded overnight loop remains active and
-Phase 5 remains incomplete.
+126,171,009,024 available bytes. Candidate `7c66afb` then passed the exact
+seven-job matrix for the authorized fresh-preflight retry. R44 did not launch:
+the current boot contains an NVMe read `I/O Error` and `critical medium error`
+on the host root drive at `2026-09-05T06:40:30+08:00`. The root filesystem
+currently reports clean and no later matching kernel event exists, but the
+frozen preflight and active goal both require stopping on hardware errors. No
+r44 release build, stack, smoke, or full-data workload started. Phase 5 remains
+incomplete and the bounded loop is stopped at this infrastructure boundary.
 
 ## Current loop
 
@@ -68,6 +73,7 @@ Phase 5 remains incomplete.
 | [r41](phase-5-full-gate-20260905-r41.md) (overnight attempt 2/6) | Exact-candidate cheap smoke passed both stacks 9/9 + 60 s; Fireside full initial 9/9 + 7,200 s soak + restart 9/9 | Harness: frozen-state accounting covered only 47 collection groups (15,383 documents) and omitted 11 groups (195,819); official and Fireside both total the exact frozen 211,202 | `full-data-collection-inventory-r41` fixture, captured before correction | pending | `aab4a56` source [33906402165](https://github.com/sanjevirau/fireside/actions/runs/33906402165), 7/7 green; correction pending | Failed after second export-first shutdown and before parity; product stages passed; official baseline remains banked |
 | [r42](phase-5-full-gate-20260905-r42.md) (overnight attempt 3/6) | Exact-candidate cheap smoke passed both stacks 9/9 + 60 s; Fireside full readiness + initial 9/9 + 7,200 s soak | Harness: lifecycle export destination used one literal name in the persistent Twodart checkout, colliding with an earlier attempt; overwrite guard correctly refused replacement | `lifecycle-export-staging-r42` fixture, captured before correction | pending | `74097c9` [33924570756](https://github.com/sanjevirau/fireside/actions/runs/33924570756), 7/7 green; correction pending | Failed before restart staging; no Fireside criterion failed, but restart/parity/acceptance/regressions did not run; official baseline remains banked |
 | [r43](phase-5-full-gate-20260905-r43.md) (overnight attempt 4/6) | Exact-candidate cheap smoke passed both stacks 9/9 + 60 s; Fireside full readiness + initial 9/9 + 7,200 s soak | Infrastructure capacity: post-export restart preflight had 75,874,926,592 available bytes versus the frozen 80,000,000,000-byte floor; every other health check passed | r42 lifecycle fixture remains the last behavioral fixture; r43 is infrastructure-only | `9756be6` | [33936118925](https://github.com/sanjevirau/fireside/actions/runs/33936118925), 7/7 green | Failed before restart only; exact evidence preserved; stale generated failed-attempt payloads removed, banked official baseline retained, one fresh-preflight retry authorized |
+| [r44](phase-5-full-gate-20260905-r44.md) (launcher-only rejection; no workload) | Fresh host preflight only | Infrastructure/hardware: current-boot NVMe read `I/O Error` and `critical medium error` on the host root drive; `/srv/dev-fast` data SSD was not the affected device | None; no behavioral observation or product change | `7c66afb` | [33944198428](https://github.com/sanjevirau/fireside/actions/runs/33944198428), 7/7 green | Stopped before controller upload, release build, smoke, or full-data continuation; exact sanitized preflight evidence preserved; no tag or Phase 6 |
 
 R25 failure evidence is published in `b79750636e1666e1d097b341b7cc9f85ba74d28c`;
 [evidence CI 33748445917](https://github.com/sanjevirau/fireside/actions/runs/33748445917)

@@ -1,0 +1,44 @@
+Phase 5 r44 launcher-only preflight rejection
+captured_at=2026-09-05T12:31:06+08:00
+candidate=7c66afb8ade5513264239e5ee8c585856748237f
+ci_run=33944198428
+ci_jobs=7
+ci_conclusion=success
+manifest_sha256=48f4fce8ce6d803824ecfa3193c12f3834a84c840cf7bd34a0e5b278c430732e
+protected_runner_sha256=ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc
+system_state=running
+ssh_state=active
+failed_units=0
+available_bytes_srv_dev_fast=126171009024
+swap_used_bytes=659456
+steady_vmstat_samples=3
+steady_vmstat_si=0,0,0
+steady_vmstat_so=0,0,0
+owned_phase5_processes=0
+gate_listeners=0
+workload_started=false
+release_build_started=false
+rejection=hardware_io_evidence_current_boot
+
+Current-boot kernel evidence:
+2026-09-05T06:40:30+08:00 sanjevi-linux kernel: nvme0n1: I/O Cmd(0x2) @ LBA 438216992, 256 blocks, I/O Error (sct 0x2 / sc 0x81)
+2026-09-05T06:40:30+08:00 sanjevi-linux kernel: critical medium error, dev nvme0n1, sector 438216992 op 0x0:(READ) flags 0x80700 phys_seg 32 prio class 2
+
+Device attribution:
+root_mount=/dev/nvme0n1p2
+phase5_data_mount=/dev/sdb1
+phase5_data_mountpoint=/srv/dev-fast
+nvme_model=ADATA SX8200PNP
+nvme_serial=2I4520031811
+nvme_firmware=R0906B
+nvme_state=live
+root_ext4_state=clean
+root_ext4_errors_behavior=Continue
+root_ext4_block_size=4096
+root_ext4_lifetime_writes=1868_GB
+subsequent_matching_kernel_errors=0
+
+The error is on the host root NVMe, not the Phase 5 data SSD. The clean
+filesystem state and absence of later matching kernel errors do not satisfy the
+immutable zero-current-boot hardware/I/O-evidence preflight. The controller was
+therefore not uploaded or launched.
