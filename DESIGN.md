@@ -2735,6 +2735,25 @@ valid tokens resume inclusively, unknown tokens restart at the beginning, and
 the next object name is emitted as the continuation token. SDK callers can
 therefore enumerate supported datasets without silently truncating at 1,000.
 
+### Phase 5 cleanup procfs disappearance oracle (r48)
+
+R48 passed all nine initial full-data journeys and its 7,200-second soak, then
+failed in the harness's post-export directory-process cleanup. The original
+trace identifies `ESRCH` from reading `/proc/<pid>/cmdline` during scope
+revalidation; it does not identify the disappearing PID. Linux 6.8's
+[`proc_pid_cmdline_read`](https://github.com/torvalds/linux/blob/v6.8/fs/proc/base.c#L341-L357)
+returns that errno when the task no longer exists. The frozen pre-correction
+fixture is `conformance/fixtures/phase5/procfs-disappearance-r48.json`.
+
+Known-identity cleanup reads must treat only `ENOENT` and `ESRCH` as disappearance,
+return false and send no signal to that identity. I/O and permission errors,
+malformed identity records and ownership mismatches remain errors. PID/start-time
+checks, command/checkout scope validation, revalidation before signaling,
+consecutive empty scans, orphan/listener assertions and shutdown deadlines remain
+unchanged. A required live process in fresh-backend acceptance is not made optional.
+This is a harness contract, not a Rust product change or a gate-threshold amendment.
+R48 stays failed; it must not be resumed or presented as a full pass.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.

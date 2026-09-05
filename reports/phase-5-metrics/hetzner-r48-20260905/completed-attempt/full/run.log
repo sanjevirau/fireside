@@ -1,0 +1,24 @@
+npm notice run fireside-conformance@0.0.1 test:suite:phase5-gate
+npm notice run node --import tsx src/suite/run-phase5-gate.ts --fireside-binary /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/target/release/fireside --fireside-dir /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/stack-fireside --fresh-dir /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/fresh-acceptance/r48/fresh-colleague --java-home /home/sanjevi/.local/share/mise/installs/java/26.0.2.1 --node-binary /home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node --official-dir /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/stack-official --project-id demo-twodart-local --runtime-assets-root /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/inputs/Assets --runtime-root /srv/dev-fast/p5-runtime --twodart-revision 6bda5bf29b2399017d2a872e8f3fc1a15d073a54 --full-data /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/full/inputs/full-data --smoke-evidence /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/smoke --official-baseline-evidence /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/banked-r36/evidence --output-dir /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/full/evidence --report-path /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/full/report.md
+(node:77097) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+Error: ESRCH: no such process, read
+    at async readFileHandle (node:internal/fs/promises:1261:24)
+    at async Promise.all (index 0)
+    at async assertPhase5DirectoryProcessScope (/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/harness/conformance/src/suite/phase5-stack-control.ts:889:44)
+    at async signalPhase5DirectoryProcesses (/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/harness/conformance/src/suite/phase5-stack-control.ts:874:11)
+    at async reapPhase5DirectoryProcesses (/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/harness/conformance/src/suite/phase5-stack-control.ts:805:7)
+    at async settlePhase5StackCleanup (/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/harness/conformance/src/suite/phase5-stack-control.ts:599:3)
+    at async stopPhase5Stack (/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/harness/conformance/src/suite/phase5-stack-control.ts:537:5)
+    at async main (/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/harness/conformance/src/suite/run-phase5-gate.ts:303:27)
+    at async <anonymous> (/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/harness/conformance/src/suite/run-phase5-gate.ts:2163:1) {
+  errno: -3,
+  code: 'ESRCH',
+  syscall: 'read'
+}
+
+Node.js v24.20.0

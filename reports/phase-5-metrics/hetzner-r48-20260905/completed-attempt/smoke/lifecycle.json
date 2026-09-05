@@ -1,0 +1,731 @@
+{
+  "allowedCountMismatch": 0,
+  "cacheOutputsMatched": true,
+  "executionOrder": [
+    "official",
+    "fireside"
+  ],
+  "generatedCacheParity": {
+    "bucket": "assets-local.twodart.com",
+    "name": "cache/main-cache-local.json",
+    "normalization": [
+      "metadata.buildTimestamp",
+      "data.general.slideThemeData[].chunkedJsonLink storage port",
+      "data.themeMetadataData.slides[].slideThemeData[].chunkedJsonLink storage port"
+    ],
+    "normalizedLogicalValuesMatched": true,
+    "physicalBytesMeasurementOnly": true,
+    "stableStorageCountsExact": true
+  },
+  "maximumConcurrentStacks": 1,
+  "officialBaseline": null,
+  "officialExportParity": null,
+  "records": {
+    "official": {
+      "initial": {
+        "browser": {
+          "browser": {
+            "pageErrors": 0,
+            "pageErrorHashes": [],
+            "pageErrorCallsiteClasses": [],
+            "pageErrorNames": [],
+            "consoleErrors": 11,
+            "consoleErrorHashes": [
+              "15ea2a1d68fa50626d2dca10f464f1f7228ac722f9046baf8b991f6ea270ab7e",
+              "21a970b08153ca8a62f97dd8e821779845624f8fc50c168c1e05c43dfe64909f",
+              "57f03bcea470befcd87cd50173522477c8bf480ecbbc013ce78e0acd55e167a5",
+              "5c9d1527ea5617c14c4e1098eeb7a4df51973c6f4e7d56388dc32ab29f64c1aa",
+              "62f3d49ea4a7d3f305df0f8b505d60a9b0289dd544262fe4fe706a91c6191ffa",
+              "6e02c12b0362db5db78a7a024c4bcfcce864310d99a5c1e6064d2f50abb2f77e",
+              "6e62b1052562467894a01c75b272917bf58d1d80f501fe078a86cd95c7899504",
+              "949126f7e3c547367a7919945b20c0ec316100b816d8eb902afd16500ec7d504"
+            ],
+            "consoleErrorOrigins": [
+              "first-party:https://templates.twodart.localhost:443/_next/static",
+              "first-party:https://templates.twodart.localhost:443/login/overview"
+            ],
+            "requestFailures": 0,
+            "requestFailureClasses": [
+              "GET:document:https://templates.twodart.localhost:443/login/overview:net::ERR_ABORTED",
+              "GET:fetch:http://127.0.0.1:23000/google.firestore.v1.Firestore/Listen:net::ERR_ABORTED",
+              "GET:fetch:http://127.0.0.1:23000/google.firestore.v1.Firestore/Write:net::ERR_ABORTED",
+              "POST:fetch:http://127.0.0.1:23000/google.firestore.v1.Firestore/Listen:net::ERR_ABORTED"
+            ],
+            "requestFailureHashes": []
+          },
+          "candidateIdentityStored": false,
+          "iteration": "initial",
+          "journeys": [
+            {
+              "backendAssertions": 2,
+              "durationMs": 4603,
+              "id": "otp-auth-login",
+              "networkAssertions": 2,
+              "renderedAssertions": 4
+            },
+            {
+              "backendAssertions": 2,
+              "durationMs": 722,
+              "id": "dashboard-and-deck-list",
+              "networkAssertions": 1,
+              "renderedAssertions": 2
+            },
+            {
+              "backendAssertions": 3,
+              "durationMs": 13400,
+              "id": "existing-deck-and-listener-edit",
+              "networkAssertions": 1,
+              "renderedAssertions": 4
+            },
+            {
+              "backendAssertions": 3,
+              "durationMs": 16796,
+              "id": "catalog-slide-add",
+              "networkAssertions": 2,
+              "renderedAssertions": 3
+            },
+            {
+              "backendAssertions": 6,
+              "durationMs": 11544,
+              "id": "deck-image-upload",
+              "networkAssertions": 3,
+              "renderedAssertions": 4
+            },
+            {
+              "backendAssertions": 4,
+              "durationMs": 3305,
+              "id": "duplicate-and-delete-deck",
+              "networkAssertions": 3,
+              "renderedAssertions": 6
+            },
+            {
+              "backendAssertions": 3,
+              "durationMs": 6874,
+              "id": "dotnet-deck-export",
+              "networkAssertions": 3,
+              "renderedAssertions": 2
+            },
+            {
+              "backendAssertions": 2,
+              "durationMs": 15590,
+              "id": "dev-admin-pages",
+              "networkAssertions": 18,
+              "renderedAssertions": 18
+            },
+            {
+              "backendAssertions": 2,
+              "durationMs": 3852,
+              "id": "sign-out-and-sign-in",
+              "networkAssertions": 2,
+              "renderedAssertions": 5
+            }
+          ],
+          "navigations": [
+            {
+              "label": "login",
+              "status": 200
+            },
+            {
+              "label": "otp-request",
+              "status": 200
+            },
+            {
+              "label": "otp-verify",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-master-slides",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-theme-upload",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-categories-core",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-slides-core",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-colors",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-headers",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-background-images",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-fonts",
+              "status": 200
+            },
+            {
+              "label": "admin:global-branding",
+              "status": 200
+            },
+            {
+              "label": "admin:premade-templates",
+              "status": 200
+            },
+            {
+              "label": "admin:tag",
+              "status": 200
+            },
+            {
+              "label": "admin:icons-library",
+              "status": 200
+            },
+            {
+              "label": "admin:icons-list",
+              "status": 200
+            },
+            {
+              "label": "admin:wp-actions",
+              "status": 200
+            },
+            {
+              "label": "admin:app-announcements",
+              "status": 200
+            },
+            {
+              "label": "admin:beta-users",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-categories-legacy",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-slides-legacy",
+              "status": 200
+            },
+            {
+              "label": "login",
+              "status": 200
+            },
+            {
+              "label": "otp-request",
+              "status": 200
+            },
+            {
+              "label": "otp-verify",
+              "status": 200
+            }
+          ],
+          "clientRouteState": {
+            "dom": {
+              "bodyChildCount": 6,
+              "documentReadyState": "complete",
+              "emailInputCount": 0,
+              "inputCount": 1,
+              "loginFormCount": 0,
+              "loadingSpinnerCount": 0,
+              "nextErrorOverlayCount": 1,
+              "rootDivCount": 1
+            },
+            "finalDocumentPath": "/home/recent",
+            "finalDocumentQueryKeys": [],
+            "history": [
+              {
+                "kind": "history.replaceState",
+                "path": "/login/overview",
+                "queryKeys": []
+              },
+              {
+                "kind": "history.replaceState",
+                "path": "/login/overview",
+                "queryKeys": []
+              },
+              {
+                "kind": "history.pushState",
+                "path": "/login/verification",
+                "queryKeys": []
+              },
+              {
+                "kind": "history.pushState",
+                "path": "/home/recent",
+                "queryKeys": []
+              }
+            ],
+            "nextRouter": {
+              "asPath": "/home/recent",
+              "pathname": "/home/[...slug]",
+              "queryKeys": [
+                "slug"
+              ],
+              "route": "/home/[...slug]"
+            }
+          },
+          "network": {
+            "firstPartyResponses": 5959,
+            "requiredFailures": 0,
+            "requiredRequests": 5893,
+            "routeClasses": [
+              "blob://:80/https:/templates.twodart.localhost",
+              "http://127.0.0.1:23000/google.firestore.v1.Firestore/Listen",
+              "http://127.0.0.1:23000/google.firestore.v1.Firestore/Write",
+              "http://127.0.0.1:23000/v1/projects",
+              "http://127.0.0.1:23001/identitytoolkit.googleapis.com/v1",
+              "http://127.0.0.1:23001/securetoken.googleapis.com/v1",
+              "https://storage.twodart.localhost:443/v0/b",
+              "https://templates.twodart.localhost:443/_next/static",
+              "https://templates.twodart.localhost:443/admin/:id",
+              "https://templates.twodart.localhost:443/admin/beta-users",
+              "https://templates.twodart.localhost:443/admin/global-branding",
+              "https://templates.twodart.localhost:443/admin/icons-library",
+              "https://templates.twodart.localhost:443/admin/icons-list",
+              "https://templates.twodart.localhost:443/admin/tag",
+              "https://templates.twodart.localhost:443/admin/templates-fonts",
+              "https://templates.twodart.localhost:443/admin/undefined",
+              "https://templates.twodart.localhost:443/admin/wp-actions",
+              "https://templates.twodart.localhost:443/api/login",
+              "https://templates.twodart.localhost:443/api/user",
+              "https://templates.twodart.localhost:443/api/v",
+              "https://templates.twodart.localhost:443/assets/video-announcement.jpg",
+              "https://templates.twodart.localhost:443/choladeck-app-screenshot.jpg",
+              "https://templates.twodart.localhost:443/favicon.svg",
+              "https://templates.twodart.localhost:443/home/recent",
+              "https://templates.twodart.localhost:443/home/undefined",
+              "https://templates.twodart.localhost:443/login/overview",
+              "https://templates.twodart.localhost:443/login/undefined",
+              "https://templates.twodart.localhost:443/presentation/:id",
+              "https://templates.twodart.localhost:443/presentation/undefined",
+              "https://twodartnet.twodart.localhost:443/api/user"
+            ],
+            "websocketConnections": 7,
+            "websocketFramesReceived": 8
+          },
+          "undefinedLoginRequests": {
+            "count": 2,
+            "initiatorCallsiteClasses": [
+              "other:no-stack"
+            ],
+            "initiatorCallsiteHashes": [],
+            "initiatorTypes": [
+              "other"
+            ],
+            "navigationRequests": 0,
+            "resourceTypes": [
+              "font"
+            ]
+          },
+          "passed": true,
+          "privacy": {
+            "credentialsStored": false,
+            "datasetIdentityStored": false,
+            "deckContentStored": false,
+            "otpStored": false,
+            "queryValuesStored": false,
+            "requestInitiatorPayloadStored": false,
+            "userIdentityStored": false
+          },
+          "schemaVersion": 1,
+          "skippedJourneys": [],
+          "stack": "official"
+        },
+        "cacheDigest": "7d959b1435539a64cc8c9cfb2f53dd262911537ebf336cffa2b185e13ba62833",
+        "stateAfterJourney": {
+          "authUsers": 1,
+          "firestoreDocuments": 20,
+          "generatedCache": {
+            "decodedBytes": 107473,
+            "normalizedSha256": "291180b23b28d456dc410de736a8381f4dedd934af0ffe56c6cfdc2b7e8a0a9f",
+            "physicalBytes": 12436
+          },
+          "storageObjectBytes": 499,
+          "storageObjects": 1,
+          "totalStorageObjectBytes": 12935,
+          "totalStorageObjects": 2
+        },
+        "stateBeforeJourney": {
+          "authUsers": 0,
+          "firestoreDocuments": 0,
+          "generatedCache": {
+            "decodedBytes": 105291,
+            "normalizedSha256": "828ac53806129e364a0b5976efaaa194fdff40b90318218ba50f29622ac73f4e",
+            "physicalBytes": 11891
+          },
+          "storageObjectBytes": 0,
+          "storageObjects": 0,
+          "totalStorageObjectBytes": 11891,
+          "totalStorageObjects": 1
+        }
+      },
+      "stops": {
+        "initial": {
+          "exitCode": 0,
+          "exportMetadataPresent": true,
+          "orphanCheckPassed": true,
+          "remainingDirectoryProcessGroups": 0,
+          "remainingListenerPorts": 0,
+          "shutdownOrder": "emulator-export-first-then-mprocs",
+          "shutdownMilliseconds": 4930.525278999994
+        }
+      }
+    },
+    "fireside": {
+      "initial": {
+        "browser": {
+          "browser": {
+            "pageErrors": 0,
+            "pageErrorHashes": [],
+            "pageErrorCallsiteClasses": [],
+            "pageErrorNames": [],
+            "consoleErrors": 11,
+            "consoleErrorHashes": [
+              "15ea2a1d68fa50626d2dca10f464f1f7228ac722f9046baf8b991f6ea270ab7e",
+              "21a970b08153ca8a62f97dd8e821779845624f8fc50c168c1e05c43dfe64909f",
+              "57f03bcea470befcd87cd50173522477c8bf480ecbbc013ce78e0acd55e167a5",
+              "5c9d1527ea5617c14c4e1098eeb7a4df51973c6f4e7d56388dc32ab29f64c1aa",
+              "62f3d49ea4a7d3f305df0f8b505d60a9b0289dd544262fe4fe706a91c6191ffa",
+              "6e02c12b0362db5db78a7a024c4bcfcce864310d99a5c1e6064d2f50abb2f77e",
+              "6e62b1052562467894a01c75b272917bf58d1d80f501fe078a86cd95c7899504",
+              "949126f7e3c547367a7919945b20c0ec316100b816d8eb902afd16500ec7d504"
+            ],
+            "consoleErrorOrigins": [
+              "first-party:https://phase5-fireside.templates.twodart.localhost:443/_next/static",
+              "first-party:https://phase5-fireside.templates.twodart.localhost:443/login/overview"
+            ],
+            "requestFailures": 0,
+            "requestFailureClasses": [
+              "GET:document:https://phase5-fireside.templates.twodart.localhost:443/login/overview:net::ERR_ABORTED",
+              "GET:fetch:http://127.0.0.1:23100/google.firestore.v1.Firestore/Listen:net::ERR_ABORTED",
+              "GET:fetch:http://127.0.0.1:23100/google.firestore.v1.Firestore/Write:net::ERR_ABORTED",
+              "POST:fetch:http://127.0.0.1:23100/google.firestore.v1.Firestore/Listen:net::ERR_ABORTED",
+              "POST:fetch:http://127.0.0.1:23100/google.firestore.v1.Firestore/Write:net::ERR_ABORTED"
+            ],
+            "requestFailureHashes": []
+          },
+          "candidateIdentityStored": false,
+          "iteration": "initial",
+          "journeys": [
+            {
+              "backendAssertions": 2,
+              "durationMs": 4458,
+              "id": "otp-auth-login",
+              "networkAssertions": 2,
+              "renderedAssertions": 4
+            },
+            {
+              "backendAssertions": 2,
+              "durationMs": 867,
+              "id": "dashboard-and-deck-list",
+              "networkAssertions": 1,
+              "renderedAssertions": 2
+            },
+            {
+              "backendAssertions": 3,
+              "durationMs": 13283,
+              "id": "existing-deck-and-listener-edit",
+              "networkAssertions": 1,
+              "renderedAssertions": 4
+            },
+            {
+              "backendAssertions": 3,
+              "durationMs": 16881,
+              "id": "catalog-slide-add",
+              "networkAssertions": 2,
+              "renderedAssertions": 3
+            },
+            {
+              "backendAssertions": 6,
+              "durationMs": 11826,
+              "id": "deck-image-upload",
+              "networkAssertions": 3,
+              "renderedAssertions": 4
+            },
+            {
+              "backendAssertions": 4,
+              "durationMs": 3253,
+              "id": "duplicate-and-delete-deck",
+              "networkAssertions": 3,
+              "renderedAssertions": 6
+            },
+            {
+              "backendAssertions": 3,
+              "durationMs": 7074,
+              "id": "dotnet-deck-export",
+              "networkAssertions": 3,
+              "renderedAssertions": 2
+            },
+            {
+              "backendAssertions": 2,
+              "durationMs": 15728,
+              "id": "dev-admin-pages",
+              "networkAssertions": 18,
+              "renderedAssertions": 18
+            },
+            {
+              "backendAssertions": 2,
+              "durationMs": 3890,
+              "id": "sign-out-and-sign-in",
+              "networkAssertions": 2,
+              "renderedAssertions": 5
+            }
+          ],
+          "navigations": [
+            {
+              "label": "login",
+              "status": 200
+            },
+            {
+              "label": "otp-request",
+              "status": 200
+            },
+            {
+              "label": "otp-verify",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-master-slides",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-theme-upload",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-categories-core",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-slides-core",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-colors",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-headers",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-background-images",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-fonts",
+              "status": 200
+            },
+            {
+              "label": "admin:global-branding",
+              "status": 200
+            },
+            {
+              "label": "admin:premade-templates",
+              "status": 200
+            },
+            {
+              "label": "admin:tag",
+              "status": 200
+            },
+            {
+              "label": "admin:icons-library",
+              "status": 200
+            },
+            {
+              "label": "admin:icons-list",
+              "status": 200
+            },
+            {
+              "label": "admin:wp-actions",
+              "status": 200
+            },
+            {
+              "label": "admin:app-announcements",
+              "status": 200
+            },
+            {
+              "label": "admin:beta-users",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-categories-legacy",
+              "status": 200
+            },
+            {
+              "label": "admin:templates-slides-legacy",
+              "status": 200
+            },
+            {
+              "label": "login",
+              "status": 200
+            },
+            {
+              "label": "otp-request",
+              "status": 200
+            },
+            {
+              "label": "otp-verify",
+              "status": 200
+            }
+          ],
+          "clientRouteState": {
+            "dom": {
+              "bodyChildCount": 6,
+              "documentReadyState": "complete",
+              "emailInputCount": 0,
+              "inputCount": 1,
+              "loginFormCount": 0,
+              "loadingSpinnerCount": 0,
+              "nextErrorOverlayCount": 1,
+              "rootDivCount": 1
+            },
+            "finalDocumentPath": "/home/recent",
+            "finalDocumentQueryKeys": [],
+            "history": [
+              {
+                "kind": "history.replaceState",
+                "path": "/login/overview",
+                "queryKeys": []
+              },
+              {
+                "kind": "history.replaceState",
+                "path": "/login/overview",
+                "queryKeys": []
+              },
+              {
+                "kind": "history.pushState",
+                "path": "/login/verification",
+                "queryKeys": []
+              },
+              {
+                "kind": "history.pushState",
+                "path": "/home/recent",
+                "queryKeys": []
+              }
+            ],
+            "nextRouter": {
+              "asPath": "/home/recent",
+              "pathname": "/home/[...slug]",
+              "queryKeys": [
+                "slug"
+              ],
+              "route": "/home/[...slug]"
+            }
+          },
+          "network": {
+            "firstPartyResponses": 6192,
+            "requiredFailures": 0,
+            "requiredRequests": 6126,
+            "routeClasses": [
+              "blob://:80/https:/phase5-fireside.templates.twodart.localhost",
+              "http://127.0.0.1:23100/google.firestore.v1.Firestore/Listen",
+              "http://127.0.0.1:23100/google.firestore.v1.Firestore/Write",
+              "http://127.0.0.1:23100/v1/projects",
+              "http://127.0.0.1:23101/identitytoolkit.googleapis.com/v1",
+              "http://127.0.0.1:23101/securetoken.googleapis.com/v1",
+              "https://phase5-fireside.storage.twodart.localhost:443/v0/b",
+              "https://phase5-fireside.templates.twodart.localhost:443/_next/static",
+              "https://phase5-fireside.templates.twodart.localhost:443/admin/:id",
+              "https://phase5-fireside.templates.twodart.localhost:443/admin/beta-users",
+              "https://phase5-fireside.templates.twodart.localhost:443/admin/global-branding",
+              "https://phase5-fireside.templates.twodart.localhost:443/admin/icons-library",
+              "https://phase5-fireside.templates.twodart.localhost:443/admin/icons-list",
+              "https://phase5-fireside.templates.twodart.localhost:443/admin/tag",
+              "https://phase5-fireside.templates.twodart.localhost:443/admin/templates-fonts",
+              "https://phase5-fireside.templates.twodart.localhost:443/admin/undefined",
+              "https://phase5-fireside.templates.twodart.localhost:443/admin/wp-actions",
+              "https://phase5-fireside.templates.twodart.localhost:443/api/login",
+              "https://phase5-fireside.templates.twodart.localhost:443/api/user",
+              "https://phase5-fireside.templates.twodart.localhost:443/api/v",
+              "https://phase5-fireside.templates.twodart.localhost:443/assets/video-announcement.jpg",
+              "https://phase5-fireside.templates.twodart.localhost:443/choladeck-app-screenshot.jpg",
+              "https://phase5-fireside.templates.twodart.localhost:443/favicon.svg",
+              "https://phase5-fireside.templates.twodart.localhost:443/home/recent",
+              "https://phase5-fireside.templates.twodart.localhost:443/home/undefined",
+              "https://phase5-fireside.templates.twodart.localhost:443/login/overview",
+              "https://phase5-fireside.templates.twodart.localhost:443/login/undefined",
+              "https://phase5-fireside.templates.twodart.localhost:443/presentation/:id",
+              "https://phase5-fireside.templates.twodart.localhost:443/presentation/undefined",
+              "https://phase5-fireside.twodartnet.twodart.localhost:443/api/user"
+            ],
+            "websocketConnections": 7,
+            "websocketFramesReceived": 8
+          },
+          "undefinedLoginRequests": {
+            "count": 2,
+            "initiatorCallsiteClasses": [
+              "other:no-stack"
+            ],
+            "initiatorCallsiteHashes": [],
+            "initiatorTypes": [
+              "other"
+            ],
+            "navigationRequests": 0,
+            "resourceTypes": [
+              "font"
+            ]
+          },
+          "passed": true,
+          "privacy": {
+            "credentialsStored": false,
+            "datasetIdentityStored": false,
+            "deckContentStored": false,
+            "otpStored": false,
+            "queryValuesStored": false,
+            "requestInitiatorPayloadStored": false,
+            "userIdentityStored": false
+          },
+          "schemaVersion": 1,
+          "skippedJourneys": [],
+          "stack": "fireside"
+        },
+        "cacheDigest": "7d959b1435539a64cc8c9cfb2f53dd262911537ebf336cffa2b185e13ba62833",
+        "stateAfterJourney": {
+          "authUsers": 1,
+          "firestoreDocuments": 20,
+          "generatedCache": {
+            "decodedBytes": 107473,
+            "normalizedSha256": "291180b23b28d456dc410de736a8381f4dedd934af0ffe56c6cfdc2b7e8a0a9f",
+            "physicalBytes": 12436
+          },
+          "storageObjectBytes": 499,
+          "storageObjects": 1,
+          "totalStorageObjectBytes": 12935,
+          "totalStorageObjects": 2
+        },
+        "stateBeforeJourney": {
+          "authUsers": 0,
+          "firestoreDocuments": 0,
+          "generatedCache": {
+            "decodedBytes": 105291,
+            "normalizedSha256": "828ac53806129e364a0b5976efaaa194fdff40b90318218ba50f29622ac73f4e",
+            "physicalBytes": 11891
+          },
+          "storageObjectBytes": 0,
+          "storageObjects": 0,
+          "totalStorageObjectBytes": 11891,
+          "totalStorageObjects": 1
+        }
+      },
+      "stops": {
+        "initial": {
+          "exitCode": 0,
+          "exportMetadataPresent": true,
+          "orphanCheckPassed": true,
+          "remainingDirectoryProcessGroups": 0,
+          "remainingListenerPorts": 0,
+          "shutdownOrder": "emulator-export-first-then-mprocs",
+          "shutdownMilliseconds": 124092.92969399999
+        }
+      }
+    }
+  },
+  "schemaVersion": 1,
+  "smoke": true,
+  "smokeRequirements": {
+    "allNineBrowserJourneys": true,
+    "bothStacks": true,
+    "cleanup": true,
+    "exportFirstShutdown": true,
+    "orphanCheck": true
+  }
+}

@@ -1,0 +1,320 @@
+{
+  "observedAt": "2026-09-05T17:41:07.806Z",
+  "root": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48",
+  "exits": {
+    "controller.exit": null,
+    "build.exit": "0",
+    "smoke.exit": "0",
+    "full/run.exit": null
+  },
+  "tmux": {
+    "exit": 0,
+    "stdout": "fireside-phase5-hetzner-r48 pid=66549 dead=0 command=bash\n"
+  },
+  "controllerTail": [
+    "  \"finishedAt\": \"2026-09-05T16:20:44.138Z\"",
+    "}",
+    "Cheap pass complete. Starting only the r36 Fireside full-data continuation.",
+    "Official r36 remains banked on the old host. Cross-host performance winner claims are prohibited."
+  ],
+  "fullLogTail": [
+    "npm notice run fireside-conformance@0.0.1 test:suite:phase5-gate",
+    "npm notice run node --import tsx src/suite/run-phase5-gate.ts --fireside-binary /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/target/release/fireside --fireside-dir /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/stack-fireside --fresh-dir /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/fresh-acceptance/r48/fresh-colleague --java-home /home/sanjevi/.local/share/mise/installs/java/26.0.2.1 --node-binary /home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node --official-dir /srv/d [display truncated]",
+    "(node:77097) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN",
+    "(Use `node --trace-warnings ...` to show where the warning was created)"
+  ],
+  "releaseSha": "e37ef066c45b53a85a13b16c8b1652df6400e9256fc1e4797d602c637dec8df9  /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/target/release/fireside\n",
+  "files": [
+    {
+      "name": "browser-fireside-initial.json",
+      "bytes": 8717,
+      "mtime": "2026-09-05T16:31:15.068Z"
+    },
+    {
+      "name": "browser-fireside-initial.json.diagnostics.jsonl",
+      "bytes": 1399582,
+      "mtime": "2026-09-05T16:31:15.073Z"
+    },
+    {
+      "name": "environment.json",
+      "bytes": 8140,
+      "mtime": "2026-09-05T16:21:56.204Z"
+    },
+    {
+      "name": "fireside-initial-frontend-recheck.json",
+      "bytes": 1148,
+      "mtime": "2026-09-05T16:27:55.248Z"
+    },
+    {
+      "name": "fireside-initial-frontend-recheck.jsonl",
+      "bytes": 1557,
+      "mtime": "2026-09-05T16:27:55.247Z"
+    },
+    {
+      "name": "fireside-initial-process-memory.jsonl",
+      "bytes": 3068376,
+      "mtime": "2026-09-05T17:41:01.710Z"
+    },
+    {
+      "name": "fireside-initial-readiness.json",
+      "bytes": 13004,
+      "mtime": "2026-09-05T16:27:45.120Z"
+    },
+    {
+      "name": "fireside-initial-readiness.jsonl",
+      "bytes": 2870456,
+      "mtime": "2026-09-05T16:27:45.112Z"
+    },
+    {
+      "name": "fireside-initial-tmux.log",
+      "bytes": 44174,
+      "mtime": "2026-09-05T16:27:43.182Z"
+    },
+    {
+      "name": "logs",
+      "bytes": 4096,
+      "mtime": "2026-09-05T16:31:15.377Z"
+    },
+    {
+      "name": "manifest.json",
+      "bytes": 26330,
+      "mtime": "2026-09-05T16:20:44.657Z"
+    },
+    {
+      "name": "official-baseline-evidence",
+      "bytes": 4096,
+      "mtime": "2026-09-05T16:21:01.850Z"
+    },
+    {
+      "name": "official-baseline.json",
+      "bytes": 1001,
+      "mtime": "2026-09-05T16:21:01.868Z"
+    },
+    {
+      "name": "preflight-fireside-soak.json",
+      "bytes": 2215,
+      "mtime": "2026-09-05T16:21:56.191Z"
+    },
+    {
+      "name": "smoke-prerequisite.json",
+      "bytes": 514,
+      "mtime": "2026-09-05T16:21:01.899Z"
+    }
+  ],
+  "stageResults": {
+    "browser-fireside-initial.json": {
+      "candidateIdentityStored": false,
+      "iteration": "initial",
+      "passed": true,
+      "schemaVersion": 1,
+      "stack": "fireside",
+      "journeys": [
+        {
+          "backendAssertions": 2,
+          "durationMs": 4973,
+          "id": "otp-auth-login",
+          "networkAssertions": 2,
+          "renderedAssertions": 4
+        },
+        {
+          "backendAssertions": 2,
+          "durationMs": 2350,
+          "id": "dashboard-and-deck-list",
+          "networkAssertions": 1,
+          "renderedAssertions": 2
+        },
+        {
+          "backendAssertions": 3,
+          "durationMs": 23023,
+          "id": "existing-deck-and-listener-edit",
+          "networkAssertions": 1,
+          "renderedAssertions": 4
+        },
+        {
+          "backendAssertions": 3,
+          "durationMs": 98255,
+          "id": "catalog-slide-add",
+          "networkAssertions": 2,
+          "renderedAssertions": 3
+        },
+        {
+          "backendAssertions": 6,
+          "durationMs": 18298,
+          "id": "deck-image-upload",
+          "networkAssertions": 3,
+          "renderedAssertions": 4
+        },
+        {
+          "backendAssertions": 4,
+          "durationMs": 8015,
+          "id": "duplicate-and-delete-deck",
+          "networkAssertions": 3,
+          "renderedAssertions": 6
+        },
+        {
+          "backendAssertions": 3,
+          "durationMs": 14017,
+          "id": "dotnet-deck-export",
+          "networkAssertions": 3,
+          "renderedAssertions": 2
+        },
+        {
+          "backendAssertions": 2,
+          "durationMs": 23113,
+          "id": "dev-admin-pages",
+          "networkAssertions": 18,
+          "renderedAssertions": 18
+        },
+        {
+          "backendAssertions": 2,
+          "durationMs": 6765,
+          "id": "sign-out-and-sign-in",
+          "networkAssertions": 2,
+          "renderedAssertions": 5
+        }
+      ]
+    }
+  },
+  "result": null,
+  "reportPresent": false,
+  "manifestSha256": "c281263a95cadb7ba254d9b9355bd00808c6054865853158adc54a9886b683aa",
+  "memory": {
+    "sampleCount": 464,
+    "parseErrors": 0,
+    "peakAggregatePssBytes": 19482101760,
+    "lastAt": "2026-09-05T17:41:01.466Z",
+    "lastAggregatePssBytes": 13191851008,
+    "topPeaks": [
+      {
+        "pid": 77767,
+        "name": "next-server (v16.2.9)",
+        "pssBytes": 9862263808,
+        "rssBytes": 9914773504,
+        "observedAt": "2026-09-05T16:22:26.869Z"
+      },
+      {
+        "pid": 77728,
+        "name": "fireside",
+        "pssBytes": 5353085952,
+        "rssBytes": 5313097728,
+        "observedAt": "2026-09-05T16:31:19.143Z"
+      },
+      {
+        "pid": 78672,
+        "name": "node",
+        "pssBytes": 3504026624,
+        "rssBytes": 3561578496,
+        "observedAt": "2026-09-05T16:42:56.283Z"
+      }
+    ],
+    "latestTop3": [
+      {
+        "pid": 77767,
+        "name": "next-server (v16.2.9)",
+        "pssBytes": 8555877376,
+        "rssBytes": 8615575552
+      },
+      {
+        "pid": 78672,
+        "name": "node",
+        "pssBytes": 1433951232,
+        "rssBytes": 1491537920
+      },
+      {
+        "pid": 77728,
+        "name": "fireside",
+        "pssBytes": 1060249600,
+        "rssBytes": 1062760448
+      }
+    ]
+  },
+  "primaryProcesses": [
+    "  81071   77097    4186 Sl+  MainThread      /home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node --import file:///srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/harness/conformance/node_modules/tsx/dist/loader.mjs /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/harness/conformance/src/suite/run-phase5-soak.ts --official-dir /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/stack-official --fireside-dir /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/stack-fireside --project-id demo-twodart-local --stack fireside --output /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/full/evidence/soak-fireside.json"
+  ],
+  "pinnedProcessHealth": {
+    "exit": 0,
+    "stdout": "    PID    PPID ELAPSED STAT %CPU   RSS COMMAND\n  66549   66548    5445 Ss+   0.0  3684 bash\n  77097   77096    4823 Sl+  11.1 415352 MainThread\n  77728   77600    4750 Sl+   186 1038576 fireside\n  81071   77097    4186 Sl+   2.4 186092 MainThread\n"
+  },
+  "rollup": [
+    {
+      "pid": 77728,
+      "metrics": [
+        "Rss:             1038576 kB",
+        "Pss:             1036123 kB",
+        "Private_Clean:     13656 kB",
+        "Private_Dirty:   1022416 kB",
+        "Anonymous:       1022416 kB",
+        "Swap:                  0 kB",
+        "SwapPss:               0 kB"
+      ]
+    },
+    {
+      "pid": 81071,
+      "metrics": [
+        "Rss:              186092 kB",
+        "Pss:              132755 kB",
+        "Private_Clean:        56 kB",
+        "Private_Dirty:    129592 kB",
+        "Anonymous:        129564 kB",
+        "Swap:                  0 kB",
+        "SwapPss:               0 kB"
+      ]
+    }
+  ],
+  "system": {
+    "exit": 0,
+    "stdout": "running\n"
+  },
+  "ssh": {
+    "exit": 0,
+    "stdout": "active\n"
+  },
+  "failedUnits": {
+    "exit": 0,
+    "stdout": ""
+  },
+  "swap": "Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n/dev/md0                                partition\t33520636\t0\t\t-2\n",
+  "swappiness": "60",
+  "vmstat": {
+    "exit": 0,
+    "stdout": "procs -----------memory---------- ---swap-- -----io---- -system-- -------cpu-------\n r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st gu\n 1  0      0 7780400 700808 43312172    0    0   264  5965 8092    4  9  2 89  0  0  0\n 0  0      0 7783312 700808 43312172    0    0     0     0 6454 5912 15  1 84  0  0  0\n 2  0      0 7786500 700808 43312172    0    0     0     0 6267 6209 15  0 85  0  0  0\n 2  0      0 7789288 700808 43312172    0    0     0     0 6185 6062 15  0 85  0  0  0\n"
+  },
+  "mdstat": "Personalities : [raid1] [raid0] [raid6] [raid5] [raid4] [raid10] \nmd0 : active raid1 nvme1n1p1[1] nvme0n1p1[0]\n      33520640 blocks super 1.2 [2/2] [UU]\n      \nmd2 : active raid1 nvme1n1p3[1] nvme0n1p3[0]\n      465370432 blocks super 1.2 [2/2] [UU]\n      bitmap: 3/4 pages [12KB], 65536KB chunk\n\nmd1 : active raid1 nvme1n1p2[1] nvme0n1p2[0]\n      1046528 blocks super 1.2 [2/2] [UU]\n      \nunused devices: <none>\n",
+  "listeners": {
+    "exit": 0,
+    "stdout": "State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess                                 \nLISTEN 0      4096         0.0.0.0:22         0.0.0.0:*                                           \nLISTEN 0      511        127.0.0.1:23115      0.0.0.0:*    users:((\"MainThread\",pid=77882,fd=22)) \nLISTEN 0      128        127.0.0.1:23114      0.0.0.0:*    users:((\"python\",pid=77681,fd=3))      \nLISTEN 0      511        127.0.0.1:23112      0.0.0.0:*    users:((\"MainThread\",pid=78672,fd=25)) \nLISTEN 0      512        127.0.0.1:23116      0.0.0.0:*    users:((\"TwodartNet\",pid=78061,fd=295))\nLISTEN 0      128        127.0.0.1:23107      0.0.0.0:*    users:((\"fireside\",pid=77728,fd=24))   \nLISTEN 0      128        127.0.0.1:23106      0.0.0.0:*    users:((\"fireside\",pid=77728,fd=20))   \nLISTEN 0      128        127.0.0.1:23105      0.0.0.0:*    users:((\"fireside\",pid=77728,fd=19))   \nLISTEN 0      128        127.0.0.1:23104      0.0.0.0:*    users:((\"fireside\",pid=77728,fd=18))   \nLISTEN 0      1024       127.0.0.1:23111      0.0.0.0:*    users:((\"mprocs\",pid=77562,fd=11))     \nLISTEN 0      128        127.0.0.1:23110      0.0.0.0:*    users:((\"fireside\",pid=77728,fd=23))   \nLISTEN 0      128        127.0.0.1:23109      0.0.0.0:*    users:((\"fireside\",pid=77728,fd=22))   \nLISTEN 0      128        127.0.0.1:23108      0.0.0.0:*    users:((\"fireside\",pid=77728,fd=21))   \nLISTEN 0      511        127.0.0.1:23103      0.0.0.0:*    users:((\"MainThread\",pid=78472,fd=21)) \nLISTEN 0      128        127.0.0.1:23102      0.0.0.0:*    users:((\"fireside\",pid=77728,fd=17))   \nLISTEN 0      128        127.0.0.1:23101      0.0.0.0:*    users:((\"fireside\",pid=77728,fd=16))   \nLISTEN 0      128        127.0.0.1:23100      0.0.0.0:*    users:((\"fireside\",pid=77728,fd=14))   \nLISTEN 0      4096   127.0.0.53%lo:53         0.0.0.0:*                                           \nLISTEN 0      4096      127.0.0.54:53         0.0.0.0:*                                           \nLISTEN 0      512        127.0.0.1:38013      0.0.0.0:*    users:((\"dotnet\",pid=77768,fd=224))    \nLISTEN 0      512        127.0.0.1:45715      0.0.0.0:*    users:((\"dotnet\",pid=77768,fd=221))    \nLISTEN 0      511                *:443              *:*                                           \nLISTEN 0      511                *:80               *:*                                           \nLISTEN 0      4096            [::]:22            [::]:*                                           \nLISTEN 0      512            [::1]:23116         [::]:*    users:((\"TwodartNet\",pid=78061,fd=296))\nLISTEN 0      511                *:23113            *:*    users:((\"next-server (v1\",pid=77767,fd=24))\n"
+  },
+  "journal": {
+    "kernelExit": 0,
+    "journalExit": 0,
+    "hardware": [],
+    "resources": [],
+    "stderr": []
+  },
+  "smart": {
+    "nvme0n1": {
+      "exit": 0,
+      "smartExit": 0,
+      "passed": true,
+      "critical": 0,
+      "media": 0,
+      "errorLog": 0,
+      "percentageUsed": 1,
+      "temperature": 36,
+      "unsafeShutdowns": 0
+    },
+    "nvme1n1": {
+      "exit": 0,
+      "smartExit": 0,
+      "passed": true,
+      "critical": 0,
+      "media": 0,
+      "errorLog": 0,
+      "percentageUsed": 64,
+      "temperature": 37,
+      "unsafeShutdowns": 13
+    }
+  },
+  "observationFinishedAt": "2026-09-05T17:41:11.136Z",
+  "observationNote": "Read-only monitoring snapshot; selected fields summarized. The long full-log command is explicitly display-truncated. Original durable gate evidence unchanged remotely. Memory maxima sampled, nonfinal and nonsimultaneous; no efficiency conclusion."
+}

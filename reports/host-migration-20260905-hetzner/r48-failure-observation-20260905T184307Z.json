@@ -1,0 +1,792 @@
+{
+  "observedAt": "2026-09-05T18:43:07.448Z",
+  "root": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48",
+  "exits": {
+    "controller.exit": "1",
+    "build.exit": "0",
+    "smoke.exit": "0",
+    "full/run.exit": "1"
+  },
+  "tmux": {
+    "exit": 1,
+    "stdout": "",
+    "stderr": "no server running on /tmp/tmux-1000/default\n"
+  },
+  "controllerTail": [
+    "}",
+    "Cheap pass complete. Starting only the r36 Fireside full-data continuation.",
+    "Official r36 remains banked on the old host. Cross-host performance winner claims are prohibited.",
+    "Controller complete, exit 1. Preserve and audit evidence; no tag or Phase 6 launch."
+  ],
+  "fullLogTail": [
+    "  errno: -3,",
+    "  code: 'ESRCH',",
+    "  syscall: 'read'",
+    "}",
+    "Node.js v24.20.0"
+  ],
+  "releaseSha": "e37ef066c45b53a85a13b16c8b1652df6400e9256fc1e4797d602c637dec8df9  /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/target/release/fireside\n",
+  "files": [
+    {
+      "name": "browser-fireside-initial.json",
+      "bytes": 8717,
+      "mtime": "2026-09-05T16:31:15.068Z"
+    },
+    {
+      "name": "browser-fireside-initial.json.diagnostics.jsonl",
+      "bytes": 1399582,
+      "mtime": "2026-09-05T16:31:15.073Z"
+    },
+    {
+      "name": "checksums.sha256",
+      "bytes": 5500,
+      "mtime": "2026-09-05T18:33:55.877Z"
+    },
+    {
+      "name": "environment.json",
+      "bytes": 8140,
+      "mtime": "2026-09-05T16:21:56.204Z"
+    },
+    {
+      "name": "failure.json",
+      "bytes": 359,
+      "mtime": "2026-09-05T18:33:53.020Z"
+    },
+    {
+      "name": "fireside-initial-frontend-recheck.json",
+      "bytes": 1148,
+      "mtime": "2026-09-05T16:27:55.248Z"
+    },
+    {
+      "name": "fireside-initial-frontend-recheck.jsonl",
+      "bytes": 1557,
+      "mtime": "2026-09-05T16:27:55.247Z"
+    },
+    {
+      "name": "fireside-initial-process-memory.json",
+      "bytes": 26207,
+      "mtime": "2026-09-05T18:31:27.636Z"
+    },
+    {
+      "name": "fireside-initial-process-memory.jsonl",
+      "bytes": 5036674,
+      "mtime": "2026-09-05T18:31:25.750Z"
+    },
+    {
+      "name": "fireside-initial-readiness.json",
+      "bytes": 13004,
+      "mtime": "2026-09-05T16:27:45.120Z"
+    },
+    {
+      "name": "fireside-initial-readiness.jsonl",
+      "bytes": 2870456,
+      "mtime": "2026-09-05T16:27:45.112Z"
+    },
+    {
+      "name": "fireside-initial-tmux.log",
+      "bytes": 44375,
+      "mtime": "2026-09-05T18:33:52.456Z"
+    },
+    {
+      "name": "fireside-initial.exit",
+      "bytes": 2,
+      "mtime": "2026-09-05T18:33:52.455Z"
+    },
+    {
+      "name": "logs",
+      "bytes": 4096,
+      "mtime": "2026-09-05T18:31:27.546Z"
+    },
+    {
+      "name": "manifest.json",
+      "bytes": 26330,
+      "mtime": "2026-09-05T16:20:44.657Z"
+    },
+    {
+      "name": "official-baseline-evidence",
+      "bytes": 4096,
+      "mtime": "2026-09-05T16:21:01.850Z"
+    },
+    {
+      "name": "official-baseline.json",
+      "bytes": 1001,
+      "mtime": "2026-09-05T16:21:01.868Z"
+    },
+    {
+      "name": "preflight-fireside-soak.json",
+      "bytes": 2215,
+      "mtime": "2026-09-05T16:21:56.191Z"
+    },
+    {
+      "name": "smoke-prerequisite.json",
+      "bytes": 514,
+      "mtime": "2026-09-05T16:21:01.899Z"
+    },
+    {
+      "name": "soak-comparison.json",
+      "bytes": 4443,
+      "mtime": "2026-09-05T18:31:27.604Z"
+    },
+    {
+      "name": "soak-comparison.md",
+      "bytes": 1401,
+      "mtime": "2026-09-05T18:31:27.611Z"
+    },
+    {
+      "name": "soak-fireside.json",
+      "bytes": 3784291,
+      "mtime": "2026-09-05T18:31:27.506Z"
+    }
+  ],
+  "stageResults": {
+    "browser-fireside-initial.json": {
+      "candidateIdentityStored": false,
+      "iteration": "initial",
+      "passed": true,
+      "schemaVersion": 1,
+      "stack": "fireside",
+      "journeys": [
+        {
+          "backendAssertions": 2,
+          "durationMs": 4973,
+          "id": "otp-auth-login",
+          "networkAssertions": 2,
+          "renderedAssertions": 4
+        },
+        {
+          "backendAssertions": 2,
+          "durationMs": 2350,
+          "id": "dashboard-and-deck-list",
+          "networkAssertions": 1,
+          "renderedAssertions": 2
+        },
+        {
+          "backendAssertions": 3,
+          "durationMs": 23023,
+          "id": "existing-deck-and-listener-edit",
+          "networkAssertions": 1,
+          "renderedAssertions": 4
+        },
+        {
+          "backendAssertions": 3,
+          "durationMs": 98255,
+          "id": "catalog-slide-add",
+          "networkAssertions": 2,
+          "renderedAssertions": 3
+        },
+        {
+          "backendAssertions": 6,
+          "durationMs": 18298,
+          "id": "deck-image-upload",
+          "networkAssertions": 3,
+          "renderedAssertions": 4
+        },
+        {
+          "backendAssertions": 4,
+          "durationMs": 8015,
+          "id": "duplicate-and-delete-deck",
+          "networkAssertions": 3,
+          "renderedAssertions": 6
+        },
+        {
+          "backendAssertions": 3,
+          "durationMs": 14017,
+          "id": "dotnet-deck-export",
+          "networkAssertions": 3,
+          "renderedAssertions": 2
+        },
+        {
+          "backendAssertions": 2,
+          "durationMs": 23113,
+          "id": "dev-admin-pages",
+          "networkAssertions": 18,
+          "renderedAssertions": 18
+        },
+        {
+          "backendAssertions": 2,
+          "durationMs": 6765,
+          "id": "sign-out-and-sign-in",
+          "networkAssertions": 2,
+          "renderedAssertions": 5
+        }
+      ]
+    },
+    "fireside-initial-process-memory.json": {
+      "completedAt": "2026-09-05T18:31:27.637Z",
+      "intervalSeconds": 10,
+      "peakAggregatePssBytes": 19482101760,
+      "peakAggregateRssBytes": 20900544512,
+      "processPeaks": {
+        "count": 92,
+        "first": [
+          {
+            "command": "-bash",
+            "pid": 77238,
+            "procStatStartTimeTicks": "2955630",
+            "pssBytes": 2342912,
+            "rssBytes": 5566464,
+            "firstObservedAt": "2026-09-05T16:21:56.274Z",
+            "lastObservedAt": "2026-09-05T18:31:25.505Z"
+          },
+          {
+            "command": "bun",
+            "pid": 77252,
+            "procStatStartTimeTicks": "2955634",
+            "pssBytes": 1900544,
+            "rssBytes": 9940992,
+            "firstObservedAt": "2026-09-05T16:22:06.323Z",
+            "lastObservedAt": "2026-09-05T18:31:25.505Z"
+          },
+          {
+            "command": "bash",
+            "pid": 77253,
+            "procStatStartTimeTicks": "2955634",
+            "pssBytes": 817152,
+            "rssBytes": 3854336,
+            "firstObservedAt": "2026-09-05T16:22:06.323Z",
+            "lastObservedAt": "2026-09-05T18:31:25.505Z"
+          }
+        ],
+        "last": [
+          {
+            "command": "node",
+            "pid": 80969,
+            "procStatStartTimeTicks": "3006997",
+            "pssBytes": 161924096,
+            "rssBytes": 214638592,
+            "firstObservedAt": "2026-09-05T16:30:38.172Z",
+            "lastObservedAt": "2026-09-05T18:31:25.505Z"
+          },
+          {
+            "command": "node",
+            "pid": 81087,
+            "procStatStartTimeTicks": "3012692",
+            "pssBytes": 157404160,
+            "rssBytes": 210649088,
+            "firstObservedAt": "2026-09-05T16:31:29.400Z",
+            "lastObservedAt": "2026-09-05T18:31:25.505Z"
+          },
+          {
+            "command": "node",
+            "pid": 81093,
+            "procStatStartTimeTicks": "3012693",
+            "pssBytes": 158503936,
+            "rssBytes": 211828736,
+            "firstObservedAt": "2026-09-05T16:31:29.400Z",
+            "lastObservedAt": "2026-09-05T18:31:25.505Z"
+          }
+        ]
+      },
+      "sampleCount": 759,
+      "schemaVersion": 1,
+      "stack": "fireside"
+    },
+    "soak-comparison.json": {
+      "schemaVersion": 3,
+      "swapIsMeasurementOnly": true,
+      "winnerRequired": false,
+      "topProcessRanking": "per-PID maximum sampled PSS; independent ranks, not matched process identities",
+      "stacks": {
+        "official": {
+          "durationSeconds": 7200,
+          "passed": true,
+          "swapActivity": {
+            "residualSwapBytesAtEnd": 12597698560,
+            "residualSwapBytesAtStart": 13496057856,
+            "sampleCount": 241,
+            "swapInPagesDelta": 499591,
+            "swapOutPagesDelta": 438844
+          },
+          "topProcessesByPss": [
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ]
+          ]
+        },
+        "fireside": {
+          "durationSeconds": 7200,
+          "passed": true,
+          "swapActivity": {
+            "residualSwapBytesAtEnd": 0,
+            "residualSwapBytesAtStart": 0,
+            "sampleCount": 241,
+            "swapInPagesDelta": 0,
+            "swapOutPagesDelta": 0
+          },
+          "topProcessesByPss": [
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ],
+            [
+              "command",
+              "pid",
+              "peakPssBytes",
+              "peakRssBytes",
+              "samples"
+            ]
+          ]
+        }
+      }
+    },
+    "soak-fireside.json": {
+      "primaryErrorText": null,
+      "cleanupErrorTexts": [],
+      "candidateIdentityStored": false,
+      "completedAt": "2026-09-05T18:31:27.469Z",
+      "datasetIdentityStored": false,
+      "durationSeconds": 7200,
+      "expected": {
+        "catalogReads": 480,
+        "functionDispatches": 240,
+        "gatewayWrites": 1440,
+        "runAndCaseWrites": 960,
+        "storageCycles": 240,
+        "tokenBatches": 2880,
+        "tokenWrites": 57600
+      },
+      "failureHashes": [],
+      "health": {
+        "after": {
+          "failedUnits": 0,
+          "oomOrResourceEvidence": 0
+        },
+        "before": {
+          "failedUnits": 0,
+          "oomOrResourceEvidence": 0
+        }
+      },
+      "manifestSha256": "c281263a95cadb7ba254d9b9355bd00808c6054865853158adc54a9886b683aa",
+      "memory": {
+        "fireside": {
+          "peakPssBytes": 18302240768,
+          "peakRssBytes": 19498381312,
+          "pssSlopeBytesPerHour": -1126099025.265904,
+          "rssSlopeBytesPerHour": -1119387966.1163564
+        }
+      },
+      "topProcessesByPss": {
+        "fireside": [
+          {
+            "command": "next-server (v1",
+            "pid": 77767,
+            "peakPssBytes": 8702707712,
+            "peakRssBytes": 8762253312
+          },
+          {
+            "command": "fireside",
+            "pid": 77728,
+            "peakPssBytes": 5127376896,
+            "peakRssBytes": 5156372480
+          },
+          {
+            "command": "MainThread",
+            "pid": 78672,
+            "peakPssBytes": 3504026624,
+            "peakRssBytes": 3561578496
+          },
+          {
+            "command": "TwodartNet",
+            "pid": 78061,
+            "peakPssBytes": 629414912,
+            "peakRssBytes": 687677440
+          },
+          {
+            "command": "dotnet",
+            "pid": 77976,
+            "peakPssBytes": 371879936,
+            "peakRssBytes": 437506048
+          },
+          {
+            "command": "java",
+            "pid": 77786,
+            "peakPssBytes": 211698688,
+            "peakRssBytes": 214695936
+          },
+          {
+            "command": "MainThread",
+            "pid": 80969,
+            "peakPssBytes": 161350656,
+            "peakRssBytes": 214638592
+          },
+          {
+            "command": "MainThread",
+            "pid": 81093,
+            "peakPssBytes": 158503936,
+            "peakRssBytes": 211828736
+          },
+          {
+            "command": "MainThread",
+            "pid": 81087,
+            "peakPssBytes": 157404160,
+            "peakRssBytes": 210649088
+          },
+          {
+            "command": "dotnet",
+            "pid": 77768,
+            "peakPssBytes": 123905024,
+            "peakRssBytes": 181616640
+          }
+        ]
+      },
+      "privateContentStored": false,
+      "projectId": "demo-twodart-local",
+      "raw": {
+        "swapWindow": {
+          "start": {
+            "swapFreeBytes": 34325131264,
+            "swapInPages": 55,
+            "swapOutPages": 98,
+            "swapTotalBytes": 34325131264
+          },
+          "end": {
+            "swapFreeBytes": 34325131264,
+            "swapInPages": 55,
+            "swapOutPages": 98,
+            "swapTotalBytes": 34325131264
+          }
+        },
+        "stacks": {
+          "fireside": {
+            "catalogLatencyMilliseconds": {
+              "items": 480
+            },
+            "errorHashes": {
+              "items": 0
+            },
+            "errorTexts": {
+              "items": 0
+            },
+            "functionLatencyMilliseconds": {
+              "items": 240
+            },
+            "listenerLatencyMilliseconds": {
+              "items": 60000
+            },
+            "storageLatencyMilliseconds": {
+              "items": 240
+            },
+            "writeLatencyMilliseconds": {
+              "items": 5280
+            }
+          }
+        }
+      },
+      "schemaVersion": 1,
+      "smoke": false,
+      "swapActivity": {
+        "residualSwapBytesAtEnd": 0,
+        "residualSwapBytesAtStart": 0,
+        "sampleCount": 241,
+        "swapInPagesDelta": 0,
+        "swapOutPagesDelta": 0
+      },
+      "stack": "fireside",
+      "stacks": {
+        "fireside": {
+          "acknowledgedStateMismatches": 0,
+          "counts": {
+            "catalogReads": 480,
+            "functionDispatches": 240,
+            "gatewayWrites": 1440,
+            "runAndCaseWrites": 960,
+            "storageCycles": 240,
+            "tokenBatches": 2880,
+            "tokenWrites": 57600
+          },
+          "duplicateObservableEffects": 0,
+          "errors": 0,
+          "listenerDelivery": {
+            "expected": 60000,
+            "gaps": 0,
+            "observed": 60000
+          },
+          "latencyMilliseconds": {
+            "catalogRead": [
+              "p50",
+              "p99",
+              "samples"
+            ],
+            "functionDelivery": [
+              "p50",
+              "p99",
+              "samples"
+            ],
+            "listenerDelivery": [
+              "p50",
+              "p99",
+              "samples"
+            ],
+            "storageCycle": [
+              "p50",
+              "p99",
+              "samples"
+            ],
+            "writeCommit": [
+              "p50",
+              "p99",
+              "samples"
+            ]
+          },
+          "sessions": 2,
+          "stalls": 0
+        }
+      },
+      "startedAt": "2026-09-05T16:31:21.527Z",
+      "syntheticIdentifiersStored": false,
+      "userIdentityStored": false,
+      "passed": true
+    }
+  },
+  "result": null,
+  "reportPresent": false,
+  "manifestSha256": "c281263a95cadb7ba254d9b9355bd00808c6054865853158adc54a9886b683aa",
+  "memory": {
+    "sampleCount": 759,
+    "parseErrors": 0,
+    "peakAggregatePssBytes": 19482101760,
+    "lastAt": "2026-09-05T18:31:25.505Z",
+    "lastAggregatePssBytes": 13190496256,
+    "topPeaks": [
+      {
+        "pid": 77767,
+        "name": "next-server (v16.2.9)",
+        "pssBytes": 9862263808,
+        "rssBytes": 9914773504,
+        "observedAt": "2026-09-05T16:22:26.869Z"
+      },
+      {
+        "pid": 77728,
+        "name": "fireside",
+        "pssBytes": 5353085952,
+        "rssBytes": 5313097728,
+        "observedAt": "2026-09-05T16:31:19.143Z"
+      },
+      {
+        "pid": 78672,
+        "name": "node",
+        "pssBytes": 3504026624,
+        "rssBytes": 3561578496,
+        "observedAt": "2026-09-05T16:42:56.283Z"
+      }
+    ],
+    "latestTop3": [
+      {
+        "pid": 77767,
+        "name": "next-server (v16.2.9)",
+        "pssBytes": 8555863040,
+        "rssBytes": 8615571456
+      },
+      {
+        "pid": 78672,
+        "name": "node",
+        "pssBytes": 1440636928,
+        "rssBytes": 1498226688
+      },
+      {
+        "pid": 77728,
+        "name": "fireside",
+        "pssBytes": 1047324672,
+        "rssBytes": 1049837568
+      }
+    ]
+  },
+  "primaryProcesses": [],
+  "pinnedProcessHealth": {
+    "exit": 1,
+    "stdout": "    PID    PPID ELAPSED STAT %CPU   RSS COMMAND\n",
+    "stderr": ""
+  },
+  "rollup": [
+    {
+      "pid": 77728,
+      "metrics": null
+    },
+    {
+      "pid": 81071,
+      "metrics": null
+    }
+  ],
+  "system": {
+    "exit": 0,
+    "stdout": "running\n"
+  },
+  "ssh": {
+    "exit": 0,
+    "stdout": "active\n"
+  },
+  "failedUnits": {
+    "exit": 0,
+    "stdout": ""
+  },
+  "swap": "Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n/dev/md0                                partition\t33520636\t0\t\t-2\n",
+  "swappiness": "60",
+  "vmstat": {
+    "exit": 0,
+    "stdout": "procs -----------memory---------- ---swap-- -----io---- -system-- -------cpu-------\n r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st gu\n 0  0      0 13391488 747160 50725980    0    0   238  5746 7887    4 10  1 89  0  0  0\n 0  0      0 13394328 747160 50726068    0    0     0     0  298  152  0  0 100  0  0  0\n 0  0      0 13394328 747160 50726068    0    0     0     0   52   59  0  0 100  0  0  0\n 0  0      0 13395060 747160 50726068    0    0     0     0   64   64  0  0 100  0  0  0\n"
+  },
+  "mdstat": "Personalities : [raid1] [raid0] [raid6] [raid5] [raid4] [raid10] \nmd0 : active raid1 nvme1n1p1[1] nvme0n1p1[0]\n      33520640 blocks super 1.2 [2/2] [UU]\n      \nmd2 : active raid1 nvme1n1p3[1] nvme0n1p3[0]\n      465370432 blocks super 1.2 [2/2] [UU]\n      bitmap: 2/4 pages [8KB], 65536KB chunk\n\nmd1 : active raid1 nvme1n1p2[1] nvme0n1p2[0]\n      1046528 blocks super 1.2 [2/2] [UU]\n      \nunused devices: <none>\n",
+  "listeners": {
+    "exit": 0,
+    "stdout": "State  Recv-Q Send-Q Local Address:Port Peer Address:PortProcess\nLISTEN 0      4096         0.0.0.0:22        0.0.0.0:*          \nLISTEN 0      4096   127.0.0.53%lo:53        0.0.0.0:*          \nLISTEN 0      4096      127.0.0.54:53        0.0.0.0:*          \nLISTEN 0      511                *:443             *:*          \nLISTEN 0      511                *:80              *:*          \nLISTEN 0      4096            [::]:22           [::]:*          \n"
+  },
+  "journal": {
+    "kernelExit": 0,
+    "journalExit": 0,
+    "hardware": [],
+    "resources": [],
+    "stderr": []
+  },
+  "smart": {
+    "nvme0n1": {
+      "exit": 0,
+      "smartExit": 0,
+      "passed": true,
+      "critical": 0,
+      "media": 0,
+      "errorLog": 0,
+      "percentageUsed": 1,
+      "temperature": 35,
+      "unsafeShutdowns": 0
+    },
+    "nvme1n1": {
+      "exit": 0,
+      "smartExit": 0,
+      "passed": true,
+      "critical": 0,
+      "media": 0,
+      "errorLog": 0,
+      "percentageUsed": 64,
+      "temperature": 37,
+      "unsafeShutdowns": 13
+    }
+  },
+  "observationFinishedAt": "2026-09-05T18:43:10.777Z",
+  "observationNote": "Read-only failure-discovery snapshot; selected fields summarized. No workload intervention. Original gate evidence will be preserved byte-for-byte separately. Sampled memory maxima are not a final efficiency claim."
+}

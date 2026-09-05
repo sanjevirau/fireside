@@ -3,6 +3,34 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+test("r48 preserves the cleanup ESRCH oracle before correction", async () => {
+  const fixture = JSON.parse(await readFile(new URL(
+    "../fixtures/phase5/procfs-disappearance-r48.json", import.meta.url,
+  ), "utf8"));
+  assert.equal(fixture.capturedBeforeHarnessChange, true);
+  assert.deepEqual(fixture.contract.knownIdentityReadDisappearanceCodes, ["ENOENT", "ESRCH"]);
+  assert.equal(fixture.observed.disappearingPid, null);
+  assert.equal(fixture.observed.fullGatePassed, false);
+  assert.equal(fixture.observed.restartStarted, false);
+  assert.equal(fixture.observed.soakPassed, true);
+  assert.equal(fixture.observed.soakSeconds, 7200);
+  for (const source of fixture.sources as { path: string; sha256: string }[]) {
+    const bytes = await readFile(new URL(`../../${source.path}`, import.meta.url));
+    assert.equal(createHash("sha256").update(bytes).digest("hex"), source.sha256);
+  }
+  const root = new URL("../../reports/phase-5-metrics/hetzner-r48-20260905/completed-attempt/", import.meta.url);
+  const log = await readFile(new URL("full/run.log", root), "utf8");
+  assert.ok(log.includes(fixture.observed.message));
+  assert.match(log, /Promise\.all \(index 0\)/u);
+  assert.match(log, /assertPhase5DirectoryProcessScope/u);
+  const failure = JSON.parse(await readFile(new URL("full/evidence/failure.json", root), "utf8"));
+  assert.equal(failure.errorHash, fixture.observed.errorHash);
+  for (const name of ["controller.exit", "full/run.exit"]) {
+    assert.equal((await readFile(new URL(name, root), "utf8")).trim(), "1");
+  }
+  assert.equal((await readFile(new URL("full/evidence/fireside-initial.exit", root), "utf8")).trim(), "0");
+});
+
 test("r46 captures fresh-backend service output independently of the tmux display", async () => {
   const fixture = JSON.parse(await readFile(new URL(
     "../fixtures/phase5/fresh-backend-service-log-r46.json", import.meta.url,

@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "capturedBeforeHarnessChange": true,
+  "classification": "post-export-cleanup-procfs-process-disappearance-race",
+  "candidate": "3407c658d31fbedc35fced8670a6afffd2943e97",
+  "manifestSha256": "c281263a95cadb7ba254d9b9355bd00808c6054865853158adc54a9886b683aa",
+  "runnerSha256": "ad61e2e6720abe5e53c745ec264c94166ccd3ff9662c84c1655062c9dd0258cc",
+  "observed": {
+    "failedAt": "2026-09-05T18:33:53.019Z",
+    "message": "ESRCH: no such process, read",
+    "errno": -3,
+    "code": "ESRCH",
+    "syscall": "read",
+    "promiseAllIndex": 0,
+    "function": "assertPhase5DirectoryProcessScope",
+    "readTarget": "/proc/<pid>/cmdline",
+    "disappearingPid": null,
+    "pidUnavailableInOriginalTrace": true,
+    "fullInitialJourneysPassed": 9,
+    "soakSeconds": 7200,
+    "soakPassed": true,
+    "mprocsExit": 0,
+    "controllerExit": 1,
+    "fullRunExit": 1,
+    "fullGatePassed": false,
+    "restartStarted": false,
+    "errorHash": "24d660bf5bbc2128c991c9bfdd5e3405ac636390b6d9f163fc8726f363eca989"
+  },
+  "sources": [
+    {
+      "path": "reports/phase-5-metrics/hetzner-r48-20260905/completed-attempt/full/run.log",
+      "sha256": "fb8717f4d9066254fbb7460c58e487c608838df26634a02bd03a3059fb75a449"
+    },
+    {
+      "path": "reports/phase-5-metrics/hetzner-r48-20260905/completed-attempt/full/evidence/failure.json",
+      "sha256": "76662bef3e87dc47c449dbe138d847464b4280ca62fa6e88017eb41f93e40617"
+    },
+    {
+      "path": "reports/phase-5-metrics/hetzner-r48-20260905/completed-attempt/full/evidence/soak-fireside.json",
+      "sha256": "c61412e230fa520bc4743c635b9869124a76131979438ab9bad75241b863ba77"
+    }
+  ],
+  "oracle": {
+    "implementation": "https://raw.githubusercontent.com/torvalds/linux/v6.8/fs/proc/base.c",
+    "function": "proc_pid_cmdline_read",
+    "interpretation": "The procfs cmdline read returns ESRCH if get_proc_task no longer finds the task. A previously discovered process can disappear before cleanup scope revalidation. The original trace identifies this read but not the disappearing PID."
+  },
+  "contract": {
+    "knownIdentityReadDisappearanceCodes": [
+      "ENOENT",
+      "ESRCH"
+    ],
+    "onDisappearance": "Return false; do not signal this identity. Continue bounded cleanup and its final empty-process/listener checks.",
+    "mustPropagate": [
+      "EIO",
+      "EACCES",
+      "EPERM",
+      "malformed identity",
+      "command mismatch",
+      "checkout scope mismatch"
+    ],
+    "preservePidStartTimeComparison": true,
+    "preserveSignalScopeRevalidation": true,
+    "preserveConsecutiveEmptyScans": true,
+    "preserveOrphanAndListenerAssertions": true,
+    "preserveShutdownDeadlines": true,
+    "noProductChange": true,
+    "noProtectedRunnerChange": true,
+    "noManifestChange": true,
+    "noWorkloadOrThresholdChange": true,
+    "noResumeOfFailedRun": true
+  }
+}
