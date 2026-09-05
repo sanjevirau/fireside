@@ -2762,6 +2762,27 @@ to later identities after disappearance, while permission/I/O errors, PID reuse
 and scope mismatches retain their original refusal behavior. All other cleanup
 sequencing and final orphan checks remain unchanged.
 
+### Phase 5 quiet-listener diagnostic boundary (before product changes)
+
+The R48 cache-watcher deadlines and terminal resume-token error remain distinct
+from its cleanup failure. `conformance/fixtures/phase5/idle-listen-diagnostic-plan.json`
+freezes tiny idle-control, natural-reconnect and forced-raw-reconnect captures
+before another full-data attempt. Observe the actual 7.11.6 high-level watcher
+and separate raw gRPC client, 4,100 unrelated one-document commits and a
+150-second quiet window. Record real tokens, lifecycle and subsequent target
+delivery; do not predict the official server's heartbeat cadence or replace a
+rejected token with an invented fallback. Capture completion is not a gate pass.
+
+The provisioned Phase 5 oracle is the v1.21.0 jar used by the pinned Twodart
+stack, running on Java 26.0.2.1. Earlier phases' v1.22.0 comparisons remain
+separate. Diagnostic servers are fresh, loopback-only and sequential; no full
+dataset or active gate is touched. The external launcher verifies exact binary,
+jar, SDK-source and tooling hashes, preserves failure evidence, and signals only
+its own identity-checked children for planned diagnostic shutdown. The capture
+itself cannot launch or signal servers. Its reattachment outcome is frozen before
+owned cleanup, while all later lifecycle events remain in the raw records.
+Actual captured contracts and regression fixtures must precede any product fix.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.

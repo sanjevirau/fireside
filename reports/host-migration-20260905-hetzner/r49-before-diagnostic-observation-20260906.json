@@ -1,0 +1,151 @@
+{
+  "at": "2026-09-05T20:01:44.207Z",
+  "hostname": {
+    "status": 0,
+    "stdout": "fireside-hetzner\n",
+    "stderr": ""
+  },
+  "system": {
+    "status": 0,
+    "stdout": "running\n",
+    "stderr": ""
+  },
+  "ssh": {
+    "status": 0,
+    "stdout": "active\n",
+    "stderr": ""
+  },
+  "failed": {
+    "status": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "tmux": {
+    "status": 1,
+    "stdout": "",
+    "stderr": "no server running on /tmp/tmux-1000/default\n"
+  },
+  "listeners": {
+    "status": 0,
+    "stdout": "State  Recv-Q Send-Q Local Address:Port Peer Address:PortProcess\nLISTEN 0      4096         0.0.0.0:22        0.0.0.0:*          \nLISTEN 0      4096   127.0.0.53%lo:53        0.0.0.0:*          \nLISTEN 0      4096      127.0.0.54:53        0.0.0.0:*          \nLISTEN 0      511                *:443             *:*          \nLISTEN 0      511                *:80              *:*          \nLISTEN 0      4096            [::]:22           [::]:*          \n",
+    "stderr": ""
+  },
+  "processes": {
+    "status": 0,
+    "stdout": "   9376       1 Ssl  227960   11:32:15 /home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node /srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/stack-official/node_modules/portless/dist/cli.js proxy start --foreground --port 443 --https --skip-trust",
+    "stderr": ""
+  },
+  "meminfo": "MemTotal:       65765236 kB\nMemFree:        13406936 kB\nMemAvailable:   64149340 kB\nBuffers:          754388 kB\nCached:         46736940 kB\nSwapCached:            0 kB\nActive:          1640068 kB\nInactive:       46064040 kB\nActive(anon):     225100 kB\nInactive(anon):      448 kB\nActive(file):    1414968 kB\nInactive(file): 46063592 kB\nUnevictable:       30484 kB\nMlocked:           27412 kB\nSwapTotal:      33520636 kB\nSwapFree:       33520636 kB\nZswap:                 0 kB\nZswapped:              0 kB\nDirty:               848 kB\nWriteback:             0 kB\nAnonPages:        243304 kB\nMapped:           105044 kB\nShmem:              4016 kB\nKReclaimable:    3989952 kB\nSlab:            4446456 kB\nSReclaimable:    3989952 kB\nSUnreclaim:       456504 kB\nKernelStack:        4112 kB\nPageTables:         7068 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    66403252 kB\nCommitted_AS:     517492 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:       29588 kB\nVmallocChunk:          0 kB\nPercpu:            10224 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      322880 kB\nDirectMap2M:     5888000 kB\nDirectMap1G:    60817408 kB\n",
+  "vmstat": {
+    "status": 0,
+    "stdout": "--procs-- -----------------------memory---------------------- ---swap-- -----io---- -system-- ----------cpu----------\n   r    b         swpd         free         buff        cache   si   so    bi    bo   in   cs  us  sy  id  wa  st  gu\n   0    0            0     13406936       754388     50726892    0    0   212  5114 7026    4   9   1  90   0   0   0\n   0    0            0     13406696       754388     50726892    0    0     0    22  275  179   0   0 100   0   0   0\n   0    0            0     13406696       754388     50726892    0    0     0     0   42   51   0   0 100   0   0   0\n   0    0            0     13406888       754388     50726896    0    0     0     0   64   69   0   0 100   0   0   0\n",
+    "stderr": ""
+  },
+  "raid": "Personalities : [raid1] [raid0] [raid6] [raid5] [raid4] [raid10] \nmd0 : active raid1 nvme1n1p1[1] nvme0n1p1[0]\n      33520640 blocks super 1.2 [2/2] [UU]\n      \nmd2 : active raid1 nvme1n1p3[1] nvme0n1p3[0]\n      465370432 blocks super 1.2 [2/2] [UU]\n      bitmap: 2/4 pages [8KB], 65536KB chunk\n\nmd1 : active raid1 nvme1n1p2[1] nvme0n1p2[0]\n      1046528 blocks super 1.2 [2/2] [UU]\n      \nunused devices: <none>\n",
+  "kernel": {
+    "status": 0,
+    "stdout": "Sep 05 10:09:25 Ubuntu-noble-latest-amd64-base.zst kernel: nvme nvme0: Shutdown timeout set to 10 seconds\nSep 05 10:09:25 Ubuntu-noble-latest-amd64-base.zst kernel: nvme nvme1: Shutdown timeout set to 10 seconds\n",
+    "stderr": ""
+  },
+  "resources": {
+    "status": 1,
+    "stdout": "-- No entries --\n",
+    "stderr": ""
+  },
+  "attempts": [
+    {
+      "path": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/preparation-r49",
+      "error": "ENOENT"
+    },
+    {
+      "path": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r49",
+      "error": "ENOENT"
+    },
+    {
+      "path": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/fresh-acceptance/r49",
+      "error": "ENOENT"
+    },
+    {
+      "path": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/deployment-32bb3f4",
+      "error": "ENOENT"
+    },
+    {
+      "path": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/diagnostic-idle-listen-20260906",
+      "error": "ENOENT"
+    }
+  ],
+  "rootEntries": [
+    "attempts",
+    "banked-r36",
+    "ci-b5fe1d5-seven-jobs.json",
+    "ci-cbdc108-seven-jobs.json",
+    "deployment",
+    "deployment-3407c65",
+    "deployment-473d883",
+    "deployment.lock",
+    "exports",
+    "fresh-acceptance",
+    "fresh-colleague",
+    "input-verification.json",
+    "input-verification.log",
+    "inputs",
+    "preparation-r47",
+    "preparation-r48",
+    "setup-fireside-dependencies.log",
+    "setup-fresh-colleague-dependencies.log",
+    "setup-harness-b5fe1d5",
+    "setup-official-dependencies.log",
+    "setup-stage-fireside.log",
+    "setup-stage-official.log",
+    "stack-fireside",
+    "stack-official"
+  ],
+  "sdk": {
+    "stack-official": {
+      "git": {
+        "status": 0,
+        "stdout": " M scripts/dev/mprocs/js-dotnet.yaml\n",
+        "stderr": ""
+      },
+      "head": {
+        "status": 0,
+        "stdout": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54\n",
+        "stderr": ""
+      },
+      "packagePath": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/stack-official/node_modules/@google-cloud/firestore/package.json",
+      "packageVersion": "7.11.6"
+    },
+    "stack-fireside": {
+      "git": {
+        "status": 0,
+        "stdout": " M scripts/dev/mprocs/js-dotnet.yaml\n",
+        "stderr": ""
+      },
+      "head": {
+        "status": 0,
+        "stdout": "6bda5bf29b2399017d2a872e8f3fc1a15d073a54\n",
+        "stderr": ""
+      },
+      "packagePath": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/stack-fireside/node_modules/@google-cloud/firestore/package.json",
+      "packageVersion": "7.11.6"
+    }
+  },
+  "tools": {
+    "status": 0,
+    "stdout": "/usr/sbin/smartctl\n",
+    "stderr": "bash: line 1: java: command not found\n"
+  },
+  "jar": {
+    "path": "/home/sanjevi/.cache/firebase/emulators/cloud-firestore-emulator-v1.22.0.jar",
+    "error": "ENOENT"
+  },
+  "priorBinary": {
+    "path": "/srv/dev-fast/runtime-data/fireside-templates-hetzner-20260905/attempts/r48/target/release/fireside",
+    "dir": false,
+    "symlink": false,
+    "size": 27418440,
+    "mtime": "2026-09-05T16:12:19.955Z"
+  },
+  "binaryHash": "e37ef066c45b53a85a13b16c8b1652df6400e9256fc1e4797d602c637dec8df9",
+  "r48Exit": "1\n"
+}
