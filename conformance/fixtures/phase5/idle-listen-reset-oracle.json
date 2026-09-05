@@ -1,0 +1,909 @@
+{
+  "schemaVersion": 1,
+  "capturedBeforeProductChange": true,
+  "capturedAt": "2026-09-05T20:51:52.454Z",
+  "toolingCommit": "a05e824c50b9a6fd4c2ea7c4db33195ed06d6978",
+  "firesideBaseline": {
+    "commit": "3407c658d31fbedc35fced8670a6afffd2943e97",
+    "binarySha256": "e37ef066c45b53a85a13b16c8b1652df6400e9256fc1e4797d602c637dec8df9",
+    "mode": "fresh disk/WAL",
+    "overrides": []
+  },
+  "official": {
+    "jarVersion": "1.21.0",
+    "jarSha256": "c3d3680a89d946a90a027365ea14c26c6472a162bcf37f099bbb1ebd66d25e8e",
+    "javaVersion": "26.0.2.1",
+    "heap": "default"
+  },
+  "highLevelSdkVersion": "7.11.6",
+  "lowLevelSdkVersion": "9.0.0",
+  "planSha256": "401e08f0a5e5d02ffc3bf4d92b0f42e8d91e8e2c78836c2dfbd7800dcce542b3",
+  "evidenceRoot": "reports/phase-5-metrics/idle-listen-20260906-r2",
+  "contract": {
+    "javaReopensThroughTargetResetAndCurrentReplay": true,
+    "javaQuietHeartbeatsObserved": false,
+    "naturalSdkReopenObservedWithoutInjectedLoss": true,
+    "firesideControlStillDelivers": true,
+    "firesideChurnResumeTerminatesWithCode9": true,
+    "postResumeMutationRequired": true,
+    "cleanupExcludedFromBehavioralOutcome": true,
+    "productGatePassClaimed": false,
+    "performanceWinnerClaimed": false,
+    "fullCacheQueryTimeoutAttributed": false
+  },
+  "cases": [
+    {
+      "directory": "01-official-idle-control",
+      "raw": {
+        "resultSha256": "43d07052b1837f1a3957a3114d9180d5a1c93b037ace0b0cecef6ec77e2fe262",
+        "eventsSha256": "2d5b16fdd8f54c323e4a463437f464737426f13d76c0dd4886cd8905fc2fc167"
+      },
+      "observed": {
+        "rawInitial": true,
+        "rawInitialDocument": true,
+        "highInitial": true,
+        "rawReattachedCurrent": false,
+        "rawReattachRejectedOrClosed": false,
+        "rawMutationDelivered": true,
+        "highMutationDelivered": true,
+        "highErrors": 0,
+        "unrelatedDocumentsAcknowledged": 0,
+        "initialTokenBase64": "CgkI5tqCsaTYlgM=",
+        "latestTokenBase64": "CgkIybnK+KTYlgM=",
+        "sdkListenStreams": 2
+      },
+      "unrelatedAcknowledgements": 0,
+      "unrelatedWriteMilliseconds": 0.03204900000037014,
+      "quietMilliseconds": 149999.977135,
+      "quietRawResponses": 0,
+      "sdkResumedRequest": {
+        "sequence": 148,
+        "at": "2026-09-05T20:33:47.013Z",
+        "elapsedMilliseconds": 123972.68613100001,
+        "phase": "quiet-window-after-writes",
+        "kind": "sdk-listen-request",
+        "value": {
+          "streamId": 2,
+          "request": {
+            "database": "projects/demo-phase5-idle-listen/databases/(default)",
+            "addTarget": {
+              "query": {
+                "parent": "projects/demo-phase5-idle-listen/databases/(default)/documents/_phase5_idle_listen/b1d734f3-7c6c-48f6-9b5c-1ecb01b0f869",
+                "structuredQuery": {
+                  "from": [
+                    {
+                      "collectionId": "quiet"
+                    }
+                  ]
+                }
+              },
+              "resumeToken": "CgkIuImEsaTYlgM=",
+              "targetId": 1
+            }
+          }
+        }
+      },
+      "relevant": [
+        {
+          "sequence": 150,
+          "at": "2026-09-05T20:33:47.021Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "ADD",
+              "targetIds": [
+                1
+              ],
+              "resumeToken": ""
+            }
+          }
+        },
+        {
+          "sequence": 151,
+          "at": "2026-09-05T20:33:47.022Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "RESET",
+              "targetIds": [
+                1
+              ],
+              "resumeToken": "CgkIoKmi6qTYlgM=",
+              "readTime": {
+                "seconds": "1788640427",
+                "nanos": 21472000
+              }
+            }
+          }
+        },
+        {
+          "sequence": 152,
+          "at": "2026-09-05T20:33:47.023Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "documentChange": {
+              "document": {
+                "name": "projects/demo-phase5-idle-listen/databases/(default)/documents/_phase5_idle_listen/b1d734f3-7c6c-48f6-9b5c-1ecb01b0f869/quiet/target",
+                "fields": {
+                  "owner": {
+                    "stringValue": "b1d734f3-7c6c-48f6-9b5c-1ecb01b0f869"
+                  },
+                  "version": {
+                    "integerValue": "0"
+                  },
+                  "text": {
+                    "stringValue": "quiet 火🔥"
+                  }
+                },
+                "createTime": {
+                  "seconds": "1788640306",
+                  "nanos": 751848000
+                },
+                "updateTime": {
+                  "seconds": "1788640306",
+                  "nanos": 751848000
+                }
+              },
+              "targetIds": [
+                1
+              ]
+            }
+          }
+        },
+        {
+          "sequence": 153,
+          "at": "2026-09-05T20:33:47.024Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "CURRENT",
+              "targetIds": [
+                1
+              ],
+              "resumeToken": "CgkIiq2i6qTYlgM=",
+              "readTime": {
+                "seconds": "1788640427",
+                "nanos": 21962000
+              }
+            }
+          }
+        },
+        {
+          "sequence": 154,
+          "at": "2026-09-05T20:33:47.024Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "NO_CHANGE",
+              "resumeToken": "CgkI/q2i6qTYlgM=",
+              "readTime": {
+                "seconds": "1788640427",
+                "nanos": 22078000
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "directory": "02-official-churn-natural",
+      "raw": {
+        "resultSha256": "de2230b5fe37f91728d028bdf4f73adfd989f440189c7211fde6baaf641dfa1d",
+        "eventsSha256": "c47b8e11730344e7158550783398bd2099b515bb0aab42e3ad3aa2c8aa723106"
+      },
+      "observed": {
+        "rawInitial": true,
+        "rawInitialDocument": true,
+        "highInitial": true,
+        "rawReattachedCurrent": false,
+        "rawReattachRejectedOrClosed": false,
+        "rawMutationDelivered": true,
+        "highMutationDelivered": true,
+        "highErrors": 0,
+        "unrelatedDocumentsAcknowledged": 4100,
+        "initialTokenBase64": "CgkIpc+Q/qTYlgM=",
+        "latestTokenBase64": "CgkI/pbkyaXYlgM=",
+        "sdkListenStreams": 2
+      },
+      "unrelatedAcknowledgements": 4100,
+      "unrelatedWriteMilliseconds": 8583.233375000002,
+      "quietMilliseconds": 150000.339995,
+      "quietRawResponses": 0,
+      "sdkResumedRequest": {
+        "sequence": 8349,
+        "at": "2026-09-05T20:36:28.714Z",
+        "elapsedMilliseconds": 123970.83423,
+        "phase": "quiet-window-after-writes",
+        "kind": "sdk-listen-request",
+        "value": {
+          "streamId": 2,
+          "request": {
+            "database": "projects/demo-phase5-idle-listen/databases/(default)",
+            "addTarget": {
+              "query": {
+                "parent": "projects/demo-phase5-idle-listen/databases/(default)/documents/_phase5_idle_listen/15c2003b-f109-4375-a25b-9707bd239e31",
+                "structuredQuery": {
+                  "from": [
+                    {
+                      "collectionId": "quiet"
+                    }
+                  ]
+                }
+              },
+              "resumeToken": "CgkI+6yS/qTYlgM=",
+              "targetId": 1
+            }
+          }
+        }
+      },
+      "relevant": [
+        {
+          "sequence": 8350,
+          "at": "2026-09-05T20:36:28.719Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "ADD",
+              "targetIds": [
+                1
+              ],
+              "resumeToken": ""
+            }
+          }
+        },
+        {
+          "sequence": 8351,
+          "at": "2026-09-05T20:36:28.721Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "RESET",
+              "targetIds": [
+                1
+              ],
+              "resumeToken": "CgkI/Nevt6XYlgM=",
+              "readTime": {
+                "seconds": "1788640588",
+                "nanos": 721148000
+              }
+            }
+          }
+        },
+        {
+          "sequence": 8352,
+          "at": "2026-09-05T20:36:28.722Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "documentChange": {
+              "document": {
+                "name": "projects/demo-phase5-idle-listen/databases/(default)/documents/_phase5_idle_listen/15c2003b-f109-4375-a25b-9707bd239e31/quiet/target",
+                "fields": {
+                  "owner": {
+                    "stringValue": "15c2003b-f109-4375-a25b-9707bd239e31"
+                  },
+                  "version": {
+                    "integerValue": "0"
+                  },
+                  "text": {
+                    "stringValue": "quiet 火🔥"
+                  }
+                },
+                "createTime": {
+                  "seconds": "1788640468",
+                  "nanos": 459229000
+                },
+                "updateTime": {
+                  "seconds": "1788640468",
+                  "nanos": 459229000
+                }
+              },
+              "targetIds": [
+                1
+              ]
+            }
+          }
+        },
+        {
+          "sequence": 8353,
+          "at": "2026-09-05T20:36:28.723Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "CURRENT",
+              "targetIds": [
+                1
+              ],
+              "resumeToken": "CgkIv9qvt6XYlgM=",
+              "readTime": {
+                "seconds": "1788640588",
+                "nanos": 721471000
+              }
+            }
+          }
+        },
+        {
+          "sequence": 8354,
+          "at": "2026-09-05T20:36:28.723Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "NO_CHANGE",
+              "resumeToken": "CgkI7dqvt6XYlgM=",
+              "readTime": {
+                "seconds": "1788640588",
+                "nanos": 721517000
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "directory": "03-official-churn-forced",
+      "raw": {
+        "resultSha256": "02e3678ef20df42623be808b271a23dab2bc956d978abab87472f616caece1da",
+        "eventsSha256": "24a2ec8e242968d4ac33fba0899c6656b5c4988e4f13bd17342a2f33582f02bc"
+      },
+      "observed": {
+        "rawInitial": true,
+        "rawInitialDocument": true,
+        "highInitial": true,
+        "rawReattachedCurrent": true,
+        "rawReattachRejectedOrClosed": false,
+        "rawMutationDelivered": true,
+        "highMutationDelivered": true,
+        "highErrors": 0,
+        "unrelatedDocumentsAcknowledged": 4100,
+        "initialTokenBase64": "CgkI29vLz6XYlgM=",
+        "latestTokenBase64": "CgkItuzLz6XYlgM=",
+        "sdkListenStreams": 2
+      },
+      "unrelatedAcknowledgements": 4100,
+      "unrelatedWriteMilliseconds": 8089.623409000001,
+      "quietMilliseconds": 150000.80353099998,
+      "quietRawResponses": 0,
+      "sdkResumedRequest": {
+        "sequence": 8349,
+        "at": "2026-09-05T20:39:19.528Z",
+        "elapsedMilliseconds": 123975.161413,
+        "phase": "quiet-window-after-writes",
+        "kind": "sdk-listen-request",
+        "value": {
+          "streamId": 2,
+          "request": {
+            "database": "projects/demo-phase5-idle-listen/databases/(default)",
+            "addTarget": {
+              "query": {
+                "parent": "projects/demo-phase5-idle-listen/databases/(default)/documents/_phase5_idle_listen/6c890c1f-e506-4bbe-aa94-a2ec460ab8b0",
+                "structuredQuery": {
+                  "from": [
+                    {
+                      "collectionId": "quiet"
+                    }
+                  ]
+                }
+              },
+              "resumeToken": "CgkI7v7Lz6XYlgM=",
+              "targetId": 1
+            }
+          }
+        }
+      },
+      "relevant": [
+        {
+          "sequence": 8350,
+          "at": "2026-09-05T20:39:19.532Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "ADD",
+              "targetIds": [
+                1
+              ],
+              "resumeToken": ""
+            }
+          }
+        },
+        {
+          "sequence": 8351,
+          "at": "2026-09-05T20:39:19.535Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "RESET",
+              "targetIds": [
+                1
+              ],
+              "resumeToken": "CgkI16jpiKbYlgM=",
+              "readTime": {
+                "seconds": "1788640759",
+                "nanos": 534679000
+              }
+            }
+          }
+        },
+        {
+          "sequence": 8352,
+          "at": "2026-09-05T20:39:19.536Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "documentChange": {
+              "document": {
+                "name": "projects/demo-phase5-idle-listen/databases/(default)/documents/_phase5_idle_listen/6c890c1f-e506-4bbe-aa94-a2ec460ab8b0/quiet/target",
+                "fields": {
+                  "owner": {
+                    "stringValue": "6c890c1f-e506-4bbe-aa94-a2ec460ab8b0"
+                  },
+                  "version": {
+                    "integerValue": "0"
+                  },
+                  "text": {
+                    "stringValue": "quiet 火🔥"
+                  }
+                },
+                "createTime": {
+                  "seconds": "1788640639",
+                  "nanos": 259715000
+                },
+                "updateTime": {
+                  "seconds": "1788640639",
+                  "nanos": 259715000
+                }
+              },
+              "targetIds": [
+                1
+              ]
+            }
+          }
+        },
+        {
+          "sequence": 8353,
+          "at": "2026-09-05T20:39:19.537Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "CURRENT",
+              "targetIds": [
+                1
+              ],
+              "resumeToken": "CgkIyqvpiKbYlgM=",
+              "readTime": {
+                "seconds": "1788640759",
+                "nanos": 535050000
+              }
+            }
+          }
+        },
+        {
+          "sequence": 8354,
+          "at": "2026-09-05T20:39:19.537Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "NO_CHANGE",
+              "resumeToken": "CgkI/qvpiKbYlgM=",
+              "readTime": {
+                "seconds": "1788640759",
+                "nanos": 535102000
+              }
+            }
+          }
+        },
+        {
+          "sequence": 8401,
+          "at": "2026-09-05T20:39:57.660Z",
+          "phase": "resume-observation",
+          "kind": "raw-response",
+          "label": "resumed",
+          "response": {
+            "targetChange": {
+              "targetChangeType": "ADD",
+              "targetIds": [
+                23
+              ],
+              "resumeToken": ""
+            }
+          }
+        },
+        {
+          "sequence": 8402,
+          "at": "2026-09-05T20:39:57.664Z",
+          "phase": "resume-observation",
+          "kind": "raw-response",
+          "label": "resumed",
+          "response": {
+            "targetChange": {
+              "targetChangeType": "RESET",
+              "targetIds": [
+                23
+              ],
+              "resumeToken": "CgkIxsOAm6bYlgM=",
+              "readTime": {
+                "seconds": "1788640797",
+                "nanos": 663686000
+              }
+            }
+          }
+        },
+        {
+          "sequence": 8403,
+          "at": "2026-09-05T20:39:57.664Z",
+          "phase": "resume-observation",
+          "kind": "raw-response",
+          "label": "resumed",
+          "response": {
+            "documentChange": {
+              "document": {
+                "name": "projects/demo-phase5-idle-listen/databases/(default)/documents/_phase5_idle_listen/6c890c1f-e506-4bbe-aa94-a2ec460ab8b0/quiet/target",
+                "fields": {
+                  "owner": {
+                    "stringValue": "6c890c1f-e506-4bbe-aa94-a2ec460ab8b0"
+                  },
+                  "version": {
+                    "integerValue": "0"
+                  },
+                  "text": {
+                    "stringValue": "quiet 火🔥"
+                  }
+                },
+                "createTime": {
+                  "seconds": "1788640639",
+                  "nanos": 259715000
+                },
+                "updateTime": {
+                  "seconds": "1788640639",
+                  "nanos": 259715000
+                }
+              },
+              "targetIds": [
+                23
+              ]
+            }
+          }
+        },
+        {
+          "sequence": 8404,
+          "at": "2026-09-05T20:39:57.665Z",
+          "phase": "resume-observation",
+          "kind": "raw-response",
+          "label": "resumed",
+          "response": {
+            "targetChange": {
+              "targetChangeType": "CURRENT",
+              "targetIds": [
+                23
+              ],
+              "resumeToken": "CgkI4MWAm6bYlgM=",
+              "readTime": {
+                "seconds": "1788640797",
+                "nanos": 663968000
+              }
+            }
+          }
+        },
+        {
+          "sequence": 8405,
+          "at": "2026-09-05T20:39:57.665Z",
+          "phase": "resume-observation",
+          "kind": "raw-response",
+          "label": "resumed",
+          "response": {
+            "targetChange": {
+              "targetChangeType": "NO_CHANGE",
+              "resumeToken": "CgkIl8aAm6bYlgM=",
+              "readTime": {
+                "seconds": "1788640797",
+                "nanos": 664023000
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "directory": "04-fireside-idle-control",
+      "raw": {
+        "resultSha256": "9f5efe289eea3b25eac5f5a21ba74bc54e192b08f684eefc6e673ea8687d8660",
+        "eventsSha256": "7641df2f79fb456b62514497dc5f18fe4bb379a655ecf1a64c819b0d563235de"
+      },
+      "observed": {
+        "rawInitial": true,
+        "rawInitialDocument": true,
+        "highInitial": true,
+        "rawReattachedCurrent": false,
+        "rawReattachRejectedOrClosed": false,
+        "rawMutationDelivered": true,
+        "highMutationDelivered": true,
+        "highErrors": 0,
+        "unrelatedDocumentsAcknowledged": 0,
+        "initialTokenBase64": "ZmlyZXNpZGUtcmVzdW1lLQAAAAAAAAAC",
+        "latestTokenBase64": "ZmlyZXNpZGUtcmVzdW1lLQAAAAAAAAAD",
+        "sdkListenStreams": 2
+      },
+      "unrelatedAcknowledgements": 0,
+      "unrelatedWriteMilliseconds": 0.0326190000000679,
+      "quietMilliseconds": 150001.056387,
+      "quietRawResponses": 0,
+      "sdkResumedRequest": {
+        "sequence": 150,
+        "at": "2026-09-05T20:42:08.704Z",
+        "elapsedMilliseconds": 123485.150314,
+        "phase": "quiet-window-after-writes",
+        "kind": "sdk-listen-request",
+        "value": {
+          "streamId": 2,
+          "request": {
+            "database": "projects/demo-phase5-idle-listen/databases/(default)",
+            "addTarget": {
+              "query": {
+                "parent": "projects/demo-phase5-idle-listen/databases/(default)/documents/_phase5_idle_listen/9c7fb3f0-cddf-4046-86de-3e5cffa43cbf",
+                "structuredQuery": {
+                  "from": [
+                    {
+                      "collectionId": "quiet"
+                    }
+                  ]
+                }
+              },
+              "resumeToken": "ZmlyZXNpZGUtcmVzdW1lLQAAAAAAAAAC",
+              "targetId": 1
+            }
+          }
+        }
+      },
+      "relevant": [
+        {
+          "sequence": 151,
+          "at": "2026-09-05T20:42:08.707Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "ADD",
+              "targetIds": [
+                1
+              ],
+              "resumeToken": ""
+            }
+          }
+        },
+        {
+          "sequence": 152,
+          "at": "2026-09-05T20:42:08.707Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "CURRENT",
+              "targetIds": [
+                1
+              ],
+              "resumeToken": "ZmlyZXNpZGUtcmVzdW1lLQAAAAAAAAAC",
+              "readTime": {
+                "seconds": "1788640928",
+                "nanos": 706796650
+              }
+            }
+          }
+        },
+        {
+          "sequence": 153,
+          "at": "2026-09-05T20:42:08.708Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "NO_CHANGE",
+              "resumeToken": "ZmlyZXNpZGUtcmVzdW1lLQAAAAAAAAAC",
+              "readTime": {
+                "seconds": "1788640928",
+                "nanos": 706796650
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "directory": "05-fireside-churn-natural",
+      "raw": {
+        "resultSha256": "77bf66bf10d73f4694e2d4418581c86799ef98dd9b8cfce818bed248dcf6a2f2",
+        "eventsSha256": "69e9c5b0ef4df77022f955d8a38fc4742aadb87bb40e9e1e73d8f30d55b37091"
+      },
+      "observed": {
+        "rawInitial": true,
+        "rawInitialDocument": true,
+        "highInitial": true,
+        "rawReattachedCurrent": false,
+        "rawReattachRejectedOrClosed": false,
+        "rawMutationDelivered": true,
+        "highMutationDelivered": false,
+        "highErrors": 1,
+        "unrelatedDocumentsAcknowledged": 4100,
+        "initialTokenBase64": "ZmlyZXNpZGUtcmVzdW1lLQAAAAAAAAAC",
+        "latestTokenBase64": "ZmlyZXNpZGUtcmVzdW1lLQAAAAAAABAH",
+        "sdkListenStreams": 2
+      },
+      "unrelatedAcknowledgements": 4100,
+      "unrelatedWriteMilliseconds": 86079.873637,
+      "quietMilliseconds": 150000.66249000002,
+      "quietRawResponses": 0,
+      "sdkResumedRequest": {
+        "sequence": 8350,
+        "at": "2026-09-05T20:44:48.839Z",
+        "elapsedMilliseconds": 123464.74028299999,
+        "phase": "quiet-window-after-writes",
+        "kind": "sdk-listen-request",
+        "value": {
+          "streamId": 2,
+          "request": {
+            "database": "projects/demo-phase5-idle-listen/databases/(default)",
+            "addTarget": {
+              "query": {
+                "parent": "projects/demo-phase5-idle-listen/databases/(default)/documents/_phase5_idle_listen/162bef53-7adf-4a6d-9bf7-f39fa5616efb",
+                "structuredQuery": {
+                  "from": [
+                    {
+                      "collectionId": "quiet"
+                    }
+                  ]
+                }
+              },
+              "resumeToken": "ZmlyZXNpZGUtcmVzdW1lLQAAAAAAAAAC",
+              "targetId": 1
+            }
+          }
+        }
+      },
+      "relevant": [
+        {
+          "sequence": 8351,
+          "at": "2026-09-05T20:44:48.842Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "REMOVE",
+              "targetIds": [
+                1
+              ],
+              "cause": {
+                "code": 9,
+                "message": "listen resume token has expired"
+              },
+              "resumeToken": ""
+            }
+          }
+        }
+      ]
+    },
+    {
+      "directory": "06-fireside-churn-forced",
+      "raw": {
+        "resultSha256": "20a54b8a41eaa0e69dfabe47ac874be342d1bbecbad22d8b220ba85480bf53da",
+        "eventsSha256": "2b43fae14f00890d22791b4a452df35d0e8a552472481ba7167878aa94a1807e"
+      },
+      "observed": {
+        "rawInitial": true,
+        "rawInitialDocument": true,
+        "highInitial": true,
+        "rawReattachedCurrent": false,
+        "rawReattachRejectedOrClosed": true,
+        "rawMutationDelivered": false,
+        "highMutationDelivered": false,
+        "highErrors": 1,
+        "unrelatedDocumentsAcknowledged": 4100,
+        "initialTokenBase64": "ZmlyZXNpZGUtcmVzdW1lLQAAAAAAAAAC",
+        "latestTokenBase64": "ZmlyZXNpZGUtcmVzdW1lLQAAAAAAAAAC",
+        "sdkListenStreams": 2
+      },
+      "unrelatedAcknowledgements": 4100,
+      "unrelatedWriteMilliseconds": 85279.463827,
+      "quietMilliseconds": 150000.958499,
+      "quietRawResponses": 0,
+      "sdkResumedRequest": {
+        "sequence": 8350,
+        "at": "2026-09-05T20:49:25.927Z",
+        "elapsedMilliseconds": 123474.425585,
+        "phase": "quiet-window-after-writes",
+        "kind": "sdk-listen-request",
+        "value": {
+          "streamId": 2,
+          "request": {
+            "database": "projects/demo-phase5-idle-listen/databases/(default)",
+            "addTarget": {
+              "query": {
+                "parent": "projects/demo-phase5-idle-listen/databases/(default)/documents/_phase5_idle_listen/5bd76fe0-5469-4195-a455-d7e19d14616f",
+                "structuredQuery": {
+                  "from": [
+                    {
+                      "collectionId": "quiet"
+                    }
+                  ]
+                }
+              },
+              "resumeToken": "ZmlyZXNpZGUtcmVzdW1lLQAAAAAAAAAC",
+              "targetId": 1
+            }
+          }
+        }
+      },
+      "relevant": [
+        {
+          "sequence": 8351,
+          "at": "2026-09-05T20:49:25.930Z",
+          "phase": "quiet-window-after-writes",
+          "kind": "sdk-listen-response",
+          "streamId": 2,
+          "response": {
+            "targetChange": {
+              "targetChangeType": "REMOVE",
+              "targetIds": [
+                1
+              ],
+              "cause": {
+                "code": 9,
+                "message": "listen resume token has expired"
+              },
+              "resumeToken": ""
+            }
+          }
+        },
+        {
+          "sequence": 8478,
+          "at": "2026-09-05T20:51:21.261Z",
+          "phase": "resume-observation",
+          "kind": "raw-response",
+          "label": "resumed",
+          "response": {
+            "targetChange": {
+              "targetChangeType": "REMOVE",
+              "targetIds": [
+                23
+              ],
+              "cause": {
+                "code": 9,
+                "message": "listen resume token has expired"
+              },
+              "resumeToken": ""
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

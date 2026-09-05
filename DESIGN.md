@@ -2792,6 +2792,40 @@ assertions, including rejected samples. The launcher-only r1 rejection remains
 preserved; corrected diagnostics use a new attempt directory. This is not a
 Firestore wire-contract change or an immutable-gate amendment.
 
+### Phase 5 captured expired-token reset/replay contract
+
+The six-case `idle-listen-20260906-r2` diagnostic completed on the healthy
+Hetzner host before any product correction. Its exact frames and tokens are
+frozen in `conformance/fixtures/phase5/idle-listen-reset-oracle.json`; the
+[oracle report](reports/phase-5-idle-listen-reset-oracle-20260906.md) distinguishes
+scenario completion from the two failing Fireside churn observations.
+
+The real 7.11.6 SDK reopened each quiet stream after approximately 120 seconds
+without injected SDK loss. No periodic quiet raw-listener responses were
+observed from either server during the frozen 150-second post-write window.
+Java v1.21.0 accepted the actual previous token with target-local `RESET`, a
+full current-target document replay and `CURRENT`, followed by a checkpoint.
+This occurred on the control as well as both 4,100-commit churn cases. The forced
+raw reopen used the last token actually received and observed the same reset
+and replay. Java subsequently delivered the target mutation on both clients.
+
+The pre-correction Fireside binary instead returned target-local `REMOVE` with
+code 9, `listen resume token has expired`, when the bounded replay history had
+advanced past that token. Its control still delivered updates, and the original
+raw stream in the natural-reconnect case survived, but the high-level SDK
+subscription terminated in both churn cases. This is a product resume defect,
+not evidence that Java sends a heartbeat or that the host exhausted resources.
+
+The required general correction is to recover a valid opaque revision token
+whose historical snapshot returns `ResetRequired` by explicitly resetting that
+target and replaying its current scoped snapshot. Never pretend an unavailable
+old baseline is unchanged. Preserve bounded replay retention, retained-history
+incremental diffs/Bloom behavior, malformed/future-token rejection, existing
+read-time handling, authorization, and other active targets. These captures do
+not require every retained resume or subsequent change to reset, do not cover
+WebChannel transport, and do not explain the separate large cache-query
+timeouts. Product regressions and a new live verification remain required.
+
 ## 13. Engineering rules
 
 - Use Conventional Commits and small feature-sized commits.

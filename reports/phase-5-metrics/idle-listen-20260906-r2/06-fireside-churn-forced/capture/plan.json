@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "kind": "pre-product-fix diagnostic plan, not an oracle result or acceptance gate",
+  "purpose": "Observe a quiet target while unrelated changes exceed retained history, then resume and mutate it; investigate r48 terminal cache-watcher behavior.",
+  "serverLifecycle": "Externally managed, sequential official Java then current Fireside, on a quiescent host; never launch, stop, or signal a server from this capture.",
+  "transport": "gRPC Listen; decoded response messages, not raw HTTP/2 or WebChannel byte frames",
+  "highLevelSdkVersion": "7.11.6",
+  "unrelatedDocuments": 4100,
+  "batchSize": 1,
+  "cleanupBatchSize": 100,
+  "maximumUnrelatedWriteSeconds": 180,
+  "cases": {
+    "idle-control": { "unrelatedWrites": false, "forceRawLoss": false },
+    "churn-natural": { "unrelatedWrites": true, "forceRawLoss": false },
+    "churn-forced": { "unrelatedWrites": true, "forceRawLoss": true }
+  },
+  "idleSecondsAfterWrites": 150,
+  "initialObservationSeconds": 30,
+  "reattachObservationSeconds": 30,
+  "mutationObservationSeconds": 30,
+  "rpcTimeoutMilliseconds": 10000,
+  "maximumScenarioSeconds": 900,
+  "maximumCleanupSeconds": 120,
+  "memorySampleMilliseconds": 1000,
+  "targetId": 23,
+  "workload": [
+    "Create an exclusively owned random namespace and one quiet synthetic target document.",
+    "Open one raw query Listen and one 7.11.6 query onSnapshot for that target collection; require their initial observation and an observed raw resume token before proceeding.",
+    "For churn cases, create 4100 unrelated tiny documents in 4100 acknowledged sequential single-document commits within 180 seconds; neither watched collection nor target document changes. The idle control performs none.",
+    "Leave both listeners open for 150 seconds after the writes (or after initial readiness in the idle control); observe all frames and callbacks without predicting any heartbeat cadence.",
+    "Only in churn-forced, cancel the owned low-level client stream and open another raw Listen using the latest token actually observed on the first stream. Natural/control cases do not deliberately disconnect either listener.",
+    "For forced reattachment observe at most 30 seconds, preserving rejection or silence; do not invent a fallback token or silently reopen without it. Instrument the high-level SDK's actual Listen calls separately to observe natural reconnection without forcing it.",
+    "Change the target version from 0 to 1 and observe the active raw stream and high-level delivery for at most 30 seconds, even if forced reattachment was rejected.",
+    "Close owned client streams, delete only documents within the acknowledged exclusively owned namespace under a 120-second cleanup budget, and retain all failure evidence."
+  ],
+  "constraints": {
+    "loopbackOnly": true,
+    "syntheticDemoProjectOnly": true,
+    "fullDatasetReadOrMutation": false,
+    "productOrGateChange": false,
+    "serverIntervention": false,
+    "javaHeartbeatTimingAssumed": false,
+    "performanceWinnerRequired": false,
+    "liveCapturePerformedByTests": false
+  },
+  "interpretation": "Capture completion is not a compatibility pass. Report actual stream, token, callback, mutation-delivery and cleanup outcomes for both oracles before proposing a product change. External launcher must record exact binary/jar identity and host preflight separately."
+}
