@@ -2273,6 +2273,17 @@ tmux-only marker, wrong/missing process, or wrong override cannot pass. The
 default/fallback criteria, protected runner and all workload thresholds remain
 unchanged; r46 is a failed gate, not a product default-selection failure.
 
+The corrected harness records `*-backend.log` and `*-backend.json` before
+shutdown, rejects logs older than the recorded launch, and rechecks the PID's
+start-time identity while reading its exact command and checkout scope. Only
+`TWODART_FIREBASE_BACKEND` is retained from the selected process environment;
+no complete environment is stored. The default command explicitly unsets any
+inherited selector, while the documented fallback sets `official`. Acquisition
+and validation failures are recorded verbatim, without changing acceptance
+workload or the browser runner. Both captured paths and negative cases have
+fixture-backed local tests; seven-job CI and the complete real gate remain
+required before an acceptance claim.
+
 ### Phase 5 r22 diagnostic readiness attribution and amendment
 
 The preserved r22 attempt remains a failed cheap smoke, not a product failure

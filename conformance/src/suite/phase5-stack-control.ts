@@ -71,6 +71,7 @@ export interface RunningPhase5Stack {
   readonly firesideBinary: string;
   readonly label: string;
   readonly launchLog: string;
+  readonly launchStartedAtMilliseconds: number;
   readonly ports: Phase5StackPorts;
   readonly processSampler: Phase5ProcessSampler;
   readonly stack: Phase5StackName;
@@ -209,7 +210,7 @@ export function renderPhase5StackCommand(input: StackLaunchInput): string {
     .join(" ");
   return [
     "set +e",
-    `env ${exports} bun dev:mprocs --data ${shellQuote(input.datasetName)}`,
+    `${input.backendOverride === null ? "env -u TWODART_FIREBASE_BACKEND" : "env"} ${exports} bun dev:mprocs --data ${shellQuote(input.datasetName)}`,
     "phase5_status=$?",
     `printf '%s\\n' \"$phase5_status\" > ${shellQuote(exitMarker)}`,
   ].join("; ");
@@ -335,6 +336,7 @@ export async function startPhase5Stack(
       firesideBinary: input.firesideBinary,
       label: input.label,
       launchLog,
+      launchStartedAtMilliseconds: startedAt,
       ports: input.ports,
       processSampler,
       stack: input.stack,
@@ -699,7 +701,7 @@ async function stopPhase5EmulatorProcess(
   }
 }
 
-async function phase5EmulatorProcesses(
+export async function phase5EmulatorProcesses(
   directory: string,
   stack: Phase5StackName,
   firesideBinary: string,

@@ -5,6 +5,7 @@ import path from "node:path";
 import { createServer } from "node:http";
 import test from "node:test";
 import { gzipSync } from "node:zlib";
+import "./phase5-fresh-backend.test.ts";
 
 import {
   cacheOutputDigest,
@@ -167,6 +168,15 @@ test("Phase 5 stack shutdown uses the pinned mprocs control event", () => {
       command: "/gate/stack-official/node_modules/.bin/mprocs",
     },
   );
+});
+
+test("fresh default unsets inherited backend while fallback explicitly selects official", () => {
+  const command = renderPhase5StackCommand({ ...launch, stack: "fireside", backendOverride: null });
+  assert.match(command, /env -u TWODART_FIREBASE_BACKEND /u);
+  assert.doesNotMatch(command, /TWODART_FIREBASE_BACKEND=/u);
+  const fallback = renderPhase5StackCommand({ ...launch, backendOverride: "official" });
+  assert.match(fallback, /TWODART_FIREBASE_BACKEND='official'/u);
+  assert.doesNotMatch(fallback, /env -u/u);
 });
 
 test("Phase 5 stack shutdown waits for export before force-quit and always settles", async () => {

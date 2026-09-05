@@ -18,6 +18,7 @@ import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
 
 import { Firestore } from "@google-cloud/firestore";
+import { recordPhase5FreshBackend } from "./phase5-fresh-backend.ts";
 
 import {
   assertPhase5Manifest,
@@ -1448,13 +1449,7 @@ async function runFreshColleague(
       manifest.dataset.logicalCounts.firestoreDocuments,
     );
     active.set(running.stack, running);
-    const log = await readFile(running.launchLog, "utf8");
-    if (backend === null && !log.includes("Fireside suite:")) {
-      throw new Error("Fresh documented command did not select Fireside by default");
-    }
-    if (backend === "official" && !log.includes("official Firebase Emulator Suite")) {
-      throw new Error("Fresh documented official fallback did not select firebase-tools");
-    }
+    await recordPhase5FreshBackend(running, backend, args.outputDirectory);
     await stopPhase5Stack(running, PHASE5_EXPORT_SHUTDOWN_SECONDS);
     active.delete(running.stack);
   }
