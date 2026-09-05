@@ -82,3 +82,62 @@ setup, idle-RAID preflight, exact-candidate seven-job CI and new release build,
 then the unchanged cheap smoke and authorized full continuation. The host
 migration amendment is not permission to declare a performance winner against
 the old host's banked measurements.
+
+## Setup continuation at 2026-09-05 08:34 UTC
+
+- The 28 banked official evidence checksums now also pass on the new host.
+  Firestore, Storage rules and UI archives match their local SHA-256 values.
+  All three runtime asset trees were rehashed on the new host and match the
+  frozen manifest. The two 8.18 GB data/export transfers are still active;
+  neither destination has been qualified or used by a workload.
+- The complete source bundle is stored at
+  `/home/sanjevi/.cache/fireside-provisioning/twodart-6bda5bf.bundle`.
+  Official, Fireside and a separate `fresh-colleague` clone all ran the existing
+  `bun setup` successfully with generated synthetic local environment values.
+  Their tracked files remain unchanged. Each installed its own dependencies
+  and Python virtual environment; the fresh clone does not share dependency
+  directories with either comparison stack. Its runtime assets are isolated
+  copies; its full-data import directory remains absent for the gate to stage.
+  Official/Fireside frozen full-data and asset staging still awaits transfer
+  verification through the existing host preparation helper.
+- Pinned mprocs reports `0.9.6-twodart.2`, Portless `0.11.1` from its frozen Git
+  revision, and patched firebase-tools `15.22.0`. The latter's pinned Pub/Sub
+  emulator `0.8.33` was downloaded before measurement and verified with SHA-256
+  `93768f8763d85c37f7f6e0f64d10195abaa088f4ff559b7d9fb8a2fc5520848d`.
+- Portless is running with shared state `/home/sanjevi/.portless`. Its generated
+  CA is trusted in the Linux system store and the worker's NSS database. A curl
+  probe and Chrome 150.0.7871.124 both reached the expected unregistered-route
+  HTTP 404 over valid HTTPS without skipping certificate validation. This is a
+  setup-only TLS probe, not application readiness or a browser journey pass.
+  The CA private key remains mode 0600 on the server. Portless listens on 80/443,
+  which remain blocked externally by the SSH-only IPv4/IPv6 UFW policy.
+- A fixed root-owned read-only SMART helper is installed; sudo permits only its
+  two exact NVMe device invocations alongside the existing two swap commands.
+  No general `smartctl`, shell, package-manager, or service-control sudo grant.
+- Candidate `b5fe1d51ea1fd0b5912cab0ae2d4f1d4d1f0987d` is being checked by
+  [seven-job CI run 33955150481](https://github.com/sanjevirau/fireside/actions/runs/33955150481).
+  At this update the overall run is not complete. No release build, smoke or
+  full-data acceptance measurement has started. RAID synchronization is still
+  active and remains a hard launch interlock.
+
+Automatic continuation is configured for this task. It must inspect existing
+transfer processes rather than start duplicates, finish input rehash/staging,
+review and install the deployment preflight/launcher, and require completed
+seven-job CI and idle healthy RAID before proceeding.
+
+## CI checkpoint at 2026-09-05 08:47 UTC
+
+All seven named jobs in run 33955150481 completed successfully for exact
+candidate `b5fe1d51ea1fd0b5912cab0ae2d4f1d4d1f0987d`. The authenticated
+[CI response](ci-b5fe1d5-seven-jobs.json) is preserved and staged on the host.
+The reviewed [deployment controller](DEPLOYMENT.md) and preflight were staged
+byte-for-byte; their eight pure fixture tests also passed under the host's
+pinned Node 24.20.0. The fixed SMART helper was exercised through the worker's
+two narrow sudo grants: both devices returned exit status zero, health passed,
+critical warning zero, media errors zero, and error-log count zero.
+
+Frozen input and banked export transfers are still running (approximately
+5 GiB each at this checkpoint). `/proc/mdstat` shows root-array resync at 97.1%
+and swap-array synchronization still delayed. No completed-input receipt,
+release build, smoke or full gate is claimed. The host is running with no
+failed systemd units and approximately 416.7 GB available disk space.
