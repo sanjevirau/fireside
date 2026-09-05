@@ -37,8 +37,14 @@ root_ext4_errors_behavior=Continue
 root_ext4_block_size=4096
 root_ext4_lifetime_writes=1868_GB
 subsequent_matching_kernel_errors=0
+affected_ext4_block=54501668
+affected_inode=3842581
+affected_path=/home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node
+affected_file_size_bytes=126458664
 
-The error is on the host root NVMe, not the Phase 5 data SSD. The clean
-filesystem state and absence of later matching kernel errors do not satisfy the
-immutable zero-current-boot hardware/I/O-evidence preflight. The controller was
-therefore not uploaded or launched.
+Read-only ext4 attribution maps the first affected 4 KiB block to the pinned
+Node 24.20.0 executable used by the Phase 5 launcher. The error is on the host
+root NVMe, not the Phase 5 data SSD. The clean filesystem state and absence of
+later matching kernel errors do not satisfy the immutable zero-current-boot
+hardware/I/O-evidence preflight. The controller was therefore not uploaded or
+launched.

@@ -21,7 +21,10 @@ critical medium error, dev nvme0n1, sector 438216992 op 0x0:(READ) flags 0x80700
 `/dev/nvme0n1p2` is the host root filesystem. The Phase 5 runtime data is on a
 separate device, `/dev/sdb1` mounted at `/srv/dev-fast`. The root ext4
 filesystem currently reports `clean`, the NVMe controller reports `live`, and
-no later matching kernel errors were observed. Those facts do not erase the
+no later matching kernel errors were observed. Read-only ext4 block attribution
+maps the first affected block to
+`/home/sanjevi/.local/share/mise/installs/node/24.20.0/bin/node`, the exact pinned
+Node executable used by the Phase 5 controller. Those facts do not erase the
 current-boot critical medium error or satisfy the frozen preflight. The active
 goal explicitly stops on hardware errors, so launching the immutable gate would
 misrepresent the environment.

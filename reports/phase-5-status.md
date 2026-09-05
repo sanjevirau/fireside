@@ -48,10 +48,12 @@ removed without touching the banked official baseline, and the host now has
 seven-job matrix for the authorized fresh-preflight retry. R44 did not launch:
 the current boot contains an NVMe read `I/O Error` and `critical medium error`
 on the host root drive at `2026-09-05T06:40:30+08:00`. The root filesystem
-currently reports clean and no later matching kernel event exists, but the
-frozen preflight and active goal both require stopping on hardware errors. No
-r44 release build, stack, smoke, or full-data workload started. Phase 5 remains
-incomplete and the bounded loop is stopped at this infrastructure boundary.
+currently reports clean and no later matching kernel event exists. Read-only
+ext4 attribution maps the affected block to the exact pinned Node 24.20.0
+executable used by the controller. The frozen preflight and active goal both
+require stopping on hardware errors. No r44 release build, stack, smoke, or
+full-data workload started. Phase 5 remains incomplete and the bounded loop is
+stopped at this infrastructure boundary.
 
 ## Current loop
 
