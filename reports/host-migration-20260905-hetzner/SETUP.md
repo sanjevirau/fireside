@@ -141,3 +141,36 @@ Frozen input and banked export transfers are still running (approximately
 and swap-array synchronization still delayed. No completed-input receipt,
 release build, smoke or full gate is claimed. The host is running with no
 failed systemd units and approximately 416.7 GB available disk space.
+
+## Completed input migration and r45 preflight — 2026-09-05 09:43 UTC
+
+Both data-transfer processes exited zero. The actual destination verifier
+completed at `2026-09-05T09:19:48.638Z`, rehashing every file in both distinct
+8.18 GB trees and all three runtime asset trees. All identities matched, and
+all 28 banked official evidence checksums passed. Preserve the exact
+[receipt](input-verification.json), [verification log](input-verification.log),
+and [setup-only verifier](verify-transferred-inputs.mjs). The receipt SHA-256 is
+`aba45491553492102a8f8bed338309abc80f4bfa822d3a74b4d0201c82cfa7b7`.
+The existing host-prepare helper then completed official and Fireside staging
+without reinstalling dependencies. All three Twodart checkouts remained tracked
+clean at `6bda5bf29b2399017d2a872e8f3fc1a15d073a54`; fresh-colleague full-data
+remained absent. No further input transfer or old-host access is needed.
+
+All three RAID1 arrays finished synchronization and report idle, clean, zero
+degraded members and both expected members in sync. Both drives still pass
+SMART with zero critical warnings, media errors and error-log entries. These
+checks do not erase the documented 64% endurance usage on the older SSD.
+
+Both candidate CI `33955150481` and setup-evidence CI `33956267827` completed
+all seven jobs successfully. The deployment controller was invoked exactly
+once as worker in tmux at `2026-09-05T09:43:23+00:00`, attempt `r45`. It stopped
+at the pre-build journal check, exit 1, without draining swap, cloning, building,
+starting smoke, or starting any acceptance workload. Its exact evidence is in
+[r45-preflight-rejected](r45-preflight-rejected/); see the
+[attribution and correction report](../phase-5-hetzner-r45-preflight-20260905.md).
+
+The rejection was a deployment-classifier false positive on the kernel's
+informational NVMe shutdown-budget messages, not a new disk error or Fireside
+failure. A narrow regression-tested correction is pending its own complete
+seven-job CI before staging and a fresh, separately recorded attempt. The
+product candidate, frozen manifest and protected browser runner remain unchanged.

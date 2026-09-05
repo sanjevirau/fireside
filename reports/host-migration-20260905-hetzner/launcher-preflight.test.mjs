@@ -45,6 +45,25 @@ test('journal predicates detect original storage failure and resource failures w
   assert.equal(result.resources.length, 2);
   assert.deepEqual(journalErrors('PCI: normal startup\nerror-log capabilities supported', 'sshd: session opened'), { hardware: [], resources: [] });
 });
+test('r45 captured NVMe shutdown-budget notices are not actual timeouts', async () => {
+  const captured = JSON.parse(await readFile(new URL('./r45-preflight-rejected/preflight-before-build/journal-errors.json', import.meta.url), 'utf8'));
+  assert.equal(captured.hardware.length, 2);
+  assert.deepEqual(journalErrors(captured.hardware.join('\n'), ''), { hardware: [], resources: [] });
+});
+test('NVMe fault detection remains fail-closed beside an informational shutdown budget', () => {
+  const faults = [
+    'nvme nvme0: I/O 17 QID 1 timeout, aborting',
+    'nvme nvme0: I/O 17 QID 1 timeout, reset controller',
+    'nvme nvme0: controller is down; will reset',
+    'nvme nvme1: Shutdown timeout set to 10 seconds; I/O Error',
+    'nvme nvme0: critical medium error',
+    'nvme nvme0: I/O timed out',
+    'nvme nvme0: Abort status: 0x371',
+  ];
+  for (const fault of faults) {
+    assert.deepEqual(journalErrors(`nvme nvme0: Shutdown timeout set to 10 seconds\n${fault}`, '').hardware, [fault]);
+  }
+});
 test('vmstat discards boot average but requires three zero steady samples', () => {
   const row = (si, so) => `1 0 100 900 0 0 ${si} ${so} 0 0 1 1 1 1 98 0 0`;
   assert.equal(steadySwapSamples([row(50, 50), row(0, 0), row(0, 0), row(0, 0)].join('\n')).length, 3);

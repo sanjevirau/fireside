@@ -66,12 +66,7 @@ export function validateSmart(device, report) {
 
 export function journalErrors(kernel, journal) {
   return {
-    // Linux 6.8 nvme_init_identify() reports a configured budget with dev_info,
-    // not an elapsed timeout. Strip only that exact terminal notice for matching;
-    // keep the original journal and still detect any other fault on the line.
-    hardware: kernel.split('\n').filter((line) => hardwarePattern.test(
-      line.replace(/\bnvme nvme\d+: Shutdown timeout set to \d+ seconds$/u, ''),
-    )),
+    hardware: kernel.split('\n').filter((line) => hardwarePattern.test(line)),
     resources: journal.split('\n').filter((line) => resourcePattern.test(line)),
   };
 }

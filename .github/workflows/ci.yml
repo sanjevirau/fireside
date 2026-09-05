@@ -51,6 +51,8 @@ jobs:
         run: npm run check --prefix conformance
       - name: Run Phase 5 harness tests
         run: npm run test:phase5-harness --prefix conformance
+      - name: Verify replacement-host deployment preflight fixtures
+        run: node --test reports/host-migration-20260905-hetzner/launcher-preflight.test.mjs
 
   conformance:
     name: Differential harness
