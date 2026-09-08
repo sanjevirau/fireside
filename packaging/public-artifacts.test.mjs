@@ -56,6 +56,32 @@ test('private context is detected in metadata and native strings without echoing
   const files = native(); files[4][1] = 'private-customer.invalid';
   assert.throws(() => auditPublicPackage(archive(files), expected, policy));
 });
+test('archive text scanning stays bounded for native-sized inputs', () => {
+  const scanner = new URL('./public-artifacts.mjs', import.meta.url).href;
+  const result = spawnSync(process.execPath, ['--max-old-space-size=64', '--input-type=module', '-e',
+    `import {assertPublicText} from ${JSON.stringify(scanner)};
+     const bytes = Buffer.alloc(48 * 1024 * 1024, 0x80);
+     assertPublicText(bytes, 'synthetic native bytes');
+     console.log('bounded scan passed');`], {encoding:'utf8', timeout:30_000});
+  assert.equal(result.signal, null, result.stderr);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /bounded scan passed/);
+});
+test('bounded scans detect markers across chunk boundaries and both UTF-16 alignments', () => {
+  const markers = ['private-customer.invalid', '-----BEGIN PRIVATE KEY-----', 'ghp_' + 'x'.repeat(40),
+    'github_pat_' + 'x'.repeat(50), 'npm_' + 'x'.repeat(40), 'AKIA' + 'A'.repeat(16)];
+  for (const marker of markers) for (const encoding of ['utf8', 'utf16le']) {
+    const value = Buffer.from(marker, encoding);
+    for (const displacement of [-value.length + 1, -5, -1, 0, 1]) {
+      const bytes = Buffer.alloc(128 * 1024, 65);
+      value.copy(bytes, 64 * 1024 + displacement);
+      assert.throws(() => assertPublicText(bytes, 'synthetic boundary bytes', policy));
+    }
+  }
+  const longPolicy = {forbiddenTerms: ['界'.repeat(30_000)]};
+  const bytes = Buffer.from('A'.repeat(65_535) + longPolicy.forbiddenTerms[0], 'utf8');
+  assert.throws(() => assertPublicText(bytes, 'long synthetic rule', longPolicy));
+});
 test('credential markers, wrong identity and lifecycle scripts are rejected', () => {
   assert.throws(() => assertPublicText(Buffer.from('-----BEGIN PRIVATE KEY-----'), 'fixture', policy));
   assert.throws(() => auditPublicPackage(archive(native()), {...expected, engineRevision: '2'.repeat(40)}, policy));
