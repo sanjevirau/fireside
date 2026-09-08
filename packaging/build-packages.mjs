@@ -52,10 +52,13 @@ for (const name of [key, 'cli']) {
   }
   for (const license of ['LICENSE-MIT','LICENSE-APACHE']) copyFileSync(join(root, license), join(dir, license));
   const expectedName = name === 'cli' ? manifest.name : `@fireside-dev/${key}`;
+  console.log(JSON.stringify({stage:'pack',package:expectedName}));
   const result = packResult(packageManager('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', out], {cwd:dir, encoding:'utf8'}), expectedName);
+  console.log(JSON.stringify({stage:'audit',package:expectedName}));
   auditPublicPackage(readFileSync(join(out, result.filename)), {
     name: result.name, version: manifest.version, engineRevision: release.engineRevision, localDevelopment: Boolean(localRevision),
   }, localRevision ? undefined : publicationPolicy);
+  console.log(JSON.stringify({stage:'audited',package:expectedName}));
   packages.push({name:result.name, version:result.version, filename:result.filename,
     sha256:sha256(readFileSync(join(out, result.filename))), integrity:result.integrity, files:result.files.map(file => file.path)});
 }

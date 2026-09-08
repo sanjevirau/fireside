@@ -43,15 +43,25 @@ export function packageEntries(compressed) {
 }
 
 export function assertPublicText(bytes, label, policy = {forbiddenTerms: []}) {
-  // Labels identify the file, never print a matched confidential value.
+  // Native files need not be valid text. Converting an entire executable to
+  // several decoded/case-folded strings multiplies its heap footprint and
+  // stresses the packaging runtime's GC. Scan overlapping, bounded windows.
+  // Overlap covers every credential prefix/minimum and any private policy term;
+  // even-sized strides retain both UTF-16 byte alignments. Never print matches.
+  const terms = policy.forbiddenTerms.map(term => {
+    assert.ok(typeof term === 'string' && term.length >= 4, 'Invalid publication policy');
+    return term.toLowerCase();
+  });
+  const overlap = Math.max(512, ...terms.map(term => Buffer.byteLength(term, 'utf8') * 2 + 4));
   for (const [encoding, offset] of [['utf8', 0], ['utf16le', 0], ['utf16le', 1]]) {
-    const text = bytes.subarray(offset).toString(encoding);
-    assert.ok(!/-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/.test(text), `${label}: private key`);
-    assert.ok(!/(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,}|npm_[A-Za-z0-9]{30,}|AKIA[A-Z0-9]{16})/.test(text), `${label}: credential pattern`);
-    const folded = text.toLowerCase();
-    for (const term of policy.forbiddenTerms) {
-      assert.ok(typeof term === 'string' && term.length >= 4, 'Invalid publication policy');
-      assert.ok(!folded.includes(term.toLowerCase()), `${label}: confidential context (value withheld)`);
+    for (let start = offset; start < bytes.length; start += 64 * 1024) {
+      const text = bytes.subarray(start, start + 64 * 1024 + overlap).toString(encoding);
+      assert.ok(!/-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/.test(text), `${label}: private key`);
+      assert.ok(!/(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,}|npm_[A-Za-z0-9]{30,}|AKIA[A-Z0-9]{16})/.test(text), `${label}: credential pattern`);
+      const folded = text.toLowerCase();
+      for (const term of terms) {
+        assert.ok(!folded.includes(term), `${label}: confidential context (value withheld)`);
+      }
     }
   }
 }
