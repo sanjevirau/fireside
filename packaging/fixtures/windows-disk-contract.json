@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "recordedBeforeImplementation": true,
+  "reproduction": {
+    "run": "https://github.com/sanjevirau/fireside/actions/runs/34138956973",
+    "job": 101796347377,
+    "platform": "windows-2025 x64",
+    "operation": "first packed npm Firestore disk/WAL startup",
+    "error": "Firestore storage failed to open: disk I/O failed: Access is denied. (os error 5)",
+    "source": "Journal::open invokes Unix File::open(parent).sync_all on a directory"
+  },
+  "sources": [
+    "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew",
+    "https://learn.microsoft.com/en-us/windows/win32/fileio/obtaining-a-handle-to-a-directory",
+    "https://doc.rust-lang.org/std/os/windows/fs/trait.OpenOptionsExt.html"
+  ],
+  "contract": [
+    "Unix directory fsync stays unchanged",
+    "Windows WAL uses FILE_FLAG_WRITE_THROUGH plus existing file sync_all calls",
+    "Storage redb immediate durability remains enabled; Unix-only directory sync must not run on Windows",
+    "Native Windows packed tests must write, gracefully close and reopen disk data, then export and import the full suite",
+    "These checks do not establish Windows power-loss durability equivalence with the old Linux acceptance"
+  ]
+}

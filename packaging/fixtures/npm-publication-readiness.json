@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "recordedBeforeImplementation": true,
+  "source": "https://github.blog/changelog/2026-07-28-npm-publish-time-malware-scanning-and-dual-use-metadata/",
+  "observation": {
+    "package": "@fireside-dev/darwin-arm64@0.1.0-next.0",
+    "acknowledgedAt": "2026-09-07T17:56:40Z",
+    "publishExitCode": 0,
+    "immediatePackageIndexStatus": 404,
+    "exactVersionMetadataStatus": 200,
+    "exactVersionIntegrityMatched": true,
+    "packageIndexVisibleAt": "2026-09-07T18:02:19Z",
+    "automaticTags": ["next", "latest"],
+    "explicitPublishTag": "next",
+    "latestRemoval": {"command":"npm dist-tag rm @fireside-dev/darwin-arm64 latest","authenticationSucceeded":true,"httpStatus":400}
+  },
+  "requirements": [
+    "An acknowledged publish must never be repeated during the same run just because install availability is delayed",
+    "On resume, query accepted exact-version metadata and reject differing integrity before considering another upload",
+    "Verify accepted native version integrity, then allow their availability scans to overlap",
+    "Wait for every native package index before publishing the CLI, then wait for the CLI index",
+    "Bound read-only waits, fail immediately on integrity mismatch and preserve partial publication on timeout",
+    "Record automatic latest tags on prereleases as an owner review decision: registry removal returned 400; never silently promote, delete a version, or add a stored token"
+  ]
+}

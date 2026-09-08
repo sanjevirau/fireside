@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /fireside_phase2_browser_demo/{documentId} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == 'phase3-browser'
+        && request.auth.token.role == 'editor'
+        && request.auth.token.phase == 3;
+    }
+
+    match /{unmatched=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "oracle": "firebase-tools Auth emulator",
+  "version": "15.22.0",
+  "sdkVersion": "12.18.0",
+  "capturedAt": "2026-09-08T01:12:29.326Z",
+  "syntheticOnly": true,
+  "sourceHashes": {
+    "handlers.js": "b228707e1a8dcab02ef8acb261a3b5f8b670589c3887d5a4fba02cba78e07853",
+    "widget_ui.js": "188cb9d4379d412561ab35df0ab68f1ace2447e6c8ec13622c0897b076893b64",
+    "operations.js": "dbc71e2a7919458709528c4a20ea051143032eded7ef1a39f75221be7c46b322"
+  },
+  "observation": {
+    "validation": [
+      {
+        "status": 400,
+        "body": "{\n  \"authEmulator\": {\n    \"error\": \"missing apiKey or providerId query parameters\"\n  }\n}"
+      },
+      {
+        "status": 400,
+        "body": "{\n  \"authEmulator\": {\n    \"error\": \"missing apiKey or providerId query parameters\"\n  }\n}"
+      },
+      {
+        "status": 400,
+        "body": "{\n  \"authEmulator\": {\n    \"error\": \"missing apiKey or providerId query parameters\"\n  }\n}"
+      }
+    ],
+    "stages": [
+      "imported-google-picker-provider-filter-unicode",
+      "popup-completes-existing-uid-and-closes",
+      "reload-restores-auth-user",
+      "popup-cancel-rejects-with-sdk-error",
+      "new-google-account-popup",
+      "redirect-roundtrip-existing-uid"
+    ],
+    "events": [
+      {
+        "envelopeKeys": [
+          "data",
+          "eventId",
+          "eventType"
+        ],
+        "storageKey": "synthetic-api-key:popup-regression",
+        "eventKeys": [
+          "error",
+          "eventId",
+          "postBody",
+          "sessionId",
+          "tenantId",
+          "type",
+          "urlResponse"
+        ],
+        "type": "signInViaPopup",
+        "eventIdPresent": true,
+        "sessionId": "ValueNotUsedByAuthEmulator",
+        "postBody": "",
+        "tenantId": null,
+        "error": null,
+        "responsePath": "/emulator/auth/handler",
+        "responseKeys": [
+          "id_token",
+          "providerId"
+        ],
+        "provider": "google.com",
+        "claimsKeys": [
+          "aud",
+          "email",
+          "email_verified",
+          "exp",
+          "iat",
+          "iss",
+          "name",
+          "sub"
+        ]
+      },
+      {
+        "envelopeKeys": [
+          "data",
+          "eventId",
+          "eventType"
+        ],
+        "storageKey": "synthetic-api-key:popup-regression",
+        "eventKeys": [
+          "error",
+          "eventId",
+          "postBody",
+          "sessionId",
+          "tenantId",
+          "type",
+          "urlResponse"
+        ],
+        "type": "signInViaPopup",
+        "eventIdPresent": true,
+        "sessionId": "ValueNotUsedByAuthEmulator",
+        "postBody": "",
+        "tenantId": null,
+        "error": null,
+        "responsePath": "/emulator/auth/handler",
+        "responseKeys": [
+          "id_token",
+          "providerId"
+        ],
+        "provider": "google.com",
+        "claimsKeys": [
+          "aud",
+          "email",
+          "email_verified",
+          "exp",
+          "iat",
+          "iss",
+          "name",
+          "sub"
+        ]
+      }
+    ],
+    "exchanges": [
+      {
+        "status": 200,
+        "requestKeys": [
+          "requestUri",
+          "returnIdpCredential",
+          "returnSecureToken",
+          "sessionId"
+        ],
+        "requestUriPath": "/emulator/auth/handler",
+        "requestUriKeys": [
+          "id_token",
+          "providerId"
+        ],
+        "postBody": null,
+        "sessionId": "ValueNotUsedByAuthEmulator",
+        "returnSecureToken": true,
+        "returnIdpCredential": true,
+        "providerId": "google.com",
+        "existingUidReused": true,
+        "error": null
+      },
+      {
+        "status": 200,
+        "requestKeys": [
+          "requestUri",
+          "returnIdpCredential",
+          "returnSecureToken",
+          "sessionId"
+        ],
+        "requestUriPath": "/emulator/auth/handler",
+        "requestUriKeys": [
+          "id_token",
+          "providerId"
+        ],
+        "postBody": null,
+        "sessionId": "ValueNotUsedByAuthEmulator",
+        "returnSecureToken": true,
+        "returnIdpCredential": true,
+        "providerId": "google.com",
+        "isNewUser": true,
+        "existingUidReused": false,
+        "error": null
+      },
+      {
+        "status": 200,
+        "requestKeys": [
+          "requestUri",
+          "returnIdpCredential",
+          "returnSecureToken",
+          "sessionId"
+        ],
+        "requestUriPath": "/emulator/auth/handler",
+        "requestUriKeys": [
+          "id_token",
+          "providerId"
+        ],
+        "postBody": null,
+        "sessionId": "ValueNotUsedByAuthEmulator",
+        "returnSecureToken": true,
+        "returnIdpCredential": true,
+        "providerId": "google.com",
+        "existingUidReused": true,
+        "error": null
+      }
+    ],
+    "pageErrors": [],
+    "browserVersion": "152.0.7977.76"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "recordedBeforeImplementation": true,
+  "run": "https://github.com/sanjevirau/fireside/actions/runs/34142138630/job/101806235317",
+  "passedBeforeFailure": "native static-CRT build, Rust control/Auth tests, npm and Bun install/listeners/disk reopen",
+  "sequence": [
+    "FIRESIDE_FUNCTIONS_HOST_READY",
+    "All emulators ready",
+    "fireside functions host: stopping after launcher disconnected",
+    "Functions HTTP request: ECONNREFUSED"
+  ],
+  "cause": "tokio::process::Child::wait drops child.stdin before waiting; using it in select closed the private Functions control pipe",
+  "source": "tokio 1.53.1 src/process/mod.rs Child::wait documentation and implementation",
+  "requiredFix": "Keep the control handle outside Child across the cancellable runtime wait; restore it for explicit export-first shutdown",
+  "regression": "Existing full-suite packaged test must call Functions successfully, export/import and shut down both runs on native Windows"
+}

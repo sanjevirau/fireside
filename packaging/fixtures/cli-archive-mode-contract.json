@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "recordedBeforeImplementation": true,
+  "run": "https://github.com/sanjevirau/fireside/actions/runs/34143711975",
+  "platformTests": "All five native npm/Bun/full-suite cells passed",
+  "verificationFailure": "CLI package differs across platform builds",
+  "comparison": {
+    "uncompressedTarBytes": 56320,
+    "differingByteOffsets": [31847, 31848, 31849, 31896, 31897],
+    "explanation": "Only package/bin/fireside.mjs mode (755 Unix, 644 Windows) and its tar header checksum differ; all file contents and gzip headers match"
+  },
+  "requiredFix": "Canonical CLI source archive mode 644; npm/Bun must create a working installed command without dependency scripts",
+  "regression": "Existing actual npm exec/Bun run command tests plus strict cross-platform tarball checksum equality; do not relax the equality check"
+}

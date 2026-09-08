@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "recordedBeforeImplementation": true,
+  "run": "https://github.com/sanjevirau/fireside/actions/runs/34140895168/job/101802408252",
+  "passedBeforeFailure": "npm actual install, listeners, Unicode, disk/WAL and reopen",
+  "failure": "spawnSync C:\\npm\\prefix\\bun ENOENT",
+  "cause": "Executable discovery accepted npm's extensionless shell shim on Windows",
+  "requirements": [
+    "Select native .exe files for direct Windows execution, never extensionless shell shims",
+    "Statically link the Windows C runtime for the distributed standalone engine",
+    "Run the actual npm/Bun and complete-suite tests on that exact linked artifact"
+  ],
+  "sources": [
+    "https://nodejs.org/api/child_process.html",
+    "https://doc.rust-lang.org/reference/linkage.html"
+  ]
+}

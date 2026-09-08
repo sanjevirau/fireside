@@ -1,0 +1,233 @@
+{
+  "schemaVersion": 1,
+  "target": "official-firebase-tools-emulator-hub",
+  "targetVersion": "15.22.0",
+  "targetProject": "demo-fireside-phase4-suite-oracle",
+  "capturedAt": "2026-09-01T14:20:26.109Z",
+  "credentialsStored": false,
+  "accessTokensStored": false,
+  "realUserDataStored": false,
+  "sourceHashes": {
+    "package.json": "bdaec59ef8484658506c54fc4bd5910722aaf77a77f5a6a3f6a057bec0797abf",
+    "lib/emulator/controller.js": "9759fa0910a1b3430d80f75cfecdc0e8adb8a595e5810ea9aba5dcc3727ce196",
+    "lib/emulator/functionsEmulator.js": "0c16fe813bc5a034e43a9218c0099ae2c75628e14078d40b86708630cf402406",
+    "lib/emulator/functionsEmulatorRuntime.js": "5bef9577eaa8e6edfeb44130e9c6d498b3c85f93f410052d198c4823f1dda82c",
+    "lib/emulator/hub.js": "0c111df0bbba9f26d8c91af1a6c15f0edd3b4ccca26478365a8bfd6bd685c1cc",
+    "lib/emulator/hubExport.js": "c401c950fdfd53db98a9215590603091d65d71129c3ed591233a69d6bb4b7ecd",
+    "lib/emulator/loggingEmulator.js": "275c3138ff33c7dc9a92c404c78756eac6ae0d69f4bbb968c6321a7927423ff1",
+    "lib/emulator/pubsubEmulator.js": "edaa1585b0a3c71ea46d782bf715c9aae9afb6d6b82a8873371a120dd088d564",
+    "lib/emulator/ui.js": "3cee76413feb86d49712518eae8377b16af758777e7a1f789edd6625fa3aa938"
+  },
+  "locatorBeforeStop": {
+    "version": "15.22.0",
+    "origins": [
+      "http://127.0.0.1:<hub-port>"
+    ],
+    "pid": "<suite-pid>"
+  },
+  "observations": [
+    {
+      "id": "hub-locator",
+      "method": "GET",
+      "path": "/",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "131"
+      },
+      "response": {
+        "version": "15.22.0",
+        "origins": [
+          "http://127.0.0.1:<hub-port>"
+        ],
+        "pid": "<suite-pid>",
+        "host": "127.0.0.1",
+        "port": "<hub-port>"
+      }
+    },
+    {
+      "id": "hub-emulator-map",
+      "method": "GET",
+      "path": "/emulators",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "1279"
+      },
+      "response": {
+        "hub": {
+          "listen": [
+            {
+              "address": "127.0.0.1",
+              "family": "IPv4",
+              "port": "<hub-port>"
+            }
+          ],
+          "name": "hub",
+          "host": "127.0.0.1",
+          "port": "<hub-port>"
+        },
+        "ui": {
+          "listen": [
+            {
+              "address": "127.0.0.1",
+              "family": "IPv4",
+              "port": "<ui-port>"
+            }
+          ],
+          "name": "ui",
+          "host": "127.0.0.1",
+          "port": "<ui-port>"
+        },
+        "logging": {
+          "listen": [
+            {
+              "address": "127.0.0.1",
+              "family": "IPv4",
+              "port": "<logging-port>"
+            }
+          ],
+          "name": "logging",
+          "host": "127.0.0.1",
+          "port": "<logging-port>"
+        },
+        "auth": {
+          "listen": [
+            {
+              "address": "127.0.0.1",
+              "family": "IPv4",
+              "port": "<auth-port>"
+            }
+          ],
+          "name": "auth",
+          "host": "127.0.0.1",
+          "port": "<auth-port>"
+        },
+        "functions": {
+          "name": "functions",
+          "host": "127.0.0.1",
+          "port": "<functions-port>"
+        },
+        "pubsub": {
+          "listen": [
+            {
+              "address": "127.0.0.1",
+              "family": "IPv4",
+              "port": "<pubsub-port>"
+            }
+          ],
+          "name": "pubsub",
+          "host": "127.0.0.1",
+          "port": "<pubsub-port>",
+          "pid": "<suite-pid>"
+        },
+        "eventarc": {
+          "name": "eventarc",
+          "host": "127.0.0.1",
+          "port": "<eventarc-port>"
+        },
+        "tasks": {
+          "name": "tasks",
+          "host": "127.0.0.1",
+          "port": "<tasks-port>"
+        }
+      }
+    },
+    {
+      "id": "create-export-user",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-phase4-suite-oracle/accounts",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "kind": "identitytoolkit#SignupNewUserResponse",
+        "localId": "phase4-hub-export-user",
+        "displayName": "Hub 火🔥",
+        "email": "phase4-hub-export@example.com"
+      }
+    },
+    {
+      "id": "hub-auth-export",
+      "method": "POST",
+      "path": "/_admin/export",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "21"
+      },
+      "response": {
+        "message": "OK"
+      }
+    },
+    {
+      "id": "hub-export-origin-blocked",
+      "method": "POST",
+      "path": "/_admin/export",
+      "status": 403,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "66"
+      },
+      "response": {
+        "message": "Export cannot be triggered by external callers."
+      }
+    }
+  ],
+  "exportInventory": [
+    {
+      "path": "auth_export/accounts.json",
+      "byteLength": 244,
+      "sha256": "a34c17e57b88e97995b238f7d53a47c569b617c5456d8628f8b63c6b8a534e7c",
+      "json": {
+        "kind": "identitytoolkit#DownloadAccountResponse",
+        "users": [
+          {
+            "localId": "phase4-hub-export-user",
+            "lastLoginAt": "<generated-lastLoginAt>",
+            "displayName": "Hub 火🔥",
+            "emailVerified": true,
+            "email": "phase4-hub-export@example.com",
+            "createdAt": "<generated-createdAt>"
+          }
+        ]
+      }
+    },
+    {
+      "path": "auth_export/config.json",
+      "byteLength": 99,
+      "sha256": "a06ad971dd56d46b5975ab34f3308384ff3231d81c70b82b7099fb9b3d312ca8",
+      "json": {
+        "signIn": {
+          "allowDuplicateEmails": false
+        },
+        "emailPrivacyConfig": {
+          "enableImprovedEmailPrivacy": false
+        }
+      }
+    },
+    {
+      "path": "firebase-export-metadata.json",
+      "byteLength": 95,
+      "sha256": "216cca87a45d89f743395ef9c0a82c3e320ac6df27e89a1ec4d3007429b2ccd8",
+      "json": {
+        "version": "15.22.0",
+        "auth": {
+          "version": "15.22.0",
+          "path": "auth_export"
+        }
+      }
+    }
+  ],
+  "invariants": {
+    "exportStatus": 200,
+    "externalOriginStatus": 403,
+    "externalOriginRejected": true,
+    "metadataFile": "firebase-export-metadata.json",
+    "authFiles": [
+      "auth_export/accounts.json",
+      "auth_export/config.json"
+    ]
+  }
+}

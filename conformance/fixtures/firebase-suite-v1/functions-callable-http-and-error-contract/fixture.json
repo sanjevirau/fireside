@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 1,
+  "target": "official-firebase-tools-functions-emulator",
+  "targetVersion": "15.22.0",
+  "firebaseFunctionsVersion": "7.2.5",
+  "firebaseAdminVersion": "13.10.0",
+  "targetProject": "demo-fireside-phase4-suite-oracle",
+  "capturedAt": "2026-09-01T14:20:26.100Z",
+  "credentialsStored": false,
+  "accessTokensStored": false,
+  "realUserDataStored": false,
+  "sourceHashes": {
+    "package.json": "bdaec59ef8484658506c54fc4bd5910722aaf77a77f5a6a3f6a057bec0797abf",
+    "lib/emulator/controller.js": "9759fa0910a1b3430d80f75cfecdc0e8adb8a595e5810ea9aba5dcc3727ce196",
+    "lib/emulator/functionsEmulator.js": "0c16fe813bc5a034e43a9218c0099ae2c75628e14078d40b86708630cf402406",
+    "lib/emulator/functionsEmulatorRuntime.js": "5bef9577eaa8e6edfeb44130e9c6d498b3c85f93f410052d198c4823f1dda82c",
+    "lib/emulator/hub.js": "0c111df0bbba9f26d8c91af1a6c15f0edd3b4ccca26478365a8bfd6bd685c1cc",
+    "lib/emulator/hubExport.js": "c401c950fdfd53db98a9215590603091d65d71129c3ed591233a69d6bb4b7ecd",
+    "lib/emulator/loggingEmulator.js": "275c3138ff33c7dc9a92c404c78756eac6ae0d69f4bbb968c6321a7927423ff1",
+    "lib/emulator/pubsubEmulator.js": "edaa1585b0a3c71ea46d782bf715c9aae9afb6d6b82a8873371a120dd088d564",
+    "lib/emulator/ui.js": "3cee76413feb86d49712518eae8377b16af758777e7a1f789edd6625fa3aa938"
+  },
+  "observations": [
+    {
+      "id": "functions-backends",
+      "method": "GET",
+      "path": "/backends",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "2224"
+      },
+      "response": {
+        "backends": [
+          {
+            "directory": "<suite-root>/functions",
+            "env": {},
+            "functionTriggers": [
+              {
+                "entryPoint": "httpEcho",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "httpEcho",
+                "id": "us-central1-httpEcho",
+                "codebase": "phase4-oracle",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-phase4-suite-oracle/locations/us-central1/services/httpEcho"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {}
+              },
+              {
+                "entryPoint": "callableEcho",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "callableEcho",
+                "id": "us-central1-callableEcho",
+                "codebase": "phase4-oracle",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-phase4-suite-oracle/locations/us-central1/services/callableEcho",
+                  "deployment-callable": "true"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {}
+              },
+              {
+                "entryPoint": "scheduledTick",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "scheduledTick",
+                "id": "us-central1-scheduledTick",
+                "codebase": "phase4-oracle",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-phase4-suite-oracle/locations/us-central1/services/scheduledTick"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "eventTrigger": {
+                  "eventType": "pubsub",
+                  "resource": ""
+                },
+                "schedule": {
+                  "schedule": "every 5 minutes",
+                  "timeZone": null,
+                  "retryConfig": {
+                    "maxBackoffSeconds": null,
+                    "minBackoffSeconds": null,
+                    "maxRetrySeconds": null,
+                    "retryCount": null,
+                    "maxDoublings": null
+                  }
+                }
+              },
+              {
+                "entryPoint": "topicEcho",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "topicEcho",
+                "id": "us-central1-topicEcho",
+                "codebase": "phase4-oracle",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-phase4-suite-oracle/locations/us-central1/services/topicEcho"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "eventTrigger": {
+                  "eventType": "google.cloud.pubsub.topic.v1.messagePublished",
+                  "resource": "projects/demo-fireside-phase4-suite-oracle/topics/phase4-topic",
+                  "eventFilters": {
+                    "topic": "projects/demo-fireside-phase4-suite-oracle/topics/phase4-topic"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "http-function-get",
+      "method": "GET",
+      "path": "/demo-fireside-phase4-suite-oracle/us-central1/httpEcho?mode=get",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "69"
+      },
+      "response": {
+        "method": "GET",
+        "query": {
+          "mode": "get"
+        },
+        "body": {},
+        "unicode": "火🔥"
+      }
+    },
+    {
+      "id": "http-function-post",
+      "method": "POST",
+      "path": "/demo-fireside-phase4-suite-oracle/us-central1/httpEcho",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "94"
+      },
+      "response": {
+        "method": "POST",
+        "query": {},
+        "body": {
+          "unicode": "火🔥",
+          "nested": {
+            "n": 4
+          }
+        },
+        "unicode": "火🔥"
+      }
+    },
+    {
+      "id": "callable-success",
+      "method": "POST",
+      "path": "/demo-fireside-phase4-suite-oracle/us-central1/callableEcho",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "82"
+      },
+      "response": {
+        "result": {
+          "echo": {
+            "unicode": "火🔥",
+            "n": 4
+          },
+          "authUid": null,
+          "unicode": "火🔥"
+        }
+      }
+    },
+    {
+      "id": "callable-typed-error",
+      "method": "POST",
+      "path": "/demo-fireside-phase4-suite-oracle/us-central1/callableEcho",
+      "status": 400,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "98"
+      },
+      "response": {
+        "error": {
+          "details": {
+            "unicode": "火🔥"
+          },
+          "message": "phase4 invalid",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "id": "callable-invalid-get",
+      "method": "GET",
+      "path": "/demo-fireside-phase4-suite-oracle/us-central1/callableEcho",
+      "status": 400,
+      "responseHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "63"
+      },
+      "response": {
+        "error": {
+          "message": "Bad Request",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "id": "unknown-function",
+      "method": "POST",
+      "path": "/demo-fireside-phase4-suite-oracle/us-central1/missingFunction",
+      "status": 404,
+      "responseHeaders": {
+        "content-type": "text/html; charset=utf-8",
+        "content-length": "174"
+      },
+      "response": "Function us-central1-missingFunction does not exist, valid functions are: us-central1-httpEcho, us-central1-callableEcho, us-central1-scheduledTick-0, us-central1-topicEcho-0"
+    }
+  ],
+  "backendInventory": [
+    {
+      "directory": "<suite-root>/functions",
+      "env": {},
+      "functionTriggers": [
+        {
+          "entryPoint": "httpEcho",
+          "platform": "gcfv2",
+          "region": "us-central1",
+          "name": "httpEcho",
+          "id": "us-central1-httpEcho",
+          "codebase": "phase4-oracle",
+          "availableMemoryMb": 256,
+          "labels": {
+            "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-phase4-suite-oracle/locations/us-central1/services/httpEcho"
+          },
+          "timeoutSeconds": 60,
+          "secretEnvironmentVariables": [],
+          "httpsTrigger": {}
+        },
+        {
+          "entryPoint": "callableEcho",
+          "platform": "gcfv2",
+          "region": "us-central1",
+          "name": "callableEcho",
+          "id": "us-central1-callableEcho",
+          "codebase": "phase4-oracle",
+          "availableMemoryMb": 256,
+          "labels": {
+            "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-phase4-suite-oracle/locations/us-central1/services/callableEcho",
+            "deployment-callable": "true"
+          },
+          "timeoutSeconds": 60,
+          "secretEnvironmentVariables": [],
+          "httpsTrigger": {}
+        },
+        {
+          "entryPoint": "scheduledTick",
+          "platform": "gcfv2",
+          "region": "us-central1",
+          "name": "scheduledTick",
+          "id": "us-central1-scheduledTick",
+          "codebase": "phase4-oracle",
+          "availableMemoryMb": 256,
+          "labels": {
+            "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-phase4-suite-oracle/locations/us-central1/services/scheduledTick"
+          },
+          "timeoutSeconds": 60,
+          "secretEnvironmentVariables": [],
+          "eventTrigger": {
+            "eventType": "pubsub",
+            "resource": ""
+          },
+          "schedule": {
+            "schedule": "every 5 minutes",
+            "timeZone": null,
+            "retryConfig": {
+              "maxBackoffSeconds": null,
+              "minBackoffSeconds": null,
+              "maxRetrySeconds": null,
+              "retryCount": null,
+              "maxDoublings": null
+            }
+          }
+        },
+        {
+          "entryPoint": "topicEcho",
+          "platform": "gcfv2",
+          "region": "us-central1",
+          "name": "topicEcho",
+          "id": "us-central1-topicEcho",
+          "codebase": "phase4-oracle",
+          "availableMemoryMb": 256,
+          "labels": {
+            "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-phase4-suite-oracle/locations/us-central1/services/topicEcho"
+          },
+          "timeoutSeconds": 60,
+          "secretEnvironmentVariables": [],
+          "eventTrigger": {
+            "eventType": "google.cloud.pubsub.topic.v1.messagePublished",
+            "resource": "projects/demo-fireside-phase4-suite-oracle/topics/phase4-topic",
+            "eventFilters": {
+              "topic": "projects/demo-fireside-phase4-suite-oracle/topics/phase4-topic"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "invariants": {
+    "discoveredFunctionCount": 1,
+    "functionIds": [
+      "us-central1-callableEcho",
+      "us-central1-httpEcho",
+      "us-central1-scheduledTick",
+      "us-central1-topicEcho"
+    ],
+    "validCallableUsesResultEnvelope": true,
+    "typedCallableErrorUsesErrorEnvelope": true,
+    "unknownFunctionStatus": 404
+  }
+}

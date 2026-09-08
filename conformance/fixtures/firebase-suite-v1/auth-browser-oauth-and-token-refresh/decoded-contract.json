@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "fixtureSet": "auth-browser-oauth-and-token-refresh",
+  "target": "official-firebase-tools-auth-emulator",
+  "targetVersion": "15.22.0",
+  "operationCount": 6,
+  "operations": [
+    {
+      "id": "create-auth-uri-existing-password-user",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/accounts:createAuthUri?key=phase4-fake-api-key",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "recaptcha-parameters",
+      "method": "GET",
+      "path": "/identitytoolkit.googleapis.com/v1/recaptchaParams?key=phase4-fake-api-key",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "fake-google-idp-sign-in",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=phase4-fake-api-key",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "idp-secure-token-refresh",
+      "method": "POST",
+      "path": "/securetoken.googleapis.com/v1/token?key=phase4-fake-api-key",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "oauth-popup-handler",
+      "method": "GET",
+      "path": "/emulator/auth/handler?apiKey=phase4-fake-api-key&providerId=google.com",
+      "status": 200,
+      "responseContentType": "text/html; charset=utf-8"
+    },
+    {
+      "id": "oauth-helper-iframe",
+      "method": "GET",
+      "path": "/emulator/auth/iframe?apiKey=phase4-fake-api-key&appName=phase4",
+      "status": 200,
+      "responseContentType": "text/html; charset=utf-8"
+    }
+  ]
+}

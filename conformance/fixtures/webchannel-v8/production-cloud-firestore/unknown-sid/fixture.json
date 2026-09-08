@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "metadata": {
+    "hypothesis": "An unknown session returns the exact browser-visible HTTP 400 body",
+    "target": "production-cloud-firestore",
+    "targetVersion": "production-2026-08-31",
+    "sdk": "firebase@12.18.0",
+    "recordedAt": "2026-08-30T21:50:27.503Z",
+    "transport": "web-channel"
+  },
+  "exchanges": [
+    {
+      "sequence": 1,
+      "request": {
+        "method": "GET",
+        "uri": "/google.firestore.v1.Firestore/Listen/channel?AID=0&CI=1&RID=rpc&SID=fireside-synthetic-unknown-sid&TYPE=xmlhttp&VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&t=1&zx=fireside-synthetic-nonce",
+        "headers": [
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:53361"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:53361/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 400,
+        "headers": [
+          {
+            "name": "date",
+            "value": "Sun, 30 Aug 2026 21:50:28 GMT"
+          },
+          {
+            "name": "content-type",
+            "value": "text/html; charset=UTF-8"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "content-length",
+            "value": "1566"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:53361"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          }
+        ],
+        "bodyBase64": "PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ZW4+CiAgPG1ldGEgY2hhcnNldD11dGYtOD4KICA8bWV0YSBuYW1lPXZpZXdwb3J0IGNvbnRlbnQ9ImluaXRpYWwtc2NhbGU9MSwgbWluaW11bS1zY2FsZT0xLCB3aWR0aD1kZXZpY2Utd2lkdGgiPgogIDx0aXRsZT5FcnJvciA0MDAgKEJhZCBSZXF1ZXN0KSEhMTwvdGl0bGU+CiAgPHN0eWxlPgogICAgKnttYXJnaW46MDtwYWRkaW5nOjB9aHRtbCxjb2Rle2ZvbnQ6MTVweC8yMnB4IGFyaWFsLHNhbnMtc2VyaWZ9aHRtbHtiYWNrZ3JvdW5kOiNmZmY7Y29sb3I6IzIyMjtwYWRkaW5nOjE1cHh9Ym9keXttYXJnaW46NyUgYXV0byAwO21heC13aWR0aDozOTBweDttaW4taGVpZ2h0OjE4MHB4O3BhZGRpbmc6MzBweCAwIDE1cHh9KiA+IGJvZHl7YmFja2dyb3VuZDp1cmwoLy93d3cuZ29vZ2xlLmNvbS9pbWFnZXMvZXJyb3JzL3JvYm90LnBuZykgMTAwJSA1cHggbm8tcmVwZWF0O3BhZGRpbmctcmlnaHQ6MjA1cHh9cHttYXJnaW46MTFweCAwIDIycHg7b3ZlcmZsb3c6aGlkZGVufWluc3tjb2xvcjojNzc3O3RleHQtZGVjb3JhdGlvbjpub25lfWEgaW1ne2JvcmRlcjowfUBtZWRpYSBzY3JlZW4gYW5kIChtYXgtd2lkdGg6NzcycHgpe2JvZHl7YmFja2dyb3VuZDpub25lO21hcmdpbi10b3A6MDttYXgtd2lkdGg6bm9uZTtwYWRkaW5nLXJpZ2h0OjB9fSNsb2dve2JhY2tncm91bmQ6dXJsKC8vd3d3Lmdvb2dsZS5jb20vaW1hZ2VzL2JyYW5kaW5nL2dvb2dsZWxvZ28vMXgvZ29vZ2xlbG9nb19jb2xvcl8xNTB4NTRkcC5wbmcpIG5vLXJlcGVhdDttYXJnaW4tbGVmdDotNXB4fUBtZWRpYSBvbmx5IHNjcmVlbiBhbmQgKG1pbi1yZXNvbHV0aW9uOjE5MmRwaSl7I2xvZ297YmFja2dyb3VuZDp1cmwoLy93d3cuZ29vZ2xlLmNvbS9pbWFnZXMvYnJhbmRpbmcvZ29vZ2xlbG9nby8yeC9nb29nbGVsb2dvX2NvbG9yXzE1MHg1NGRwLnBuZykgbm8tcmVwZWF0IDAlIDAlLzEwMCUgMTAwJTstbW96LWJvcmRlci1pbWFnZTp1cmwoLy93d3cuZ29vZ2xlLmNvbS9pbWFnZXMvYnJhbmRpbmcvZ29vZ2xlbG9nby8yeC9nb29nbGVsb2dvX2NvbG9yXzE1MHg1NGRwLnBuZykgMH19QG1lZGlhIG9ubHkgc2NyZWVuIGFuZCAoLXdlYmtpdC1taW4tZGV2aWNlLXBpeGVsLXJhdGlvOjIpeyNsb2dve2JhY2tncm91bmQ6dXJsKC8vd3d3Lmdvb2dsZS5jb20vaW1hZ2VzL2JyYW5kaW5nL2dvb2dsZWxvZ28vMngvZ29vZ2xlbG9nb19jb2xvcl8xNTB4NTRkcC5wbmcpIG5vLXJlcGVhdDstd2Via2l0LWJhY2tncm91bmQtc2l6ZToxMDAlIDEwMCV9fSNsb2dve2Rpc3BsYXk6aW5saW5lLWJsb2NrO2hlaWdodDo1NHB4O3dpZHRoOjE1MHB4fQogIDwvc3R5bGU+CiAgPGEgaHJlZj0vL3d3dy5nb29nbGUuY29tLz48c3BhbiBpZD1sb2dvIGFyaWEtbGFiZWw9R29vZ2xlPjwvc3Bhbj48L2E+CiAgPHA+PGI+NDAwLjwvYj4gPGlucz5UaGF04oCZcyBhbiBlcnJvci48L2lucz4KICA8cD5Zb3VyIGNsaWVudCBoYXMgaXNzdWVkIGEgbWFsZm9ybWVkIG9yIGlsbGVnYWwgcmVxdWVzdC4gVW5rbm93biBTSUQgPGlucz5UaGF04oCZcyBhbGwgd2Uga25vdy48L2lucz4K",
+        "bodyChunksBase64": [
+          "PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ZW4+CiAgPG1ldGEgY2hhcnNldD11dGYtOD4KICA8bWV0YSBuYW1lPXZpZXdwb3J0IGNvbnRlbnQ9ImluaXRpYWwtc2NhbGU9MSwgbWluaW11bS1zY2FsZT0xLCB3aWR0aD1kZXZpY2Utd2lkdGgiPgogIDx0aXRsZT5FcnJvciA0MDAgKEJhZCBSZXF1ZXN0KSEhMTwvdGl0bGU+CiAgPHN0eWxlPgogICAgKnttYXJnaW46MDtwYWRkaW5nOjB9aHRtbCxjb2Rle2ZvbnQ6MTVweC8yMnB4IGFyaWFsLHNhbnMtc2VyaWZ9aHRtbHtiYWNrZ3JvdW5kOiNmZmY7Y29sb3I6IzIyMjtwYWRkaW5nOjE1cHh9Ym9keXttYXJnaW46NyUgYXV0byAwO21heC13aWR0aDozOTBweDttaW4taGVpZ2h0OjE4MHB4O3BhZGRpbmc6MzBweCAwIDE1cHh9KiA+IGJvZHl7YmFja2dyb3VuZDp1cmwoLy93d3cuZ29vZ2xlLmNvbS9pbWFnZXMvZXJyb3JzL3JvYm90LnBuZykgMTAwJSA1cHggbm8tcmVwZWF0O3BhZGRpbmctcmlnaHQ6MjA1cHh9cHttYXJnaW46MTFweCAwIDIycHg7b3ZlcmZsb3c6aGlkZGVufWluc3tjb2xvcjojNzc3O3RleHQtZGVjb3JhdGlvbjpub25lfWEgaW1ne2JvcmRlcjowfUBtZWRpYSBzY3JlZW4gYW5kIChtYXgtd2lkdGg6NzcycHgpe2JvZHl7YmFja2dyb3VuZDpub25lO21hcmdpbi10b3A6MDttYXgtd2lkdGg6bm9uZTtwYWRkaW5nLXJpZ2h0OjB9fSNsb2dve2JhY2tncm91bmQ6dXJsKC8vd3d3Lmdvb2dsZS5jb20vaW1hZ2VzL2JyYW5kaW5nL2dvb2dsZWxvZ28vMXgvZ29vZ2xlbG9nb19jb2xvcl8xNTB4NTRkcC5wbmcpIG5vLXJlcGVhdDttYXJnaW4tbGVmdDotNXB4fUBtZWRpYSBvbmx5IHNjcmVlbiBhbmQgKG1pbi1yZXNvbHV0aW9uOjE5MmRwaSl7I2xvZ297YmFja2dyb3VuZDp1cmwoLy93d3cuZ29vZ2xlLmNvbS9pbWFnZXMvYnJhbmRpbmcvZ29vZ2xlbG9nby8yeC9nb29nbGVsb2dvX2NvbG9yXzE1MHg1NGRwLnBuZykgbm8tcmVwZWF0IDAlIDAlLzEwMCUgMTAwJTstbW96LWJvcmRlci1pbWFnZTp1cmwoLy93d3cuZ29vZ2xlLmNvbS9pbWFnZXMvYnJhbmRpbmcvZ29vZ2xlbG9nby8yeC9nb29nbGVsb2dvX2NvbG9yXzE1MHg1NGRwLnBuZykgMH19QG1lZGlhIG9ubHkgc2NyZWVuIGFuZCAoLXdlYmtpdC1taW4tZGV2aWNlLXBpeGVsLXJhdGlvOjIpeyNsb2dve2JhY2tncm91bmQ6dXJsKC8vd3d3Lmdvb2dsZS5jb20vaW1hZ2VzL2JyYW5kaW5nL2dvb2dsZWxvZ28vMngvZ29vZ2xlbG9nb19jb2xvcl8xNTB4NTRkcC5wbmcpIG5vLXJlcGVhdDstd2Via2l0LWJhY2tncm91bmQtc2l6ZToxMDAlIDEwMCV9fSNsb2dve2Rpc3BsYXk6aW5saW5lLWJsb2NrO2hlaWdodDo1NHB4O3dpZHRoOjE1MHB4fQogIDwvc3R5bGU+CiAgPGEgaHJlZj0vL3d3dy5nb29nbGUuY29tLz48c3BhbiBpZD1sb2dvIGFyaWEtbGFiZWw9R29vZ2xlPjwvc3Bhbj48L2E+CiAgPHA+PGI+NDAwLjwvYj4gPGlucz5UaGF04oCZcyBhbiBlcnJvci48L2lucz4KICA8cD5Zb3VyIGNsaWVudCBoYXMgaXNzdWVkIGEgbWFsZm9ybWVkIG9yIGlsbGVnYWwgcmVxdWVzdC4gVW5rbm93biBTSUQgPGlucz5UaGF04oCZcyBhbGwgd2Uga25vdy48L2lucz4K"
+        ]
+      }
+    }
+  ]
+}

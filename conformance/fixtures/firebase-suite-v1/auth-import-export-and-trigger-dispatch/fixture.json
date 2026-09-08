@@ -1,0 +1,301 @@
+{
+  "schemaVersion": 1,
+  "target": "official-firebase-tools-auth-emulator",
+  "targetVersion": "15.22.0",
+  "targetProject": "demo-fireside-phase4-auth-oracle",
+  "capturedAt": "2026-09-01T13:48:39.813Z",
+  "hypothesis": "Auth config/accounts import and export preserve persisted fields while user create/delete lifecycle operations multicast legacy Firebase Auth events to Functions",
+  "credentialsStored": false,
+  "accessTokensStored": false,
+  "realUserDataStored": false,
+  "sourceHashes": {
+    "package.json": "bdaec59ef8484658506c54fc4bd5910722aaf77a77f5a6a3f6a057bec0797abf",
+    "lib/emulator/auth/apiSpec.js": "9014b6512f2adf4cc72ed244946bb942857a09d12dd77cd6c65bb7ce27ba76c8",
+    "lib/emulator/auth/cloudFunctions.js": "2647a6af6ee6a9915f256f499df9b6136161645d73482fec063441f52dea1368",
+    "lib/emulator/auth/handlers.js": "b228707e1a8dcab02ef8acb261a3b5f8b670589c3887d5a4fba02cba78e07853",
+    "lib/emulator/auth/operations.js": "dbc71e2a7919458709528c4a20ea051143032eded7ef1a39f75221be7c46b322",
+    "lib/emulator/auth/server.js": "40f4d7c16aca84829ee502f4bfebc84fb50ad2893650011f268c0b6e1f27c1a7",
+    "lib/emulator/auth/state.js": "79b3d0333f69448ec32217c513503bbb6dfe6e16fe1f5a274af3ac5a917b7fb5"
+  },
+  "observations": [
+    {
+      "id": "emulator-config-before",
+      "method": "GET",
+      "path": "/emulator/v1/projects/demo-fireside-phase4-auth-oracle/config",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "signIn": {
+          "allowDuplicateEmails": false
+        },
+        "emailPrivacyConfig": {
+          "enableImprovedEmailPrivacy": false
+        }
+      }
+    },
+    {
+      "id": "emulator-config-update",
+      "method": "PATCH",
+      "path": "/emulator/v1/projects/demo-fireside-phase4-auth-oracle/config",
+      "request": {
+        "signIn": {
+          "allowDuplicateEmails": false
+        },
+        "emailPrivacyConfig": {
+          "enableImprovedEmailPrivacy": false
+        }
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "signIn": {
+          "allowDuplicateEmails": false
+        },
+        "emailPrivacyConfig": {
+          "enableImprovedEmailPrivacy": false
+        }
+      }
+    },
+    {
+      "id": "accounts-json-batch-import",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-phase4-auth-oracle/accounts:batchCreate",
+      "request": {
+        "users": [
+          {
+            "localId": "phase4-import-user-a",
+            "email": "phase4-import-a@example.com",
+            "emailVerified": true,
+            "displayName": "Imported 火",
+            "customAttributes": "{\"imported\":true}",
+            "createdAt": "1700000000000",
+            "lastLoginAt": "1700000001000"
+          },
+          {
+            "localId": "phase4-import-user-b",
+            "email": "phase4-import-b@example.com",
+            "emailVerified": false,
+            "disabled": true,
+            "createdAt": "1700000002000",
+            "lastLoginAt": "1700000003000"
+          }
+        ]
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "kind": "identitytoolkit#UploadAccountResponse",
+        "error": []
+      }
+    },
+    {
+      "id": "accounts-json-batch-export",
+      "method": "GET",
+      "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-phase4-auth-oracle/accounts:batchGet?maxResults=1000",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "kind": "identitytoolkit#DownloadAccountResponse",
+        "users": [
+          {
+            "localId": "<generated-localId>",
+            "displayName": "Google 火🔥",
+            "photoUrl": "https://example.invalid/avatar.png",
+            "email": "phase4-google@example.com",
+            "emailVerified": true,
+            "createdAt": "<generated-createdAt>",
+            "lastLoginAt": "<generated-lastLoginAt>",
+            "providerUserInfo": [
+              {
+                "providerId": "google.com",
+                "rawId": "phase4-google-subject",
+                "federatedId": "phase4-google-subject",
+                "displayName": "Google 火🔥",
+                "photoUrl": "https://example.invalid/avatar.png",
+                "email": "phase4-google@example.com"
+              }
+            ],
+            "lastRefreshAt": "<generated-lastRefreshAt>"
+          },
+          {
+            "localId": "<generated-localId>",
+            "lastLoginAt": "<generated-lastLoginAt>",
+            "displayName": "更新済み 🔥",
+            "emailVerified": false,
+            "email": "phase4-auth-oracle@example.com",
+            "salt": "<salt>",
+            "passwordHash": "<passwordHash>",
+            "passwordUpdatedAt": "<generated-passwordUpdatedAt>",
+            "validSince": "<generated-validSince>",
+            "createdAt": "<generated-createdAt>",
+            "providerUserInfo": [
+              {
+                "providerId": "password",
+                "email": "phase4-auth-oracle@example.com",
+                "federatedId": "phase4-auth-oracle@example.com",
+                "rawId": "phase4-auth-oracle@example.com",
+                "displayName": "更新済み 🔥"
+              }
+            ],
+            "lastRefreshAt": "<generated-lastRefreshAt>",
+            "customAttributes": "{\"role\":\"owner\",\"unicode\":\"火🔥\"}"
+          },
+          {
+            "localId": "phase4-custom-user",
+            "customAuth": true,
+            "lastLoginAt": "<generated-lastLoginAt>",
+            "createdAt": "<generated-createdAt>",
+            "lastRefreshAt": "<generated-lastRefreshAt>"
+          },
+          {
+            "localId": "phase4-import-user-a",
+            "createdAt": "1700000000000",
+            "lastLoginAt": "1700000001000",
+            "displayName": "Imported 火",
+            "customAttributes": "{\"imported\":true}",
+            "validSince": "<generated-validSince>",
+            "email": "phase4-import-a@example.com",
+            "emailVerified": true,
+            "disabled": false
+          },
+          {
+            "localId": "phase4-import-user-b",
+            "createdAt": "1700000002000",
+            "lastLoginAt": "1700000003000",
+            "validSince": "<generated-validSince>",
+            "email": "phase4-import-b@example.com",
+            "emailVerified": false,
+            "disabled": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "admin-create-user",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-phase4-auth-oracle/accounts",
+      "request": {
+        "localId": "phase4-lifecycle-user",
+        "email": "phase4-lifecycle@example.com",
+        "emailVerified": true,
+        "displayName": "Lifecycle 🔥"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "kind": "identitytoolkit#SignupNewUserResponse",
+        "localId": "phase4-lifecycle-user",
+        "displayName": "Lifecycle 🔥",
+        "email": "phase4-lifecycle@example.com"
+      }
+    },
+    {
+      "id": "admin-delete-user",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-phase4-auth-oracle/accounts:delete",
+      "request": {
+        "localId": "phase4-lifecycle-user"
+      },
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "kind": "identitytoolkit#DeleteAccountResponse"
+      }
+    },
+    {
+      "id": "emulator-delete-all-accounts",
+      "method": "DELETE",
+      "path": "/emulator/v1/projects/demo-fireside-phase4-auth-oracle/accounts",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "response": {}
+    }
+  ],
+  "dispatches": [
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-auth-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "513",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "eventId": "<generated-eventId>",
+        "eventType": "providers/firebase.auth/eventTypes/user.create",
+        "resource": {
+          "name": "projects/demo-fireside-phase4-auth-oracle",
+          "service": "firebaseauth.googleapis.com"
+        },
+        "params": {},
+        "timestamp": "<generated-timestamp>",
+        "data": {
+          "uid": "phase4-lifecycle-user",
+          "email": "phase4-lifecycle@example.com",
+          "emailVerified": true,
+          "displayName": "Lifecycle 🔥",
+          "metadata": {
+            "creationTime": "<generated-creationTime>",
+            "lastSignInTime": "<generated-lastSignInTime>"
+          },
+          "customClaims": {}
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/functions/projects/demo-fireside-phase4-auth-oracle/trigger_multicast",
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "513",
+        "host": "<functions-emulator-host>"
+      },
+      "body": {
+        "eventId": "<generated-eventId>",
+        "eventType": "providers/firebase.auth/eventTypes/user.delete",
+        "resource": {
+          "name": "projects/demo-fireside-phase4-auth-oracle",
+          "service": "firebaseauth.googleapis.com"
+        },
+        "params": {},
+        "timestamp": "<generated-timestamp>",
+        "data": {
+          "uid": "phase4-lifecycle-user",
+          "email": "phase4-lifecycle@example.com",
+          "emailVerified": true,
+          "displayName": "Lifecycle 🔥",
+          "metadata": {
+            "creationTime": "<generated-creationTime>",
+            "lastSignInTime": "<generated-lastSignInTime>"
+          },
+          "customClaims": {}
+        }
+      }
+    }
+  ],
+  "invariants": {
+    "batchImportDispatchCount": 0,
+    "lifecycleDispatchCount": 2,
+    "capturedDispatchCount": 2,
+    "batchImportTriggersCreateEvents": false,
+    "lifecycleActions": [
+      "create",
+      "delete"
+    ],
+    "dispatchEndpoint": "/functions/projects/demo-fireside-phase4-auth-oracle/trigger_multicast"
+  }
+}

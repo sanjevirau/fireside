@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "recordedBeforeImplementation": true,
+  "sources": [
+    "https://nodejs.org/api/child_process.html",
+    "https://docs.github.com/en/actions/reference/runners/github-hosted-runners",
+    "crates/cli/src/main.rs",
+    "crates/suite-runtime/src/lib.rs",
+    "support/functions-host.cjs"
+  ],
+  "observedBlockers": [
+    "Windows child_process.kill is not a portable graceful export request",
+    "Windows .cmd files cannot be invoked by execFile without a command interpreter",
+    "Windows PATH uses a semicolon and Java may live under a directory containing spaces",
+    "The native non-Unix allocator bootstrap currently rejects unset defaults",
+    "The Functions host shutdown currently invokes the Unix kill utility"
+  ],
+  "requiredPlatforms": {
+    "darwin-arm64": "macos-15",
+    "darwin-x64": "macos-15-intel",
+    "linux-x64": "ubuntu-24.04",
+    "linux-arm64": "ubuntu-24.04-arm",
+    "win32-x64": "windows-2025"
+  },
+  "requiredChecks": [
+    "fresh locked native build on each host architecture",
+    "npm and Bun actual-tarball installs with dependency scripts disabled",
+    "paths containing spaces and non-ASCII text",
+    "realtime listeners and UTF-16 documents",
+    "disk/WAL reopen",
+    "full suite Functions call, export, shutdown, import and second export",
+    "checksum validation and explicit unsupported-platform errors"
+  ],
+  "localControlDesignNotFirebaseProtocol": {
+    "enabledOnlyForOwnedPipe": "FIRESIDE_CONTROL_STDIN=1",
+    "shutdownLine": "FIRESIDE_SHUTDOWN\n",
+    "eof": "request graceful shutdown when launcher disconnects",
+    "limits": "one bounded line; no network endpoint or arbitrary command execution"
+  },
+  "acceptanceBoundary": "Previous acceptance applies only to its tested engine; portability checks do not claim new endurance acceptance or universal OS support."
+}

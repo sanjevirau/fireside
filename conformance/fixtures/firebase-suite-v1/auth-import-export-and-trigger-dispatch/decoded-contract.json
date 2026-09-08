@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "fixtureSet": "auth-import-export-and-trigger-dispatch",
+  "target": "official-firebase-tools-auth-emulator",
+  "targetVersion": "15.22.0",
+  "operationCount": 7,
+  "operations": [
+    {
+      "id": "emulator-config-before",
+      "method": "GET",
+      "path": "/emulator/v1/projects/demo-fireside-phase4-auth-oracle/config",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "emulator-config-update",
+      "method": "PATCH",
+      "path": "/emulator/v1/projects/demo-fireside-phase4-auth-oracle/config",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "accounts-json-batch-import",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-phase4-auth-oracle/accounts:batchCreate",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "accounts-json-batch-export",
+      "method": "GET",
+      "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-phase4-auth-oracle/accounts:batchGet?maxResults=1000",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "admin-create-user",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-phase4-auth-oracle/accounts",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "admin-delete-user",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-phase4-auth-oracle/accounts:delete",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "emulator-delete-all-accounts",
+      "method": "DELETE",
+      "path": "/emulator/v1/projects/demo-fireside-phase4-auth-oracle/accounts",
+      "status": 200,
+      "responseContentType": "application/json"
+    }
+  ],
+  "invariants": {
+    "batchImportDispatchCount": 0,
+    "lifecycleDispatchCount": 2,
+    "capturedDispatchCount": 2,
+    "batchImportTriggersCreateEvents": false,
+    "lifecycleActions": [
+      "create",
+      "delete"
+    ],
+    "dispatchEndpoint": "/functions/projects/demo-fireside-phase4-auth-oracle/trigger_multicast"
+  }
+}

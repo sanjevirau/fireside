@@ -1,0 +1,4300 @@
+{
+  "schemaVersion": 1,
+  "metadata": {
+    "hypothesis": "A second browser client may update a server document absent from its local cache",
+    "target": "production-cloud-firestore",
+    "targetVersion": "production-2026-08-31",
+    "sdk": "firebase@12.18.0",
+    "recordedAt": "2026-08-31T16:42:43.714Z",
+    "transport": "web-channel"
+  },
+  "exchanges": [
+    {
+      "sequence": 1,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=78937&CVER=22&X-HTTP-Session-Id=gsessionid&zx=k4i379dxvmqk&t=1",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "615"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": "aGVhZGVycz1YLUdvb2ctQXBpLUNsaWVudCUzQWdsLWpzJTJGK2ZpcmUlMkYxMi4xOC4wJTBEJTBBQ29udGVudC1UeXBlJTNBdGV4dCUyRnBsYWluJTBEJTBBWC1GaXJlYmFzZS1HTVBJRCUzQTElM0ExMjM0NTY3ODklM0F3ZWIlM0FmaXJlc2lkZS13ZWJjaGFubmVsLWNhcHR1cmUlMEQlMEFBdXRob3JpemF0aW9uJTNBJTVCUkVEQUNURUQlNUQlMEQlMEF4LWdvb2ctYXBpLWtleSUzQSU1QlJFREFDVEVEJTVEJTBEJTBBJmNvdW50PTEmb2ZzPTAmcmVxMF9fX2RhdGFfXz0lN0IlMjJkYXRhYmFzZSUyMiUzQSUyMnByb2plY3RzJTJGZmlyZXNpZGUtY29uZm9ybWFuY2UlMkZkYXRhYmFzZXMlMkYlMjhkZWZhdWx0JTI5JTIyJTdE"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "x-client-wire-protocol",
+            "value": "h2"
+          },
+          {
+            "name": "x-http-session-id",
+            "value": "CyN3Z1fSUnIALrZjODTSNPmnLvHuygD40AQtod3kGuyHSdRem0zVGQ"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:45 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "access-control-expose-headers",
+            "value": "x-client-wire-protocol,x-http-session-id"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "NTEKW1swLFsiYyIsIndmeFhkbm5sLWppeTZsZWtGZGJoRkEiLCIiLDgsMTQsMzAwMDBdXV0K",
+        "bodyChunksBase64": [
+          "NTEKW1swLFsiYyIsIndmeFhkbm5sLWppeTZsZWtGZGJoRkEiLCIiLDgsMTQsMzAwMDBdXV0K"
+        ]
+      }
+    },
+    {
+      "sequence": 2,
+      "request": {
+        "method": "GET",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?gsessionid=CyN3Z1fSUnIALrZjODTSNPmnLvHuygD40AQtod3kGuyHSdRem0zVGQ&VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=rpc&SID=wfxXdnnl-jiy6lekFdbhFA&AID=0&CI=1&TYPE=xmlhttp&zx=w5giyix845x&t=1",
+        "headers": [
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "x-debug-tracking-id",
+            "value": "17035427096111253655;o=0"
+          },
+          {
+            "name": "cache-control",
+            "value": "private, no-store"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:46 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "vary",
+            "value": "Referer,Accept-Encoding"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          }
+        ],
+        "bodyBase64": "NjMKW1sxLFt7CiAgInN0cmVhbUlkIjogIjAiLAogICJzdHJlYW1Ub2tlbiI6ICJHUkJvUWdLQjlMVzEiCn0KXV1d",
+        "bodyChunksBase64": [
+          "NjMKW1sxLFt7CiAgInN0cmVhbUlkIjogIjAiLAogICJzdHJlYW1Ub2tlbiI6ICJHUkJvUWdLQjlMVzEiCn0KXV1d"
+        ]
+      }
+    },
+    {
+      "sequence": 3,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&gsessionid=CyN3Z1fSUnIALrZjODTSNPmnLvHuygD40AQtod3kGuyHSdRem0zVGQ&SID=wfxXdnnl-jiy6lekFdbhFA&RID=78938&AID=1&zx=p3unnyof2bpj&t=1",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "328"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": "Y291bnQ9MSZvZnM9MSZyZXEwX19fZGF0YV9fPSU3QiUyMnN0cmVhbVRva2VuJTIyJTNBJTIyR1JCb1FnS0I5TFcxJTIyJTJDJTIyd3JpdGVzJTIyJTNBJTVCJTdCJTIydXBkYXRlJTIyJTNBJTdCJTIybmFtZSUyMiUzQSUyMnByb2plY3RzJTJGZmlyZXNpZGUtY29uZm9ybWFuY2UlMkZkYXRhYmFzZXMlMkYlMjhkZWZhdWx0JTI5JTJGZG9jdW1lbnRzJTJGZmlyZXNpZGVfd2ViY2hhbm5lbF9jYXB0dXJlJTJGb3JhY2xlLWNyb3NzLWNsaWVudCUyMiUyQyUyMmZpZWxkcyUyMiUzQSU3QiUyMmElMjIlM0ElN0IlMjJzdHJpbmdWYWx1ZSUyMiUzQSUyMmElMjIlN0QlN0QlN0QlN0QlNUQlN0Q="
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:47 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "OApbMCwxLDddCg==",
+        "bodyChunksBase64": [
+          "OApbMCwxLDddCg=="
+        ]
+      }
+    },
+    {
+      "sequence": 4,
+      "request": {
+        "method": "GET",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?gsessionid=CyN3Z1fSUnIALrZjODTSNPmnLvHuygD40AQtod3kGuyHSdRem0zVGQ&VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=rpc&SID=wfxXdnnl-jiy6lekFdbhFA&AID=1&CI=1&TYPE=xmlhttp&zx=yt91879updzp&t=1",
+        "headers": [
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "cache-control",
+            "value": "private, no-store"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:47 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "MTQKW1syLFsibm9vcCJdXV0xODIKW1szLFt7CiAgInN0cmVhbVRva2VuIjogIkVBRVpFR2hDQW9IMHRiVT0iLAogICJ3cml0ZVJlc3VsdHMiOiBbCiAgICB7CiAgICAgICJ1cGRhdGVUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NDcuMDY1ODY0WiIKICAgIH0KICBdLAogICJjb21taXRUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NDcuMDY1ODY0WiIKfQpdXV0=",
+        "bodyChunksBase64": [
+          "MTQKW1syLFsibm9vcCJdXV0=",
+          "MTgyCltbMyxbewogICJzdHJlYW1Ub2tlbiI6ICJFQUVaRUdoQ0FvSDB0YlU9IiwKICAid3JpdGVSZXN1bHRzIjogWwogICAgewogICAgICAidXBkYXRlVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ3LjA2NTg2NFoiCiAgICB9CiAgXSwKICAiY29tbWl0VGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ3LjA2NTg2NFoiCn0KXV1d"
+        ]
+      }
+    },
+    {
+      "sequence": 5,
+      "request": {
+        "method": "GET",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?gsessionid=CyN3Z1fSUnIALrZjODTSNPmnLvHuygD40AQtod3kGuyHSdRem0zVGQ&VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=rpc&SID=wfxXdnnl-jiy6lekFdbhFA&AID=3&CI=1&TYPE=xmlhttp&zx=ke925e1ty4z6&t=1",
+        "headers": [
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "cache-control",
+            "value": "private, no-store"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:47 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "MTQKW1s0LFsibm9vcCJdXV0=",
+        "bodyChunksBase64": [
+          "MTQKW1s0LFsibm9vcCJdXV0="
+        ]
+      }
+    },
+    {
+      "sequence": 6,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=30406&CVER=22&X-HTTP-Session-Id=gsessionid&zx=qin7d5wmpxww&t=1",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "622"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": "aGVhZGVycz1YLUdvb2ctQXBpLUNsaWVudCUzQWdsLWpzJTJGK2ZpcmUlMkYxMi4xOC4wJTBEJTBBQ29udGVudC1UeXBlJTNBdGV4dCUyRnBsYWluJTBEJTBBWC1GaXJlYmFzZS1HTVBJRCUzQTElM0ExMjM0NTY3ODklM0F3ZWIlM0FmaXJlc2lkZS13ZWJjaGFubmVsLWNhcHR1cmUtcmVhZGVyJTBEJTBBQXV0aG9yaXphdGlvbiUzQSU1QlJFREFDVEVEJTVEJTBEJTBBeC1nb29nLWFwaS1rZXklM0ElNUJSRURBQ1RFRCU1RCUwRCUwQSZjb3VudD0xJm9mcz0wJnJlcTBfX19kYXRhX189JTdCJTIyZGF0YWJhc2UlMjIlM0ElMjJwcm9qZWN0cyUyRmZpcmVzaWRlLWNvbmZvcm1hbmNlJTJGZGF0YWJhc2VzJTJGJTI4ZGVmYXVsdCUyOSUyMiU3RA=="
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "x-client-wire-protocol",
+            "value": "h2"
+          },
+          {
+            "name": "x-http-session-id",
+            "value": "pskfWQxkOL6ZMqgfwo_y9JgrIzQbStCBcwf0o10T45vVslD6VEdRww"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:47 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "access-control-expose-headers",
+            "value": "x-client-wire-protocol,x-http-session-id"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "NTEKW1swLFsiYyIsIno1d2YyOUtTZS1ERWFObFFPblpXTmciLCIiLDgsMTQsMzAwMDBdXV0K",
+        "bodyChunksBase64": [
+          "NTEKW1swLFsiYyIsIno1d2YyOUtTZS1ERWFObFFPblpXTmciLCIiLDgsMTQsMzAwMDBdXV0K"
+        ]
+      }
+    },
+    {
+      "sequence": 7,
+      "request": {
+        "method": "GET",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?gsessionid=pskfWQxkOL6ZMqgfwo_y9JgrIzQbStCBcwf0o10T45vVslD6VEdRww&VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=rpc&SID=z5wf29KSe-DEaNlQOnZWNg&AID=0&CI=1&TYPE=xmlhttp&zx=l7x733yop1k9&t=1",
+        "headers": [
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "x-debug-tracking-id",
+            "value": "8352006843654867535;o=0"
+          },
+          {
+            "name": "cache-control",
+            "value": "private, no-store"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:48 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "vary",
+            "value": "Referer,Accept-Encoding"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          }
+        ],
+        "bodyBase64": "NjMKW1sxLFt7CiAgInN0cmVhbUlkIjogIjAiLAogICJzdHJlYW1Ub2tlbiI6ICJHUkJvUWdLQjlMVzEiCn0KXV1d",
+        "bodyChunksBase64": [
+          "NjMKW1sxLFt7CiAgInN0cmVhbUlkIjogIjAiLAogICJzdHJlYW1Ub2tlbiI6ICJHUkJvUWdLQjlMVzEiCn0KXV1d"
+        ]
+      }
+    },
+    {
+      "sequence": 8,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&gsessionid=pskfWQxkOL6ZMqgfwo_y9JgrIzQbStCBcwf0o10T45vVslD6VEdRww&SID=z5wf29KSe-DEaNlQOnZWNg&RID=30407&AID=1&zx=zbcz7oahioij&t=1",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "440"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": "Y291bnQ9MSZvZnM9MSZyZXEwX19fZGF0YV9fPSU3QiUyMnN0cmVhbVRva2VuJTIyJTNBJTIyR1JCb1FnS0I5TFcxJTIyJTJDJTIyd3JpdGVzJTIyJTNBJTVCJTdCJTIydXBkYXRlJTIyJTNBJTdCJTIybmFtZSUyMiUzQSUyMnByb2plY3RzJTJGZmlyZXNpZGUtY29uZm9ybWFuY2UlMkZkYXRhYmFzZXMlMkYlMjhkZWZhdWx0JTI5JTJGZG9jdW1lbnRzJTJGZmlyZXNpZGVfd2ViY2hhbm5lbF9jYXB0dXJlJTJGb3JhY2xlLWNyb3NzLWNsaWVudCUyMiUyQyUyMmZpZWxkcyUyMiUzQSU3QiUyMmIlMjIlM0ElN0IlMjJzdHJpbmdWYWx1ZSUyMiUzQSUyMmIlMjIlN0QlN0QlN0QlMkMlMjJ1cGRhdGVNYXNrJTIyJTNBJTdCJTIyZmllbGRQYXRocyUyMiUzQSU1QiUyMmIlMjIlNUQlN0QlMkMlMjJjdXJyZW50RG9jdW1lbnQlMjIlM0ElN0IlMjJleGlzdHMlMjIlM0F0cnVlJTdEJTdEJTVEJTdE"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:48 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "OApbMCwxLDddCg==",
+        "bodyChunksBase64": [
+          "OApbMCwxLDddCg=="
+        ]
+      }
+    },
+    {
+      "sequence": 9,
+      "request": {
+        "method": "GET",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?gsessionid=pskfWQxkOL6ZMqgfwo_y9JgrIzQbStCBcwf0o10T45vVslD6VEdRww&VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=rpc&SID=z5wf29KSe-DEaNlQOnZWNg&AID=1&CI=1&TYPE=xmlhttp&zx=qmamxr3sj3ob&t=1",
+        "headers": [
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "cache-control",
+            "value": "private, no-store"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:48 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "MTQKW1syLFsibm9vcCJdXV0xODIKW1szLFt7CiAgInN0cmVhbVRva2VuIjogIkVBRVpFR2hDQW9IMHRiVT0iLAogICJ3cml0ZVJlc3VsdHMiOiBbCiAgICB7CiAgICAgICJ1cGRhdGVUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NDguOTMzNzY4WiIKICAgIH0KICBdLAogICJjb21taXRUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NDguOTMzNzY4WiIKfQpdXV0=",
+        "bodyChunksBase64": [
+          "MTQKW1syLFsibm9vcCJdXV0=",
+          "MTgyCltbMyxbewogICJzdHJlYW1Ub2tlbiI6ICJFQUVaRUdoQ0FvSDB0YlU9IiwKICAid3JpdGVSZXN1bHRzIjogWwogICAgewogICAgICAidXBkYXRlVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ4LjkzMzc2OFoiCiAgICB9CiAgXSwKICAiY29tbWl0VGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ4LjkzMzc2OFoiCn0KXV1d"
+        ]
+      }
+    },
+    {
+      "sequence": 10,
+      "request": {
+        "method": "GET",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?gsessionid=pskfWQxkOL6ZMqgfwo_y9JgrIzQbStCBcwf0o10T45vVslD6VEdRww&VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=rpc&SID=z5wf29KSe-DEaNlQOnZWNg&AID=3&CI=1&TYPE=xmlhttp&zx=1lao0ontddqy&t=1",
+        "headers": [
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "cache-control",
+            "value": "private, no-store"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:49 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "MTQKW1s0LFsibm9vcCJdXV0=",
+        "bodyChunksBase64": [
+          "MTQKW1s0LFsibm9vcCJdXV0="
+        ]
+      }
+    },
+    {
+      "sequence": 11,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=15768&CVER=22&X-HTTP-Session-Id=gsessionid&zx=oo39xyrgu38p&t=1",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "846"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": "aGVhZGVycz1YLUdvb2ctQXBpLUNsaWVudCUzQWdsLWpzJTJGK2ZpcmUlMkYxMi4xOC4wJTBEJTBBQ29udGVudC1UeXBlJTNBdGV4dCUyRnBsYWluJTBEJTBBWC1GaXJlYmFzZS1HTVBJRCUzQTElM0ExMjM0NTY3ODklM0F3ZWIlM0FmaXJlc2lkZS13ZWJjaGFubmVsLWNhcHR1cmUtcmVhZGVyJTBEJTBBQXV0aG9yaXphdGlvbiUzQSU1QlJFREFDVEVEJTVEJTBEJTBBeC1nb29nLWFwaS1rZXklM0ElNUJSRURBQ1RFRCU1RCUwRCUwQSZjb3VudD0xJm9mcz0wJnJlcTBfX19kYXRhX189JTdCJTIyZGF0YWJhc2UlMjIlM0ElMjJwcm9qZWN0cyUyRmZpcmVzaWRlLWNvbmZvcm1hbmNlJTJGZGF0YWJhc2VzJTJGJTI4ZGVmYXVsdCUyOSUyMiUyQyUyMmFkZFRhcmdldCUyMiUzQSU3QiUyMmRvY3VtZW50cyUyMiUzQSU3QiUyMmRvY3VtZW50cyUyMiUzQSU1QiUyMnByb2plY3RzJTJGZmlyZXNpZGUtY29uZm9ybWFuY2UlMkZkYXRhYmFzZXMlMkYlMjhkZWZhdWx0JTI5JTJGZG9jdW1lbnRzJTJGZmlyZXNpZGVfd2ViY2hhbm5lbF9jYXB0dXJlJTJGb3JhY2xlLWNyb3NzLWNsaWVudCUyMiU1RCU3RCUyQyUyMnRhcmdldElkJTIyJTNBMTAwMiU3RCU3RA=="
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "x-client-wire-protocol",
+            "value": "h2"
+          },
+          {
+            "name": "x-http-session-id",
+            "value": "YHO5PM4G7YRJ4CiaXZ-iv7LGuhEF8LXnFxOatOiThHaR4f4kP8MDAA"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:49 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "access-control-expose-headers",
+            "value": "x-client-wire-protocol,x-http-session-id"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "NTEKW1swLFsiYyIsIm41a1R1Q2xlTGp6RHZJSXMxMkY0cHciLCIiLDgsMTQsMzAwMDBdXV0K",
+        "bodyChunksBase64": [
+          "NTEKW1swLFsiYyIsIm41a1R1Q2xlTGp6RHZJSXMxMkY0cHciLCIiLDgsMTQsMzAwMDBdXV0K"
+        ]
+      }
+    },
+    {
+      "sequence": 12,
+      "request": {
+        "method": "GET",
+        "uri": "/google.firestore.v1.Firestore/Listen/channel?gsessionid=YHO5PM4G7YRJ4CiaXZ-iv7LGuhEF8LXnFxOatOiThHaR4f4kP8MDAA&VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=rpc&SID=n5kTuCleLjzDvIIs12F4pw&AID=0&CI=1&TYPE=xmlhttp&zx=eya64gyxjzkm&t=1",
+        "headers": [
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "x-debug-tracking-id",
+            "value": "18356125405778137979;o=0"
+          },
+          {
+            "name": "cache-control",
+            "value": "private, no-store"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:49 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "vary",
+            "value": "Referer,Accept-Encoding"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          }
+        ],
+        "bodyBase64": "MTExNQpbWzEsW3sKICAidGFyZ2V0Q2hhbmdlIjogewogICAgInRhcmdldENoYW5nZVR5cGUiOiAiQUREIiwKICAgICJ0YXJnZXRJZHMiOiBbCiAgICAgIDEwMDIKICAgIF0KICB9Cn0KXV0sWzIsW3sKICAiZG9jdW1lbnRDaGFuZ2UiOiB7CiAgICAiZG9jdW1lbnQiOiB7CiAgICAgICJuYW1lIjogInByb2plY3RzL2ZpcmVzaWRlLWNvbmZvcm1hbmNlL2RhdGFiYXNlcy8oZGVmYXVsdCkvZG9jdW1lbnRzL2ZpcmVzaWRlX3dlYmNoYW5uZWxfY2FwdHVyZS9vcmFjbGUtY3Jvc3MtY2xpZW50IiwKICAgICAgImZpZWxkcyI6IHsKICAgICAgICAiYSI6IHsKICAgICAgICAgICJzdHJpbmdWYWx1ZSI6ICJhIgogICAgICAgIH0sCiAgICAgICAgImIiOiB7CiAgICAgICAgICAic3RyaW5nVmFsdWUiOiAiYiIKICAgICAgICB9CiAgICAgIH0sCiAgICAgICJjcmVhdGVUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NDcuMDY1ODY0WiIsCiAgICAgICJ1cGRhdGVUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NDguOTMzNzY4WiIKICAgIH0sCiAgICAidGFyZ2V0SWRzIjogWwogICAgICAxMDAyCiAgICBdCiAgfQp9Cl1dLFszLFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJ0YXJnZXRDaGFuZ2VUeXBlIjogIkNVUlJFTlQiLAogICAgInRhcmdldElkcyI6IFsKICAgICAgMTAwMgogICAgXSwKICAgICJyZXN1bWVUb2tlbiI6ICJDZ2tJaUo3YzhLZkxsZ009IiwKICAgICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ5LjI2MDgwOFoiCiAgfQp9Cl1dLFs0LFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJyZXN1bWVUb2tlbiI6ICJDZ2tJaUo3YzhLZkxsZ009IiwKICAgICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ5LjI2MDgwOFoiCiAgfQp9Cl1dLFs1LFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJyZXN1bWVUb2tlbiI6ICJDZ2tJNXBMZjhLZkxsZ009IiwKICAgICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ5LjMwODUxOFoiCiAgfQp9Cl1dLFs2LFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJyZXN1bWVUb2tlbiI6ICJDZ2tJbStEbDhLZkxsZ009IiwKICAgICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ5LjQxNjczMVoiCiAgfQp9Cl1dXQ==",
+        "bodyChunksBase64": [
+          "MTExNQpbWzEsW3sKICAidGFyZ2V0Q2hhbmdlIjogewogICAgInRhcmdldENoYW5nZVR5cGUiOiAiQUREIiwKICAgICJ0YXJnZXRJZHMiOiBbCiAgICAgIDEwMDIKICAgIF0KICB9Cn0KXV0sWzIsW3sKICAiZG9jdW1lbnRDaGFuZ2UiOiB7CiAgICAiZG9jdW1lbnQiOiB7CiAgICAgICJuYW1lIjogInByb2plY3RzL2ZpcmVzaWRlLWNvbmZvcm1hbmNlL2RhdGFiYXNlcy8oZGVmYXVsdCkvZG9jdW1lbnRzL2ZpcmVzaWRlX3dlYmNoYW5uZWxfY2FwdHVyZS9vcmFjbGUtY3Jvc3MtY2xpZW50IiwKICAgICAgImZpZWxkcyI6IHsKICAgICAgICAiYSI6IHsKICAgICAgICAgICJzdHJpbmdWYWx1ZSI6ICJhIgogICAgICAgIH0sCiAgICAgICAgImIiOiB7CiAgICAgICAgICAic3RyaW5nVmFsdWUiOiAiYiIKICAgICAgICB9CiAgICAgIH0sCiAgICAgICJjcmVhdGVUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NDcuMDY1ODY0WiIsCiAgICAgICJ1cGRhdGVUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NDguOTMzNzY4WiIKICAgIH0sCiAgICAidGFyZ2V0SWRzIjogWwogICAgICAxMDAyCiAgICBdCiAgfQp9Cl1dLFszLFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJ0YXJnZXRDaGFuZ2VUeXBlIjogIkNVUlJFTlQiLAogICAgInRhcmdldElkcyI6IFsKICAgICAgMTAwMgogICAgXSwKICAgICJyZXN1bWVUb2tlbiI6ICJDZ2tJaUo3YzhLZkxsZ009IiwKICAgICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ5LjI2MDgwOFoiCiAgfQp9Cl1dLFs0LFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJyZXN1bWVUb2tlbiI6ICJDZ2tJaUo3YzhLZkxsZ009IiwKICAgICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ5LjI2MDgwOFoiCiAgfQp9Cl1dLFs1LFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJyZXN1bWVUb2tlbiI6ICJDZ2tJNXBMZjhLZkxsZ009IiwKICAgICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ5LjMwODUxOFoiCiAgfQp9Cl1dLFs2LFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJyZXN1bWVUb2tlbiI6ICJDZ2tJbStEbDhLZkxsZ009IiwKICAgICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ5LjQxNjczMVoiCiAgfQp9Cl1dXQ=="
+        ]
+      }
+    },
+    {
+      "sequence": 13,
+      "request": {
+        "method": "GET",
+        "uri": "/google.firestore.v1.Firestore/Listen/channel?gsessionid=YHO5PM4G7YRJ4CiaXZ-iv7LGuhEF8LXnFxOatOiThHaR4f4kP8MDAA&VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=rpc&SID=n5kTuCleLjzDvIIs12F4pw&AID=6&CI=1&TYPE=xmlhttp&zx=dly4ie8ucb3p&t=1",
+        "headers": [
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "cache-control",
+            "value": "private, no-store"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:49 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "MTQKW1s3LFsibm9vcCJdXV0xMDYKW1s4LFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJ0YXJnZXRDaGFuZ2VUeXBlIjogIlJFTU9WRSIsCiAgICAidGFyZ2V0SWRzIjogWwogICAgICAxMDAyCiAgICBdCiAgfQp9Cl1dXQ==",
+        "bodyChunksBase64": [
+          "MTQKW1s3LFsibm9vcCJdXV0=",
+          "MTA2CltbOCxbewogICJ0YXJnZXRDaGFuZ2UiOiB7CiAgICAidGFyZ2V0Q2hhbmdlVHlwZSI6ICJSRU1PVkUiLAogICAgInRhcmdldElkcyI6IFsKICAgICAgMTAwMgogICAgXQogIH0KfQpdXV0="
+        ]
+      }
+    },
+    {
+      "sequence": 14,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&gsessionid=YHO5PM4G7YRJ4CiaXZ-iv7LGuhEF8LXnFxOatOiThHaR4f4kP8MDAA&SID=n5kTuCleLjzDvIIs12F4pw&RID=15769&AID=6&zx=kwfuckay60f4&t=1",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "140"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": "Y291bnQ9MSZvZnM9MSZyZXEwX19fZGF0YV9fPSU3QiUyMmRhdGFiYXNlJTIyJTNBJTIycHJvamVjdHMlMkZmaXJlc2lkZS1jb25mb3JtYW5jZSUyRmRhdGFiYXNlcyUyRiUyOGRlZmF1bHQlMjklMjIlMkMlMjJyZW1vdmVUYXJnZXQlMjIlM0ExMDAyJTdE"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:49 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "OApbMSw3LDddCg==",
+        "bodyChunksBase64": [
+          "OApbMSw3LDddCg=="
+        ]
+      }
+    },
+    {
+      "sequence": 15,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=1853&CVER=22&X-HTTP-Session-Id=gsessionid&zx=ecdoaumu6pyq&t=1",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "839"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": "aGVhZGVycz1YLUdvb2ctQXBpLUNsaWVudCUzQWdsLWpzJTJGK2ZpcmUlMkYxMi4xOC4wJTBEJTBBQ29udGVudC1UeXBlJTNBdGV4dCUyRnBsYWluJTBEJTBBWC1GaXJlYmFzZS1HTVBJRCUzQTElM0ExMjM0NTY3ODklM0F3ZWIlM0FmaXJlc2lkZS13ZWJjaGFubmVsLWNhcHR1cmUlMEQlMEFBdXRob3JpemF0aW9uJTNBJTVCUkVEQUNURUQlNUQlMEQlMEF4LWdvb2ctYXBpLWtleSUzQSU1QlJFREFDVEVEJTVEJTBEJTBBJmNvdW50PTEmb2ZzPTAmcmVxMF9fX2RhdGFfXz0lN0IlMjJkYXRhYmFzZSUyMiUzQSUyMnByb2plY3RzJTJGZmlyZXNpZGUtY29uZm9ybWFuY2UlMkZkYXRhYmFzZXMlMkYlMjhkZWZhdWx0JTI5JTIyJTJDJTIyYWRkVGFyZ2V0JTIyJTNBJTdCJTIyZG9jdW1lbnRzJTIyJTNBJTdCJTIyZG9jdW1lbnRzJTIyJTNBJTVCJTIycHJvamVjdHMlMkZmaXJlc2lkZS1jb25mb3JtYW5jZSUyRmRhdGFiYXNlcyUyRiUyOGRlZmF1bHQlMjklMkZkb2N1bWVudHMlMkZmaXJlc2lkZV93ZWJjaGFubmVsX2NhcHR1cmUlMkZvcmFjbGUtY3Jvc3MtY2xpZW50JTIyJTVEJTdEJTJDJTIydGFyZ2V0SWQlMjIlM0ExMDAyJTdEJTdE"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "x-client-wire-protocol",
+            "value": "h2"
+          },
+          {
+            "name": "x-http-session-id",
+            "value": "X3L76P7bSMowE7HRkNCN6iL_LpiuAgcox4dJxhdJpz_0xN2VdAC7fg"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:49 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "access-control-expose-headers",
+            "value": "x-client-wire-protocol,x-http-session-id"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "NTEKW1swLFsiYyIsIjVsS1hqajI5TGJCN2NiUjJjclRSbWciLCIiLDgsMTQsMzAwMDBdXV0K",
+        "bodyChunksBase64": [
+          "NTEKW1swLFsiYyIsIjVsS1hqajI5TGJCN2NiUjJjclRSbWciLCIiLDgsMTQsMzAwMDBdXV0K"
+        ]
+      }
+    },
+    {
+      "sequence": 16,
+      "request": {
+        "method": "GET",
+        "uri": "/google.firestore.v1.Firestore/Listen/channel?gsessionid=X3L76P7bSMowE7HRkNCN6iL_LpiuAgcox4dJxhdJpz_0xN2VdAC7fg&VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=rpc&SID=5lKXjj29LbB7cbR2crTRmg&AID=0&CI=1&TYPE=xmlhttp&zx=l3vy6r9n3cfp&t=1",
+        "headers": [
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "x-debug-tracking-id",
+            "value": "6346263901067577746;o=0"
+          },
+          {
+            "name": "cache-control",
+            "value": "private, no-store"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:49 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "vary",
+            "value": "Referer,Accept-Encoding"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          }
+        ],
+        "bodyBase64": "MTExNQpbWzEsW3sKICAidGFyZ2V0Q2hhbmdlIjogewogICAgInRhcmdldENoYW5nZVR5cGUiOiAiQUREIiwKICAgICJ0YXJnZXRJZHMiOiBbCiAgICAgIDEwMDIKICAgIF0KICB9Cn0KXV0sWzIsW3sKICAiZG9jdW1lbnRDaGFuZ2UiOiB7CiAgICAiZG9jdW1lbnQiOiB7CiAgICAgICJuYW1lIjogInByb2plY3RzL2ZpcmVzaWRlLWNvbmZvcm1hbmNlL2RhdGFiYXNlcy8oZGVmYXVsdCkvZG9jdW1lbnRzL2ZpcmVzaWRlX3dlYmNoYW5uZWxfY2FwdHVyZS9vcmFjbGUtY3Jvc3MtY2xpZW50IiwKICAgICAgImZpZWxkcyI6IHsKICAgICAgICAiYSI6IHsKICAgICAgICAgICJzdHJpbmdWYWx1ZSI6ICJhIgogICAgICAgIH0sCiAgICAgICAgImIiOiB7CiAgICAgICAgICAic3RyaW5nVmFsdWUiOiAiYiIKICAgICAgICB9CiAgICAgIH0sCiAgICAgICJjcmVhdGVUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NDcuMDY1ODY0WiIsCiAgICAgICJ1cGRhdGVUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NDguOTMzNzY4WiIKICAgIH0sCiAgICAidGFyZ2V0SWRzIjogWwogICAgICAxMDAyCiAgICBdCiAgfQp9Cl1dLFszLFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJ0YXJnZXRDaGFuZ2VUeXBlIjogIkNVUlJFTlQiLAogICAgInRhcmdldElkcyI6IFsKICAgICAgMTAwMgogICAgXSwKICAgICJyZXN1bWVUb2tlbiI6ICJDZ2tJamJQNjhLZkxsZ009IiwKICAgICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ5Ljc1NTAyMVoiCiAgfQp9Cl1dLFs0LFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJyZXN1bWVUb2tlbiI6ICJDZ2tJamJQNjhLZkxsZ009IiwKICAgICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ5Ljc1NTAyMVoiCiAgfQp9Cl1dLFs1LFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJyZXN1bWVUb2tlbiI6ICJDZ2tJOTQvOThLZkxsZ009IiwKICAgICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ5Ljc5OTY3MVoiCiAgfQp9Cl1dLFs2LFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJyZXN1bWVUb2tlbiI6ICJDZ2tJb2M3LzhLZkxsZ009IiwKICAgICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ5Ljg0MDQxN1oiCiAgfQp9Cl1dXQ==",
+        "bodyChunksBase64": [
+          "MTExNQpbWzEsW3sKICAidGFyZ2V0Q2hhbmdlIjogewogICAgInRhcmdldENoYW5nZVR5cGUiOiAiQUREIiwKICAgICJ0YXJnZXRJZHMiOiBbCiAgICAgIDEwMDIKICAgIF0KICB9Cn0KXV0sWzIsW3sKICAiZG9jdW1lbnRDaGFuZ2UiOiB7CiAgICAiZG9jdW1lbnQiOiB7CiAgICAgICJuYW1lIjogInByb2plY3RzL2ZpcmVzaWRlLWNvbmZvcm1hbmNlL2RhdGFiYXNlcy8oZGVmYXVsdCkvZG9jdW1lbnRzL2ZpcmVzaWRlX3dlYmNoYW5uZWxfY2FwdHVyZS9vcmFjbGUtY3Jvc3MtY2xpZW50IiwKICAgICAgImZpZWxkcyI6IHsKICAgICAgICAiYSI6IHsKICAgICAgICAgICJzdHJpbmdWYWx1ZSI6ICJhIgogICAgICAgIH0sCiAgICAgICAgImIiOiB7CiAgICAgICAgICAic3RyaW5nVmFsdWUiOiAiYiIKICAgICAgICB9CiAgICAgIH0sCiAgICAgICJjcmVhdGVUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NDcuMDY1ODY0WiIsCiAgICAgICJ1cGRhdGVUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NDguOTMzNzY4WiIKICAgIH0sCiAgICAidGFyZ2V0SWRzIjogWwogICAgICAxMDAyCiAgICBdCiAgfQp9Cl1dLFszLFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJ0YXJnZXRDaGFuZ2VUeXBlIjogIkNVUlJFTlQiLAogICAgInRhcmdldElkcyI6IFsKICAgICAgMTAwMgogICAgXSwKICAgICJyZXN1bWVUb2tlbiI6ICJDZ2tJamJQNjhLZkxsZ009IiwKICAgICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ5Ljc1NTAyMVoiCiAgfQp9Cl1dLFs0LFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJyZXN1bWVUb2tlbiI6ICJDZ2tJamJQNjhLZkxsZ009IiwKICAgICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ5Ljc1NTAyMVoiCiAgfQp9Cl1dLFs1LFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJyZXN1bWVUb2tlbiI6ICJDZ2tJOTQvOThLZkxsZ009IiwKICAgICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ5Ljc5OTY3MVoiCiAgfQp9Cl1dLFs2LFt7CiAgInRhcmdldENoYW5nZSI6IHsKICAgICJyZXN1bWVUb2tlbiI6ICJDZ2tJb2M3LzhLZkxsZ009IiwKICAgICJyZWFkVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjQ5Ljg0MDQxN1oiCiAgfQp9Cl1dXQ=="
+        ]
+      }
+    },
+    {
+      "sequence": 19,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&gsessionid=pskfWQxkOL6ZMqgfwo_y9JgrIzQbStCBcwf0o10T45vVslD6VEdRww&SID=z5wf29KSe-DEaNlQOnZWNg&RID=30408&TYPE=terminate&zx=lc6fzbsbvnxd",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "0"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain;charset=UTF-8"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "no-cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "cross-origin-resource-policy",
+            "value": "cross-origin"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:50 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "content-length",
+            "value": "0"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          }
+        ],
+        "bodyBase64": null
+      }
+    },
+    {
+      "sequence": 21,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&gsessionid=YHO5PM4G7YRJ4CiaXZ-iv7LGuhEF8LXnFxOatOiThHaR4f4kP8MDAA&SID=n5kTuCleLjzDvIIs12F4pw&RID=15770&TYPE=terminate&zx=f9prvlcnhysj",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "0"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain;charset=UTF-8"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "no-cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "cross-origin-resource-policy",
+            "value": "cross-origin"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:50 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "content-length",
+            "value": "0"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          }
+        ],
+        "bodyBase64": null
+      }
+    },
+    {
+      "sequence": 22,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&gsessionid=CyN3Z1fSUnIALrZjODTSNPmnLvHuygD40AQtod3kGuyHSdRem0zVGQ&SID=wfxXdnnl-jiy6lekFdbhFA&RID=78939&TYPE=terminate&zx=usfk0uszd5z0",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "0"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain;charset=UTF-8"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "no-cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "cross-origin-resource-policy",
+            "value": "cross-origin"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:50 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "content-length",
+            "value": "0"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          }
+        ],
+        "bodyBase64": null
+      }
+    },
+    {
+      "sequence": 23,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&gsessionid=X3L76P7bSMowE7HRkNCN6iL_LpiuAgcox4dJxhdJpz_0xN2VdAC7fg&SID=5lKXjj29LbB7cbR2crTRmg&RID=1855&TYPE=terminate&zx=mdr5d390i4qn",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "0"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain;charset=UTF-8"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "no-cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "cross-origin-resource-policy",
+            "value": "cross-origin"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:50 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "content-length",
+            "value": "0"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          }
+        ],
+        "bodyBase64": null
+      }
+    },
+    {
+      "sequence": 24,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=26717&CVER=22&X-HTTP-Session-Id=gsessionid&zx=igxzwqkxq62r&t=1",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "615"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": "aGVhZGVycz1YLUdvb2ctQXBpLUNsaWVudCUzQWdsLWpzJTJGK2ZpcmUlMkYxMi4xOC4wJTBEJTBBQ29udGVudC1UeXBlJTNBdGV4dCUyRnBsYWluJTBEJTBBWC1GaXJlYmFzZS1HTVBJRCUzQTElM0ExMjM0NTY3ODklM0F3ZWIlM0FmaXJlc2lkZS13ZWJjaGFubmVsLWNhcHR1cmUlMEQlMEFBdXRob3JpemF0aW9uJTNBJTVCUkVEQUNURUQlNUQlMEQlMEF4LWdvb2ctYXBpLWtleSUzQSU1QlJFREFDVEVEJTVEJTBEJTBBJmNvdW50PTEmb2ZzPTAmcmVxMF9fX2RhdGFfXz0lN0IlMjJkYXRhYmFzZSUyMiUzQSUyMnByb2plY3RzJTJGZmlyZXNpZGUtY29uZm9ybWFuY2UlMkZkYXRhYmFzZXMlMkYlMjhkZWZhdWx0JTI5JTIyJTdE"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "x-client-wire-protocol",
+            "value": "h2"
+          },
+          {
+            "name": "x-http-session-id",
+            "value": "kvVKtkhE59NjXc7ujQlgmYIz5OxJHwuJyWYzv3ToiOq4myXh29WA4A"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:50 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "access-control-expose-headers",
+            "value": "x-client-wire-protocol,x-http-session-id"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "NTEKW1swLFsiYyIsInZKUVlwY1NOQXAyNm84bFE5RnB2TkEiLCIiLDgsMTQsMzAwMDBdXV0K",
+        "bodyChunksBase64": [
+          "NTEKW1swLFsiYyIsInZKUVlwY1NOQXAyNm84bFE5RnB2TkEiLCIiLDgsMTQsMzAwMDBdXV0K"
+        ]
+      }
+    },
+    {
+      "sequence": 25,
+      "request": {
+        "method": "GET",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?gsessionid=kvVKtkhE59NjXc7ujQlgmYIz5OxJHwuJyWYzv3ToiOq4myXh29WA4A&VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=rpc&SID=vJQYpcSNAp26o8lQ9FpvNA&AID=0&CI=0&TYPE=xmlhttp&zx=y821lo3qnihl&t=1",
+        "headers": [
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "x-debug-tracking-id",
+            "value": "5075903050502685841;o=0"
+          },
+          {
+            "name": "cache-control",
+            "value": "private, no-store"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:52 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "vary",
+            "value": "Referer,Accept-Encoding"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          }
+        ],
+        "bodyBase64": "NjMKW1sxLFt7CiAgInN0cmVhbUlkIjogIjAiLAogICJzdHJlYW1Ub2tlbiI6ICJHUkJvUWdLQjlMVzEiCn0KXV1dMTgyCltbMixbewogICJzdHJlYW1Ub2tlbiI6ICJFQUVaRUdoQ0FvSDB0YlU9IiwKICAid3JpdGVSZXN1bHRzIjogWwogICAgewogICAgICAidXBkYXRlVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjUyLjI3ODk2N1oiCiAgICB9CiAgXSwKICAiY29tbWl0VGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjUyLjI3ODk2N1oiCn0KXV1d",
+        "bodyChunksBase64": [
+          "NjMKW1sxLFt7CiAgInN0cmVhbUlkIjogIjAiLAogICJzdHJlYW1Ub2tlbiI6ICJHUkJvUWdLQjlMVzEiCn0KXV1d",
+          "MTgyCltbMixbewogICJzdHJlYW1Ub2tlbiI6ICJFQUVaRUdoQ0FvSDB0YlU9IiwKICAid3JpdGVSZXN1bHRzIjogWwogICAgewogICAgICAidXBkYXRlVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjUyLjI3ODk2N1oiCiAgICB9CiAgXSwKICAiY29tbWl0VGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjUyLjI3ODk2N1oiCn0KXV1d"
+        ]
+      }
+    },
+    {
+      "sequence": 26,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&gsessionid=kvVKtkhE59NjXc7ujQlgmYIz5OxJHwuJyWYzv3ToiOq4myXh29WA4A&SID=vJQYpcSNAp26o8lQ9FpvNA&RID=26718&AID=1&zx=e15voyg2me8k&t=1",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "328"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": "Y291bnQ9MSZvZnM9MSZyZXEwX19fZGF0YV9fPSU3QiUyMnN0cmVhbVRva2VuJTIyJTNBJTIyR1JCb1FnS0I5TFcxJTIyJTJDJTIyd3JpdGVzJTIyJTNBJTVCJTdCJTIydXBkYXRlJTIyJTNBJTdCJTIybmFtZSUyMiUzQSUyMnByb2plY3RzJTJGZmlyZXNpZGUtY29uZm9ybWFuY2UlMkZkYXRhYmFzZXMlMkYlMjhkZWZhdWx0JTI5JTJGZG9jdW1lbnRzJTJGZmlyZXNpZGVfd2ViY2hhbm5lbF9jYXB0dXJlJTJGb3JhY2xlLWNyb3NzLWNsaWVudCUyMiUyQyUyMmZpZWxkcyUyMiUzQSU3QiUyMmElMjIlM0ElN0IlMjJzdHJpbmdWYWx1ZSUyMiUzQSUyMmElMjIlN0QlN0QlN0QlN0QlNUQlN0Q="
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:52 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "OApbMSwxLDddCg==",
+        "bodyChunksBase64": [
+          "OApbMSwxLDddCg=="
+        ]
+      }
+    },
+    {
+      "sequence": 27,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=18744&CVER=22&X-HTTP-Session-Id=gsessionid&zx=8g2rr7agtkn3&t=1",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "622"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": "aGVhZGVycz1YLUdvb2ctQXBpLUNsaWVudCUzQWdsLWpzJTJGK2ZpcmUlMkYxMi4xOC4wJTBEJTBBQ29udGVudC1UeXBlJTNBdGV4dCUyRnBsYWluJTBEJTBBWC1GaXJlYmFzZS1HTVBJRCUzQTElM0ExMjM0NTY3ODklM0F3ZWIlM0FmaXJlc2lkZS13ZWJjaGFubmVsLWNhcHR1cmUtcmVhZGVyJTBEJTBBQXV0aG9yaXphdGlvbiUzQSU1QlJFREFDVEVEJTVEJTBEJTBBeC1nb29nLWFwaS1rZXklM0ElNUJSRURBQ1RFRCU1RCUwRCUwQSZjb3VudD0xJm9mcz0wJnJlcTBfX19kYXRhX189JTdCJTIyZGF0YWJhc2UlMjIlM0ElMjJwcm9qZWN0cyUyRmZpcmVzaWRlLWNvbmZvcm1hbmNlJTJGZGF0YWJhc2VzJTJGJTI4ZGVmYXVsdCUyOSUyMiU3RA=="
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "x-client-wire-protocol",
+            "value": "h2"
+          },
+          {
+            "name": "x-http-session-id",
+            "value": "NfwDZu88d7XzkV-uHeOId---CKk1RWbaDyY_kwXxk2OiJDs69y6w4w"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:52 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "access-control-expose-headers",
+            "value": "x-client-wire-protocol,x-http-session-id"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "NTEKW1swLFsiYyIsIlpYOWJ6X1ROMlQyYmNrcTRLbW5teHciLCIiLDgsMTQsMzAwMDBdXV0K",
+        "bodyChunksBase64": [
+          "NTEKW1swLFsiYyIsIlpYOWJ6X1ROMlQyYmNrcTRLbW5teHciLCIiLDgsMTQsMzAwMDBdXV0K"
+        ]
+      }
+    },
+    {
+      "sequence": 28,
+      "request": {
+        "method": "GET",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?gsessionid=NfwDZu88d7XzkV-uHeOId---CKk1RWbaDyY_kwXxk2OiJDs69y6w4w&VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=rpc&SID=ZX9bz_TN2T2bckq4Kmnmxw&AID=0&CI=0&TYPE=xmlhttp&zx=qwn8vmt77b9f&t=1",
+        "headers": [
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "x-debug-tracking-id",
+            "value": "3495482096672828146;o=0"
+          },
+          {
+            "name": "cache-control",
+            "value": "private, no-store"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:53 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "vary",
+            "value": "Referer,Accept-Encoding"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          }
+        ],
+        "bodyBase64": "NjMKW1sxLFt7CiAgInN0cmVhbUlkIjogIjAiLAogICJzdHJlYW1Ub2tlbiI6ICJHUkJvUWdLQjlMVzEiCn0KXV1dMTgyCltbMixbewogICJzdHJlYW1Ub2tlbiI6ICJFQUVaRUdoQ0FvSDB0YlU9IiwKICAid3JpdGVSZXN1bHRzIjogWwogICAgewogICAgICAidXBkYXRlVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjU0LjIzNjc0OVoiCiAgICB9CiAgXSwKICAiY29tbWl0VGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjU0LjIzNjc0OVoiCn0KXV1d",
+        "bodyChunksBase64": [
+          "NjMKW1sxLFt7CiAgInN0cmVhbUlkIjogIjAiLAogICJzdHJlYW1Ub2tlbiI6ICJHUkJvUWdLQjlMVzEiCn0KXV1d",
+          "MTgyCltbMixbewogICJzdHJlYW1Ub2tlbiI6ICJFQUVaRUdoQ0FvSDB0YlU9IiwKICAid3JpdGVSZXN1bHRzIjogWwogICAgewogICAgICAidXBkYXRlVGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjU0LjIzNjc0OVoiCiAgICB9CiAgXSwKICAiY29tbWl0VGltZSI6ICIyMDI2LTA4LTMxVDE2OjQyOjU0LjIzNjc0OVoiCn0KXV1d"
+        ]
+      }
+    },
+    {
+      "sequence": 29,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&gsessionid=NfwDZu88d7XzkV-uHeOId---CKk1RWbaDyY_kwXxk2OiJDs69y6w4w&SID=ZX9bz_TN2T2bckq4Kmnmxw&RID=18745&AID=1&zx=s7xk47a7p9ms&t=1",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "440"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": "Y291bnQ9MSZvZnM9MSZyZXEwX19fZGF0YV9fPSU3QiUyMnN0cmVhbVRva2VuJTIyJTNBJTIyR1JCb1FnS0I5TFcxJTIyJTJDJTIyd3JpdGVzJTIyJTNBJTVCJTdCJTIydXBkYXRlJTIyJTNBJTdCJTIybmFtZSUyMiUzQSUyMnByb2plY3RzJTJGZmlyZXNpZGUtY29uZm9ybWFuY2UlMkZkYXRhYmFzZXMlMkYlMjhkZWZhdWx0JTI5JTJGZG9jdW1lbnRzJTJGZmlyZXNpZGVfd2ViY2hhbm5lbF9jYXB0dXJlJTJGb3JhY2xlLWNyb3NzLWNsaWVudCUyMiUyQyUyMmZpZWxkcyUyMiUzQSU3QiUyMmIlMjIlM0ElN0IlMjJzdHJpbmdWYWx1ZSUyMiUzQSUyMmIlMjIlN0QlN0QlN0QlMkMlMjJ1cGRhdGVNYXNrJTIyJTNBJTdCJTIyZmllbGRQYXRocyUyMiUzQSU1QiUyMmIlMjIlNUQlN0QlMkMlMjJjdXJyZW50RG9jdW1lbnQlMjIlM0ElN0IlMjJleGlzdHMlMjIlM0F0cnVlJTdEJTdEJTVEJTdE"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:54 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "OApbMSwxLDddCg==",
+        "bodyChunksBase64": [
+          "OApbMSwxLDddCg=="
+        ]
+      }
+    },
+    {
+      "sequence": 30,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=26521&CVER=22&X-HTTP-Session-Id=gsessionid&zx=o9249d9qjt6&t=1",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "846"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": "aGVhZGVycz1YLUdvb2ctQXBpLUNsaWVudCUzQWdsLWpzJTJGK2ZpcmUlMkYxMi4xOC4wJTBEJTBBQ29udGVudC1UeXBlJTNBdGV4dCUyRnBsYWluJTBEJTBBWC1GaXJlYmFzZS1HTVBJRCUzQTElM0ExMjM0NTY3ODklM0F3ZWIlM0FmaXJlc2lkZS13ZWJjaGFubmVsLWNhcHR1cmUtcmVhZGVyJTBEJTBBQXV0aG9yaXphdGlvbiUzQSU1QlJFREFDVEVEJTVEJTBEJTBBeC1nb29nLWFwaS1rZXklM0ElNUJSRURBQ1RFRCU1RCUwRCUwQSZjb3VudD0xJm9mcz0wJnJlcTBfX19kYXRhX189JTdCJTIyZGF0YWJhc2UlMjIlM0ElMjJwcm9qZWN0cyUyRmZpcmVzaWRlLWNvbmZvcm1hbmNlJTJGZGF0YWJhc2VzJTJGJTI4ZGVmYXVsdCUyOSUyMiUyQyUyMmFkZFRhcmdldCUyMiUzQSU3QiUyMmRvY3VtZW50cyUyMiUzQSU3QiUyMmRvY3VtZW50cyUyMiUzQSU1QiUyMnByb2plY3RzJTJGZmlyZXNpZGUtY29uZm9ybWFuY2UlMkZkYXRhYmFzZXMlMkYlMjhkZWZhdWx0JTI5JTJGZG9jdW1lbnRzJTJGZmlyZXNpZGVfd2ViY2hhbm5lbF9jYXB0dXJlJTJGb3JhY2xlLWNyb3NzLWNsaWVudCUyMiU1RCU3RCUyQyUyMnRhcmdldElkJTIyJTNBMTAwMiU3RCU3RA=="
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "x-client-wire-protocol",
+            "value": "h2"
+          },
+          {
+            "name": "x-http-session-id",
+            "value": "7aL1w4BSsHnCRuZN-U0-XtEduY6VAUeZXNuvrivjPU8BoDQFns9Yzg"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:54 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "access-control-expose-headers",
+            "value": "x-client-wire-protocol,x-http-session-id"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "NTEKW1swLFsiYyIsIm9WSWtTWEY4LUwwcEZpR19CVVBFMUEiLCIiLDgsMTQsMzAwMDBdXV0K",
+        "bodyChunksBase64": [
+          "NTEKW1swLFsiYyIsIm9WSWtTWEY4LUwwcEZpR19CVVBFMUEiLCIiLDgsMTQsMzAwMDBdXV0K"
+        ]
+      }
+    },
+    {
+      "sequence": 31,
+      "request": {
+        "method": "GET",
+        "uri": "/google.firestore.v1.Firestore/Listen/channel?gsessionid=7aL1w4BSsHnCRuZN-U0-XtEduY6VAUeZXNuvrivjPU8BoDQFns9Yzg&VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=rpc&SID=oVIkSXF8-L0pFiG_BUPE1A&AID=0&CI=0&TYPE=xmlhttp&zx=vjs59lijdgc3&t=1",
+        "headers": [
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "x-debug-tracking-id",
+            "value": "10684859421476378758;o=0"
+          },
+          {
+            "name": "cache-control",
+            "value": "private, no-store"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:55 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "vary",
+            "value": "Referer,Accept-Encoding"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          }
+        ],
+        "bodyBase64": "OTk1CltbMSxbewogICJ0YXJnZXRDaGFuZ2UiOiB7CiAgICAidGFyZ2V0Q2hhbmdlVHlwZSI6ICJBREQiLAogICAgInRhcmdldElkcyI6IFsKICAgICAgMTAwMgogICAgXQogIH0KfQpdXSxbMixbewogICJkb2N1bWVudENoYW5nZSI6IHsKICAgICJkb2N1bWVudCI6IHsKICAgICAgIm5hbWUiOiAicHJvamVjdHMvZmlyZXNpZGUtY29uZm9ybWFuY2UvZGF0YWJhc2VzLyhkZWZhdWx0KS9kb2N1bWVudHMvZmlyZXNpZGVfd2ViY2hhbm5lbF9jYXB0dXJlL29yYWNsZS1jcm9zcy1jbGllbnQiLAogICAgICAiZmllbGRzIjogewogICAgICAgICJhIjogewogICAgICAgICAgInN0cmluZ1ZhbHVlIjogImEiCiAgICAgICAgfSwKICAgICAgICAiYiI6IHsKICAgICAgICAgICJzdHJpbmdWYWx1ZSI6ICJiIgogICAgICAgIH0KICAgICAgfSwKICAgICAgImNyZWF0ZVRpbWUiOiAiMjAyNi0wOC0zMVQxNjo0Mjo0Ny4wNjU4NjRaIiwKICAgICAgInVwZGF0ZVRpbWUiOiAiMjAyNi0wOC0zMVQxNjo0Mjo1NC4yMzY3NDlaIgogICAgfSwKICAgICJ0YXJnZXRJZHMiOiBbCiAgICAgIDEwMDIKICAgIF0KICB9Cn0KXV0sWzMsW3sKICAidGFyZ2V0Q2hhbmdlIjogewogICAgInRhcmdldENoYW5nZVR5cGUiOiAiQ1VSUkVOVCIsCiAgICAidGFyZ2V0SWRzIjogWwogICAgICAxMDAyCiAgICBdLAogICAgInJlc3VtZVRva2VuIjogIkNna0k4T2lmODZmTGxnTT0iLAogICAgInJlYWRUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NTQuNTYyNDE2WiIKICB9Cn0KXV0sWzQsW3sKICAidGFyZ2V0Q2hhbmdlIjogewogICAgInJlc3VtZVRva2VuIjogIkNna0k4T2lmODZmTGxnTT0iLAogICAgInJlYWRUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NTQuNTYyNDE2WiIKICB9Cn0KXV0sWzUsW3sKICAidGFyZ2V0Q2hhbmdlIjogewogICAgInJlc3VtZVRva2VuIjogIkNna0luTjZpODZmTGxnTT0iLAogICAgInJlYWRUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NTQuNjEwMjA0WiIKICB9Cn0KXV1dMTA2CltbNixbewogICJ0YXJnZXRDaGFuZ2UiOiB7CiAgICAidGFyZ2V0Q2hhbmdlVHlwZSI6ICJSRU1PVkUiLAogICAgInRhcmdldElkcyI6IFsKICAgICAgMTAwMgogICAgXQogIH0KfQpdXV0=",
+        "bodyChunksBase64": [
+          "OTk1CltbMSxbewogICJ0YXJnZXRDaGFuZ2UiOiB7CiAgICAidGFyZ2V0Q2hhbmdlVHlwZSI6ICJBREQiLAogICAgInRhcmdldElkcyI6IFsKICAgICAgMTAwMgogICAgXQogIH0KfQpdXSxbMixbewogICJkb2N1bWVudENoYW5nZSI6IHsKICAgICJkb2N1bWVudCI6IHsKICAgICAgIm5hbWUiOiAicHJvamVjdHMvZmlyZXNpZGUtY29uZm9ybWFuY2UvZGF0YWJhc2VzLyhkZWZhdWx0KS9kb2N1bWVudHMvZmlyZXNpZGVfd2ViY2hhbm5lbF9jYXB0dXJlL29yYWNsZS1jcm9zcy1jbGllbnQiLAogICAgICAiZmllbGRzIjogewogICAgICAgICJhIjogewogICAgICAgICAgInN0cmluZ1ZhbHVlIjogImEiCiAgICAgICAgfSwKICAgICAgICAiYiI6IHsKICAgICAgICAgICJzdHJpbmdWYWx1ZSI6ICJiIgogICAgICAgIH0KICAgICAgfSwKICAgICAgImNyZWF0ZVRpbWUiOiAiMjAyNi0wOC0zMVQxNjo0Mjo0Ny4wNjU4NjRaIiwKICAgICAgInVwZGF0ZVRpbWUiOiAiMjAyNi0wOC0zMVQxNjo0Mjo1NC4yMzY3NDlaIgogICAgfSwKICAgICJ0YXJnZXRJZHMiOiBbCiAgICAgIDEwMDIKICAgIF0KICB9Cn0KXV0sWzMsW3sKICAidGFyZ2V0Q2hhbmdlIjogewogICAgInRhcmdldENoYW5nZVR5cGUiOiAiQ1VSUkVOVCIsCiAgICAidGFyZ2V0SWRzIjogWwogICAgICAxMDAyCiAgICBdLAogICAgInJlc3VtZVRva2VuIjogIkNna0k4T2lmODZmTGxnTT0iLAogICAgInJlYWRUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NTQuNTYyNDE2WiIKICB9Cn0KXV0sWzQsW3sKICAidGFyZ2V0Q2hhbmdlIjogewogICAgInJlc3VtZVRva2VuIjogIkNna0k4T2lmODZmTGxnTT0iLAogICAgInJlYWRUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NTQuNTYyNDE2WiIKICB9Cn0KXV0sWzUsW3sKICAidGFyZ2V0Q2hhbmdlIjogewogICAgInJlc3VtZVRva2VuIjogIkNna0luTjZpODZmTGxnTT0iLAogICAgInJlYWRUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NTQuNjEwMjA0WiIKICB9Cn0KXV1d",
+          "MTA2CltbNixbewogICJ0YXJnZXRDaGFuZ2UiOiB7CiAgICAidGFyZ2V0Q2hhbmdlVHlwZSI6ICJSRU1PVkUiLAogICAgInRhcmdldElkcyI6IFsKICAgICAgMTAwMgogICAgXQogIH0KfQpdXV0="
+        ]
+      }
+    },
+    {
+      "sequence": 32,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&gsessionid=7aL1w4BSsHnCRuZN-U0-XtEduY6VAUeZXNuvrivjPU8BoDQFns9Yzg&SID=oVIkSXF8-L0pFiG_BUPE1A&RID=26522&AID=5&zx=3ul3qg2ozzpn&t=1",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "140"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": "Y291bnQ9MSZvZnM9MSZyZXEwX19fZGF0YV9fPSU3QiUyMmRhdGFiYXNlJTIyJTNBJTIycHJvamVjdHMlMkZmaXJlc2lkZS1jb25mb3JtYW5jZSUyRmRhdGFiYXNlcyUyRiUyOGRlZmF1bHQlMjklMjIlMkMlMjJyZW1vdmVUYXJnZXQlMjIlM0ExMDAyJTdE"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:56 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "OApbMSw1LDddCg==",
+        "bodyChunksBase64": [
+          "OApbMSw1LDddCg=="
+        ]
+      }
+    },
+    {
+      "sequence": 33,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=61699&CVER=22&X-HTTP-Session-Id=gsessionid&zx=cy5dvkpdabxo&t=1",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "839"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": "aGVhZGVycz1YLUdvb2ctQXBpLUNsaWVudCUzQWdsLWpzJTJGK2ZpcmUlMkYxMi4xOC4wJTBEJTBBQ29udGVudC1UeXBlJTNBdGV4dCUyRnBsYWluJTBEJTBBWC1GaXJlYmFzZS1HTVBJRCUzQTElM0ExMjM0NTY3ODklM0F3ZWIlM0FmaXJlc2lkZS13ZWJjaGFubmVsLWNhcHR1cmUlMEQlMEFBdXRob3JpemF0aW9uJTNBJTVCUkVEQUNURUQlNUQlMEQlMEF4LWdvb2ctYXBpLWtleSUzQSU1QlJFREFDVEVEJTVEJTBEJTBBJmNvdW50PTEmb2ZzPTAmcmVxMF9fX2RhdGFfXz0lN0IlMjJkYXRhYmFzZSUyMiUzQSUyMnByb2plY3RzJTJGZmlyZXNpZGUtY29uZm9ybWFuY2UlMkZkYXRhYmFzZXMlMkYlMjhkZWZhdWx0JTI5JTIyJTJDJTIyYWRkVGFyZ2V0JTIyJTNBJTdCJTIyZG9jdW1lbnRzJTIyJTNBJTdCJTIyZG9jdW1lbnRzJTIyJTNBJTVCJTIycHJvamVjdHMlMkZmaXJlc2lkZS1jb25mb3JtYW5jZSUyRmRhdGFiYXNlcyUyRiUyOGRlZmF1bHQlMjklMkZkb2N1bWVudHMlMkZmaXJlc2lkZV93ZWJjaGFubmVsX2NhcHR1cmUlMkZvcmFjbGUtY3Jvc3MtY2xpZW50JTIyJTVEJTdEJTJDJTIydGFyZ2V0SWQlMjIlM0ExMDAyJTdEJTdE"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "x-client-wire-protocol",
+            "value": "h2"
+          },
+          {
+            "name": "x-http-session-id",
+            "value": "yZbn8uuhhy1u75sTT-By2NQqBnLAxjDnAxyC40SJ3EDPnb864L0DLQ"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:56 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "access-control-expose-headers",
+            "value": "x-client-wire-protocol,x-http-session-id"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          },
+          {
+            "name": "vary",
+            "value": "origin,Accept-Encoding"
+          }
+        ],
+        "bodyBase64": "NTEKW1swLFsiYyIsImxVd3VubXZxZ0phZFZVTlRmMm9kREEiLCIiLDgsMTQsMzAwMDBdXV0K",
+        "bodyChunksBase64": [
+          "NTEKW1swLFsiYyIsImxVd3VubXZxZ0phZFZVTlRmMm9kREEiLCIiLDgsMTQsMzAwMDBdXV0K"
+        ]
+      }
+    },
+    {
+      "sequence": 34,
+      "request": {
+        "method": "GET",
+        "uri": "/google.firestore.v1.Firestore/Listen/channel?gsessionid=yZbn8uuhhy1u75sTT-By2NQqBnLAxjDnAxyC40SJ3EDPnb864L0DLQ&VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&RID=rpc&SID=lUwunmvqgJadVUNTf2odDA&AID=0&CI=0&TYPE=xmlhttp&zx=5wgpy3b5m9jm&t=1",
+        "headers": [
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "x-debug-tracking-id",
+            "value": "3952090771284336257;o=0"
+          },
+          {
+            "name": "cache-control",
+            "value": "private, no-store"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:57 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "vary",
+            "value": "Referer,Accept-Encoding"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          },
+          {
+            "name": "accept-ranges",
+            "value": "none"
+          }
+        ],
+        "bodyBase64": "OTk1CltbMSxbewogICJ0YXJnZXRDaGFuZ2UiOiB7CiAgICAidGFyZ2V0Q2hhbmdlVHlwZSI6ICJBREQiLAogICAgInRhcmdldElkcyI6IFsKICAgICAgMTAwMgogICAgXQogIH0KfQpdXSxbMixbewogICJkb2N1bWVudENoYW5nZSI6IHsKICAgICJkb2N1bWVudCI6IHsKICAgICAgIm5hbWUiOiAicHJvamVjdHMvZmlyZXNpZGUtY29uZm9ybWFuY2UvZGF0YWJhc2VzLyhkZWZhdWx0KS9kb2N1bWVudHMvZmlyZXNpZGVfd2ViY2hhbm5lbF9jYXB0dXJlL29yYWNsZS1jcm9zcy1jbGllbnQiLAogICAgICAiZmllbGRzIjogewogICAgICAgICJhIjogewogICAgICAgICAgInN0cmluZ1ZhbHVlIjogImEiCiAgICAgICAgfSwKICAgICAgICAiYiI6IHsKICAgICAgICAgICJzdHJpbmdWYWx1ZSI6ICJiIgogICAgICAgIH0KICAgICAgfSwKICAgICAgImNyZWF0ZVRpbWUiOiAiMjAyNi0wOC0zMVQxNjo0Mjo0Ny4wNjU4NjRaIiwKICAgICAgInVwZGF0ZVRpbWUiOiAiMjAyNi0wOC0zMVQxNjo0Mjo1NC4yMzY3NDlaIgogICAgfSwKICAgICJ0YXJnZXRJZHMiOiBbCiAgICAgIDEwMDIKICAgIF0KICB9Cn0KXV0sWzMsW3sKICAidGFyZ2V0Q2hhbmdlIjogewogICAgInRhcmdldENoYW5nZVR5cGUiOiAiQ1VSUkVOVCIsCiAgICAidGFyZ2V0SWRzIjogWwogICAgICAxMDAyCiAgICBdLAogICAgInJlc3VtZVRva2VuIjogIkNna0krNUNJOUtmTGxnTT0iLAogICAgInJlYWRUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NTYuMjcxNDgzWiIKICB9Cn0KXV0sWzQsW3sKICAidGFyZ2V0Q2hhbmdlIjogewogICAgInJlc3VtZVRva2VuIjogIkNna0krNUNJOUtmTGxnTT0iLAogICAgInJlYWRUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NTYuMjcxNDgzWiIKICB9Cn0KXV0sWzUsW3sKICAidGFyZ2V0Q2hhbmdlIjogewogICAgInJlc3VtZVRva2VuIjogIkNna0l0T0tLOUtmTGxnTT0iLAogICAgInJlYWRUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NTYuMzE0Njc2WiIKICB9Cn0KXV1d",
+        "bodyChunksBase64": [
+          "OTk1CltbMSxbewogICJ0YXJnZXRDaGFuZ2UiOiB7CiAgICAidGFyZ2V0Q2hhbmdlVHlwZSI6ICJBREQiLAogICAgInRhcmdldElkcyI6IFsKICAgICAgMTAwMgogICAgXQogIH0KfQpdXSxbMixbewogICJkb2N1bWVudENoYW5nZSI6IHsKICAgICJkb2N1bWVudCI6IHsKICAgICAgIm5hbWUiOiAicHJvamVjdHMvZmlyZXNpZGUtY29uZm9ybWFuY2UvZGF0YWJhc2VzLyhkZWZhdWx0KS9kb2N1bWVudHMvZmlyZXNpZGVfd2ViY2hhbm5lbF9jYXB0dXJlL29yYWNsZS1jcm9zcy1jbGllbnQiLAogICAgICAiZmllbGRzIjogewogICAgICAgICJhIjogewogICAgICAgICAgInN0cmluZ1ZhbHVlIjogImEiCiAgICAgICAgfSwKICAgICAgICAiYiI6IHsKICAgICAgICAgICJzdHJpbmdWYWx1ZSI6ICJiIgogICAgICAgIH0KICAgICAgfSwKICAgICAgImNyZWF0ZVRpbWUiOiAiMjAyNi0wOC0zMVQxNjo0Mjo0Ny4wNjU4NjRaIiwKICAgICAgInVwZGF0ZVRpbWUiOiAiMjAyNi0wOC0zMVQxNjo0Mjo1NC4yMzY3NDlaIgogICAgfSwKICAgICJ0YXJnZXRJZHMiOiBbCiAgICAgIDEwMDIKICAgIF0KICB9Cn0KXV0sWzMsW3sKICAidGFyZ2V0Q2hhbmdlIjogewogICAgInRhcmdldENoYW5nZVR5cGUiOiAiQ1VSUkVOVCIsCiAgICAidGFyZ2V0SWRzIjogWwogICAgICAxMDAyCiAgICBdLAogICAgInJlc3VtZVRva2VuIjogIkNna0krNUNJOUtmTGxnTT0iLAogICAgInJlYWRUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NTYuMjcxNDgzWiIKICB9Cn0KXV0sWzQsW3sKICAidGFyZ2V0Q2hhbmdlIjogewogICAgInJlc3VtZVRva2VuIjogIkNna0krNUNJOUtmTGxnTT0iLAogICAgInJlYWRUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NTYuMjcxNDgzWiIKICB9Cn0KXV0sWzUsW3sKICAidGFyZ2V0Q2hhbmdlIjogewogICAgInJlc3VtZVRva2VuIjogIkNna0l0T0tLOUtmTGxnTT0iLAogICAgInJlYWRUaW1lIjogIjIwMjYtMDgtMzFUMTY6NDI6NTYuMzE0Njc2WiIKICB9Cn0KXV1d"
+        ]
+      }
+    },
+    {
+      "sequence": 35,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&gsessionid=NfwDZu88d7XzkV-uHeOId---CKk1RWbaDyY_kwXxk2OiJDs69y6w4w&SID=ZX9bz_TN2T2bckq4Kmnmxw&RID=18746&TYPE=terminate&zx=3odbnz69gie0",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "0"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain;charset=UTF-8"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "no-cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "cross-origin-resource-policy",
+            "value": "cross-origin"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:57 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "content-length",
+            "value": "0"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          }
+        ],
+        "bodyBase64": null
+      }
+    },
+    {
+      "sequence": 37,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&gsessionid=7aL1w4BSsHnCRuZN-U0-XtEduY6VAUeZXNuvrivjPU8BoDQFns9Yzg&SID=oVIkSXF8-L0pFiG_BUPE1A&RID=26523&TYPE=terminate&zx=l9c25e66xech",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "0"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain;charset=UTF-8"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "no-cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "cross-origin-resource-policy",
+            "value": "cross-origin"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:57 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "content-length",
+            "value": "0"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          }
+        ],
+        "bodyBase64": null
+      }
+    },
+    {
+      "sequence": 38,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&gsessionid=kvVKtkhE59NjXc7ujQlgmYIz5OxJHwuJyWYzv3ToiOq4myXh29WA4A&SID=vJQYpcSNAp26o8lQ9FpvNA&RID=26719&TYPE=terminate&zx=vf8pnle7vj2r",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "0"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain;charset=UTF-8"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "no-cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "cross-origin-resource-policy",
+            "value": "cross-origin"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:57 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "content-length",
+            "value": "0"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          }
+        ],
+        "bodyBase64": null
+      }
+    },
+    {
+      "sequence": 39,
+      "request": {
+        "method": "POST",
+        "uri": "/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Ffireside-conformance%2Fdatabases%2F%28default%29&gsessionid=yZbn8uuhhy1u75sTT-By2NQqBnLAxjDnAxyC40SJ3EDPnb864L0DLQ&SID=lUwunmvqgJadVUNTf2odDA&RID=61701&TYPE=terminate&zx=si8qiiqn9cot",
+        "headers": [
+          {
+            "name": "content-length",
+            "value": "0"
+          },
+          {
+            "name": "sec-ch-ua-platform",
+            "value": "\"macOS\""
+          },
+          {
+            "name": "user-agent",
+            "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+          },
+          {
+            "name": "sec-ch-ua",
+            "value": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\""
+          },
+          {
+            "name": "content-type",
+            "value": "text/plain;charset=UTF-8"
+          },
+          {
+            "name": "sec-ch-ua-mobile",
+            "value": "?0"
+          },
+          {
+            "name": "accept",
+            "value": "*/*"
+          },
+          {
+            "name": "origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "sec-fetch-site",
+            "value": "same-site"
+          },
+          {
+            "name": "sec-fetch-mode",
+            "value": "no-cors"
+          },
+          {
+            "name": "sec-fetch-dest",
+            "value": "empty"
+          },
+          {
+            "name": "referer",
+            "value": "http://127.0.0.1:50284/"
+          },
+          {
+            "name": "accept-encoding",
+            "value": "gzip, deflate, br, zstd"
+          },
+          {
+            "name": "accept-language",
+            "value": "en-US,en;q=0.9"
+          }
+        ],
+        "bodyBase64": null
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "content-type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "name": "cross-origin-resource-policy",
+            "value": "cross-origin"
+          },
+          {
+            "name": "date",
+            "value": "Mon, 31 Aug 2026 16:42:57 GMT"
+          },
+          {
+            "name": "server",
+            "value": "ESF"
+          },
+          {
+            "name": "content-length",
+            "value": "0"
+          },
+          {
+            "name": "x-xss-protection",
+            "value": "0"
+          },
+          {
+            "name": "x-frame-options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "name": "x-content-type-options",
+            "value": "nosniff"
+          },
+          {
+            "name": "access-control-allow-origin",
+            "value": "http://127.0.0.1:50284"
+          },
+          {
+            "name": "vary",
+            "value": "origin"
+          },
+          {
+            "name": "access-control-allow-credentials",
+            "value": "true"
+          },
+          {
+            "name": "alt-svc",
+            "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+          }
+        ],
+        "bodyBase64": null
+      }
+    }
+  ]
+}

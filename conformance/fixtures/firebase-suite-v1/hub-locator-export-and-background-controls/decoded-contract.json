@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "fixtureSet": "hub-locator-export-and-background-controls",
+  "target": "official-firebase-tools-emulator-hub",
+  "targetVersion": "15.22.0",
+  "operationCount": 5,
+  "operations": [
+    {
+      "id": "hub-locator",
+      "method": "GET",
+      "path": "/",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "hub-emulator-map",
+      "method": "GET",
+      "path": "/emulators",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "create-export-user",
+      "method": "POST",
+      "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-phase4-suite-oracle/accounts",
+      "status": 200,
+      "responseContentType": "application/json"
+    },
+    {
+      "id": "hub-auth-export",
+      "method": "POST",
+      "path": "/_admin/export",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "hub-export-origin-blocked",
+      "method": "POST",
+      "path": "/_admin/export",
+      "status": 403,
+      "responseContentType": "application/json; charset=utf-8"
+    }
+  ],
+  "invariants": {
+    "exportStatus": 200,
+    "externalOriginStatus": 403,
+    "externalOriginRejected": true,
+    "metadataFile": "firebase-export-metadata.json",
+    "authFiles": [
+      "auth_export/accounts.json",
+      "auth_export/config.json"
+    ]
+  }
+}

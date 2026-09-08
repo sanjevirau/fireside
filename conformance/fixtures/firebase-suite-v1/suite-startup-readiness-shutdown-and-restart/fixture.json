@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "target": "official-firebase-tools-emulator-suite",
+  "targetVersion": "15.22.0",
+  "targetProject": "demo-fireside-phase4-suite-oracle",
+  "capturedAt": "2026-09-01T14:20:26.114Z",
+  "credentialsStored": false,
+  "accessTokensStored": false,
+  "realUserDataStored": false,
+  "sourceHashes": {
+    "package.json": "bdaec59ef8484658506c54fc4bd5910722aaf77a77f5a6a3f6a057bec0797abf",
+    "lib/emulator/controller.js": "9759fa0910a1b3430d80f75cfecdc0e8adb8a595e5810ea9aba5dcc3727ce196",
+    "lib/emulator/functionsEmulator.js": "0c16fe813bc5a034e43a9218c0099ae2c75628e14078d40b86708630cf402406",
+    "lib/emulator/functionsEmulatorRuntime.js": "5bef9577eaa8e6edfeb44130e9c6d498b3c85f93f410052d198c4823f1dda82c",
+    "lib/emulator/hub.js": "0c111df0bbba9f26d8c91af1a6c15f0edd3b4ccca26478365a8bfd6bd685c1cc",
+    "lib/emulator/hubExport.js": "c401c950fdfd53db98a9215590603091d65d71129c3ed591233a69d6bb4b7ecd",
+    "lib/emulator/loggingEmulator.js": "275c3138ff33c7dc9a92c404c78756eac6ae0d69f4bbb968c6321a7927423ff1",
+    "lib/emulator/pubsubEmulator.js": "edaa1585b0a3c71ea46d782bf715c9aae9afb6d6b82a8873371a120dd088d564",
+    "lib/emulator/ui.js": "3cee76413feb86d49712518eae8377b16af758777e7a1f789edd6625fa3aa938"
+  },
+  "firstReadiness": {
+    "readyAfterMilliseconds": 18470,
+    "statuses": {
+      "hub": 200,
+      "functions": 200,
+      "auth": 200,
+      "pubsub": 200,
+      "ui": 200
+    },
+    "backendCount": 1,
+    "functionTriggerCount": 4,
+    "logLines": [
+      "i  emulators: Starting emulators: auth, functions, pubsub",
+      "i  emulators: Detected demo project ID \"demo-fireside-phase4-suite-oracle\", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.",
+      "⚠  functions: Application Default Credentials detected. Non-emulated services will access production using these credentials. Be careful!",
+      "i  pubsub: Pub/Sub Emulator logging to pubsub-debug.log",
+      "i  functions: Watching \"<suite-root>/functions\" for Cloud Functions...",
+      "⚠  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory.",
+      "✔  functions: Using node@24 from host.",
+      "✔  functions: Loaded functions definitions from source: httpEcho, callableEcho, scheduledTick, topicEcho.",
+      "✔  functions[us-central1-httpEcho]: http function initialized (http://127.0.0.1:<functions-port>/demo-fireside-phase4-suite-oracle/us-central1/httpEcho).",
+      "✔  functions[us-central1-callableEcho]: http function initialized (http://127.0.0.1:<functions-port>/demo-fireside-phase4-suite-oracle/us-central1/callableEcho).",
+      "✔  functions[us-central1-scheduledTick]: pubsub function initialized.",
+      "✔  functions[us-central1-topicEcho]: pubsub function initialized.",
+      "│ ✔  All emulators ready! It is now safe to connect your app. │",
+      "│ i  View Emulator UI at http://127.0.0.1:<ui-port>/              │",
+      "│ Emulator       │ Host:Port       │ View in Emulator UI              │",
+      "│ Authentication │ 127.0.0.1:<auth-port> │ http://127.0.0.1:<ui-port>/auth      │",
+      "│ Functions      │ 127.0.0.1:<functions-port> │ http://127.0.0.1:<ui-port>/functions │",
+      "  Emulator Hub host: 127.0.0.1 port: <hub-port>"
+    ]
+  },
+  "firstStop": {
+    "clean": false,
+    "exitCode": 2,
+    "signalCode": null,
+    "locatorDeleted": true,
+    "portsClosed": true
+  },
+  "restartReadiness": {
+    "readyAfterMilliseconds": 17837,
+    "statuses": {
+      "hub": 200,
+      "functions": 200,
+      "auth": 200,
+      "pubsub": 200,
+      "ui": 200
+    },
+    "backendCount": 1,
+    "functionTriggerCount": 4,
+    "logLines": [
+      "i  emulators: Starting emulators: auth, functions, pubsub",
+      "i  emulators: Detected demo project ID \"demo-fireside-phase4-suite-oracle\", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.",
+      "⚠  functions: Application Default Credentials detected. Non-emulated services will access production using these credentials. Be careful!",
+      "i  pubsub: Pub/Sub Emulator logging to pubsub-debug.log",
+      "i  functions: Watching \"<suite-root>/functions\" for Cloud Functions...",
+      "⚠  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory.",
+      "✔  functions: Using node@24 from host.",
+      "✔  functions: Loaded functions definitions from source: httpEcho, callableEcho, scheduledTick, topicEcho.",
+      "✔  functions[us-central1-httpEcho]: http function initialized (http://127.0.0.1:<functions-port>/demo-fireside-phase4-suite-oracle/us-central1/httpEcho).",
+      "✔  functions[us-central1-callableEcho]: http function initialized (http://127.0.0.1:<functions-port>/demo-fireside-phase4-suite-oracle/us-central1/callableEcho).",
+      "✔  functions[us-central1-scheduledTick]: pubsub function initialized.",
+      "✔  functions[us-central1-topicEcho]: pubsub function initialized.",
+      "│ ✔  All emulators ready! It is now safe to connect your app. │",
+      "│ i  View Emulator UI at http://127.0.0.1:<ui-port>/              │",
+      "│ Emulator       │ Host:Port       │ View in Emulator UI              │",
+      "│ Authentication │ 127.0.0.1:<auth-port> │ http://127.0.0.1:<ui-port>/auth      │",
+      "│ Functions      │ 127.0.0.1:<functions-port> │ http://127.0.0.1:<ui-port>/functions │",
+      "  Emulator Hub host: 127.0.0.1 port: <hub-port>"
+    ]
+  },
+  "restartHub": {
+    "id": "restart-hub-readiness",
+    "method": "GET",
+    "path": "/",
+    "status": 200,
+    "responseHeaders": {
+      "content-type": "application/json; charset=utf-8",
+      "content-length": "131"
+    },
+    "response": {
+      "version": "15.22.0",
+      "origins": [
+        "http://127.0.0.1:<hub-port>"
+      ],
+      "pid": "<suite-pid>",
+      "host": "127.0.0.1",
+      "port": "<hub-port>"
+    }
+  },
+  "secondStop": {
+    "clean": true,
+    "exitCode": 0,
+    "signalCode": null,
+    "locatorDeleted": true,
+    "portsClosed": true
+  },
+  "relevantLogLines": [
+    "i  emulators: Starting emulators: auth, functions, pubsub",
+    "i  emulators: Detected demo project ID \"demo-fireside-phase4-suite-oracle\", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.",
+    "⚠  functions: Application Default Credentials detected. Non-emulated services will access production using these credentials. Be careful!",
+    "i  pubsub: Pub/Sub Emulator logging to pubsub-debug.log",
+    "i  functions: Watching \"<suite-root>/functions\" for Cloud Functions...",
+    "⚠  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory.",
+    "✔  functions: Using node@24 from host.",
+    "✔  functions: Loaded functions definitions from source: httpEcho, callableEcho, scheduledTick, topicEcho.",
+    "✔  functions[us-central1-httpEcho]: http function initialized (http://127.0.0.1:<functions-port>/demo-fireside-phase4-suite-oracle/us-central1/httpEcho).",
+    "✔  functions[us-central1-callableEcho]: http function initialized (http://127.0.0.1:<functions-port>/demo-fireside-phase4-suite-oracle/us-central1/callableEcho).",
+    "✔  functions[us-central1-scheduledTick]: pubsub function initialized.",
+    "✔  functions[us-central1-topicEcho]: pubsub function initialized.",
+    "│ ✔  All emulators ready! It is now safe to connect your app. │",
+    "│ i  View Emulator UI at http://127.0.0.1:<ui-port>/              │",
+    "│ Emulator       │ Host:Port       │ View in Emulator UI              │",
+    "│ Authentication │ 127.0.0.1:<auth-port> │ http://127.0.0.1:<ui-port>/auth      │",
+    "│ Functions      │ 127.0.0.1:<functions-port> │ http://127.0.0.1:<ui-port>/functions │",
+    "  Emulator Hub host: 127.0.0.1 port: <hub-port>",
+    "i  emulators: Starting emulators: auth, functions, pubsub",
+    "i  emulators: Detected demo project ID \"demo-fireside-phase4-suite-oracle\", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.",
+    "⚠  functions: Application Default Credentials detected. Non-emulated services will access production using these credentials. Be careful!",
+    "i  pubsub: Pub/Sub Emulator logging to pubsub-debug.log",
+    "i  functions: Watching \"<suite-root>/functions\" for Cloud Functions...",
+    "⚠  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory.",
+    "✔  functions: Using node@24 from host.",
+    "✔  functions: Loaded functions definitions from source: httpEcho, callableEcho, scheduledTick, topicEcho.",
+    "✔  functions[us-central1-httpEcho]: http function initialized (http://127.0.0.1:<functions-port>/demo-fireside-phase4-suite-oracle/us-central1/httpEcho).",
+    "✔  functions[us-central1-callableEcho]: http function initialized (http://127.0.0.1:<functions-port>/demo-fireside-phase4-suite-oracle/us-central1/callableEcho).",
+    "✔  functions[us-central1-scheduledTick]: pubsub function initialized.",
+    "✔  functions[us-central1-topicEcho]: pubsub function initialized.",
+    "│ ✔  All emulators ready! It is now safe to connect your app. │",
+    "│ i  View Emulator UI at http://127.0.0.1:<ui-port>/              │",
+    "│ Emulator       │ Host:Port       │ View in Emulator UI              │",
+    "│ Authentication │ 127.0.0.1:<auth-port> │ http://127.0.0.1:<ui-port>/auth      │",
+    "│ Functions      │ 127.0.0.1:<functions-port> │ http://127.0.0.1:<ui-port>/functions │",
+    "  Emulator Hub host: 127.0.0.1 port: <hub-port>"
+  ],
+  "invariants": {
+    "exactFirebaseToolsVersion": "15.22.0",
+    "services": [
+      "auth",
+      "eventarc",
+      "functions",
+      "hub",
+      "logging",
+      "pubsub",
+      "tasks",
+      "ui"
+    ],
+    "firstStartReady": true,
+    "originGuardedRunExitedCleanly": false,
+    "originGuardFallthroughObservedInOfficialSuite": true,
+    "locatorDeletedAfterFirstStop": true,
+    "firstStopPortsClosed": true,
+    "samePortRestartReady": true,
+    "cleanControlRestartStop": true,
+    "locatorDeletedAfterSecondStop": true,
+    "secondStopPortsClosed": true
+  }
+}

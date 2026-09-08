@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "target": "official-java-emulator",
+  "targetVersion": "1.22.0",
+  "targetProject": "demo-fireside-phase3-rules",
+  "capturedAt": "2026-09-01T08:53:23.625Z",
+  "credentialsStored": false,
+  "authorizationHeadersStored": false,
+  "javaJarSha256": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c",
+  "rulesSource": "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /probe/access-10 {\n      allow get: if get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a1).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a2).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a3).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a4).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a5).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a6).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a7).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a8).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a9).data.allowed == true;\n    }\n    match /probe/access-11 {\n      allow get: if get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a1).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a2).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a3).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a4).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a5).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a6).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a7).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a8).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a9).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a10).data.allowed == true;\n    }\n    match /probe/cached-11 {\n      allow get: if get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true &&\n        get(/databases/$(database)/documents/access/a0).data.allowed == true;\n    }\n    match /probe/exists-10 {\n      allow get: if exists(/databases/$(database)/documents/access/e0) &&\n        exists(/databases/$(database)/documents/access/e1) &&\n        exists(/databases/$(database)/documents/access/e2) &&\n        exists(/databases/$(database)/documents/access/e3) &&\n        exists(/databases/$(database)/documents/access/e4) &&\n        exists(/databases/$(database)/documents/access/e5) &&\n        exists(/databases/$(database)/documents/access/e6) &&\n        exists(/databases/$(database)/documents/access/e7) &&\n        exists(/databases/$(database)/documents/access/e8) &&\n        exists(/databases/$(database)/documents/access/e9);\n    }\n    match /probe/exists-11 {\n      allow get: if exists(/databases/$(database)/documents/access/e0) &&\n        exists(/databases/$(database)/documents/access/e1) &&\n        exists(/databases/$(database)/documents/access/e2) &&\n        exists(/databases/$(database)/documents/access/e3) &&\n        exists(/databases/$(database)/documents/access/e4) &&\n        exists(/databases/$(database)/documents/access/e5) &&\n        exists(/databases/$(database)/documents/access/e6) &&\n        exists(/databases/$(database)/documents/access/e7) &&\n        exists(/databases/$(database)/documents/access/e8) &&\n        exists(/databases/$(database)/documents/access/e9) &&\n        exists(/databases/$(database)/documents/access/e10);\n    }\n    match /batch/{id} {\n      allow create, update: if exists(/databases/$(database)/documents/access/$(id));\n    }\n    match /state/counter {\n      allow update: if request.resource.data.version == resource.data.version + 1;\n    }\n    match /atomic/{id} {\n      allow create: if getAfter(/databases/$(database)/documents/state/counter).data.version == request.resource.data.expectedVersion;\n    }\n    match /runtime/missing-field {\n      allow get: if resource.data.missing == true;\n    }\n    match /runtime/division-zero {\n      allow get: if 1 / 0 == 0;\n    }\n    match /runtime/list-out-of-bounds {\n      allow get: if [1][2] == 1;\n    }\n    match /runtime/wrong-type-method {\n      allow get: if resource.data.ordinal.size() == 1;\n    }\n    match /runtime/missing-get-resource {\n      allow get: if get(/databases/$(database)/documents/missing/document).data.allowed == true;\n    }\n  }\n}\n",
+  "rulesSourceSha256": "5fabe1cc68443920238d2e61eda7fa5167150654412d26c77806d1605df82699",
+  "observations": [
+    {
+      "id": "get-after-sees-pending-write",
+      "method": "POST",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-rules/databases/(default)/documents:commit",
+      "status": 200,
+      "body": {
+        "writeResults": [
+          {
+            "updateTime": "2026-09-01T08:53:23.591117Z"
+          },
+          {
+            "updateTime": "2026-09-01T08:53:23.591117Z"
+          }
+        ],
+        "commitTime": "2026-09-01T08:53:23.591117Z"
+      }
+    },
+    {
+      "id": "get-after-denies-stale-invariant",
+      "method": "POST",
+      "url": "http://127.0.0.1:{ephemeral-port}/v1/projects/demo-fireside-phase3-rules/databases/(default)/documents:commit",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "\nevaluation error at L71:24 for 'update' @ L71, evaluation error at L74:24 for 'create' @ L74, false for 'update' @ L71, false for 'create' @ L74",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    }
+  ],
+  "relevantLogLines": [
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "INFO: Exception when handling request: PERMISSION_DENIED: ",
+    "INFO: Exception when handling request: PERMISSION_DENIED: "
+  ]
+}

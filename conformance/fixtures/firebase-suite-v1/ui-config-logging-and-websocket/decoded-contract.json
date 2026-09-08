@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "fixtureSet": "ui-config-logging-and-websocket",
+  "target": "official-firebase-tools-emulator-ui-and-logging",
+  "targetVersion": "15.22.0/ui-1.15.0",
+  "operationCount": 2,
+  "operations": [
+    {
+      "id": "ui-api-config",
+      "method": "GET",
+      "path": "/api/config",
+      "status": 200,
+      "responseContentType": "application/json; charset=utf-8"
+    },
+    {
+      "id": "ui-index-html",
+      "method": "GET",
+      "path": "/",
+      "status": 200,
+      "responseContentType": "text/html; charset=UTF-8"
+    }
+  ],
+  "invariants": {
+    "uiConfigStatus": 200,
+    "indexStatus": 200,
+    "loggingWebsocketConnected": true,
+    "replayedLogMessageCount": 40
+  }
+}

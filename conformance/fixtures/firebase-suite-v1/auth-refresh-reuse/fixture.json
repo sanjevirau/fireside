@@ -1,0 +1,790 @@
+{
+  "schemaVersion": 1,
+  "target": "official-firebase-tools-auth-emulator",
+  "targetVersion": "15.22.0",
+  "targetProject": "demo-fireside-auth-refresh",
+  "capturedAt": "2026-09-03T10:30:03.272Z",
+  "credentialsStored": false,
+  "accessTokensStored": false,
+  "realUserDataStored": false,
+  "sourceHashes": {
+    "lib/emulator/auth/state.js": "79b3d0333f69448ec32217c513503bbb6dfe6e16fe1f5a274af3ac5a917b7fb5",
+    "lib/emulator/auth/operations.js": "dbc71e2a7919458709528c4a20ea051143032eded7ef1a39f75221be7c46b322"
+  },
+  "browserSdkVersion": "12.18.0",
+  "observations": [
+    {
+      "id": "anonymous-first",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "anonymous",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true
+      }
+    },
+    {
+      "id": "anonymous-repeat-original",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "anonymous",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true
+      }
+    },
+    {
+      "id": "anonymous-concurrent-1",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "anonymous",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true
+      }
+    },
+    {
+      "id": "anonymous-concurrent-2",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "anonymous",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true
+      }
+    },
+    {
+      "id": "anonymous-concurrent-3",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "anonymous",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true
+      }
+    },
+    {
+      "id": "anonymous-concurrent-4",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "anonymous",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true
+      }
+    },
+    {
+      "id": "anonymous-disabled",
+      "status": 400,
+      "contentType": "application/json; charset=utf-8",
+      "bodyKeys": [
+        "error"
+      ],
+      "error": "USER_DISABLED"
+    },
+    {
+      "id": "anonymous-reenabled-original",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "anonymous",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true
+      }
+    },
+    {
+      "id": "anonymous-deleted",
+      "status": 400,
+      "contentType": "application/json; charset=utf-8",
+      "bodyKeys": [
+        "error"
+      ],
+      "error": "INVALID_REFRESH_TOKEN"
+    },
+    {
+      "id": "password-first",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "password",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true
+      }
+    },
+    {
+      "id": "password-repeat-original",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "password",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true
+      }
+    },
+    {
+      "id": "password-concurrent-1",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "password",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true
+      }
+    },
+    {
+      "id": "password-concurrent-2",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "password",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true
+      }
+    },
+    {
+      "id": "password-concurrent-3",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "password",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true
+      }
+    },
+    {
+      "id": "password-concurrent-4",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "password",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true
+      }
+    },
+    {
+      "id": "password-disabled",
+      "status": 400,
+      "contentType": "application/json; charset=utf-8",
+      "bodyKeys": [
+        "error"
+      ],
+      "error": "USER_DISABLED"
+    },
+    {
+      "id": "password-reenabled-original",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "password",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true
+      }
+    },
+    {
+      "id": "password-deleted",
+      "status": 400,
+      "contentType": "application/json; charset=utf-8",
+      "bodyKeys": [
+        "error"
+      ],
+      "error": "INVALID_REFRESH_TOKEN"
+    },
+    {
+      "id": "custom-first",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "custom",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true,
+        "role": "owner",
+        "unicode": "火🔥"
+      }
+    },
+    {
+      "id": "custom-repeat-original",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "custom",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true,
+        "role": "owner",
+        "unicode": "火🔥"
+      }
+    },
+    {
+      "id": "custom-concurrent-1",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "custom",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true,
+        "role": "owner",
+        "unicode": "火🔥"
+      }
+    },
+    {
+      "id": "custom-concurrent-2",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "custom",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true,
+        "role": "owner",
+        "unicode": "火🔥"
+      }
+    },
+    {
+      "id": "custom-concurrent-3",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "custom",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true,
+        "role": "owner",
+        "unicode": "火🔥"
+      }
+    },
+    {
+      "id": "custom-concurrent-4",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "custom",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true,
+        "role": "owner",
+        "unicode": "火🔥"
+      }
+    },
+    {
+      "id": "custom-disabled",
+      "status": 400,
+      "contentType": "application/json; charset=utf-8",
+      "bodyKeys": [
+        "error"
+      ],
+      "error": "USER_DISABLED"
+    },
+    {
+      "id": "custom-reenabled-original",
+      "status": 200,
+      "contentType": "application/json",
+      "bodyKeys": [
+        "access_token",
+        "expires_in",
+        "id_token",
+        "project_id",
+        "refresh_token",
+        "token_type",
+        "user_id"
+      ],
+      "sameRefreshToken": true,
+      "accessTokenEqualsIdToken": true,
+      "userMatches": true,
+      "expiresIn": "3600",
+      "tokenType": "Bearer",
+      "projectId": "12345",
+      "claims": {
+        "aud": "demo-fireside-auth-refresh",
+        "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+        "provider": "custom",
+        "lifetimeSeconds": 3600,
+        "authenticationNotInFuture": true,
+        "role": "owner",
+        "unicode": "火🔥"
+      }
+    },
+    {
+      "id": "custom-deleted",
+      "status": 400,
+      "contentType": "application/json; charset=utf-8",
+      "bodyKeys": [
+        "error"
+      ],
+      "error": "INVALID_REFRESH_TOKEN"
+    },
+    {
+      "id": "unknown-token",
+      "status": 400,
+      "contentType": "application/json; charset=utf-8",
+      "bodyKeys": [
+        "error"
+      ],
+      "error": "INVALID_REFRESH_TOKEN"
+    }
+  ],
+  "browser": {
+    "observations": [
+      {
+        "id": "browser-refresh-1",
+        "status": 200,
+        "contentType": "application/json",
+        "bodyKeys": [
+          "access_token",
+          "expires_in",
+          "id_token",
+          "project_id",
+          "refresh_token",
+          "token_type",
+          "user_id"
+        ],
+        "sameRefreshToken": true,
+        "accessTokenEqualsIdToken": true,
+        "userMatches": true,
+        "expiresIn": "3600",
+        "tokenType": "Bearer",
+        "projectId": "12345",
+        "claims": {
+          "aud": "demo-fireside-auth-refresh",
+          "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+          "provider": "custom",
+          "lifetimeSeconds": 3600,
+          "authenticationNotInFuture": true,
+          "role": "owner",
+          "unicode": "火🔥"
+        }
+      },
+      {
+        "id": "browser-refresh-2",
+        "status": 200,
+        "contentType": "application/json",
+        "bodyKeys": [
+          "access_token",
+          "expires_in",
+          "id_token",
+          "project_id",
+          "refresh_token",
+          "token_type",
+          "user_id"
+        ],
+        "sameRefreshToken": true,
+        "accessTokenEqualsIdToken": true,
+        "userMatches": true,
+        "expiresIn": "3600",
+        "tokenType": "Bearer",
+        "projectId": "12345",
+        "claims": {
+          "aud": "demo-fireside-auth-refresh",
+          "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+          "provider": "custom",
+          "lifetimeSeconds": 3600,
+          "authenticationNotInFuture": true,
+          "role": "owner",
+          "unicode": "火🔥"
+        }
+      },
+      {
+        "id": "browser-refresh-3",
+        "status": 200,
+        "contentType": "application/json",
+        "bodyKeys": [
+          "access_token",
+          "expires_in",
+          "id_token",
+          "project_id",
+          "refresh_token",
+          "token_type",
+          "user_id"
+        ],
+        "sameRefreshToken": true,
+        "accessTokenEqualsIdToken": true,
+        "userMatches": true,
+        "expiresIn": "3600",
+        "tokenType": "Bearer",
+        "projectId": "12345",
+        "claims": {
+          "aud": "demo-fireside-auth-refresh",
+          "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+          "provider": "custom",
+          "lifetimeSeconds": 3600,
+          "authenticationNotInFuture": true,
+          "role": "owner",
+          "unicode": "火🔥"
+        }
+      },
+      {
+        "id": "browser-refresh-4",
+        "status": 200,
+        "contentType": "application/json",
+        "bodyKeys": [
+          "access_token",
+          "expires_in",
+          "id_token",
+          "project_id",
+          "refresh_token",
+          "token_type",
+          "user_id"
+        ],
+        "sameRefreshToken": true,
+        "accessTokenEqualsIdToken": true,
+        "userMatches": true,
+        "expiresIn": "3600",
+        "tokenType": "Bearer",
+        "projectId": "12345",
+        "claims": {
+          "aud": "demo-fireside-auth-refresh",
+          "iss": "https://securetoken.google.com/demo-fireside-auth-refresh",
+          "provider": "custom",
+          "lifetimeSeconds": 3600,
+          "authenticationNotInFuture": true,
+          "role": "owner",
+          "unicode": "火🔥"
+        }
+      }
+    ],
+    "stages": [
+      "custom-token-sign-in",
+      "forced-refresh",
+      "second-tab-restored-user",
+      "concurrent-two-tab-refresh",
+      "reload-restored-user-and-refresh"
+    ],
+    "pageErrors": [],
+    "browserVersion": "152.0.7977.75"
+  }
+}

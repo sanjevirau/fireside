@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "oracle": "firebase-tools@15.22.0",
+  "observedAt": "2026-09-07",
+  "source": "https://github.com/firebase/firebase-tools/tree/v15.22.0/src",
+  "method": "Read the installed pinned package's commands/emulators-start.js and emulator/commandUtils.js before implementing the adapter. This is a CLI source contract, not a new wire capture.",
+  "commands": ["emulators:start", "emulators:exec"],
+  "options": {"only": "comma-separated emulator names", "project": "project ID or .firebaserc alias", "config": "firebase.json path", "import": "official export directory", "export-on-exit": "optional directory; defaults to import when omitted"},
+  "exportWithoutImportOrDestination": "reject",
+  "exportToCwdOrAncestor": "reject",
+  "shutdownSignal": "SIGINT",
+  "storageRules": {"version": "1.1.3", "filename": "cloud-storage-rules-runtime-v1.1.3.jar", "bytes": 52892936, "sha256": "0cd52db6f6271d62078f805220706377c849220b73bd68aa27078d977df9c900"},
+  "ui": {"version": "1.15.0", "filename": "ui-v1.15.0.zip", "bytes": 3538469, "sha256": "97d8c4c574e3f20c4d690a2ce8373eef76ab024da73279a062dba8517f88cf9a"},
+  "assetSource": "firebase-tools@15.22.0/lib/emulator/downloadableEmulatorInfo.json",
+  "boundary": "The accepted native suite starts Firestore, Auth, Storage, Functions, Pub/Sub and supporting control services together. Do not pretend unsupported service subsets or other Firebase products work. Refuse unsupported configurations before starting children. No cloud fallback."
+}
