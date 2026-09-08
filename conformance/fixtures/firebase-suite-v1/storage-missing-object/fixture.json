@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "target": "official-firebase-tools-storage-emulator",
+  "targetVersion": "15.22.0",
+  "capturedAt": "2026-09-08T17:48:12.617Z",
+  "projectId": "demo-fireside-storage-missing-object",
+  "bucket": "synthetic-objects.example.test",
+  "object": "samples/missing/picture.png",
+  "sourceHashes": {
+    "files.js": "aec6ab343102b9629b0698600e1d39860b063597639011d3720b1b056e472ab0",
+    "errors.js": "fd912c1e10e4a6c1459f72366ce4b36eba7e30fe35a08d68f944c696bc7fc4a1",
+    "apis/firebase.js": "1eb09e4461bb422edb05286a813ca791ec217bfa831e50534e2f9ba539500819",
+    "apis/gcloud.js": "b1d8e85761662e42ceb46baf70ab83e87e3f69335114f318b61bc091ab175fc7"
+  },
+  "browserVersion": "152.0.7977.76",
+  "syntheticOnly": true,
+  "credentialsStored": false,
+  "probes": [
+    {
+      "api": "firebase",
+      "kind": "metadata",
+      "path": "/v0/b/synthetic-objects.example.test/o/samples%2Fmissing%2Fpicture.png",
+      "status": 404,
+      "headers": {
+        "x-powered-by": "Express",
+        "access-control-allow-origin": "http://127.0.0.1:62042",
+        "vary": "Origin",
+        "access-control-expose-headers": "content-type,x-firebase-storage-version,X-Goog-Upload-Size-Received,x-goog-upload-url,x-goog-upload-command,x-gupload-uploadid,x-goog-upload-header-content-length,x-goog-upload-header-content-type,x-goog-upload-protocol,x-goog-upload-status,x-goog-upload-chunk-granularity,x-goog-upload-control-url",
+        "content-type": "text/plain; charset=utf-8",
+        "content-length": "9",
+        "etag": "W/\"9-0gXL1ngzMqISxa6S1zx3F4wtLyg\"",
+        "date": "Tue, 08 Sep 2026 17:48:11 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5"
+      },
+      "body": {
+        "byteLength": 9,
+        "sha256": "0019dfc4b32d63c1392aa264aed2253c1e0c2fb09216f8e2cc269bbfb8bb49b5",
+        "base64": "Tm90IEZvdW5k"
+      }
+    },
+    {
+      "api": "firebase",
+      "kind": "media",
+      "path": "/v0/b/synthetic-objects.example.test/o/samples%2Fmissing%2Fpicture.png?alt=media",
+      "status": 404,
+      "headers": {
+        "x-powered-by": "Express",
+        "access-control-allow-origin": "http://127.0.0.1:62042",
+        "vary": "Origin",
+        "access-control-expose-headers": "content-type,x-firebase-storage-version,X-Goog-Upload-Size-Received,x-goog-upload-url,x-goog-upload-command,x-gupload-uploadid,x-goog-upload-header-content-length,x-goog-upload-header-content-type,x-goog-upload-protocol,x-goog-upload-status,x-goog-upload-chunk-granularity,x-goog-upload-control-url",
+        "content-type": "text/plain; charset=utf-8",
+        "content-length": "9",
+        "etag": "W/\"9-0gXL1ngzMqISxa6S1zx3F4wtLyg\"",
+        "date": "Tue, 08 Sep 2026 17:48:11 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5"
+      },
+      "body": {
+        "byteLength": 9,
+        "sha256": "0019dfc4b32d63c1392aa264aed2253c1e0c2fb09216f8e2cc269bbfb8bb49b5",
+        "base64": "Tm90IEZvdW5k"
+      }
+    },
+    {
+      "api": "gcs",
+      "kind": "metadata",
+      "path": "/storage/v1/b/synthetic-objects.example.test/o/samples%2Fmissing%2Fpicture.png",
+      "status": 404,
+      "headers": {
+        "x-powered-by": "Express",
+        "access-control-allow-origin": "http://127.0.0.1:62042",
+        "vary": "Origin",
+        "access-control-expose-headers": "content-type,x-firebase-storage-version,X-Goog-Upload-Size-Received,x-goog-upload-url,x-goog-upload-command,x-gupload-uploadid,x-goog-upload-header-content-length,x-goog-upload-header-content-type,x-goog-upload-protocol,x-goog-upload-status,x-goog-upload-chunk-granularity,x-goog-upload-control-url",
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "247",
+        "etag": "W/\"f7-t5posVdRMvqk4DEHnSKh7xvkBJA\"",
+        "date": "Tue, 08 Sep 2026 17:48:11 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5"
+      },
+      "body": {
+        "byteLength": 247,
+        "sha256": "1434b9f4f89d3f4a394b8b49e54d908f32e13dc1dc9e8ed5767202dbee0e560c",
+        "base64": "eyJlcnJvciI6eyJjb2RlIjo0MDQsIm1lc3NhZ2UiOiJObyBzdWNoIG9iamVjdDogc3ludGhldGljLW9iamVjdHMuZXhhbXBsZS50ZXN0L3NhbXBsZXMvbWlzc2luZy9waWN0dXJlLnBuZyIsImVycm9ycyI6W3sibWVzc2FnZSI6Ik5vIHN1Y2ggb2JqZWN0OiBzeW50aGV0aWMtb2JqZWN0cy5leGFtcGxlLnRlc3Qvc2FtcGxlcy9taXNzaW5nL3BpY3R1cmUucG5nIiwiZG9tYWluIjoiZ2xvYmFsIiwicmVhc29uIjoibm90Rm91bmQifV19fQ=="
+      }
+    },
+    {
+      "api": "gcs",
+      "kind": "media",
+      "path": "/download/storage/v1/b/synthetic-objects.example.test/o/samples%2Fmissing%2Fpicture.png?alt=media",
+      "status": 404,
+      "headers": {
+        "x-powered-by": "Express",
+        "access-control-allow-origin": "http://127.0.0.1:62042",
+        "vary": "Origin",
+        "access-control-expose-headers": "content-type,x-firebase-storage-version,X-Goog-Upload-Size-Received,x-goog-upload-url,x-goog-upload-command,x-gupload-uploadid,x-goog-upload-header-content-length,x-goog-upload-header-content-type,x-goog-upload-protocol,x-goog-upload-status,x-goog-upload-chunk-granularity,x-goog-upload-control-url",
+        "content-type": "text/html; charset=utf-8",
+        "content-length": "74",
+        "etag": "W/\"4a-1Ho7eB8XZv5IK+S3iPhwiAHe+50\"",
+        "date": "Tue, 08 Sep 2026 17:48:11 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5"
+      },
+      "body": {
+        "byteLength": 74,
+        "sha256": "953ba9b0cb55c4b34863b86e34031940c9baa14d6970c73c714edab777a6f902",
+        "base64": "Tm8gc3VjaCBvYmplY3Q6IHN5bnRoZXRpYy1vYmplY3RzLmV4YW1wbGUudGVzdC9zYW1wbGVzL21pc3NpbmcvcGljdHVyZS5wbmc="
+      }
+    }
+  ],
+  "browser": {
+    "mediaUrl": "http://127.0.0.1:62041/v0/b/synthetic-objects.example.test/o/samples%2Fmissing%2Fpicture.png?alt=media",
+    "domEvent": "error",
+    "events": [
+      {
+        "kind": "response",
+        "status": 404,
+        "statusText": "Not Found"
+      }
+    ]
+  }
+}

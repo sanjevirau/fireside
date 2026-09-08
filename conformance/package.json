@@ -1,0 +1,36 @@
+{
+  "name": "fireside-conformance",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@12.0.2",
+  "engines": {
+    "node": ">=24.20.0 <25",
+    "npm": ">=12.0.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": true,
+    "protobufjs@7.6.5": true,
+    "re2@1.26.1": true
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test:storage-fixtures": "node --test test/storage-fixture-integrity.test.mjs",
+    "capture:storage:encoding": "node --import tsx src/suite/capture-storage-content-encoding.ts",
+    "capture:storage:pagination": "node --import tsx src/suite/capture-storage-list-pagination.ts",
+    "capture:storage:missing": "node --import tsx src/suite/capture-storage-missing-object.ts"
+  },
+  "devDependencies": {
+    "@google-cloud/firestore": "9.0.0",
+    "@grpc/grpc-js": "1.14.4",
+    "@types/node": "26.4.0",
+    "esbuild": "0.28.2",
+    "firebase": "12.18.0",
+    "firebase-tools": "15.28.1",
+    "google-auth-library": "^11.0.2",
+    "playwright": "1.62.1",
+    "tsx": "4.23.12",
+    "typescript": "7.0.2"
+  }
+}
