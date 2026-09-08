@@ -39,3 +39,36 @@ Relevant advisories:
 [qs](https://github.com/advisories/GHSA-4mjr-xmp4-gh2g),
 [stream-json](https://github.com/advisories/GHSA-528h-pc64-c93x),
 [uuid](https://github.com/advisories/GHSA-w5hq-g745-h8pq).
+
+## Prerelease publication review
+
+The release preparation refresh on 2026-09-09 MYT found **11 moderate** entries
+in the conformance lockfile, **10 moderate** entries in a new production-only
+installation of the exact `0.1.0-next.2` CLI/native archives, and **16 moderate**
+entries in the retained tiny-suite consumer. All three had zero high/critical
+entries. The earlier table is preserved as its original snapshot; advisory
+feeds and newly resolved transitive dependencies can change between checks.
+Conformance tooling pins firebase-tools 15.28.1; the shipped Functions
+compatibility host pins 15.22.0. These are different audited scopes.
+
+The refresh additionally reports
+[csv-parse prototype replacement](https://github.com/advisories/GHSA-8cw4-87c7-c6xx)
+and, in the conformance lockfile,
+[morgan log forging](https://github.com/advisories/GHSA-jxfw-x594-9x9m).
+The qs findings also include an
+[array-limit bypass](https://github.com/advisories/GHSA-x5fp-wj9c-mxmx).
+
+Review of the installed 15.22.0 source places csv-parse in its Auth-import
+command, stream-json filters in its import/framework commands, and morgan in
+its Hosting server. The reviewed gaxios call uses UUID v4, rather than the
+advisory's caller-provided-buffer v3/v5/v6 path. These observations narrow
+those specific call paths; they do not prove every transitive use unreachable.
+Express/qs request parsing and OpenTelemetry input handling still warrant
+care around untrusted traffic and data.
+
+This distribution-cleanup prerelease leaves dependency versions and engine
+behavior unchanged. It is limited to local development with trusted synthetic
+inputs and loopback access, not public hosting or hostile-data isolation.
+Do not treat these advisories as fixed or harmless. A pinned, compatibility-
+tested dependency upgrade is follow-up work; no force downgrade, audit
+suppression or zero-advisory claim is part of this release.
