@@ -1,0 +1,26 @@
+[package]
+name = "fireside-suite-front"
+description = "Firebase Emulator Hub, UI, and Logging compatibility surfaces for fireside"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+axum = { workspace = true, features = ["ws"] }
+futures-util.workspace = true
+fireside-functions-bridge = { path = "../functions-bridge" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+time.workspace = true
+tokio = { workspace = true, features = ["fs"] }
+tower-http.workspace = true
+
+[dev-dependencies]
+tokio-tungstenite = "0.29.0"
+tower = { version = "0.5.3", features = ["util"] }
+
+[lints]
+workspace = true

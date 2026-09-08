@@ -1,0 +1,38 @@
+[package]
+name = "fireside-grpc-front"
+description = "Firestore gRPC frontend for fireside"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[dependencies]
+fireside-core-store = { path = "../core-store" }
+fireside-query-engine = { path = "../query-engine" }
+fireside-rules-runtime = { path = "../rules-runtime" }
+fireside-watch-broker = { path = "../watch-broker" }
+md-5.workspace = true
+pbjson.workspace = true
+pbjson-types.workspace = true
+prost.workspace = true
+serde.workspace = true
+tonic.workspace = true
+tonic-prost.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+
+[build-dependencies]
+pbjson-build.workspace = true
+prost.workspace = true
+protox.workspace = true
+tonic-prost-build.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+base64.workspace = true
+serde_json.workspace = true

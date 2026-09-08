@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fireside Auth Emulator</title>
+<style>
+  body { font:16px system-ui,sans-serif; color:#202124; background:#f6f7f9; margin:0; padding:24px; }
+  main { max-width:480px; margin:auto; padding:24px; background:white; border-radius:12px; }
+  h1 { font-size:22px; } p { line-height:1.5; } ul { list-style:none; padding:0; }
+  button,input { font:inherit; padding:12px; border:1px solid #ccc; border-radius:6px; }
+  button { cursor:pointer; background:#fff; } button:hover { background:#f0f4ff; }
+  .js-reuse-account { display:block; width:100%; text-align:left; margin-bottom:8px; }
+  .email { display:block; font-size:14px; color:#555; margin-top:4px; }
+  label,input { display:block; } input { box-sizing:border-box; width:100%; margin:8px 0 16px; }
+  [role=alert] { color:#b3261e; white-space:pre-wrap; } small { color:#555; }
+</style>
+<main>
+  <h1>Fireside Auth Emulator</h1>
+  <p>Sign in with <strong id="provider"></strong></p>
+  <div id="accounts-list">
+    <p id="account-help">Choose an existing local account or add one.</p>
+    <ul id="accounts"></ul>
+    <button class="js-new-account" type="button">Add new account</button>
+  </div>
+  <form id="main-form" hidden>
+    <label for="email-input">Email</label><input id="email-input" type="email" required>
+    <label for="display-name-input">Display name</label><input id="display-name-input">
+    <label for="screen-name-input">Screen name (optional)</label><input id="screen-name-input">
+    <label for="profile-photo-input">Photo URL (optional)</label><input id="profile-photo-input" type="url">
+    <button id="sign-in" type="submit">Sign in</button>
+    <button id="back-button" type="button">Back</button>
+  </form>
+  <p id="error" role="alert"></p>
+  <small>Local test accounts only. No Google password is requested or sent.</small>
+</main>
+<script id="accounts-data" type="application/json">__FIRESIDE_ACCOUNTS__</script>
+<script>
+(() => {
+  'use strict';
+  const query = new URLSearchParams(location.search);
+  const apiKey = query.get('apiKey'), appName = query.get('appName');
+  const provider = query.get('providerId'), kind = query.get('authType');
+  const storageKey = apiKey + ':' + appName;
+  const error = message => { document.getElementById('error').textContent = message; };
+  document.getElementById('provider').textContent = provider;
+
+  function complete(claims) {
+    if (!appName) return error('Missing appName for browser sign-in.');
+    const response = new URL(location.pathname, location.origin);
+    response.searchParams.set('providerId', provider);
+    response.searchParams.set('id_token', JSON.stringify(claims));
+    const authEvent = {type:kind, eventId:query.get('eventId'), urlResponse:response.href,
+      sessionId:'ValueNotUsedByAuthEmulator', postBody:'', tenantId:query.get('tid'), error:null};
+    if (kind === 'signInViaPopup' || kind === 'linkViaPopup' || kind === 'reauthViaPopup') {
+      // The SDK listens through its Auth-origin iframe, not the app's window.
+      const opener = window.opener;
+      if (opener) for (let index = 0; index < opener.frames.length; index++) {
+        try {
+          const frame = opener.frames[index];
+          const frameUrl = new URL(frame.location.href);
+          if (frameUrl.origin !== location.origin || frameUrl.pathname !== '/emulator/auth/iframe') continue;
+          if (frameUrl.searchParams.get('apiKey') !== apiKey || frameUrl.searchParams.get('appName') !== appName) continue;
+          frame.postMessage({eventType:'sendAuthEvent',eventId:crypto.randomUUID(),data:{storageKey,authEvent}}, location.origin);
+          return;
+        } catch { /* Other-origin app frames are expected and are not relays. */ }
+      }
+      return error('Cannot find the matching Firebase Auth iframe. Close this window and retry sign-in.');
+    }
+    if (kind === 'signInViaRedirect' || kind === 'linkViaRedirect' || kind === 'reauthViaRedirect') {
+      try {
+        const destination = new URL(query.get('redirectUrl'));
+        if (!['http:','https:'].includes(destination.protocol)) throw new Error('Expected an HTTP(S) redirect URL.');
+        sessionStorage.setItem('firebase:redirectEvent:' + storageKey, JSON.stringify(authEvent));
+        location.assign(destination.href);
+      } catch (failure) { error(failure.message); }
+      return;
+    }
+    error('Unsupported browser authType. Start sign-in from the Firebase JS SDK.');
+  }
+
+  const accounts = JSON.parse(document.getElementById('accounts-data').textContent);
+  if (!accounts.length) document.getElementById('account-help').textContent = 'No ' + provider + ' accounts exist in the Auth Emulator.';
+  for (const claims of accounts) {
+    const item = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'js-reuse-account';
+    const name = document.createElement('span'), email = document.createElement('span');
+    name.textContent = claims.name || '(No display name)';
+    email.textContent = claims.email || ''; email.className = 'email';
+    button.append(name,email); button.onclick = () => complete(claims);
+    item.append(button); document.getElementById('accounts').append(item);
+  }
+  const showForm = visible => {
+    document.getElementById('main-form').hidden = !visible;
+    document.getElementById('accounts-list').hidden = visible;
+  };
+  document.querySelector('.js-new-account').onclick = () => showForm(true);
+  document.getElementById('back-button').onclick = () => showForm(false);
+  document.getElementById('main-form').onsubmit = event => {
+    event.preventDefault();
+    const claims = {sub:crypto.randomUUID(),iss:'',aud:'',exp:0,iat:0,email_verified:true};
+    for (const [id,key] of [['email-input','email'],['display-name-input','name'],['screen-name-input','screen_name'],['profile-photo-input','picture']]) {
+      const value = document.getElementById(id).value;
+      if (value) claims[key] = value;
+    }
+    complete(claims);
+  };
+})();
+</script>
+</html>

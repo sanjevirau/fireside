@@ -1,0 +1,23 @@
+[package]
+name = "fireside-rules-engine"
+description = "Clean-room security rules engine for fireside"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[dependencies]
+base64.workspace = true
+md-5.workspace = true
+regex.workspace = true
+sha2.workspace = true
+time.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

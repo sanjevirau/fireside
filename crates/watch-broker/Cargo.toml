@@ -1,0 +1,18 @@
+[package]
+name = "fireside-watch-broker"
+description = "Bounded Firestore listen broker for fireside"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[dependencies]
+bincode.workspace = true
+fireside-core-store = { path = "../core-store" }
+fireside-query-engine = { path = "../query-engine" }
+
+[lints]
+workspace = true

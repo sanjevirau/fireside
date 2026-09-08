@@ -1,0 +1,21 @@
+[package]
+name = "fireside-export-format"
+description = "Firestore emulator import and export formats for fireside"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[dependencies]
+crc32c.workspace = true
+fireside-core-store = { path = "../core-store" }
+prost.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

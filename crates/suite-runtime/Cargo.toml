@@ -1,0 +1,39 @@
+[package]
+name = "fireside-suite-runtime"
+description = "Production lifecycle coordinator for the Fireside emulator suite"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+axum = { workspace = true, features = ["ws"] }
+futures-util.workspace = true
+fireside-auth-front = { path = "../auth-front" }
+fireside-core-store = { path = "../core-store" }
+fireside-export-format = { path = "../export-format" }
+fireside-functions-bridge = { path = "../functions-bridge" }
+fireside-grpc-front = { path = "../grpc-front" }
+fireside-pubsub-front = { path = "../pubsub-front" }
+fireside-query-engine = { path = "../query-engine" }
+fireside-rest-front = { path = "../rest-front" }
+fireside-rules-runtime = { path = "../rules-runtime" }
+fireside-storage-front = { path = "../storage-front" }
+fireside-suite-front = { path = "../suite-front" }
+fireside-webchannel-front = { path = "../webchannel-front" }
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+time.workspace = true
+tokio = { workspace = true, features = ["fs", "io-util", "process", "signal"] }
+tokio-stream = { workspace = true, features = ["net", "sync"] }
+tonic.workspace = true
+zip.workspace = true
+
+[dev-dependencies]
+tower = { version = "0.5.3", features = ["util"] }
+
+[lints]
+workspace = true

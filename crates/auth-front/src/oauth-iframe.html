@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Fireside Auth Emulator Helper</title>
+<body>
+<script>
+(() => {
+  'use strict';
+  const query = new URLSearchParams(location.search);
+  const apiKey = query.get('apiKey'), appName = query.get('appName');
+  const storageKey = apiKey + ':' + appName;
+  const redirectKey = 'firebase:redirectEvent:' + storageKey;
+  let channel;
+  const fail = message => { document.body.textContent = message; console.error(message); };
+  function deliver(authEvent) {
+    channel.send('authEvent', {type:'authEvent',authEvent:authEvent || {type:'unknown',error:{code:'auth/no-auth-event'}}}, responses => {
+      if (!responses?.length || responses[responses.length - 1].status !== 'ACK') fail('Firebase Auth SDK did not acknowledge the sign-in event.');
+    }, gapi.iframes.CROSS_ORIGIN_IFRAMES_FILTER);
+  }
+  window.addEventListener('message', event => {
+    if (event.origin !== location.origin || event.data?.eventType !== 'sendAuthEvent') return;
+    const data = event.data.data;
+    if (!data || data.storageKey !== storageKey || !data.authEvent) return;
+    if (channel) deliver(data.authEvent);
+    else sessionStorage.setItem(redirectKey, JSON.stringify(data.authEvent));
+  });
+  window.gapi_onload = () => {
+    if (!apiKey || !appName) return fail('Missing apiKey or appName for Auth iframe.');
+    gapi.load('gapi.iframes', {timeout:10000,ontimeout:()=>fail('Could not load the Google iframe transport. Check network access to apis.google.com.'),callback:()=>{
+      channel = gapi.iframes.getContext().getParentIframe();
+      channel.register('webStorageSupport',()=>({status:'ACK',webStorageSupport:true}),gapi.iframes.CROSS_ORIGIN_IFRAMES_FILTER);
+      let stored;
+      try { stored = JSON.parse(sessionStorage.getItem(redirectKey)); }
+      catch { sessionStorage.removeItem(redirectKey); return fail('Invalid stored Auth redirect event.'); }
+      deliver(stored);
+      sessionStorage.removeItem(redirectKey);
+    }});
+  };
+})();
+</script>
+<script src="https://apis.google.com/js/api.js"></script>
+</body>
