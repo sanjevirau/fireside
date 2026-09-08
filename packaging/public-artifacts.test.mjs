@@ -82,6 +82,29 @@ test('bounded scans detect markers across chunk boundaries and both UTF-16 align
   const bytes = Buffer.from('A'.repeat(65_535) + longPolicy.forbiddenTerms[0], 'utf8');
   assert.throws(() => assertPublicText(bytes, 'long synthetic rule', longPolicy));
 });
+test('UTF-16 scanning never passes an incomplete code unit to the native decoder', () => {
+  const decode = Buffer.prototype.toString;
+  const alignments = new Set();
+  Buffer.prototype.toString = function(encoding, ...args) {
+    if (encoding === 'utf16le') {
+      assert.equal(this.length % 2, 0, 'Do not enter the unaligned odd-length Node decoder path');
+      alignments.add(this.byteOffset % 2);
+    }
+    return decode.call(this, encoding, ...args);
+  };
+  try {
+    for (const length of [4097, 4098, 65_536, 65_537]) {
+      assertPublicText(Buffer.alloc(length, 65), 'synthetic native input', policy);
+    }
+    for (const alignment of [0, 1]) {
+      const bytes = Buffer.concat([Buffer.alloc(alignment), Buffer.from('private-customer.invalid', 'utf16le'), Buffer.from([65])]);
+      assert.throws(() => assertPublicText(bytes, 'synthetic trailing-byte marker', policy), /confidential context/);
+    }
+    assert.deepEqual([...alignments].sort(), [0, 1]);
+  } finally {
+    Buffer.prototype.toString = decode;
+  }
+});
 test('credential markers, wrong identity and lifecycle scripts are rejected', () => {
   assert.throws(() => assertPublicText(Buffer.from('-----BEGIN PRIVATE KEY-----'), 'fixture', policy));
   assert.throws(() => auditPublicPackage(archive(native()), {...expected, engineRevision: '2'.repeat(40)}, policy));
