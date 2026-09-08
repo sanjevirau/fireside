@@ -47,7 +47,10 @@ After clean shutdown, restore **only the temporary dependency changes**, then
 `bun install --frozen-lockfile` returns to the published dependency pin; verify
 the installed version afterward. `node packaging/smoke-local-consumer.mjs
 /absolute/path/to/new-artifact-directory` verifies this cycle in a throwaway
-consumer. Once the candidate is reviewed and its
+consumer. When the source version has not been published yet, append the exact
+existing registry version as the second argument (not `latest`, a range or a
+file path). The receipt records which published version was restored; it never
+changes an application checkout. Once the candidate is reviewed and its
 required CI/platform checks pass, publish a separately versioned public release
 through the existing GitHub/npm workflow. Update the consumer's exact dependency
 and lockfile in a small PR, then test the **registry-installed** version again.
