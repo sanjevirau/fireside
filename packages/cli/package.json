@@ -1,0 +1,22 @@
+{
+  "name": "@fireside-dev/cli",
+  "version": "0.1.0-next.2",
+  "description": "Rust Firebase-compatible local emulator preview with persistent disk storage",
+  "type": "module",
+  "bin": {"fireside": "bin/fireside.mjs"},
+  "exports": {"./binary": "./src/binary.mjs"},
+  "files": ["bin", "src", "release.json", "README.md", "LICENSE-MIT", "LICENSE-APACHE"],
+  "engines": {"node": ">=24 <25"},
+  "license": "MIT OR Apache-2.0",
+  "repository": {"type": "git", "url": "git+https://github.com/sanjevirau/fireside.git", "directory": "packages/cli"},
+  "bugs": {"url": "https://github.com/sanjevirau/fireside/issues"},
+  "publishConfig": {"access": "public", "registry": "https://registry.npmjs.org/"},
+  "dependencies": {"firebase-tools": "15.22.0"},
+  "optionalDependencies": {
+    "@fireside-dev/darwin-arm64": "0.1.0-next.2",
+    "@fireside-dev/darwin-x64": "0.1.0-next.2",
+    "@fireside-dev/linux-x64": "0.1.0-next.2",
+    "@fireside-dev/linux-arm64": "0.1.0-next.2",
+    "@fireside-dev/win32-x64": "0.1.0-next.2"
+  }
+}

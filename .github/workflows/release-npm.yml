@@ -1,0 +1,122 @@
+name: Reviewed npm release
+
+# No PR, push or automatic tag publishing. The release owner creates the
+# reviewed tag, then dispatches this workflow on main with that exact tag.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing reviewed npm-vVERSION tag (unchanged original tag for recovery)'
+        required: true
+        type: string
+      resume:
+        description: 'Use the reviewed version-specific recovery receipt and original artifacts; no builds'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
+jobs:
+  authorize:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    outputs:
+      source_run: ${{ steps.contract.outputs.source_run }}
+      artifact_ids: ${{ steps.contract.outputs.artifact_ids }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.20.0
+          package-manager-cache: false
+      - name: Validate exact release tag and protected environment
+        id: contract
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          RELEASE_RESUME: ${{ inputs.resume }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --test packaging/*.test.mjs
+          node packaging/check-release.mjs --release
+          gh api repos/${{ github.repository }} --jq '.private' | grep -qx false
+          gh api repos/${{ github.repository }}/environments/npm-release --jq 'any(.protection_rules[]; .type == "required_reviewers")' | grep -qx true
+
+  quality:
+    needs: authorize
+    if: ${{ !inputs.resume }}
+    uses: ./.github/workflows/ci.yml
+
+  artifacts:
+    needs: authorize
+    if: ${{ !inputs.resume }}
+    uses: ./.github/workflows/packages.yml
+
+  publish:
+    needs: [authorize, quality, artifacts]
+    if: ${{ always() && needs.authorize.result == 'success' && (inputs.resume || (needs.quality.result == 'success' && needs.artifacts.result == 'success')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    environment: npm-release
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.20.0
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm install --global npm@12.0.2
+      - uses: actions/download-artifact@484a0b528fb4d7bd804637ccb632e47a0e638317
+        with:
+          path: dist
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.authorize.outputs.source_run || github.run_id }}
+          artifact-ids: ${{ needs.authorize.outputs.artifact_ids }}
+      - name: Publish verified platform packages, then CLI, through OIDC
+        env:
+          RELEASE_RESUME: ${{ inputs.resume }}
+        run: node packaging/publish-packages.mjs dist --publish
+
+  release-notes:
+    needs: [authorize, publish]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/download-artifact@484a0b528fb4d7bd804637ccb632e47a0e638317
+        with:
+          path: dist
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.authorize.outputs.source_run || github.run_id }}
+          artifact-ids: ${{ needs.authorize.outputs.artifact_ids }}
+      - name: Attach artifacts to draft GitHub release for final review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          SOURCE_RUN: ${{ needs.authorize.outputs.source_run || github.run_id }}
+        run: |
+          gh release create "$RELEASE_TAG" --verify-tag --draft --title "Fireside ${RELEASE_TAG#npm-v}" --notes-file packaging/CHANGELOG.md
+          VERSION="${RELEASE_TAG#npm-v}"
+          mkdir release-receipts
+          for PLATFORM in linux-x64 linux-arm64 darwin-arm64 darwin-x64 win32-x64; do
+            for RECEIPT in npm-smoke bun-smoke suite-smoke; do
+              cp "dist/$PLATFORM/$RECEIPT.json" "release-receipts/$PLATFORM-$RECEIPT.json"
+            done
+          done
+          gh release upload "$RELEASE_TAG" "dist/linux-x64/fireside-dev-cli-$VERSION.tgz" dist/*/fireside-dev-linux-*.tgz dist/*/fireside-dev-darwin-*.tgz dist/*/fireside-dev-win32-*.tgz dist/*/*-manifest.json release-receipts/*.json
+          node -e 'const fs=require("node:fs");fs.writeFileSync("release-source.json",JSON.stringify({tag:process.env.RELEASE_TAG,artifactBuildRun:process.env.SOURCE_RUN,publicationRun:process.env.GITHUB_RUN_ID,publicationCommit:process.env.GITHUB_SHA,rebuiltDuringRecovery:false},null,2));'
+          gh release upload "$RELEASE_TAG" release-source.json
