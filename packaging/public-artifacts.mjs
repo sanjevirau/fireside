@@ -55,7 +55,13 @@ export function assertPublicText(bytes, label, policy = {forbiddenTerms: []}) {
   const overlap = Math.max(512, ...terms.map(term => Buffer.byteLength(term, 'utf8') * 2 + 4));
   for (const [encoding, offset] of [['utf8', 0], ['utf16le', 0], ['utf16le', 1]]) {
     for (let start = offset; start < bytes.length; start += 64 * 1024) {
-      const text = bytes.subarray(start, start + 64 * 1024 + overlap).toString(encoding);
+      let end = Math.min(bytes.length, start + 64 * 1024 + overlap);
+      // Node 24.20.0's unaligned UCS2 path copies buflen bytes into a
+      // floor(buflen / 2)-unit allocation. Avoid its one-byte overflow by
+      // omitting only an incomplete trailing unit, as UTF-16 decoding expects.
+      // Both alignments are still scanned, including all complete final units.
+      if (encoding === 'utf16le') end -= (end - start) % 2;
+      const text = bytes.subarray(start, end).toString(encoding);
       assert.ok(!/-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/.test(text), `${label}: private key`);
       assert.ok(!/(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,}|npm_[A-Za-z0-9]{30,}|AKIA[A-Z0-9]{16})/.test(text), `${label}: credential pattern`);
       const folded = text.toLowerCase();
