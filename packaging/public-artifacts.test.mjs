@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 import { gzipSync } from 'node:zlib';
 import { assertPublicText, auditPublicPackage, packageEntries } from './public-artifacts.mjs';
@@ -135,10 +136,18 @@ test('publication requires reviewed clean history and public provenance; normal 
   assert.match(packages, /actions\/upload-artifact[^\n]*\n\s+if: success\(\)/);
 });
 test('unreviewed history blocks direct publication before accessing artifacts or npm', () => {
-  const source = JSON.parse(readFileSync(new URL('./source-publication.json', import.meta.url)));
-  if (source.reviewedCleanPublicHistory) return;
-  const result = spawnSync(process.execPath, [fileURLToPath(new URL('./publish-packages.mjs', import.meta.url)), 'nonexistent-artifacts', '--publish'], {encoding: 'utf8'});
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /cutover must be reviewed before publication/);
-  assert.doesNotMatch(result.stderr, /ENOENT/);
+  // Exercise the rejection even after this repository's review is complete.
+  // Only the throwaway copy gets an unreviewed receipt; never modify live state.
+  const root = mkdtempSync(join(tmpdir(), 'fireside-unreviewed-publication-'));
+  try {
+    cpSync(new URL('./', import.meta.url), join(root, 'packaging'), {recursive: true});
+    cpSync(new URL('../packages/cli/', import.meta.url), join(root, 'packages/cli'), {recursive: true});
+    writeFileSync(join(root, 'packaging/source-publication.json'), JSON.stringify({schemaVersion: 1, reviewedCleanPublicHistory: false}));
+    const result = spawnSync(process.execPath, [join(root, 'packaging/publish-packages.mjs'), 'nonexistent-artifacts', '--publish'], {encoding: 'utf8', cwd: root});
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /cutover must be reviewed before publication/);
+    assert.doesNotMatch(result.stderr, /ENOENT/);
+  } finally {
+    rmSync(root, {recursive: true, force: true});
+  }
 });
