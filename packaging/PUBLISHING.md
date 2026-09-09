@@ -79,8 +79,14 @@ macOS notarization and more platforms remain separate supported-platform work.
 4. Approve the `npm-release` environment only after reviewing the exact artifacts
    and checks. GitHub-hosted Ubuntu publishes using `id-token: write`, with no
    npm token. npm generates provenance for this public repo/public package.
-5. Platform packages publish before the CLI, all initially on `next`. Every
-   published version's integrity must equal the tested tarball. Partial failure
+5. Platform packages publish before the CLI, all initially on `next`. Each
+   connection must first pass an authentication-only dry-run using the pinned
+   npm 12.0.2 client. A zero exit code is insufficient: its explicit OIDC token
+   exchange success is required for all six packages before any upload. Raw
+   verbose authentication logs are not emitted or uploaded. Failures report
+   only a fixed category and exchange HTTP status; investigate trust without
+   falling back to another credential. Actual uploads require provenance.
+   Every published version's integrity must equal the tested tarball. Partial failure
    stops: preserve it, do not rebuild different bytes under the same version.
    The publisher can recognize byte-identical versions already present, but a
    fresh rebuild may differ; investigate before retrying a release.
@@ -136,6 +142,19 @@ Recovery requires independently reviewed receipts for the actual failed run.
 Recovery avoids another platform build/quality cycle for the already-verified
 artifacts. The repair PR still runs the existing required CI; none of those new
 builds replace the reviewed original release artifacts.
+
+### `0.1.0-next.2` publication interruption
+
+[Original release run](https://github.com/sanjevirau/fireside/actions/runs/34294395101)
+passed all seven quality checks, five platform builds and the artifact verifier.
+After owner approval, npm rejected the first `darwin-arm64` upload with HTTP 404
+before an acknowledgement. The remaining five packages were not attempted.
+All six registry versions were absent when inspected after failure. The error
+does not establish which authentication check failed: the pinned npm client
+can suppress an OIDC exchange failure before falling back to other credentials.
+The version-specific recovery receipt preserves the original archives and tag;
+authentication preflight must pass before recovery can upload anything. No trust
+permission, 2FA requirement or product content is weakened by this recovery.
 
 ## Version and rollback policy
 

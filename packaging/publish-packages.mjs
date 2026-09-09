@@ -7,6 +7,7 @@ import { publishVerifiedRelease } from './registry-readiness.mjs';
 import { recoveryReceipt, validateRecoveryPackages } from './release-recovery.mjs';
 import { auditPublicPackage } from './public-artifacts.mjs';
 import { publicationPolicy as loadPublicationPolicy } from './publication-policy.mjs';
+import { verifyPublishingAuth } from './publishing-auth.mjs';
 
 const [artifactRoot, mode = '--check'] = process.argv.slice(2);
 if (!artifactRoot || !['--check','--publish'].includes(mode)) throw new Error('Usage: publish-packages.mjs ARTIFACT_ROOT [--check|--publish]');
@@ -41,11 +42,12 @@ const recovery = process.env.RELEASE_RESUME === 'true' ? recoveryReceipt() : nul
 if (recovery) validateRecoveryPackages(recovery, ordered);
 console.log(JSON.stringify({mode, version:manifest.version, packages:ordered}, null, 2));
 if (mode === '--publish') {
+  verifyPublishingAuth(ordered);
   // Native packages first, CLI last. Every package goes to next first, never
   // latest until all exact registry artifacts have been verified.
   await publishVerifiedRelease(ordered, {
     accepted: recovery?.accepted ?? [],
-    publish: record => execFileSync('npm', ['publish', record.path, '--access', 'public', '--tag', 'next', '--ignore-scripts'], {stdio:'inherit'}),
+    publish: record => execFileSync('npm', ['publish', record.path, '--provenance', '--access', 'public', '--tag', 'next', '--ignore-scripts'], {stdio:'inherit'}),
   });
   if (!manifest.version.includes('-')) {
     // npm dist-tag is NOT supported by OIDC. Do not fall back to a stored token.

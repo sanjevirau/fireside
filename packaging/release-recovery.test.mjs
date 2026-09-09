@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { recoveryReceipt, validateRecoverySource, validateRecoveryPackages } from './release-recovery.mjs';
 
 import { syntheticRecoveryFixture } from './synthetic-recovery-fixture.mjs';
@@ -43,7 +43,8 @@ test('recovery requires all six original tarball checksums and integrities', () 
 
 test('only an existing version-specific receipt enables recovery', () => {
   const current=JSON.parse(readFileSync(new URL('../packages/cli/package.json',import.meta.url)));
-  if (current.version === receipt.version) assert.deepEqual(recoveryReceipt(),receipt);
+  const path=new URL(`./recoveries/npm-v${current.version}.json`,import.meta.url);
+  if (existsSync(path)) assert.deepEqual(recoveryReceipt(),JSON.parse(readFileSync(path)));
   else assert.throws(()=>recoveryReceipt(),/ENOENT/);
 });
 
