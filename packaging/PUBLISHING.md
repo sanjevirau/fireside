@@ -157,6 +157,13 @@ The version-specific recovery receipt preserves the original archives and tag;
 authentication preflight must pass before recovery can upload anything. No trust
 permission, 2FA requirement or product content is weakened by this recovery.
 
+Recovery completed in [run 34309740019](https://github.com/sanjevirau/fireside/actions/runs/34309740019):
+all six exact original archives are published with provenance. The first failed
+release and the separate unsuccessful authentication attempt remain failed;
+only the successful recovery establishes publication. Registry integrity was
+checked against the original reviewed archive bytes. This does not resolve the
+dependency advisories documented in `SECURITY.md`.
+
 ## Version and rollback policy
 
 - Use `0.1.0-next.N`/`0.1.0-rc.N` while the public contract is preview-only.

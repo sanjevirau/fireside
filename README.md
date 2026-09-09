@@ -2,15 +2,18 @@
 
 A Rust-based Firebase-compatible local emulator preview.
 
-This is the product's clean source tree, with synthetic protocol fixtures and
-independent build/install tests. It remains private during release review.
-The prepared `0.1.0-next.2` package is **not published yet**. The source migration
-does not change any previously published package or certify a new release.
+This public project uses synthetic protocol fixtures and independent build/install
+tests. The `0.1.0-next.2` preview is published as `@fireside-dev/cli`:
 
-The existing npm prereleases remain available as `@fireside-dev/cli`. Creating
-this repository does not change those published package bytes or qualify a new
-engine. Source builds, generic oracle/SDK tests and native package verification
-must pass on the exact candidate before a new release.
+```sh
+npm install --save-dev @fireside-dev/cli@0.1.0-next.2
+```
+
+The [publication run](https://github.com/sanjevirau/fireside/actions/runs/34309740019)
+published the exact archives from the [original build and platform verification](https://github.com/sanjevirau/fireside/actions/runs/34294395101).
+The original run's publication step failed; its successful build/test results
+and the separate successful recovery must not be conflated. Source cleanup
+does not alter existing npm archives or qualify a changed engine.
 
 Application integration belongs in the consuming application's private test
 environment. Public fixtures must use synthetic data; product compatibility
@@ -22,7 +25,7 @@ Developers install one package, `@fireside-dev/cli`; optional dependencies selec
 the native binary. The preview supports a complete local suite configuration,
 not every Firebase service or every CLI option. See the
 [CLI guide](packages/cli/README.md) for setup, configuration, state retention,
-native resume and rollback. Its next-version command applies after publication.
+native resume and rollback.
 
 Disk/WAL is the default. Firestore, Auth and Storage services are implemented in
 Rust. Functions still run user JavaScript through Node/firebase-tools; Storage
@@ -54,5 +57,6 @@ Release CI checks native packages on macOS arm64/x64, Linux glibc arm64/x64 and
 Windows x64. A platform is qualified only by its exact passing candidate run.
 No universal compatibility, performance advantage or memory reduction is claimed.
 
-The publication command remains blocked by `packaging/source-publication.json`
-until clean-history review, public provenance and release-owner approval.
+Publication requires reviewed source, exact-candidate verification, public
+provenance and protected release-owner approval. See [Security boundaries](SECURITY.md)
+for local-only use, dependency advisories and disclosure limitations.
