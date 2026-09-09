@@ -1,4 +1,15 @@
-# 0.1.0-next.2 — public distribution cleanup (unreleased)
+# 0.1.0-next.3 — independent source identity (unreleased)
+
+- Replace the remaining consumer-shaped serialization inputs with independently
+  captured, domain-neutral records from both pinned official emulators.
+- Preserve all seven read transports, eight repetitions, value/order assertions,
+  and memory/disk-WAL replay. No engine runtime or dependency version change.
+- Pin the engine in the rewritten public history. Earlier package bytes and
+  signed provenance remain unchanged; the new identity needs fresh platform
+  build/install checks and protected publication approval.
+- Keep previous dependency advisories and preview compatibility limits explicit.
+
+# 0.1.0-next.2 — public distribution cleanup (published)
 
 - Describe the generic local emulator preview without naming private consumers,
   linking their reports, or claiming universal compatibility.
@@ -10,8 +21,8 @@
 - Preserve earlier package versions and their evidence. This is not a new
   performance result or endurance qualification.
 - All seven quality jobs and all five native platform cells remain required.
-  Publication awaits the reviewed clean-source/provenance boundary and the
-  existing release-owner approval; no stable dist-tag promotion is included.
+  Publication completed through a separately reviewed recovery of the original
+  archives. No stable-release qualification is implied by registry tags.
 
 # 0.1.0-next.1 — browser Auth repair
 

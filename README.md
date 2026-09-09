@@ -15,6 +15,11 @@ The original run's publication step failed; its successful build/test results
 and the separate successful recovery must not be conflated. Source cleanup
 does not alter existing npm archives or qualify a changed engine.
 
+The source currently prepares `0.1.0-next.3`; it is not published yet.
+See [source-history maintenance](packaging/SOURCE-HISTORY.md) before updating
+an existing clone. The next preview requires fresh verification under its new
+source identity; earlier attestations are not rewritten.
+
 Application integration belongs in the consuming application's private test
 environment. Public fixtures must use synthetic data; product compatibility
 must not rely on a private checkout, credentials or application architecture.
