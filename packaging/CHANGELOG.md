@@ -1,4 +1,4 @@
-# 0.1.0-next.3 — independent source identity (unreleased)
+# 0.1.0-next.3 — independent source identity
 
 - Replace the remaining consumer-shaped serialization inputs with independently
   captured, domain-neutral records from both pinned official emulators.
