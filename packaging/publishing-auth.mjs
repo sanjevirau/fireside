@@ -1,5 +1,16 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { probeRegistry } from './registry-readiness.mjs';
+
+export async function verifyMissingPublishingAuth(records, { accepted = [], probe = probeRegistry, ...options } = {}) {
+  const missing = [];
+  for (const record of records) {
+    // npm dry-run rejects an already published version too. Never attempt to
+    // authenticate it via publish or mistake a hidden accepted upload for new.
+    if (!accepted.includes(record.name) && !await probe(record, 'version')) missing.push(record);
+  }
+  if (missing.length) verifyPublishingAuth(missing, options);
+}
 
 // npm 12.0.2 treats a failed OIDC exchange as optional and can then fall back
 // to other credentials. Dry-run performs that exchange but never uploads.

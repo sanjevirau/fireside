@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { authenticationFailure, verifyPublishingAuth } from './publishing-auth.mjs';
+import { authenticationFailure, verifyPublishingAuth, verifyMissingPublishingAuth } from './publishing-auth.mjs';
 
 const env = { GITHUB_ACTIONS: 'true', ACTIONS_ID_TOKEN_REQUEST_URL: 'synthetic-url', ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'synthetic-identity' };
 const records = ['darwin-arm64', 'cli'].map(name => ({ name: `@fireside-dev/${name}`, path: `/synthetic/${name}.tgz` }));
@@ -57,8 +57,29 @@ test('diagnostics expose only fixed reasons and HTTP status, never URLs, tokens 
 
 test('publisher checks every connection before writes and requires provenance on uploads', () => {
   const source = readFileSync(new URL('./publish-packages.mjs', import.meta.url), 'utf8');
-  assert.ok(source.indexOf('const ordered =') < source.indexOf('verifyPublishingAuth(ordered)'));
-  assert.ok(source.indexOf('validateRecoveryPackages(recovery, ordered)') < source.indexOf('verifyPublishingAuth(ordered)'));
-  assert.ok(source.indexOf('verifyPublishingAuth(ordered)') < source.indexOf('await publishVerifiedRelease'));
+  assert.ok(source.indexOf('const ordered =') < source.indexOf('await verifyMissingPublishingAuth(ordered,'));
+  assert.ok(source.indexOf('validateRecoveryPackages(recovery, ordered)') < source.indexOf('await verifyMissingPublishingAuth(ordered,'));
+  assert.ok(source.indexOf('await verifyMissingPublishingAuth(ordered,') < source.indexOf('await publishVerifiedRelease'));
   assert.match(source, /\['publish', record.path, '--provenance'/);
+});
+
+test('accepted hidden and registry-verified versions are not subjected to another publish dry-run', async () => {
+  const calls = [];
+  await verifyMissingPublishingAuth(records, {
+    accepted: [records[0].name], env, run: executor(success, calls),
+    probe: async record => { assert.equal(record.name, records[1].name); return { verified: true }; },
+  });
+  assert.equal(calls.length, 0);
+  await verifyMissingPublishingAuth(records, {
+    accepted: [records[0].name], env, run: executor(success, calls), probe: async () => null, report: () => {},
+  });
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].args[1], records[1].path);
+});
+
+test('registry uncertainty fails closed before authentication or uploads', async () => {
+  await assert.rejects(verifyMissingPublishingAuth(records, {
+    env, run: () => assert.fail('must not start authentication'),
+    probe: async () => { throw new Error('synthetic integrity mismatch'); },
+  }), /integrity mismatch/);
 });

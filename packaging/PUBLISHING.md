@@ -80,9 +80,10 @@ macOS notarization and more platforms remain separate supported-platform work.
    and checks. GitHub-hosted Ubuntu publishes using `id-token: write`, with no
    npm token. npm generates provenance for this public repo/public package.
 5. Platform packages publish before the CLI, all initially on `next`. Each
-   connection must first pass an authentication-only dry-run using the pinned
+   missing package's connection must first pass an authentication-only dry-run using the pinned
    npm 12.0.2 client. A zero exit code is insufficient: its explicit OIDC token
-   exchange success is required for all six packages before any upload. Raw
+   exchange success is required before any upload. Previously acknowledged or
+   integrity-verified versions are never re-published, including by dry-run. Raw
    verbose authentication logs are not emitted or uploaded. Failures report
    only a fixed category and exchange HTTP status; investigate trust without
    falling back to another credential. Actual uploads require provenance.
