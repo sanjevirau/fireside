@@ -18,6 +18,20 @@ Their source links may become unavailable after historical cache cleanup.
 The next preview uses a new engine source identity and requires fresh builds,
 all existing quality/install checks and protected publication approval.
 
+The public repository was subsequently recreated at the same URL, with a new
+GitHub repository identity, because old pull-request refs remained reachable
+after the branch rewrite. The former repository and its CI records are archived
+privately. The replacement was populated only from the reviewed clean history;
+old CI run IDs and PR numbers must not be interpreted as records in the new
+repository. New dependency proposals can reuse PR numbers with different heads.
+All npm trusted-publisher connections must be recreated for the new repository
+identity before another release; name equality alone is not verification.
+
+The owner authorized deprecation notices for `0.1.0-next.0` and
+`0.1.0-next.1`, and moving `latest` to the verified `0.1.0-next.2` preview on
+all six packages. This metadata-only change does not make the preview stable,
+remove old versions, change their bytes or update existing lockfiles.
+
 This maintenance does not revoke external copies or guarantee cache removal.
 It is not a claim of zero vulnerabilities, universal Firebase compatibility,
 new performance measurements or removal of the documented dependency advisories.

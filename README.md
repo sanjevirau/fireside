@@ -9,11 +9,11 @@ tests. The `0.1.0-next.2` preview is published as `@fireside-dev/cli`:
 npm install --save-dev @fireside-dev/cli@0.1.0-next.2
 ```
 
-The [publication run](https://github.com/sanjevirau/fireside/actions/runs/34309740019)
-published the exact archives from the [original build and platform verification](https://github.com/sanjevirau/fireside/actions/runs/34294395101).
-The original run's publication step failed; its successful build/test results
-and the separate successful recovery must not be conflated. Source cleanup
-does not alter existing npm archives or qualify a changed engine.
+The published archives retain their original signed npm provenance and hashes.
+Their original build (34294395101) and recovery publication (34309740019) belong
+to the former repository, now archived privately. Those historical Actions links
+are no longer public verification links in this replacement repository. Source
+cleanup does not alter existing npm archives or qualify a changed engine.
 
 The source currently prepares `0.1.0-next.3`; it is not published yet.
 See [source-history maintenance](packaging/SOURCE-HISTORY.md) before updating

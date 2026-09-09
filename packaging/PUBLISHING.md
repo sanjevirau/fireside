@@ -146,7 +146,7 @@ builds replace the reviewed original release artifacts.
 
 ### `0.1.0-next.2` publication interruption
 
-[Original release run](https://github.com/sanjevirau/fireside/actions/runs/34294395101)
+Original release run `34294395101` in the former repository
 passed all seven quality checks, five platform builds and the artifact verifier.
 After owner approval, npm rejected the first `darwin-arm64` upload with HTTP 404
 before an acknowledgement. The remaining five packages were not attempted.
@@ -157,12 +157,19 @@ The version-specific recovery receipt preserves the original archives and tag;
 authentication preflight must pass before recovery can upload anything. No trust
 permission, 2FA requirement or product content is weakened by this recovery.
 
-Recovery completed in [run 34309740019](https://github.com/sanjevirau/fireside/actions/runs/34309740019):
+Recovery completed in former-repository run `34309740019`:
 all six exact original archives are published with provenance. The first failed
 release and the separate unsuccessful authentication attempt remain failed;
 only the successful recovery establishes publication. Registry integrity was
 checked against the original reviewed archive bytes. This does not resolve the
 dependency advisories documented in `SECURITY.md`.
+
+These runs and the old Git tag were subsequently archived during
+[source-history maintenance](SOURCE-HISTORY.md). They are historical receipts,
+not runs or a recoverable tag in the replacement repository. Do not attempt a
+new-repository recovery using their old run IDs. Existing npm attestations and
+archive hashes remain tied to the original publication; a new version requires
+new public-repository verification and reconnected trusted publishers.
 
 ## Version and rollback policy
 
