@@ -149,5 +149,5 @@ try{
   const recovered=await stop();assert.equal(recovered.exit[0],0,recovered.log);record.recoveryExit=recovered.exit;
   assert(await exists(join(output,'recovered-export/firebase-export-metadata.json')));record.completedRecoveryExport=true;record.passed=true;
 }catch(error){record.error=String(error);throw error;}
-finally{if(active)await stop();await json('result.json',record);}
+finally{if(active)await stop();record.ownedSuiteExited=!active;await json('result.json',record);}
 console.log(JSON.stringify({passed:record.passed,output}));

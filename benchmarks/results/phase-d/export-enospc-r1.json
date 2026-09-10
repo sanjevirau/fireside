@@ -1,0 +1,53 @@
+{
+  "passed": false,
+  "acceptance": false,
+  "syntheticOnly": true,
+  "fault": "ENOSPC on isolated export filesystem",
+  "filesystem": {
+    "type": 25,
+    "capacityBytes": 16736256,
+    "availableBeforeBytes": 16347136,
+    "separateFromWorkingState": true,
+    "observedWriteError": "ENOSPC",
+    "availableAtExportBytes": 618496,
+    "fillerBytes": 15728640
+  },
+  "binarySha256": "5a54dd47c72b3865506d8fe18a88abc1a0734c4b35b34967111eea60f15ad91e",
+  "driverSha256": "4dd3d2e43d41b413327f1955aed5e2f74a723f3edbf45fd2a3bbf4222cb4acbe",
+  "node": "v24.20.0",
+  "launches": [
+    {
+      "name": "failed-export",
+      "readyMilliseconds": 15020.879459,
+      "resumed": false
+    }
+  ],
+  "failedExportExit": [
+    0,
+    null
+  ],
+  "exportErrorReported": false,
+  "functionsDrained": true,
+  "openPorts": [],
+  "locatorRemaining": false,
+  "nativeReceiptRetained": true,
+  "incompleteExportNotPublished": false,
+  "partialExportPaths": [
+    "export",
+    "export/auth_export",
+    "export/firebase-export-metadata.json",
+    "export/firestore_export",
+    "export/storage_export",
+    "export/storage_export/blobs",
+    "export/storage_export/buckets.json",
+    "export/storage_export/metadata",
+    "export/firestore_export/all_namespaces",
+    "export/firestore_export/firestore_export.overall_export_metadata",
+    "export/firestore_export/all_namespaces/all_kinds",
+    "export/firestore_export/all_namespaces/all_kinds/all_namespaces_all_kinds.export_metadata",
+    "export/firestore_export/all_namespaces/all_kinds/output-0",
+    "export/auth_export/accounts.json",
+    "export/auth_export/config.json"
+  ],
+  "error": "AssertionError [ERR_ASSERTION]: Expected \"actual\" to be strictly unequal to: 0"
+}

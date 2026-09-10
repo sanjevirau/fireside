@@ -22,8 +22,8 @@ owned ports closed, Hub locator removed, native receipt retained and no complete
 export published. It then reopens the same native store (not a fresh import),
 verifies the acknowledged document and completes a portable recovery export.
 All working state, logs and failed evidence are retained in its fresh output.
-No live consumer data or host disk filling is involved. ENOSPC and interrupted
-publication remain separate cases; this test does not claim to cover them.
+No live consumer data or host disk filling is involved. Interrupted publication
+remains a separate case; this test does not claim to cover it.
 
 The [before/after receipts](../benchmarks/results/phase-d/) retain the reproduced
 missing orderly drain and the corrected native reopen/recovery export. The
@@ -51,3 +51,35 @@ Storage mutations survived. The actual previous and candidate binary hashes are
 recorded, and the latter includes runtime `365ad2a`. Linux CI repeats the test
 using the exact installed `next.3` platform package with scripts disabled. This
 does not qualify arbitrary native downgrades or other historical versions.
+
+## Real filesystem exhaustion
+
+The separately frozen [export-volume](../benchmarks/phase-d-export-enospc.json)
+and [working-volume](../benchmarks/phase-d-working-disk-enospc.json) contracts use
+fresh tiny disk images, never the host filesystem. The driver rejects a shared
+host/evidence device or a volume larger than 64 MiB. It fills only its exclusive
+synthetic file, records an actual `ENOSPC`, and requires zero available space.
+The evidence and original seed remain outside the fault filesystem.
+
+Both local corrected tests passed on macOS HFS+ images with runtime `365ad2a`.
+The export-only test failed export cleanly, retained native data and completed a
+recovery export elsewhere. The working-data test additionally obtained explicit
+no-space errors from Firestore, Auth and Storage, and a subsequent Firestore write
+was fenced until reopen. After orderly teardown and removal of only the synthetic
+filler, same-directory native recovery retained every acknowledged value. The
+unacknowledged two-document batch and object were absent (not partially committed),
+and a fresh write and recovery export succeeded. These observations qualify the
+tested failure/recovery path, not host power loss or arbitrary filesystems.
+
+Earlier attempts are retained in the [receipt directory](../benchmarks/results/phase-d/):
+export r1 still had 618,496 bytes free and export legitimately succeeded; native
+r1 expected the word `restart` rather than the existing actionable instruction
+`reopen the store to recover before writing`. Both were harness failures corrected
+without a product change. All four receipts record the same binary identity.
+
+Linux CI repeats both variants using fresh 64 MiB ext4 loop images. The wrapper
+only formats the exact newly created image; it never formats a device. It uses
+normal unmount after confirmed suite exit, never a force-unmount or process kill,
+and retains the image, result and logs. A missing exit receipt leaves the mount
+intact for diagnosis. Linux qualification requires the actual CI result; the local
+HFS+ receipt must not be presented as Linux evidence.
