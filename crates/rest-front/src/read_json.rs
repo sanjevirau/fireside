@@ -87,3 +87,77 @@ pub(super) fn commit(response: &CommitResponse) -> Result<JsonValue, RestError> 
     }
     Ok(encoded)
 }
+
+#[cfg(test)]
+mod profile {
+    use super::*;
+    use std::{collections::BTreeMap, hint::black_box, io::Write as _, time::Instant};
+
+    #[test]
+    #[ignore = "manual release microprofile, not an elapsed-time CI assertion"]
+    fn nested_document_encoding_profile() {
+        let mut nested = Value {
+            value_type: Some(ValueType::StringValue("x".repeat(65_536))),
+        };
+        for _ in 0..16 {
+            nested = Value {
+                value_type: Some(ValueType::MapValue(
+                    fireside_grpc_front::google::firestore::v1::MapValue {
+                        fields: BTreeMap::from([("child".to_owned(), nested)]),
+                    },
+                )),
+            };
+        }
+        let input = Document {
+            name: "projects/demo-encoding/databases/(default)/documents/items/nested".to_owned(),
+            fields: BTreeMap::from([
+                ("nested".to_owned(), nested),
+                (
+                    "null".to_owned(),
+                    Value {
+                        value_type: Some(ValueType::NullValue(0)),
+                    },
+                ),
+                (
+                    "nonfinite".to_owned(),
+                    Value {
+                        value_type: Some(ValueType::DoubleValue(f64::NAN)),
+                    },
+                ),
+                (
+                    "timestamp".to_owned(),
+                    Value {
+                        value_type: Some(ValueType::TimestampValue(Default::default())),
+                    },
+                ),
+            ]),
+            ..Document::default()
+        };
+        let expected = document(&input).expect("normalization");
+        assert_eq!(expected["fields"]["null"], json!({"nullValue":null}));
+        assert_eq!(
+            expected["fields"]["nonfinite"],
+            json!({"doubleValue":"NaN"})
+        );
+        let started = Instant::now();
+        for _ in 0..500 {
+            let encoded = document(black_box(&input)).expect("normalization");
+            black_box(encoded);
+        }
+        let elapsed = started.elapsed().as_nanos();
+        let bytes = expected.to_string();
+        if let Some(path) = std::env::var_os("FIRESIDE_ENCODING_PROFILE_OUTPUT") {
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(path)
+                .expect("fresh profile output");
+            file.write_all(bytes.as_bytes())
+                .expect("preserve exact output");
+        }
+        eprintln!(
+            "rest-encoding-profile iterations=500 elapsed_ns={elapsed} json_bytes={}",
+            bytes.len()
+        );
+    }
+}
