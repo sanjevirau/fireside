@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "recordedBeforeMeasurement": true,
+  "scope": "Constructed short ENOSPC fault, not a live official capture or host disk exhaustion",
+  "input": "A fresh separately mounted 4–64 MiB disposable filesystem; working state and evidence must be on another filesystem",
+  "fault": "After readiness and an acknowledged Unicode document write, fill only an exclusive synthetic file on the tiny export filesystem until the OS returns ENOSPC",
+  "maximumFillBytes": 67108864,
+  "criteria": [
+    "Actual filler write receives ENOSPC and available export space is recorded",
+    "Native export fails with the OS no-space error and nonzero process exit",
+    "Functions orderly teardown completes; all owned ports close; Hub locator is removed",
+    "No completed portable export is published; partial-path evidence is retained",
+    "Native receipt and acknowledged write survive same-directory reopen",
+    "Recovery export to the unaffected evidence filesystem completes"
+  ],
+  "unchangedDriverDeadlinesMilliseconds": {"readiness":90000,"request":10000,"shutdown":45000},
+  "limitations": "Does not establish behavior when the native working-data disk itself fills, during host power loss, or when an entire machine runs out of memory. No pre-existing volume is formatted or filled."
+}

@@ -1,23 +1,32 @@
 // Constructed, isolated filesystem fault regression; not a live official capture.
-// node verify-export-failure.mjs binary tools-root sdk-root emulator-cache fresh-output
+// node verify-export-failure.mjs binary tools-root sdk-root emulator-cache fresh-output [isolated-volume]
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {once} from 'node:events';
-import {access,mkdir,readFile,writeFile,symlink} from 'node:fs/promises';
+import {access,mkdir,readFile,writeFile,symlink,stat,statfs,open,readdir} from 'node:fs/promises';
 import {createServer,createConnection} from 'node:net';
 import {tmpdir} from 'node:os';
 import {resolve,dirname,join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 
-assert.equal(process.argv.length,7,'binary tools-root sdk-root emulator-cache fresh-output');
-const [binary,tools,sdk,cache,output]=process.argv.slice(2).map(resolvePath=>resolve(resolvePath));
+assert([7,8].includes(process.argv.length),'binary tools-root sdk-root emulator-cache fresh-output [isolated-volume]');
+const [binary,tools,sdk,cache,output,volume]=process.argv.slice(2).map(resolvePath=>resolve(resolvePath));
 assert.equal(JSON.parse(await readFile(join(tools,'package.json'))).version,'15.22.0');
 assert.equal(JSON.parse(await readFile(join(sdk,'package.json'))).version,'7.2.5');
 await mkdir(output,{mode:0o700});
 const json=(name,value)=>writeFile(join(output,name),JSON.stringify(value,null,2)+'\n');
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const project='demo-export-fault-'+process.pid,bucket=project+'.appspot.com';
+let faultRoot=join(output,'blocked'),filesystem;
+if(volume){
+  const fs=await statfs(volume);
+  assert.notEqual((await stat(volume)).dev,(await stat(output)).dev,'refuse to fill the host/output filesystem');
+  const capacity=fs.blocks*fs.bsize;
+  assert(capacity>=4*1024*1024&&capacity<=64*1024*1024,'fault volume must be a separate tiny 4–64 MiB filesystem');
+  faultRoot=join(volume,'fireside-export-fault');await mkdir(faultRoot);
+  filesystem={type:fs.type,capacityBytes:capacity,availableBeforeBytes:fs.bavail*fs.bsize,separateFromWorkingState:true};
+}
 await mkdir(join(output,'functions/node_modules'),{recursive:true});
 await symlink(sdk,join(output,'functions/node_modules/firebase-functions'),'dir');
 await json('functions/package.json',{name:'export-fault-fixture',version:'1.0.0',main:'index.js',engines:{node:'24'}});
@@ -41,7 +50,7 @@ await Promise.all(reservations.map(listener=>new Promise(resolve=>listener.close
 const exists=path=>access(path).then(()=>true,()=>false);
 const listening=port=>new Promise(resolve=>{const socket=createConnection({host:'127.0.0.1',port});const done=value=>{socket.destroy();resolve(value);};socket.setTimeout(1000,()=>done(true));socket.once('connect',()=>done(true));socket.once('error',()=>done(false));});
 let active;
-const record={passed:false,acceptance:false,syntheticOnly:true,fault:'export parent becomes a regular file after readiness',binarySha256:sha(await readFile(binary)),driverSha256:sha(await readFile(new URL(import.meta.url))),node:process.version,launches:[]};
+const record={passed:false,acceptance:false,syntheticOnly:true,fault:volume?'ENOSPC on isolated export filesystem':'export parent becomes a regular file after readiness',filesystem,binarySha256:sha(await readFile(binary)),driverSha256:sha(await readFile(new URL(import.meta.url))),node:process.version,launches:[]};
 async function launch(name,extra=[]){
   const child=spawn(binary,[...args,...extra],{cwd:output,env,stdio:['pipe','pipe','pipe']});
   const handle={child,name,log:'',finished:once(child,'exit')};active=handle;
@@ -59,16 +68,25 @@ async function stop(){
 }
 const doc=`http://127.0.0.1:${ports.firestore}/v1/projects/${project}/databases/(default)/documents/items/acknowledged`;
 try{
-  await launch('failed-export',['--export-on-exit',join(output,'blocked/export')]);
+  await launch('failed-export',['--export-on-exit',join(faultRoot,'export')]);
   const write=await fetch(doc,{method:'PATCH',headers:{authorization:'Bearer owner','content-type':'application/json'},body:JSON.stringify({fields:{text:{stringValue:'acknowledged 火🔥'}}}),signal:AbortSignal.timeout(10000)});assert.equal(write.status,200);await write.arrayBuffer();
-  await writeFile(join(output,'blocked'),'controlled export-parent fault\n');
+  if(volume){
+    const filler=await open(join(faultRoot,'capacity-fill'),'wx');let written=0;
+    try{
+      while(written<=filesystem.capacityBytes){const result=await filler.write(Buffer.alloc(1024*1024));assert(result.bytesWritten>0);written+=result.bytesWritten;}
+      assert.fail('bounded fill did not produce ENOSPC');
+    }catch(error){assert.equal(error.code,'ENOSPC');filesystem.observedWriteError=error.code;}
+    finally{await filler.close();}
+    const full=await statfs(volume);filesystem.availableAtExportBytes=full.bavail*full.bsize;filesystem.fillerBytes=(await stat(join(faultRoot,'capacity-fill'))).size;
+  }else await writeFile(faultRoot,'controlled export-parent fault\n');
   const stopped=await stop();record.failedExportExit=stopped.exit;
-  record.exportErrorReported=/failed to create export parent/.test(stopped.log);
+  record.exportErrorReported=volume?/No space left on device|os error 28/i.test(stopped.log):/failed to create export parent/.test(stopped.log);
   record.functionsDrained=/functions host: stopping/.test(stopped.log);
   record.openPorts=[];for(const [name,port] of Object.entries(ports))if(await listening(port))record.openPorts.push(name);
   record.locatorRemaining=await exists(join(tmpdir(),'hub-'+project+'.json'));
   record.nativeReceiptRetained=await exists(join(output,'working/native-state.json'));
-  record.incompleteExportNotPublished=!(await exists(join(output,'blocked/export/firebase-export-metadata.json')));
+  record.incompleteExportNotPublished=!(await exists(join(faultRoot,'export/firebase-export-metadata.json')));
+  if(volume)record.partialExportPaths=(await readdir(faultRoot,{recursive:true})).filter(path=>path!=='capacity-fill');
   await json('result.json',record);
   assert.notEqual(stopped.exit[0],0);assert(record.exportErrorReported);
   assert(record.functionsDrained,'Functions must receive orderly shutdown even when export fails');
