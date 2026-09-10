@@ -95,6 +95,31 @@ into a later allowed event (`request-6`). Internal traces describe the condition
 actually evaluated for their own request, not duplicated entries fabricated to
 imitate the jar's shared mutable history. The live fixture remains unchanged.
 
+### Bounded Requests buffer (Phase B, not yet attached to serving paths)
+
+The shared rules runtime now provides a separately constructed `RequestHistory`.
+It serializes complete events once with a 16 MiB cap, retains at most 256 events
+and 16 MiB including array framing, and expires events using monotonic ten-minute
+ages. A transport must run its maintenance hook during idle periods. Subscriber
+registration and the initial history snapshot are atomic with respect to admitted
+events; later events keep their original order and identifiers.
+
+Each of at most four subscription handles has a bounded queue and a 16 MiB byte
+budget that remains charged until its send guard is dropped, not merely dequeued.
+Overflow disconnects that reader without waiting or discarding history for other
+readers. Disconnected handles retain their connection slots until dropped. A
+future transport must enforce the declared 30-second send deadline and close on
+lag, report omissions without payloads, distinguish disabled/error from empty,
+and drive idle expiry. These obligations are not qualified by buffer unit tests.
+
+Producers use `try_lock`, never wait behind a diagnostic reader, and return an
+explicit, counted omission on contention. Serialization happens only after that
+admission, preventing many concurrent omitted events from allocating maximum-sized
+JSON buffers. Oversized or invalid events never leave partial JSON in history.
+The serving runtime does not yet call this buffer; it is not a claim that Requests
+or coverage work in the current preview. Request omission policy and paired
+overhead still require integrated checks before enabling it.
+
 ## Auth, Storage and exports
 
 Auth browser helpers implement the fixture-tested local Google popup/redirect

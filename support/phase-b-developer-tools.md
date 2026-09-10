@@ -29,6 +29,21 @@ checks, strict rules-engine Clippy, formatting and whitespace checks. Full
 seven-job exact-candidate CI is still required before merge. The endpoint/UI
 and paired-overhead checks have not yet run against an integrated candidate.
 
+## Second increment: bounded history and delivery queues
+
+The internal Requests buffer implements the predeclared history/event/byte/age
+limits and four-client admission. Tests replay the committed oracle event objects
+without mutating them, exercise an atomic snapshot/live boundary, and verify
+count/byte eviction, expiry, slow readers, completed versus in-flight sends,
+slot reclamation, oversized/invalid events and contended nonblocking admission.
+Its constants are checked directly against the frozen Phase A manifest.
+
+The buffer is not yet connected to a producer or WebSocket transport. Its idle
+maintenance hook, omission reporting, disabled-state handling and per-send deadline
+must be wired and tested together with the real evaluator before UI qualification.
+Eleven additional buffer tests are local unit-model evidence, not live endpoint
+or browser evidence; all prior Phase A recordings remain unchanged.
+
 ## Remaining before Phase B completion
 
 1. Feed the real traces into bounded Requests history and subscriber queues;
