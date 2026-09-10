@@ -3,6 +3,19 @@ import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import test from 'node:test';
 
+test('native topic reload preserves failed and corrected attempts with the same driver',async()=>{
+  const root=new URL('../../benchmarks/results/phase-c/',import.meta.url);
+  const failed=JSON.parse(await readFile(new URL('topic-reload-native-r1-failure.json',root)));
+  const passed=JSON.parse(await readFile(new URL('topic-reload-native-r3.json',root)));
+  assert.equal(failed.passed,false);assert.equal(passed.passed,true);
+  assert.equal(failed.driverSha256,passed.driverSha256);
+  assert.notEqual(failed.binarySha256,passed.binarySha256);
+  assert.deepEqual(failed.topicReload.map(row=>row.status),[200,404]);
+  assert.deepEqual(passed.topicReload.map(row=>row.status),[200,200,200]);
+  assert.deepEqual(passed.topicReload.map(row=>row.delivered.version),[1,2,2]);
+  assert.equal(passed.browser.checks.length,14);assert.deepEqual(passed.shutdown,[0,null]);
+});
+
 test('short admission and native browser receipts retain their separate exact identities',async()=>{
   const root=new URL('../../benchmarks/results/phase-c/',import.meta.url);
   const records={};
