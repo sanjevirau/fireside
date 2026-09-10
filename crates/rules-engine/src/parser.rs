@@ -18,17 +18,30 @@ pub(crate) fn parse(source: &str) -> Result<Program, ParseError> {
         message: error.message,
         offset: error.offset,
     })?;
-    Parser::new(tokens).program()
+    Parser::new(tokens, source).program()
 }
 
 struct Parser {
     tokens: Vec<Token>,
     index: usize,
+    line_starts: Vec<usize>,
 }
 
 impl Parser {
-    const fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, index: 0 }
+    fn new(tokens: Vec<Token>, source: &str) -> Self {
+        let line_starts = std::iter::once(0)
+            .chain(
+                source
+                    .bytes()
+                    .enumerate()
+                    .filter_map(|(offset, byte)| (byte == b'\n').then_some(offset + 1)),
+            )
+            .collect();
+        Self {
+            tokens,
+            index: 0,
+            line_starts,
+        }
     }
 
     fn program(mut self) -> Result<Program, ParseError> {
@@ -156,6 +169,13 @@ impl Parser {
 
     fn allow(&mut self) -> Result<Allow, ParseError> {
         self.expect_identifier("allow")?;
+        let byte_offset = self.previous_offset();
+        let location = crate::AllowLocation {
+            line: self
+                .line_starts
+                .partition_point(|start| *start <= byte_offset),
+            byte_offset,
+        };
         let mut operations = Vec::new();
         loop {
             let method = self.take_identifier("allow method")?;
@@ -187,6 +207,7 @@ impl Parser {
         let condition = self.expression(0)?;
         self.expect(&TokenKind::Semicolon, "';' after allow condition")?;
         Ok(Allow {
+            location,
             operations,
             condition,
         })
@@ -559,7 +580,7 @@ fn parse_expression_path(raw: &str, offset: usize) -> Result<Expr, ParseError> {
             message: error.message,
             offset: offset + start + error.offset,
         })?;
-        let mut parser = Parser::new(tokens);
+        let mut parser = Parser::new(tokens, source);
         let expression = parser.expression(0)?;
         parser.expect(&TokenKind::Eof, "end of path interpolation")?;
         parts.push(PathPart::Interpolation(expression));

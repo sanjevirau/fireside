@@ -379,6 +379,12 @@ fn assert_case(rules: &Ruleset, access: &FixtureAccess, case: Case, expected: bo
     request.request_resource = case.proposed.map(|data| Resource::new(&path, data));
     request.query = case.query;
     let result = rules.evaluate(&request, access);
+    assert_eq!(
+        result,
+        rules.evaluate_with_trace(&request, access).0,
+        "tracing changed verdict/accounting: {}",
+        case.id
+    );
     assert_eq!(result.allowed, expected, "{}: {result:?}", case.id);
 }
 
@@ -427,7 +433,12 @@ fn assert_atomic_case(
         &atomic_path,
         map(&[("expectedVersion", Value::Integer(expected_version))]),
     ));
-    let result = rules.evaluate_atomic(&[invariant, atomic], &access);
+    let requests = [invariant, atomic];
+    let result = rules.evaluate_atomic(&requests, &access);
+    assert_eq!(
+        result,
+        rules.evaluate_atomic_with_trace(&requests, &access).0
+    );
     assert_eq!(result.allowed, expected, "atomic: {result:?}");
 }
 

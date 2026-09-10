@@ -73,6 +73,28 @@ subscriber queues and retention, slow-reader behavior, and paired overhead
 checks. Debug clients must never block application operations. Any finite-history
 deviation is explicit, and tracing must not alter authorization or durability.
 
+### Allow-decision instrumentation (Phase B, internal building block)
+
+The rules engine retains the immutable source once per compiled ruleset and the
+UTF-8 byte offset and one-based line of each allow declaration. Opt-in single and
+atomic evaluation APIs record executed allow/deny/error outcomes in order, on the
+same evaluation path as the normal verdict. They do not re-evaluate conditions,
+read documents for diagnostics, change short-circuiting, or reset atomic access
+budgets. An error followed by a successful allow remains visible in the trace even
+though the final verdict is allowed. Unvisited conditions are not synthesized.
+
+Per-operation traces retain at most 1,000 fixed-size outcomes and explicitly count
+omissions. Outcomes carry no request documents, credentials or copied error text;
+the normal API allocates no trace buffer. This internal limit is separate from
+the frozen 256-event / 16 MiB Requests history limits. Allow-declaration byte
+offsets are not expression-coverage offsets. No frontend enables this API yet:
+Requests delivery, coverage reporting and browser qualification remain pending.
+
+The Phase A jar capture also shows an earlier failed granular outcome carried
+into a later allowed event (`request-6`). Internal traces describe the conditions
+actually evaluated for their own request, not duplicated entries fabricated to
+imitate the jar's shared mutable history. The live fixture remains unchanged.
+
 ## Auth, Storage and exports
 
 Auth browser helpers implement the fixture-tested local Google popup/redirect

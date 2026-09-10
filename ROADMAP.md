@@ -55,9 +55,10 @@ this scope; expanding scope or changing a frozen criterion requires explicit rev
   tool's buffer/retention and diagnostic-overhead checks before implementation.
 
 Local evidence and limitations are in the [Phase A report](support/phase-a-developer-tools.md).
-These local checkmarks do **not** mark the phase complete: exact-candidate CI
-and review of the resulting receipt remain required. No Phase B product changes
-are included in this oracle/baseline work.
+Phase A was reviewed and merged in [PR #3](https://github.com/sanjevirau/fireside/pull/3).
+All seven jobs passed for candidate `85ef3e74abc8a5381eaf5535a8430ef06f8c48ce`
+in [CI run 34499162765](https://github.com/sanjevirau/fireside/actions/runs/34499162765).
+This receipt covers the oracle/baseline work, not later product changes.
 
 Done when Phase B has versioned fixture inputs, expected observations, provenance
 and a concrete verification plan. This is not a full re-audit of every consumer
@@ -69,6 +70,9 @@ their newly demonstrated contract gaps before implementing those corrections.
 Developer-facing inspection and debugging are required first-release work, not
 an optional documentation-only deferral. Serving the official UI assets or
 accepting a WebSocket connection is not sufficient evidence of functionality.
+
+Implementation progress is recorded in the [Phase B work log](support/phase-b-developer-tools.md).
+Completed internal building blocks do not check off a user-visible requirement.
 
 - [ ] Qualify the supported Firestore document, Auth account and Storage object
   browsing and mutation controls through the UI, not only direct API calls.

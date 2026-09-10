@@ -167,6 +167,7 @@ pub(crate) struct Function {
 
 #[derive(Clone, Debug)]
 pub(crate) struct Allow {
+    pub(crate) location: crate::AllowLocation,
     pub(crate) operations: Vec<Operation>,
     pub(crate) condition: Expr,
 }

@@ -16,6 +16,7 @@ use crate::model::{
     AtomicEvaluationResult, Auth, DocumentAccess, EvaluationRequest, EvaluationResult, LatLng,
     Query, RequestOperation, Resource, RulesDuration, RuntimeError, Timestamp, Value,
 };
+use crate::{AllowDecision, EvaluationTrace};
 
 #[path = "query_constraints.rs"]
 mod query_constraints;
@@ -31,7 +32,46 @@ pub(crate) fn evaluate<A: DocumentAccess + ?Sized>(
     access: &A,
 ) -> EvaluationResult {
     let mut state = AccessState::new(SINGLE_REQUEST_ACCESS_LIMIT);
-    evaluate_with_state(program, request, access, &mut state)
+    evaluate_with_state(program, request, access, &mut state, None)
+}
+
+pub(crate) fn evaluate_with_trace<A: DocumentAccess + ?Sized>(
+    program: &Program,
+    request: &EvaluationRequest,
+    access: &A,
+) -> (EvaluationResult, EvaluationTrace) {
+    let mut state = AccessState::new(SINGLE_REQUEST_ACCESS_LIMIT);
+    let mut trace = EvaluationTrace::default();
+    let result = evaluate_with_state(program, request, access, &mut state, Some(&mut trace));
+    (result, trace)
+}
+
+pub(crate) fn evaluate_atomic_with_trace<A: DocumentAccess + ?Sized>(
+    program: &Program,
+    requests: &[EvaluationRequest],
+    access: &A,
+) -> (AtomicEvaluationResult, Vec<EvaluationTrace>) {
+    let mut state = AccessState::new(MULTI_REQUEST_ACCESS_LIMIT);
+    let mut traces = Vec::with_capacity(requests.len());
+    let operations = requests
+        .iter()
+        .map(|request| {
+            let mut trace = EvaluationTrace::default();
+            let result =
+                evaluate_with_state(program, request, access, &mut state, Some(&mut trace));
+            traces.push(trace);
+            result
+        })
+        .collect::<Vec<_>>();
+    (
+        AtomicEvaluationResult {
+            allowed: operations.iter().all(|result| result.allowed),
+            operations,
+            document_accesses: state.document_accesses,
+            document_cache_hits: state.document_cache_hits,
+        },
+        traces,
+    )
 }
 
 pub(crate) fn evaluate_atomic<A: DocumentAccess + ?Sized>(
@@ -42,7 +82,7 @@ pub(crate) fn evaluate_atomic<A: DocumentAccess + ?Sized>(
     let mut state = AccessState::new(MULTI_REQUEST_ACCESS_LIMIT);
     let operations = requests
         .iter()
-        .map(|request| evaluate_with_state(program, request, access, &mut state))
+        .map(|request| evaluate_with_state(program, request, access, &mut state, None))
         .collect::<Vec<_>>();
     AtomicEvaluationResult {
         allowed: operations.iter().all(|result| result.allowed),
@@ -57,10 +97,11 @@ fn evaluate_with_state<A: DocumentAccess + ?Sized>(
     request: &EvaluationRequest,
     access: &A,
     state: &mut AccessState,
+    trace: Option<&mut EvaluationTrace>,
 ) -> EvaluationResult {
     let initial_accesses = state.document_accesses;
     let initial_cache_hits = state.document_cache_hits;
-    let mut evaluator = Evaluator::new(request, access, state);
+    let mut evaluator = Evaluator::new(request, access, state, trace);
     let functions = program
         .functions
         .iter()
@@ -192,10 +233,16 @@ struct Evaluator<'a, A: DocumentAccess + ?Sized> {
     matching_allows: usize,
     call_depth: usize,
     query_branch: Option<Vec<crate::FieldConstraint>>,
+    trace: Option<&'a mut EvaluationTrace>,
 }
 
 impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
-    fn new(request: &'a EvaluationRequest, access: &'a A, state: &'a mut AccessState) -> Self {
+    fn new(
+        request: &'a EvaluationRequest,
+        access: &'a A,
+        state: &'a mut AccessState,
+        trace: Option<&'a mut EvaluationTrace>,
+    ) -> Self {
         Self {
             request,
             access,
@@ -207,6 +254,7 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
             matching_allows: 0,
             call_depth: 0,
             query_branch: None,
+            trace,
         }
     }
 
@@ -264,7 +312,16 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
                     continue;
                 }
                 self.matching_allows += 1;
-                match self.eval_expr(&allow.condition, &mut environment, &functions) {
+                let result = self.eval_expr(&allow.condition, &mut environment, &functions);
+                if let Some(trace) = &mut self.trace {
+                    let decision = match &result {
+                        Ok(EvalValue::Data(Value::Bool(true))) => AllowDecision::Allow,
+                        Ok(EvalValue::Data(Value::Bool(false))) => AllowDecision::Deny,
+                        _ => AllowDecision::Error,
+                    };
+                    trace.record(allow.location, decision);
+                }
+                match result {
                     Ok(EvalValue::Data(Value::Bool(true))) => {
                         self.allowed = true;
                         return;
