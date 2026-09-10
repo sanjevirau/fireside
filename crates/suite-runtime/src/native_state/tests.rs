@@ -34,6 +34,7 @@ impl Case {
             resume_state: true,
             firestore_in_memory: false,
             firestore_rules: None,
+            diagnostics: false,
             firestore_indexes: None,
             storage_buckets: vec![StorageBucketConfig {
                 bucket: "demo-bucket".into(),

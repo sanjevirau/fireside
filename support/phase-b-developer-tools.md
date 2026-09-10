@@ -205,11 +205,30 @@ refresh regression exposed a test predicate reading a temporarily absent DOM
 node; the corrected wait polls until the required new count exists, with no
 relaxation of the count assertion. The subsequent real-browser check passed.
 
+## Ninth increment: serving-path connection and diagnostics opt-out
+
+The suite's Firestore WebSocket now uses the real evaluator's bounded Requests
+history instead of an empty placeholder. Recording defaults on for the suite;
+the native and npm launchers both accept `--no-diagnostics`. Standalone Firestore
+also serves the actual feed when its jar-compatible WebSocket port is requested.
+Disabled transports return unavailable, and enabled startup warns that decoded
+local data may appear in diagnostics.
+
+A real listener-assembly test checks enabled/disabled behavior, the same HTTP
+evaluation in both Requests and coverage, and idle-client shutdown. Unrelated
+services in that unit test are explicitly inert shells, not a full-suite pass.
+The native-command Chromium check also connects an actual Requests subscriber
+and verifies clean shutdown without first closing that client. Packaging tests
+check default and explicit opt-out argument forwarding. Full official-UI
+qualification and paired overhead remain outstanding; exact-head CI and review
+are still required for this increment.
+
 ## Remaining before Phase B completion
 
-1. Feed the real traces into bounded Requests history and subscriber queues;
-   qualify reconnect, TTL, slow readers, disabled diagnostics and cleanup.
-2. Add source-positioned expression coverage, JSON and rendered HTML reports.
+1. Qualify the connected Requests and coverage components through the complete
+   supported suite, including reconnect, disabled diagnostics and cleanup.
+2. Retain the component TTL/slow-reader/source/value bounds regressions in CI;
+   require the exact candidate's interface checks, not only prior fixture checks.
 3. Verify the supported UI controls, request details, discovery/status and logs
    in a real browser against Fireside, fixing demonstrated gaps oracle-first.
 4. Measure paired diagnostics overhead against every predeclared limit, then
