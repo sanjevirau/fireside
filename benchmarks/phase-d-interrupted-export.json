@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "recordedBeforeMeasurement": true,
+  "scope": "Constructed Unix process-crash interruption during export staging, not host power loss or interruption between final rename operations",
+  "input": "Fresh synthetic native suite; acknowledged Firestore/Auth/Storage values and one completed portable export; then 4096 additional documents with 2048-byte ASCII payloads",
+  "fault": "Watch only the fresh export parent. On creation of the new hidden staging directory, SIGSTOP only the owned native child and confirm OS stopped state. Require that staging exists without completed suite metadata before sending SIGKILL to the test-owned detached process group. A missed staging checkpoint fails the diagnostic rather than claiming coverage or silently retrying.",
+  "criteria": [
+    "Observed incomplete staging is retained, and every file of the prior completed portable export remains byte-identical",
+    "Every owned port closes after the injected crash; no unrelated process receives a signal",
+    "Same-directory native reopen preserves all acknowledged Firestore documents, Auth account and Storage bytes",
+    "Subsequent writes and a new portable export succeed; clean recovery shutdown removes the locator and closes all ports"
+  ],
+  "unchangedDriverDeadlinesMilliseconds": {"readiness":90000,"request":10000,"shutdown":45000},
+  "checkpointDeadlineMilliseconds": 5000,
+  "limitations": "Does not qualify power loss, network filesystems or the separate final publication rename window. Crash faults are intrinsic to this newly created diagnostic only, never injected into an active consumer or acceptance workload. Preserve all attempts."
+}
