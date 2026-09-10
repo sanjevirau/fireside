@@ -52,6 +52,14 @@ recorded, and the latter includes runtime `365ad2a`. Linux CI repeats the test
 using the exact installed `next.3` platform package with scripts disabled. This
 does not qualify arbitrary native downgrades or other historical versions.
 
+The first Linux CI attempt [34532489876](https://github.com/sanjevirau/fireside/actions/runs/34532489876)
+failed before its browser checks: the version-pinned Playwright Chromium binary
+was not installed on the fresh runner. This is a harness prerequisite failure,
+not native-state corruption or a passing upgrade. Its uploaded failure receipt
+is retained. The corrected workflow explicitly installs Chromium with that
+installed Playwright version before running the unchanged upgrade test; it does
+not skip browser assertions or change any lifecycle deadline.
+
 ## Real filesystem exhaustion
 
 The separately frozen [export-volume](../benchmarks/phase-d-export-enospc.json)
