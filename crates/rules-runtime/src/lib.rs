@@ -5,6 +5,7 @@
 use std::collections::BTreeMap;
 
 mod query;
+mod request_event;
 pub mod request_history;
 pub use query::{query_candidate, query_policy};
 use std::error::Error;
@@ -22,6 +23,7 @@ use fireside_rules_engine::{
     Timestamp, Value, compile,
 };
 use serde_json::Value as JsonValue;
+use sha2::{Digest as _, Sha256};
 
 pub use fireside_rules_engine::{
     AtomicEvaluationResult, EvaluationResult, Query as RulesQuery, RequestOperation,
@@ -35,19 +37,44 @@ pub const OWNER_BEARER_TOKEN: &str = "Bearer owner";
 pub struct RulesRuntime {
     state: Arc<RwLock<RuntimeState>>,
     write_guard: Arc<Mutex<()>>,
+    recorder: Option<request_event::RequestRecorder>,
 }
 
 #[derive(Default)]
 struct RuntimeState {
-    default: Option<Arc<Ruleset>>,
-    projects: BTreeMap<String, Arc<Ruleset>>,
+    default: Option<Arc<InstalledRules>>,
+    projects: BTreeMap<String, Arc<InstalledRules>>,
+}
+
+struct InstalledRules {
+    rules: Arc<Ruleset>,
+    source_hash: String,
+}
+
+impl InstalledRules {
+    fn compile(source: &str) -> Result<Arc<Self>, LoadError> {
+        Ok(Arc::new(Self {
+            rules: Arc::new(compile(source).map_err(LoadError::new)?),
+            source_hash: URL_SAFE_NO_PAD.encode(Sha256::digest(source.as_bytes())),
+        }))
+    }
 }
 
 impl RulesRuntime {
+    /// Creates an opt-in diagnostic producer. Configure before sharing runtime
+    /// clones; the ordinary default keeps the untraced evaluation path.
+    #[must_use]
+    pub fn with_request_history(history: request_history::RequestHistory) -> Self {
+        Self {
+            recorder: Some(request_event::RequestRecorder::new(history)),
+            ..Self::default()
+        }
+    }
+
     /// Compiles and installs the startup ruleset used by projects without a
     /// later project-specific hot reload.
     pub fn install_default(&self, source: &str) -> Result<(), LoadError> {
-        let rules = Arc::new(compile(source).map_err(LoadError::new)?);
+        let rules = InstalledRules::compile(source)?;
         write_lock(&self.state).default = Some(rules);
         Ok(())
     }
@@ -55,7 +82,7 @@ impl RulesRuntime {
     /// Compiles then atomically replaces one project's active ruleset. A
     /// failed compilation leaves the previous ruleset untouched.
     pub fn install_project(&self, project: &str, source: &str) -> Result<(), LoadError> {
-        let rules = Arc::new(compile(source).map_err(LoadError::new)?);
+        let rules = InstalledRules::compile(source)?;
         write_lock(&self.state)
             .projects
             .insert(project.to_owned(), rules);
@@ -66,6 +93,11 @@ impl RulesRuntime {
     /// emulator's explicit open-with-warning mode.
     #[must_use]
     pub fn rules_for(&self, project: &str) -> Option<Arc<Ruleset>> {
+        self.installed_for(project)
+            .map(|installed| installed.rules.clone())
+    }
+
+    fn installed_for(&self, project: &str) -> Option<Arc<InstalledRules>> {
         let state = read_lock(&self.state);
         state
             .projects
@@ -91,7 +123,7 @@ impl RulesRuntime {
         request: &EvaluationRequest,
         access: &SnapshotAccess,
     ) -> EvaluationResult {
-        let Some(rules) = self.rules_for(project) else {
+        let Some(installed) = self.installed_for(project) else {
             return allowed_result();
         };
         if authorization.is_owner() {
@@ -99,7 +131,12 @@ impl RulesRuntime {
         }
         let mut request = request.clone();
         request.auth = authorization.auth().cloned();
-        rules.evaluate(&request, access)
+        let Some(recorder) = &self.recorder else {
+            return installed.rules.evaluate(&request, access);
+        };
+        let (result, trace) = installed.rules.evaluate_with_trace(&request, access);
+        recorder.record(project, &installed, &request, &result, &trace, false);
+        result
     }
 
     /// Evaluates one atomic write set with shared access accounting.
@@ -111,7 +148,7 @@ impl RulesRuntime {
         requests: &[EvaluationRequest],
         access: &SnapshotAccess,
     ) -> fireside_rules_engine::AtomicEvaluationResult {
-        let Some(rules) = self.rules_for(project) else {
+        let Some(installed) = self.installed_for(project) else {
             return fireside_rules_engine::AtomicEvaluationResult {
                 allowed: true,
                 operations: requests.iter().map(|_| allowed_result()).collect(),
@@ -135,7 +172,16 @@ impl RulesRuntime {
                 request
             })
             .collect::<Vec<_>>();
-        rules.evaluate_atomic(&requests, access)
+        let Some(recorder) = &self.recorder else {
+            return installed.rules.evaluate_atomic(&requests, access);
+        };
+        let (result, traces) = installed
+            .rules
+            .evaluate_atomic_with_trace(&requests, access);
+        for ((request, operation), trace) in requests.iter().zip(&result.operations).zip(&traces) {
+            recorder.record(project, &installed, request, operation, trace, true);
+        }
+        result
     }
 
     /// Evaluates a transaction or batch against the original snapshot and a

@@ -148,6 +148,40 @@ unavailability, ping/pong, oversized input and cleanup. Virtual-clock blocked-si
 tests cover send deadlines and shutdown; these are not kernel slow-reader or
 browser qualification, nor a diagnostics-overhead measurement.
 
+### Opt-in evaluation producer and typed context (Phase B)
+
+`RulesRuntime::with_request_history` connects its actual single-operation and
+atomic evaluator paths to the bounded transport history. Default runtimes remain
+untraced. The producer evaluates once and returns the original verdict/accounting;
+owner bypass and open-without-rules mode do not manufacture rules events. Atomic
+operations share the existing access budget/cache and emit in operation order.
+Each event carries a process-scoped unique ID and an opaque release key based on
+the immutable installed source's SHA-256 (base64url), computed at install time.
+Failed reloads preserve the old rules and key. This is not the jar's opaque ID
+generation algorithm or a network RPC correlation identifier.
+
+The additional `developer-tools-request-values-v1` live fixture pins numeric,
+non-finite, nested/list, bytes, path, geographic, timestamp and decoded-auth value
+shapes. Serialization borrows the evaluation context directly under the history's
+capped, nonblocking admission; it does not construct a second JSON document tree.
+The diagnostic timestamp serializer preserves the evaluator's precision. It does
+not implement the jar's observed upload-time microsecond truncation. Partial or
+oversized serialization and truncated allow traces omit the complete event and
+increment the existing loss counter without altering the request's result.
+
+The opt-in producer/socket combination is tested through actual REST handlers
+for successful writes/reads, denied writes, missing-document evaluation errors
+and replay. This is not yet attached to the shipping CLI/suite. Before attachment,
+finish query-domain rendering and transport metadata (read/write masks,
+transforms and explicit read transactions), then qualify the actual UI and
+overhead. Current query summaries expose evaluator limit/offset/order options,
+not the jar's complete planner context. Fireside's existing evaluator already
+receives current resources; the producer reports these without extra reads,
+whereas the jar's lazy context can show undefined for an unread resource. These
+differences remain explicit, not claims of complete Requests parity. The raw
+bearer token is never retained, but decoded auth claims and request fields are
+intentional local diagnostic content and must not be published as consumer logs.
+
 ## Auth, Storage and exports
 
 Auth browser helpers implement the fixture-tested local Google popup/redirect

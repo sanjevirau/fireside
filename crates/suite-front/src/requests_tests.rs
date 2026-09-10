@@ -168,6 +168,85 @@ async fn a_producer_omission_closes_the_feed_even_with_no_later_event() {
 struct BlockedSink(Option<oneshot::Sender<()>>);
 
 #[tokio::test]
+async fn actual_rest_rule_evaluations_arrive_on_the_requests_socket() {
+    use axum::body::Body;
+    use axum::http::Request;
+    use fireside_core_store::{Store, StoreOptions};
+    use fireside_rules_runtime::RulesRuntime;
+    use tower::ServiceExt as _;
+
+    let fixture: Value = serde_json::from_str(include_str!(
+        "../../../conformance/fixtures/developer-tools-v1/fixture.json"
+    ))
+    .unwrap();
+    let history = RequestHistory::default();
+    let runtime = RulesRuntime::with_request_history(history.clone());
+    runtime
+        .install_default(fixture["rules"].as_str().unwrap())
+        .unwrap();
+    let application = fireside_rest_front::router_with_query_policy_memory_and_rules(
+        Store::new(StoreOptions::default()),
+        fireside_query_engine::QueryPolicy::default(),
+        None,
+        runtime,
+    );
+    let server = Server::start(Some(history)).await;
+    let mut client = server.client().await;
+    assert_eq!(json_frame(&mut client).await, json!([]));
+    for (method, document, body, status, outcome) in [
+        (
+            "PATCH",
+            "visible",
+            Some(json!({"fields":{"visible":{"booleanValue":true}}})),
+            200,
+            "allow",
+        ),
+        ("GET", "visible", None, 200, "allow"),
+        (
+            "PATCH",
+            "denied",
+            Some(json!({"fields":{"visible":{"booleanValue":false}}})),
+            403,
+            "deny",
+        ),
+        ("GET", "missing", None, 403, "error"),
+    ] {
+        let response = application.clone().oneshot(Request::builder()
+            .method(method)
+            .uri(format!("/v1/projects/demo-fireside-developer-tools/databases/(default)/documents/notes/{document}"))
+            .header("content-type", "application/json")
+            .body(body.map_or_else(Body::empty, |body|Body::from(body.to_string()))).unwrap()).await.unwrap();
+        assert_eq!(response.status().as_u16(), status);
+        let event = json_frame(&mut client).await;
+        assert_eq!(event["outcome"], outcome);
+        assert_eq!(event["rules"], fixture["rules"]);
+        assert_eq!(
+            event["rulesContext"]["path"],
+            format!("/databases/(default)/documents/notes/{document}")
+        );
+        assert!(
+            event["requestId"]
+                .as_str()
+                .unwrap()
+                .starts_with("fireside-")
+        );
+        if method == "GET" && document == "visible" {
+            assert_eq!(
+                event["rulesContext"]["resource"]["mapValue"]["fields"]["data"]["mapValue"]["fields"]
+                    ["visible"],
+                json!({"boolValue":true})
+            );
+        }
+    }
+    drop(client);
+    let mut reconnected = server.client().await;
+    assert_eq!(
+        json_frame(&mut reconnected).await.as_array().unwrap().len(),
+        4
+    );
+}
+
+#[tokio::test]
 async fn oversized_client_input_disconnects_and_reclaims_the_subscription() {
     let history = RequestHistory::default();
     let server = Server::start(Some(history.clone())).await;
