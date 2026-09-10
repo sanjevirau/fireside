@@ -91,12 +91,45 @@ identity, oversized context and truncated traces. A combined REST-handler/real
 WebSocket test exercises allow, deny, error, current-resource details and replay.
 Default runtime behavior and the installed CLI/suite remain unchanged.
 
-Full exact-head CI is still required for this increment. Before wiring the
+Candidate `6be718b38dee79ae4ee4ab92574686b2f74c638d` passed
+[all seven CI jobs](https://github.com/sanjevirau/fireside/actions/runs/34509706960)
+and merged in [PR #6](https://github.com/sanjevirau/fireside/pull/6).
+Before wiring the
 shipping suite, resolve query-domain rendering and transport-specific metadata
 (masks/transforms/read transactions); qualify browser rendering and diagnostic
 overhead. The producer currently reports the evaluator's available context,
 which is not the jar's lazy-resource/planner model. No complete Requests, coverage,
 performance or Phase B pass is claimed from these component tests.
+
+## Fifth increment: captured query/write/transaction metadata
+
+Two fixture-first commits add a live official-jar metadata capture, then extend
+it for replacement-with-transform and explicit empty-mask cases. The complete
+[fixture](../conformance/fixtures/developer-tools-request-metadata-v1/README.md)
+contains 23 HTTP operations and 25 live evaluations plus initial empty history.
+Earlier raw attempts remain retained separately; no consumer inputs were used.
+
+The opt-in producer now renders collection/group domains, nested parent paths,
+ordinary query options, write-mask/transform unions and escaped field names.
+The additional oracle check caught a real metadata mistake before merge: a
+replacement with transforms must list those transform paths in `writeFields`,
+not report null. Explicit empty masks remain distinct from full replacements.
+Read batches/read-only transactions report false `inTransaction`; read/write
+transactions report true. gRPC resolves this with the admitted snapshot under
+one lock; it does not change verdicts, snapshots or write/read accounting.
+
+New regressions compare serialized fields with the live oracle and exercise
+actual get/batch service calls, non-mutating write previews, missing-domain loss
+reporting, collection/group queries and unchanged traced/untraced decisions.
+The targeted rules-runtime/gRPC/suite-front suite has 96 passing tests; nine
+generic fixture-integrity tests and strict targeted Clippy also pass locally.
+All seven exact-head CI jobs are required before this increment can merge.
+
+REST read masks and explicit read-transaction handling were found unqualified
+during source inspection. Track them for Phase C reproduction; the new debug
+metadata is not evidence that those REST features work. Shipping suite attachment,
+expression coverage, actual browser qualification and paired overhead remain
+Phase B work. No phase checkbox is completed from this increment alone.
 
 ## Remaining before Phase B completion
 

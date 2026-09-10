@@ -12,6 +12,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 assert.equal(process.versions.node, '24.20.0');
 assert.ok(process.argv[2], 'provide a new output directory');
 const output = resolve(process.argv[2]);
+const metadataMode = process.argv[3] === '--metadata';
 await mkdir(output, {recursive:false});
 const work = await mkdtemp(join(tmpdir(), 'fireside-request-values-'));
 const jar = join(homedir(), '.cache/firebase/emulators/cloud-firestore-emulator-v1.22.0.jar');
@@ -42,6 +43,7 @@ const child=spawn('java',['-jar',jar,'--host','127.0.0.1','--port',String(httpPo
 const exited=once(child,'exit'), logs=[];
 for(const stream of [child.stdout,child.stderr])stream.on('data',b=>logs.push(String(b)));
 const record={schemaVersion:1,syntheticOnly:true,capturedAt:new Date().toISOString(),project,rules,
+  ...(metadataMode?{profile:'request-metadata'}:{}),
   oracle:{firestore:'1.22.0',jarSha256,node:process.versions.node,
     java:spawnSync('java',['-version'],{encoding:'utf8'}).stderr.trim()},
   operations:[],messages:[]};
@@ -54,11 +56,12 @@ async function request(id,path,method='GET',body,authorization,expectedStatus=20
     headers:{'content-type':'application/json',...(authorization?{authorization}:{})},
     ...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(10000)});
   const text=await response.text();let data;try{data=JSON.parse(text);}catch{data=text;}
-  assert.equal(response.status,expectedStatus,`${id}: ${response.status} ${text}`);
   // Retain every observed evaluation, including the jar's preliminary write checks.
   await delay(250);
   record.operations.push({id,path,method,body:body??null,authenticated:!!authorization,
     status:response.status,response:data,firstMessage:start,endMessage:record.messages.length});
+  assert.equal(response.status,expectedStatus,`${id}: ${response.status} ${text}`);
+  return data;
 }
 let failure;
 try {
@@ -94,6 +97,36 @@ try {
   await request('get-authenticated','/values/typed','GET',undefined,token);
   await request('query',':runQuery','POST',{structuredQuery:{from:[{collectionId:'values'}],
     orderBy:[{field:{fieldPath:'negative'},direction:'ASCENDING'}],limit:2,offset:0}});
+  if(metadataMode){
+    await request('query-unbounded',':runQuery','POST',{structuredQuery:{from:[{collectionId:'values'}]}});
+    // This rule covers only the root collection, not every descendant group.
+    await request('query-group',':runQuery','POST',{structuredQuery:{from:[{collectionId:'values',allDescendants:true}]}},undefined,403);
+    await request('query-nested','/parents/p:runQuery','POST',{structuredQuery:{from:[{collectionId:'values'}]}},undefined,403);
+    await request('query-nested-group','/parents/p:runQuery','POST',{structuredQuery:{from:[{collectionId:'values',allDescendants:true}]}},undefined,403);
+    await request('get-mask','/values/typed?mask.fieldPaths=yes&mask.fieldPaths=text');
+    await request('patch-mask','/values/typed?updateMask.fieldPaths=text','PATCH',{fields:{text:{stringValue:'Masked synthetic text'}}});
+    await request('patch-quoted-mask','/values/typed?updateMask.fieldPaths=%60a.b%60&updateMask.fieldPaths=nested.active','PATCH',
+      {fields:{'a.b':{stringValue:'Quoted field'},nested:{mapValue:{fields:{active:{booleanValue:true}}}}}});
+    await request('commit-transform',':commit','POST',{writes:[{
+      update:{name:`projects/${project}/databases/(default)/documents/values/typed`,fields:{yes:{booleanValue:true}}},
+      updateMask:{fieldPaths:['yes']},updateTransforms:[{fieldPath:'negative',increment:{integerValue:'1'}}]
+    }]});
+    await request('batch-get-mask',':batchGet','POST',{documents:[`projects/${project}/databases/(default)/documents/values/typed`],mask:{fieldPaths:['yes','text']}});
+    const {transaction}=await request('begin-read-transaction',':beginTransaction','POST',{options:{readOnly:{}}});
+    assert.equal(typeof transaction,'string');
+    await request('transaction-get',':batchGet','POST',{documents:[`projects/${project}/databases/(default)/documents/values/typed`],transaction,mask:{fieldPaths:['yes']}});
+    await request('rollback',':rollback','POST',{transaction});
+    const writeTransaction=await request('begin-write-transaction',':beginTransaction','POST',{options:{readWrite:{}}});
+    await request('write-transaction-get',':batchGet','POST',{documents:[`projects/${project}/databases/(default)/documents/values/typed`],transaction:writeTransaction.transaction});
+    await request('write-rollback',':rollback','POST',{transaction:writeTransaction.transaction});
+    await request('commit-replacement-transform',':commit','POST',{writes:[{
+      update:{name:`projects/${project}/databases/(default)/documents/values/typed`,fields:{yes:{booleanValue:true}}},
+      updateTransforms:[{fieldPath:'negative',increment:{integerValue:'1'}}]
+    }]});
+    await request('commit-empty-mask',':commit','POST',{writes:[{
+      update:{name:`projects/${project}/databases/(default)/documents/values/typed`,fields:{}},updateMask:{fieldPaths:[]}
+    }]});
+  }
   await request('delete','/values/typed','DELETE');
   await request('get-missing','/values/missing','GET',undefined,undefined,404);
 } catch(error){failure=error;}

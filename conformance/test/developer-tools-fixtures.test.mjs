@@ -8,6 +8,34 @@ const directory=new URL('../fixtures/developer-tools-v1/',import.meta.url);
 const bytes=await readFile(new URL('fixture.json',directory));
 const fixture=JSON.parse(bytes);
 const observation=id=>fixture.observations.find(o=>o.id===id);
+test('Requests metadata preserves query domains, masks and actual transaction mode',async()=>{
+  const root=new URL('../fixtures/developer-tools-request-metadata-v1/',import.meta.url);
+  const bytes=await readFile(new URL('fixture.json',root)), f=JSON.parse(bytes);
+  assert.equal(await readFile(new URL('SHA256SUMS',root),'utf8'),createHash('sha256').update(bytes).digest('hex')+'  fixture.json\n');
+  assert.equal(f.oracle.jarSha256,'9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c');
+  assert.equal(f.syntheticOnly,true);assert.equal(f.operations.length,23);assert.equal(f.messages.length,26);
+  assert.ok(!/Bearer |\/Users\/|\/var\/folders\//.test(bytes.toString()));
+  const op=id=>f.operations.find(o=>o.id===id), ctx=id=>f.messages[op(id).firstMessage].rulesContext;
+  const fields=id=>ctx(id).request.mapValue.fields;
+  for(const id of ['get-mask','batch-get-mask','transaction-get']){
+    assert.deepEqual(fields(id).fields,{nullValue:null});assert.deepEqual(fields(id).inTransaction,{boolValue:false});
+  }
+  assert.deepEqual(fields('write-transaction-get').inTransaction,{boolValue:true});
+  assert.equal(op('query-group').status,403);
+  assert.equal(ctx('query-group').path,'/databases/(default)/documents/**/values/*');
+  assert.deepEqual(fields('query-group').path,{undefined:{}});
+  assert.equal(ctx('query-nested').path,'/databases/(default)/documents/parents/p/values/*');
+  assert.equal(ctx('query-nested-group').path,'/databases/(default)/documents/parents/p/**/values/*');
+  assert.deepEqual(fields('query-unbounded').query.mapValue.fields.limit,{nullValue:null});
+  assert.deepEqual(fields('patch-quoted-mask').writeFields,{listValue:{values:[{stringValue:'a\\.b'},{stringValue:'nested.active'}]}});
+  assert.deepEqual(fields('commit-transform').transforms,{listValue:{values:[{stringValue:'negative'}]}});
+  assert.deepEqual(fields('commit-transform').writeFields,{listValue:{values:[{stringValue:'negative'},{stringValue:'yes'}]}});
+  assert.deepEqual(fields('commit-replacement-transform').writeFields,{listValue:{values:[{stringValue:'negative'}]}});
+  assert.deepEqual(fields('commit-replacement-transform').transforms,fields('commit-replacement-transform').writeFields);
+  assert.deepEqual(fields('commit-empty-mask').writeFields,{listValue:{}});
+  assert.deepEqual(fields('commit-empty-mask').transforms,{nullValue:null});
+  for(const id of ['begin-read-transaction','begin-write-transaction','rollback','write-rollback'])assert.equal(op(id).firstMessage,op(id).endMessage);
+});
 test('typed Requests values preserve the additional live oracle contract',async()=>{
   const root=new URL('../fixtures/developer-tools-request-values-v1/',import.meta.url);
   const bytes=await readFile(new URL('fixture.json',root)), f=JSON.parse(bytes);

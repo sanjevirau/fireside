@@ -172,15 +172,50 @@ increment the existing loss counter without altering the request's result.
 The opt-in producer/socket combination is tested through actual REST handlers
 for successful writes/reads, denied writes, missing-document evaluation errors
 and replay. This is not yet attached to the shipping CLI/suite. Before attachment,
-finish query-domain rendering and transport metadata (read/write masks,
-transforms and explicit read transactions), then qualify the actual UI and
-overhead. Current query summaries expose evaluator limit/offset/order options,
-not the jar's complete planner context. Fireside's existing evaluator already
+qualify the actual UI, remaining context gaps and overhead. Query summaries cover
+the ordinary collection/group fields described below, not every planner feature.
+Fireside's existing evaluator already
 receives current resources; the producer reports these without extra reads,
 whereas the jar's lazy context can show undefined for an unread resource. These
 differences remain explicit, not claims of complete Requests parity. The raw
 bearer token is never retained, but decoded auth claims and request fields are
 intentional local diagnostic content and must not be published as consumer logs.
+
+### Query domains, write metadata and transaction reads (Phase B)
+
+The `developer-tools-request-metadata-v1` live capture records root/nested
+collections and collection groups, bounded/unbounded query metadata, read masks,
+write masks/transforms, and both read-only and read/write transaction reads.
+The opt-in serializer renders the actual collection domain with its wildcard,
+not the evaluator's synthetic candidate document. Group `request.path` is
+undefined, while the outer domain uses `/**/collection/*`. Root parent/ancestor
+is null; nested parents use a typed path. Empty order/group maps remain empty
+objects, absent limit is null, and absent offset is integer zero. The ordinary
+query profile has false distinct/select-only-keys flags; this is not coverage
+of projections, grouping or additional planner modes.
+
+Write metadata borrows the decoded write at its existing preview/evaluation
+boundary. It reports the ordered mask/transform path union and transform-only
+paths, escaping literal dots within field segments. Full replacement without
+transforms has a null mask; replacement with transforms lists those paths; an
+explicit empty mask is an empty list object. Read projection masks remain null
+in diagnostics, as captured—not a claim that the actual projection is ignored.
+
+Atomic batch evaluation alone no longer labels reads as transactional. The
+official context uses false for ordinary and read-only-transaction reads and
+true for read/write-transaction reads; writes use true. gRPC captures the mode
+under the same lock as the validated snapshot, before any concurrent rollback,
+and forwards it for get/list/batch/query/aggregation diagnostics. There is no
+extra transaction lookup or policy evaluation. Regression tests compare real
+gRPC get/batch calls to the fixture and verify masks still project returned data.
+Authorization, snapshot consistency, read tracking and access accounting remain
+unchanged. Missing query-domain metadata omits the complete debug event through
+the existing loss counter rather than inventing a path.
+
+Source inspection also found unqualified REST read-mask and explicit read-
+transaction handling. Those frontend service-contract gaps require separate
+Phase C endpoint reproduction/correction; this diagnostic change must not imply
+they work, nor silently alter those backend semantics.
 
 ## Auth, Storage and exports
 

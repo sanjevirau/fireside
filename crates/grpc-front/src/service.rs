@@ -267,7 +267,7 @@ impl FirestoreService {
         &self,
         database: &DatabaseName,
         token: &[u8],
-    ) -> Result<Snapshot, Status> {
+    ) -> Result<(Snapshot, bool), Status> {
         let transactions = self.transaction_states();
         let transaction = transactions
             .get(token)
@@ -277,7 +277,9 @@ impl FirestoreService {
                 "transaction belongs to a different database",
             ));
         }
-        Ok(transaction.snapshot.clone())
+        // Capture diagnostic mode with the validated snapshot, so concurrent
+        // rollback cannot relabel an already-admitted read as non-transactional.
+        Ok((transaction.snapshot.clone(), !transaction.read_only))
     }
 
     fn record_read(&self, token: &[u8], key: &DocumentKey, document: Option<&Document>) {
@@ -345,14 +347,16 @@ impl FirestoreService {
         key: &DocumentKey,
         snapshot: &Snapshot,
         query: RulesQuery,
+        in_read_write_transaction: bool,
     ) -> Result<(), Status> {
         let current = snapshot.get(key);
         let request = evaluation_request(operation, key, now(), current.as_deref(), None, query);
-        require_rules_allowed(self.rules.evaluate(
+        require_rules_allowed(self.rules.evaluate_with_read_transaction(
             key.database().project_id(),
             authorization,
             &request,
             &SnapshotAccess::current(snapshot.clone(), key.database().project_id()),
+            in_read_write_transaction,
         ))
     }
 
@@ -362,14 +366,16 @@ impl FirestoreService {
         candidate: &DocumentKey,
         snapshot: &Snapshot,
         query: RulesQuery,
+        in_read_write_transaction: bool,
     ) -> Result<(), Status> {
         let request =
             evaluation_request(RequestOperation::List, candidate, now(), None, None, query);
-        require_rules_allowed(self.rules.evaluate(
+        require_rules_allowed(self.rules.evaluate_with_read_transaction(
             candidate.database().project_id(),
             authorization,
             &request,
             &SnapshotAccess::current(snapshot.clone(), candidate.database().project_id()),
+            in_read_write_transaction,
         ))
     }
 
@@ -659,6 +665,7 @@ impl Firestore for FirestoreService {
                     &key,
                     &snapshot,
                     RulesQuery::default(),
+                    false,
                 )?;
                 let document = snapshot
                     .get(&key)
@@ -670,8 +677,8 @@ impl Firestore for FirestoreService {
                 )?));
             }
         };
-        let snapshot = if token.is_empty() {
-            self.store.snapshot()
+        let (snapshot, read_write_transaction) = if token.is_empty() {
+            (self.store.snapshot(), false)
         } else {
             self.snapshot_for_transaction(key.database(), &token)?
         };
@@ -681,6 +688,7 @@ impl Firestore for FirestoreService {
             &key,
             &snapshot,
             RulesQuery::default(),
+            read_write_transaction,
         )?;
         let document = snapshot
             .get(&key)
@@ -716,10 +724,10 @@ impl Firestore for FirestoreService {
                 ),
             ),
         };
-        let snapshot = if let Some(snapshot) = historical {
-            snapshot
+        let (snapshot, read_write_transaction) = if let Some(snapshot) = historical {
+            (snapshot, false)
         } else if token.is_empty() {
-            self.store.snapshot()
+            (self.store.snapshot(), false)
         } else {
             self.snapshot_for_transaction(&database, &token)?
         };
@@ -791,6 +799,7 @@ impl Firestore for FirestoreService {
                     .collect(),
                 ..RulesQuery::default()
             },
+            read_write_transaction,
         )?;
         for document in &documents {
             self.record_read(&token, &document.key, document.document.as_deref());
@@ -914,10 +923,10 @@ impl Firestore for FirestoreService {
                 ),
             ),
         };
-        let snapshot = if let Some(snapshot) = historical {
-            snapshot
+        let (snapshot, read_write_transaction) = if let Some(snapshot) = historical {
+            (snapshot, false)
         } else if token.is_empty() {
-            self.store.snapshot()
+            (self.store.snapshot(), false)
         } else {
             self.snapshot_for_transaction(&database, &token)?
         };
@@ -966,11 +975,12 @@ impl Firestore for FirestoreService {
                 result: Some(result),
             });
         }
-        require_atomic_rules_allowed(self.rules.evaluate_atomic(
+        require_atomic_rules_allowed(self.rules.evaluate_atomic_with_read_transaction(
             database.project_id(),
             &authorization,
             &evaluations,
             &SnapshotAccess::current(snapshot, database.project_id()),
+            read_write_transaction,
         ))?;
         for (key, document) in reads {
             self.record_read(&token, &key, document.as_deref());
@@ -1115,14 +1125,20 @@ impl Firestore for FirestoreService {
                 ),
             ),
         };
-        let snapshot = if let Some(snapshot) = historical {
-            snapshot
+        let (snapshot, read_write_transaction) = if let Some(snapshot) = historical {
+            (snapshot, false)
         } else if token.is_empty() {
-            self.store.snapshot()
+            (self.store.snapshot(), false)
         } else {
             self.snapshot_for_transaction(&database, &token)?
         };
-        self.authorize_query(&authorization, &rules_candidate, &snapshot, rules_query)?;
+        self.authorize_query(
+            &authorization,
+            &rules_candidate,
+            &snapshot,
+            rules_query,
+            read_write_transaction,
+        )?;
         if explain_options
             .as_ref()
             .is_some_and(|options| !options.analyze)
@@ -1328,14 +1344,20 @@ impl Firestore for FirestoreService {
                 ),
             ),
         };
-        let snapshot = if let Some(snapshot) = historical {
-            snapshot
+        let (snapshot, read_write_transaction) = if let Some(snapshot) = historical {
+            (snapshot, false)
         } else if token.is_empty() {
-            self.store.snapshot()
+            (self.store.snapshot(), false)
         } else {
             self.snapshot_for_transaction(&database, &token)?
         };
-        self.authorize_query(&authorization, &rules_candidate, &snapshot, rules_query)?;
+        self.authorize_query(
+            &authorization,
+            &rules_candidate,
+            &snapshot,
+            rules_query,
+            read_write_transaction,
+        )?;
         if explain_options
             .as_ref()
             .is_some_and(|options| !options.analyze)
@@ -2336,6 +2358,109 @@ mod tests {
                 },
             )]),
             ..proto::Document::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn requests_diagnostics_distinguish_batch_read_only_and_read_write_reads() {
+        let history = fireside_rules_runtime::request_history::RequestHistory::default();
+        let rules = RulesRuntime::with_request_history(history.clone());
+        rules.install_default("rules_version = '2'; service cloud.firestore { match /databases/{db}/documents/{doc=**} { allow read: if true; } }").unwrap();
+        let service = FirestoreService::new_with_query_policy_and_rules(
+            rules_service().store().clone(),
+            QueryPolicy::default(),
+            rules,
+        );
+        let modes = [
+            None,
+            Some(transaction_options::Mode::ReadOnly(
+                transaction_options::ReadOnly::default(),
+            )),
+            Some(transaction_options::Mode::ReadWrite(
+                transaction_options::ReadWrite::default(),
+            )),
+        ];
+        for mode in modes {
+            let token = if mode.is_some() {
+                service
+                    .begin_transaction(Request::new(BeginTransactionRequest {
+                        database: RULES_DATABASE.into(),
+                        options: Some(TransactionOptions { mode }),
+                        ..BeginTransactionRequest::default()
+                    }))
+                    .await
+                    .unwrap()
+                    .into_inner()
+                    .transaction
+            } else {
+                Vec::new()
+            };
+            let document = service
+                .get_document(authenticated(
+                    GetDocumentRequest {
+                        name: rules_document("public/news"),
+                        mask: Some(DocumentMask {
+                            field_paths: vec!["title".into()],
+                        }),
+                        consistency_selector: (!token.is_empty()).then(|| {
+                            get_document_request::ConsistencySelector::Transaction(token.clone())
+                        }),
+                        ..GetDocumentRequest::default()
+                    },
+                    "alice",
+                ))
+                .await
+                .unwrap()
+                .into_inner();
+            assert_eq!(document.fields.len(), 1);
+            let mut batch = service
+                .batch_get_documents(authenticated(
+                    BatchGetDocumentsRequest {
+                        database: RULES_DATABASE.into(),
+                        documents: vec![rules_document("public/news")],
+                        mask: Some(DocumentMask {
+                            field_paths: vec!["title".into()],
+                        }),
+                        consistency_selector: (!token.is_empty()).then(|| {
+                            batch_get_documents_request::ConsistencySelector::Transaction(
+                                token.clone(),
+                            )
+                        }),
+                        ..BatchGetDocumentsRequest::default()
+                    },
+                    "alice",
+                ))
+                .await
+                .unwrap()
+                .into_inner();
+            assert!(batch.next().await.unwrap().is_ok());
+            assert!(batch.next().await.is_none());
+            if !token.is_empty() {
+                service
+                    .rollback(Request::new(RollbackRequest {
+                        database: RULES_DATABASE.into(),
+                        transaction: token,
+                        ..RollbackRequest::default()
+                    }))
+                    .await
+                    .unwrap();
+            }
+        }
+        let mut subscriber = history.subscribe().unwrap();
+        let frame = subscriber.recv().await.unwrap();
+        let events: serde_json::Value = serde_json::from_str(frame.text()).unwrap();
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../conformance/fixtures/developer-tools-request-metadata-v1/fixture.json"
+        ))
+        .unwrap();
+        assert_eq!(events.as_array().unwrap().len(), 6);
+        for (index, message) in [17, 17, 18, 18, 19, 19].into_iter().enumerate() {
+            let actual = &events[index]["rulesContext"]["request"]["mapValue"]["fields"];
+            let expected =
+                &fixture["messages"][message]["rulesContext"]["request"]["mapValue"]["fields"];
+            for field in ["inTransaction", "fields", "method"] {
+                assert_eq!(actual[field], expected[field], "event {index} {field}");
+            }
         }
     }
 
