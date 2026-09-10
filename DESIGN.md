@@ -324,6 +324,39 @@ before Phase B qualification; enabling diagnostics is not an efficiency claim.
 
 ## Auth, Storage and exports
 
+### Official UI discovery and Firestore REST browsing
+
+The UI configuration advertises the same real Requests listener under
+`firestore.webSocketHost` and `firestore.webSocketPort`, as captured from the
+official UI host. A separate service-directory entry alone is insufficient.
+
+The REST document-list and collection-ID adapters call the shared native service,
+including its transaction registry, rather than constructing a second query or
+snapshot engine. Captured cases cover ordering, document masks, missing-parent
+placeholders, empty results and opaque cursor replay. Full terminal pages retain
+a cursor; requesting the next page returns an empty result. Anonymous REST
+document lists remain subject to rules, and collection-ID metadata discovery
+requires owner authorization. The adapter explicitly distinguishes a missing
+REST credential from the native gRPC owner's no-header convention. No client can
+inject that internal authorization marker. Broader REST read-mask/transaction
+coverage and large-inventory listing efficiency remain separate work.
+
+The official jar hung on malformed string `pageSize` in repeated ten-second
+captures. Fireside returns structured INVALID_ARGUMENT instead of reproducing
+that hang. Tokens are server-specific opaque cursors, not byte-identical Java
+tokens. Generated read/create/update timestamps are not fixture identities.
+
+Auth exposes default-project tenant discovery as an empty list. A 404 here
+cancels the pinned UI's Auth saga, including subsequent create actions. This
+discovery response is not tenant creation or tenant-isolation support.
+
+Storage `/b` enumerates configured rule buckets and buckets represented by native
+objects, falling back to the demo project's default bucket when empty. Its local
+bucket descriptors follow the captured UI shape; timestamps describe the runtime
+opening, not durable cloud bucket creation. Empty unconfigured buckets are not
+retained after their final object is removed. Cloud bucket lifecycle operations
+and durable bucket metadata are not claimed by this UI inventory adapter.
+
 Auth browser helpers implement the fixture-tested local Google popup/redirect
 account selection and token return flow. Disabled users and account isolation
 are tested. This is not real provider OAuth or a general tenant-support claim.

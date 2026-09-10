@@ -350,6 +350,14 @@ struct UiState {
 
 async fn ui_config(State(state): State<UiState>) -> Json<JsonValue> {
     let mut value = state.directory.wire_services();
+    if let (Some(_), Some(websocket)) = (
+        state.directory.services.get("firestore"),
+        state.directory.services.get("firestore.websocket"),
+    ) {
+        value["firestore"]["webSocketHost"] = json!(websocket.host);
+        value["firestore"]["webSocketPort"] = json!(websocket.port);
+        value["firestore"]["reservedPorts"] = json!([websocket.port]);
+    }
     value["projectId"] = json!(state.directory.project());
     value["experiments"] = json!([
         "functionsv2deployoptimizations",

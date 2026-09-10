@@ -55,6 +55,7 @@ const CORS_ALLOWED_METHODS: HeaderValue =
 const JSON_CONTENT_TYPE: HeaderValue = HeaderValue::from_static("application/json");
 
 mod coverage;
+mod listing;
 
 /// Creates the HTTP/1 router that shares the Firestore store with gRPC.
 pub fn router(store: Store) -> Router {
@@ -109,16 +110,44 @@ pub fn router_with_query_policy_memory_rules_and_triggers(
     rules: RulesRuntime,
     triggers: TriggerRegistry,
 ) -> Router {
+    let service = fireside_grpc_front::FirestoreService::new_with_query_policy_and_rules(
+        store.clone(),
+        query_policy.clone(),
+        rules.clone(),
+    );
+    router_with_shared_service(
+        store,
+        query_policy,
+        allocator_memory_reporter,
+        rules,
+        triggers,
+        service,
+    )
+}
+
+/// REST routes sharing the native service's transaction and listing semantics.
+pub fn router_with_shared_service(
+    store: Store,
+    query_policy: QueryPolicy,
+    allocator_memory_reporter: Option<Arc<dyn AllocatorMemoryReporter>>,
+    rules: RulesRuntime,
+    triggers: TriggerRegistry,
+    service: fireside_grpc_front::FirestoreService,
+) -> Router {
     Router::new()
         .route(
             DOCUMENT_ROUTE,
             get(get_document)
                 .patch(patch_document)
                 .delete(delete_document)
-                .post(run_query_at_parent),
+                .post(listing::post_document_operation),
         )
         .route(COMMIT_ROUTE, axum::routing::post(commit))
         .route(BATCH_GET_ROUTE, axum::routing::post(batch_get))
+        .route(
+            "/v1/projects/{project}/databases/{database}/documents:listCollectionIds",
+            axum::routing::post(listing::root_ids),
+        )
         .route(RUN_QUERY_ROUTE, axum::routing::post(run_query_at_root))
         .route(
             RUN_AGGREGATION_QUERY_ROUTE,
@@ -138,6 +167,7 @@ pub fn router_with_query_policy_memory_rules_and_triggers(
         )
         .fallback(project_operation)
         .with_state(RestState {
+            service,
             store,
             query_policy,
             rules,
@@ -262,6 +292,7 @@ pub struct DebugMemoryUsage {
 
 #[derive(Clone)]
 struct RestState {
+    service: fireside_grpc_front::FirestoreService,
     store: Store,
     query_policy: QueryPolicy,
     rules: RulesRuntime,
@@ -390,8 +421,12 @@ struct WriteParameters {
 async fn get_document(
     State(state): State<RestState>,
     Path(path): Path<DocumentPath>,
+    Query(parameters): Query<Vec<(String, String)>>,
     headers: HeaderMap,
 ) -> Result<Json<JsonValue>, RestError> {
+    if path.document.split('/').count() % 2 == 1 {
+        return listing::documents(&state, path, parameters, headers).await;
+    }
     let project = path.project.clone();
     let key = document_key(path)?;
     let authorization = request_authorization(&headers, &project)?;
@@ -799,14 +834,14 @@ async fn run_query_at_root(
     )
 }
 
-async fn run_query_at_parent(
+fn run_query_at_parent(
     State(state): State<RestState>,
     Path(path): Path<DocumentPath>,
-    headers: HeaderMap,
+    headers: &HeaderMap,
     Json(body): Json<JsonValue>,
 ) -> Result<Json<JsonValue>, RestError> {
     let project = path.project.clone();
-    let authorization = request_authorization(&headers, &project)?;
+    let authorization = request_authorization(headers, &project)?;
     let database = DatabaseName::new(path.project, path.database)
         .map_err(|error| RestError::invalid(error.to_string()))?;
     if let Some(parent) = path.document.strip_suffix(":runQuery") {
@@ -2736,6 +2771,7 @@ mod tests {
     #[tokio::test]
     async fn debug_memory_exposes_versioned_store_accounting() {
         let state = RestState {
+            service: fireside_grpc_front::FirestoreService::new(Store::default()),
             coverage_slots: Arc::new(tokio::sync::Semaphore::new(
                 coverage::MAXIMUM_IN_FLIGHT_REPORTS,
             )),

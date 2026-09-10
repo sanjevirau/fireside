@@ -152,6 +152,22 @@ impl FirestoreService {
         &self.rules
     }
 
+    /// REST client listing with explicit client authentication, including an
+    /// anonymous caller. Unlike the native gRPC administrator convention, a
+    /// missing REST header must not become owner bypass. The extension is local
+    /// to this call and cannot be supplied through network gRPC metadata.
+    pub async fn list_documents_for_client(
+        &self,
+        message: ListDocumentsRequest,
+        authorization_header: Option<String>,
+    ) -> Result<ListDocumentsResponse, Status> {
+        let mut request = Request::new(message);
+        request
+            .extensions_mut()
+            .insert(AuthorizationSource::ClientHeader(authorization_header));
+        self.list_documents(request).await.map(Response::into_inner)
+    }
+
     /// Opens an in-process Listen channel backed by the same engine as the
     /// public gRPC streaming RPC.
     #[must_use]
@@ -706,7 +722,10 @@ impl Firestore for FirestoreService {
         &self,
         request: Request<ListDocumentsRequest>,
     ) -> Result<Response<ListDocumentsResponse>, Status> {
-        let authorization_source = grpc_authorization_source(request.metadata())?;
+        let authorization_source = match request.extensions().get::<AuthorizationSource>() {
+            Some(source) => source.clone(),
+            None => grpc_authorization_source(request.metadata())?,
+        };
         let request = request.into_inner();
         let (database, parent) = decode_parent(&request.parent)?;
         let authorization = authorization_source.resolve(database.project_id())?;

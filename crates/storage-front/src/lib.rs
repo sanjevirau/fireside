@@ -108,6 +108,7 @@ impl StorageRuntime {
             None => None,
         };
         let state = StorageState {
+            started_at: now_rfc3339(),
             metadata: Arc::new(metadata),
             config: Arc::new(config),
             inner: Arc::new(Mutex::new(data)),
@@ -201,6 +202,7 @@ impl std::error::Error for StorageError {}
 
 #[derive(Clone)]
 struct StorageState {
+    started_at: String,
     metadata: Arc<metadata::MetadataStore>,
     config: Arc<StorageConfig>,
     inner: Arc<Mutex<StorageData>>,
@@ -266,6 +268,7 @@ struct UploadSession {
 
 fn routes(state: StorageState) -> Router {
     Router::new()
+        .route("/b", get(list_buckets))
         .route("/v0/", get(readiness))
         .route("/v0/b/{bucket}/o", get(v0_list).post(v0_upload))
         .route(
@@ -308,6 +311,37 @@ fn routes(state: StorageState) -> Router {
 
 async fn readiness() -> Json<JsonValue> {
     Json(json!({ "emulator": "storage" }))
+}
+
+// Inventory for the local UI: configured buckets and buckets with native objects.
+// This does not implement the cloud bucket-management/lifecycle API.
+async fn list_buckets(State(state): State<StorageState>) -> Json<JsonValue> {
+    let mut names = BTreeSet::new();
+    if let Some(rules) = &state.config.rules {
+        names.extend(rules.buckets.iter().map(|rules| rules.bucket.clone()));
+    }
+    names.extend(
+        lock(&state.inner)
+            .objects
+            .values()
+            .map(|object| object.bucket.clone()),
+    );
+    if names.is_empty() {
+        names.insert(format!("{}.appspot.com", state.config.project));
+    }
+    let items: Vec<_> = names
+        .into_iter()
+        .map(|name| {
+            json!({
+                "kind":"storage#bucket", "name":name, "id":name,
+                "selfLink":format!("{}/v1/b/{}", state.config.origin, percent_encode(&name)),
+                "timeCreated":state.started_at, "updated":state.started_at,
+                "projectNumber":"000000000000", "metageneration":"1", "location":"US",
+                "storageClass":"STANDARD", "etag":"====", "locationType":"multi-region"
+            })
+        })
+        .collect();
+    Json(json!({"kind":"storage#buckets", "items":items}))
 }
 
 async fn not_found() -> StorageApiError {

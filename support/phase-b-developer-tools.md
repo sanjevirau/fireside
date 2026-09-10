@@ -225,6 +225,18 @@ are still required for this increment.
 
 ## Remaining before Phase B completion
 
+The complete synthetic suite browser check has exposed and reproduced missing
+Requests discovery, REST document/collection listing, Auth tenant discovery and
+Storage bucket inventory. Each protocol correction follows a committed official
+capture. The current local attempt passes fourteen browser checkpoints and a
+real Functions HTTP request, but its subsequent shutdown exceeded the short
+diagnostic deadline. It is **not a full-suite pass**. Shutdown is being investigated
+before an integrated receipt or Phase B completion is claimed. The browser driver
+now waits for acknowledged upload success rather than an optimistic table row,
+and its overall result includes cleanup success. Earlier failed attempts remain
+preserved. The REST malformed-page-size timeout and bucket-lifecycle limitations
+are explicit in DESIGN.md.
+
 1. Qualify the connected Requests and coverage components through the complete
    supported suite, including reconnect, disabled diagnostics and cleanup.
 2. Retain the component TTL/slow-reader/source/value bounds regressions in CI;

@@ -23,9 +23,12 @@ export async function observeDeveloperUi({origin,project,work,output,requestId,r
   page.on('pageerror',error=>errors.push(error.message));
   page.on('response',response=>{
     const url=new URL(response.url());
-    if (!url.pathname.startsWith('/identitytoolkit.googleapis.com/') && !url.pathname.startsWith('/v0/') && !url.pathname.startsWith('/emulator/'))return;
+    if (url.pathname!=='/b' && !url.pathname.startsWith('/identitytoolkit.googleapis.com/') && !url.pathname.startsWith('/v0/') && !url.pathname.startsWith('/v1/') && !url.pathname.startsWith('/emulator/'))return;
     pending.push((async()=>{
-      const request=response.request(); let body; try{body=await Promise.race([response.json(),delay(5000,undefined,{ref:false}).then(()=>null)]);}catch{body=null;}
+      const request=response.request(); let body; try{
+        const text=await Promise.race([response.text(),delay(5000,null,{ref:false})]);
+        try{body=JSON.parse(text);}catch{body=text?.slice(0,65536);}
+      }catch{body=null;}
       // Auth session/token material and upload download tokens are deliberately not fixture data.
       const sanitize=value=>Array.isArray(value)?value.map(sanitize):value&&typeof value==='object'?
         Object.fromEntries(Object.entries(value).filter(([key])=>!/(token|password|salt)/i.test(key)).map(([key,v])=>[key,sanitize(v)])):value;
@@ -94,7 +97,12 @@ export async function observeDeveloperUi({origin,project,work,output,requestId,r
     checked('auth-clear-control');
     await page.goto(`${origin('ui')}/storage`);
     const upload=join(work,'synthetic.txt');await writeFile(upload,'Independent developer-tool fixture 中文 🚀\n');
-    await page.locator('input[type=file]').first().setInputFiles(upload);
+    // The table inserts an optimistic row before any upload has committed.
+    const [uploaded]=await Promise.all([
+      page.waitForResponse(response=>response.url().startsWith(origin('storage')+'/v0/b/')&&response.request().method()==='POST'),
+      page.locator('input[type=file]').first().setInputFiles(upload),
+    ]);
+    assert.equal(uploaded.status(),200,'upload must be acknowledged before inspecting the object');
     await page.getByRole('row').filter({hasText:'synthetic.txt'}).waitFor();
     checked('storage-upload-and-list');
     const bytes=await (await fetch(`${origin('storage')}/v0/b/${project}.appspot.com/o/synthetic.txt?alt=media`)).text();
@@ -122,8 +130,9 @@ export async function observeDeveloperUi({origin,project,work,output,requestId,r
     await Promise.all(pending);assert.deepEqual(errors,[]);
     return {browserVersion:browser.version(),checks,coverage,errors,exchanges};
   } catch(error) {
+    await Promise.all(pending);
     await writeFile(join(output,'browser-failure.json'),JSON.stringify({message:error.message,checks,errors,
-      url:page.url(),text:await page.locator('body').innerText({timeout:2000}).catch(()=>'<page unavailable>')},null,2));
+      exchanges,url:page.url(),text:await page.locator('body').innerText({timeout:2000}).catch(()=>'<page unavailable>')},null,2));
     await page.screenshot({path:join(output,'browser-failure.png'),timeout:2000}).catch(()=>{});throw error;
   } finally {clearTimeout(watchdog);await browser.close();}
 }

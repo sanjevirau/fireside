@@ -135,6 +135,10 @@ impl AuthRuntime {
                 get(batch_get),
             )
             .route(
+                "/identitytoolkit.googleapis.com/v2/projects/{project}/tenants",
+                get(list_tenants),
+            )
+            .route(
                 "/emulator/v1/projects/{project}/config",
                 get(get_config).patch(update_config),
             )
@@ -834,6 +838,16 @@ async fn refresh_token(
         "expires_in": "3600", "refresh_token": refresh,
         "token_type": "Bearer", "user_id": grant.uid, "project_id": "12345"
     })))
+}
+
+// Default-project discovery is required by the official UI even without tenants.
+// Tenant creation and tenant-scoped operations remain unsupported.
+async fn list_tenants(
+    State(state): State<AuthState>,
+    Path(project): Path<String>,
+) -> Result<Json<JsonValue>, ApiError> {
+    state.require_project(&project)?;
+    Ok(Json(json!({ "tenants": [] })))
 }
 
 async fn admin_create(

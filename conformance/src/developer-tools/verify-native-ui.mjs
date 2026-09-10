@@ -85,13 +85,14 @@ try{
   record.browser=await observeDeveloperUi({origin,project,work:output,output,requestId:denied.requestId,readyLog:'All emulators ready;'});
   const ping=await fetch(`${origin('functions')}/${project}/us-central1/ping`,{signal:AbortSignal.timeout(15000)});
   assert.equal(ping.status,200);assert.deepEqual(await ping.json(),{synthetic:true});
-  record.functionsPing=true;record.passed=true;
+  record.functionsPing=true;record.browserAndFunctionPassed=true;
 }catch(error){await json('failure.json',{message:error.message,stack:error.stack});throw error;}
 finally{
   requests?.close();
   if(child.exitCode===null&&child.signalCode===null)child.stdin.end('FIRESIDE_SHUTDOWN\n');
   const result=await Promise.race([exited,delay(20000,null,{ref:false})]);
   await writeFile(join(output,'suite.log'),log);
+  record.passed=record.browserAndFunctionPassed===true&&result?.[0]===0;
   await json('result.json',{...record,shutdown:result});
   assert(result,'owned suite shutdown deadline; preserve live child for diagnosis');
   assert.equal(result[0],0,log);
