@@ -199,13 +199,13 @@ if (process.platform === "win32") {
 }
 
 async function startFunctionsOnce(emulator, registry, customBackends) {
-  const counts = new Map(customBackends.map((backend) => [backend, undefined]));
+  const discovered = new Map(customBackends.map((backend) => [backend, undefined]));
   const discover = emulator.discoverTriggers;
   // connect() owns discovery and source watching. Observe its initial results
   // instead of executing the backend a second time before it starts.
   emulator.discoverTriggers = async function (...args) {
     const definitions = await discover.apply(this, args);
-    if (counts.has(args[0])) counts.set(args[0], definitions.length);
+    if (discovered.has(args[0])) discovered.set(args[0], definitions);
     return definitions;
   };
   try {
@@ -215,16 +215,33 @@ async function startFunctionsOnce(emulator, registry, customBackends) {
     emulator.discoverTriggers = discover;
   }
   let total = 0;
-  for (const [backend, count] of counts) {
+  for (const [backend, definitions] of discovered) {
     // firebase-tools can log discovery failures without rejecting connect().
     // Missing results must not produce a false READY signal.
-    if (count === undefined) {
+    if (definitions === undefined) {
       throw new Error(`Functions source ${backend.functionsDir} discovery did not complete`);
     }
-    if (count === 0) {
+    if (definitions.length === 0) {
       throw new Error(`Functions source ${backend.functionsDir} exported no functions`);
     }
-    total += count;
+    for (const definition of definitions) {
+      // Discovery is not admission: upstream retains ignored definitions when
+      // their required emulator could not register the trigger. Its public
+      // inventory and getTriggerDefinitions() include those records as well.
+      let record;
+      try {
+        record = emulator.getTriggerRecordByKey(emulator.getTriggerKey(definition));
+      } catch {
+        throw new Error(`Function ${definition.id} was discovered but not registered`);
+      }
+      if (!record || record.def.id !== definition.id) {
+        throw new Error(`Function ${definition.id} was discovered but not registered`);
+      }
+      if (!record.enabled || record.ignored) {
+        throw new Error(`Function ${definition.id} was discovered but not admitted (disabled or ignored)`);
+      }
+    }
+    total += definitions.length;
   }
   return total;
 }

@@ -396,6 +396,17 @@ documents through the official emulator.
 
 ## Distribution and trust boundaries
 
+The pinned Functions host's successful discovery and `/backends` response do
+not prove registration. The independent `functions-readiness-v1` capture shows
+that missing auxiliary peers leave discovered handlers in the inventory with
+`ignored: true`, and failed codebase discovery can be swallowed by `connect()`.
+Initial custom-backend readiness now checks each discovered definition against
+the upstream registered record, requiring enabled and not ignored. It observes
+the single discovery owned by `connect()`, not a second execution of user code.
+Missing registration fails with the handler identifier before READY. This
+increment does not yet qualify Extension discovery or full-inventory transfer
+to the Rust coordinator, and does not implement task/event delivery.
+
 The pinned Functions workload host drains/stops its upstream emulator before
 exiting. A served request leaves an upstream socket-discovery timer referenced
 for thirty seconds even after worker/server shutdown. Like the captured official

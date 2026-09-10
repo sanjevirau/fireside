@@ -57,6 +57,7 @@ jobs:
           npm run test:serialization:fixtures --prefix conformance
           npm run test:developer-tools-fixtures --prefix conformance
           node --test conformance/test/developer-overhead-receipt.test.mjs
+          node --test conformance/test/functions-readiness-fixture.test.mjs
       - name: Verify package and publication safety contracts
         run: node --test packaging/*.test.mjs
 
