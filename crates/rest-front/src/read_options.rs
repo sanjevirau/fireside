@@ -65,7 +65,7 @@ pub(super) async fn get(
         .get_document_for_client(input, authorization(&headers)?)
         .await
         .map_err(|error| super::listing::status(&error))?;
-    encode(result)
+    super::read_json::document(&result).map(Json)
 }
 
 pub(super) async fn batch(
@@ -91,9 +91,7 @@ pub(super) async fn batch(
                 continue;
             }
         }
-        response.push(
-            serde_json::to_value(result).map_err(|error| RestError::internal(error.to_string()))?,
-        );
+        response.push(super::read_json::batch(&result)?);
     }
     Ok(Json(JsonValue::Array(response)))
 }
@@ -142,7 +140,7 @@ pub(super) async fn commit(
         .commit_for_client(input, authorization(&headers)?)
         .await
         .map_err(|error| super::listing::status(&error))?;
-    encode(result)
+    super::read_json::commit(&result).map(Json)
 }
 
 use base64::Engine as _;

@@ -63,6 +63,56 @@ async fn seeded() -> (Router, JsonValue) {
     (router, seed)
 }
 
+#[tokio::test]
+async fn native_read_adapter_preserves_rest_value_json_and_sdk_utc_timestamps() {
+    let (router, _) = seeded().await;
+    let fields = json!({
+        "nullable":{"nullValue":null},
+        "special":{"doubleValue":"NaN"},
+        "infinity":{"doubleValue":"Infinity"},
+        "when":{"timestampValue":"2026-01-02T03:04:05.123Z"},
+        "nested":{"mapValue":{"fields":{
+            "timestampValue":{"stringValue":"literal+00:00"},
+            "nullValue":{"stringValue":"NULL_VALUE"},
+            "items":{"arrayValue":{"values":[{"nullValue":null},{"doubleValue":"-Infinity"}]}}
+        }}}
+    });
+    let (status, written) = request(
+        &router,
+        "/notes/values",
+        "PATCH",
+        json!({"fields":fields}),
+        true,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, read) = request(&router, "/notes/values", "GET", JsonValue::Null, true).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(read, written);
+    let (status, batch) = request(
+        &router,
+        ":batchGet",
+        "POST",
+        json!({"documents":[format!("{}/notes/values", &ROOT[4..])]}),
+        true,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(batch[0]["found"], written);
+    assert!(batch[0]["readTime"].as_str().unwrap().ends_with('Z'));
+    let token = transaction(&router, false).await;
+    let (status, commit) =
+        request(&router, ":commit", "POST", transaction_write(&token), true).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(commit["commitTime"].as_str().unwrap().ends_with('Z'));
+    assert!(
+        commit["writeResults"][0]["updateTime"]
+            .as_str()
+            .unwrap()
+            .ends_with('Z')
+    );
+}
+
 fn query_value(value: &str) -> String {
     use std::fmt::Write as _;
     value.bytes().fold(String::new(), |mut output, byte| {
