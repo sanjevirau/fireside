@@ -73,11 +73,18 @@ try{
   if(volume){
     const filler=await open(join(faultRoot,'capacity-fill'),'wx');let written=0;
     try{
-      while(written<=filesystem.capacityBytes){const result=await filler.write(Buffer.alloc(1024*1024));assert(result.bytesWritten>0);written+=result.bytesWritten;}
-      assert.fail('bounded fill did not produce ENOSPC');
-    }catch(error){assert.equal(error.code,'ENOSPC');filesystem.observedWriteError=error.code;}
+      // Some filesystems reject a whole large allocation while smaller free
+      // extents remain. Reach allocation-block exhaustion, not the first error.
+      for(const size of [1024*1024,4096,1]){
+        try{
+          while(written<=filesystem.capacityBytes){const result=await filler.write(Buffer.alloc(size));assert(result.bytesWritten>0);written+=result.bytesWritten;}
+          assert.fail('bounded fill did not produce ENOSPC');
+        }catch(error){assert.equal(error.code,'ENOSPC');filesystem.observedWriteError=error.code;}
+      }
+    }
     finally{await filler.close();}
     const full=await statfs(volume);filesystem.availableAtExportBytes=full.bavail*full.bsize;filesystem.fillerBytes=(await stat(join(faultRoot,'capacity-fill'))).size;
+    assert.equal(filesystem.availableAtExportBytes,0,'tiny export filesystem must actually have no available space');
   }else await writeFile(faultRoot,'controlled export-parent fault\n');
   const stopped=await stop();record.failedExportExit=stopped.exit;
   record.exportErrorReported=volume?/No space left on device|os error 28/i.test(stopped.log):/failed to create export parent/.test(stopped.log);
