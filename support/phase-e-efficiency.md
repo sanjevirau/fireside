@@ -1,8 +1,9 @@
 # Phase E efficiency work log
 
-This is short component evidence, not completion of Phase E or combined release
-acceptance. Representative collection, Storage and lifecycle profiling remains
-required. No consumer data or performance evidence is published here.
+This is short component, collection, Storage and lifecycle evidence, not combined
+release acceptance. Remaining evidence PRs need review/CI; representative private
+consumer qualification remains part of Phase F. No consumer data or private
+performance evidence is published here.
 
 ## Nested REST normalization
 
@@ -45,7 +46,12 @@ calling the output adapter. No product input behavior was changed. The profiler
 needed a scoped Clippy allowance because its inferred timestamp type belongs to
 a transitive protobuf dependency; the measured loop and input remain unchanged.
 
-CI/platform qualification is still pending; this report is not a release claim.
+The optimized source passed all seven checks in
+[CI 34535582289](https://github.com/sanjevirau/fireside/actions/runs/34535582289)
+and was reviewed/merged as PR #21. Its
+[merge receipt](../benchmarks/results/phase-e/merged-encoding-ci.json) explicitly
+separates the old release-pinned package matrix from the new-source platform
+qualification being added in PR #24. This report is not a release claim.
 
 ## Optimized runtime integration checks
 
@@ -114,6 +120,27 @@ profile commit and corrected commit on the same host. Set
 `FIRESIDE_ENCODING_PROFILE_OUTPUT` to a fresh path for exact output hashing.
 Preserve both executables and interleave repetitions; do not compare different
 hardware or count compilation time as encoder time.
+
+## Equivalent-query warmup follow-up
+
+A separate [before-measurement contract](../benchmarks/phase-e-equivalent-queries.json)
+omits only the unmeasured listing probe on both binaries. It preserves the
+original results and every seeded document, measured request, deadline and
+expected result. The existing driver requires an explicit `--omit-list-probe`
+flag; its default Phase A behavior remains unchanged.
+
+All six runs passed. Ten-query batch times after seeding were 10.019, 10.122,
+13.143 ms published versus 9.278, 9.485, 8.053 ms corrected. After native reopen
+they were 7.472, 7.177, 5.757 ms versus 6.587, 4.088, 8.324 ms. The median
+comparisons are 10.122 vs 9.278 ms and 7.177 vs 6.587 ms. The earlier consistent
+post-seed slowdown is not reproduced with equivalent warmup. This is not proof
+that the listing probe alone caused it, nor a statistically established general
+speedup on a non-quiescent host. No query product change is justified here.
+
+All 1,800 measured/seed operation records and native RSS samples are retained in
+`equivalent-queries-pair*.json.gz`. These remain small synthetic checks, not
+full-data throughput or memory qualification. Run the existing baseline command
+with the same exact package identity and append `--omit-list-probe` to reproduce.
 
 ## Pinned SDK Storage and native lifecycle repeat
 

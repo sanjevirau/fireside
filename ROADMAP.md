@@ -21,8 +21,8 @@ the public fixtures or release artifacts.
 ## Execution order
 
 These A–F labels organize the next scoped release. They do not restart historical
-milestones or authorize expansion into additional emulator services. All phases
-below are planned; completed existing tests remain evidence within their original
+milestones or authorize expansion into additional emulator services. Checklists
+below record current scoped qualification; existing tests remain evidence within their original
 scope and should not be recreated merely to satisfy this document.
 
 | Phase | Deliverable | Completion check |
@@ -72,19 +72,22 @@ an optional documentation-only deferral. Serving the official UI assets or
 accepting a WebSocket connection is not sufficient evidence of functionality.
 
 Implementation progress is recorded in the [Phase B work log](support/phase-b-developer-tools.md).
+The [B–D source qualification audit](support/phase-bcd-qualification.md) records
+the completed named checks and exact CI boundary; Phase F release acceptance
+is separate and remains incomplete.
 Completed internal building blocks do not check off a user-visible requirement.
 
-- [ ] Qualify the supported Firestore document, Auth account and Storage object
+- [x] Qualify the supported Firestore document, Auth account and Storage object
   browsing and mutation controls through the UI, not only direct API calls.
-- [ ] Implement the Firestore Requests feed and request/rule-evaluation details,
+- [x] Implement the Firestore Requests feed and request/rule-evaluation details,
   including allowed and denied operations and the identifiers needed to correlate
   events. Confirm the UI actually renders the captured information.
-- [ ] Implement the supported rules-coverage endpoints and reports against the
+- [x] Implement the supported rules-coverage endpoints and reports against the
   official oracle. Correct rule enforcement alone does not establish coverage
   or tracing compatibility.
-- [ ] Verify service discovery/status and useful logs across startup failures,
+- [x] Verify service discovery/status and useful logs across startup failures,
   reconnect, reload and shutdown. An empty feed must not mask a broken transport.
-- [ ] Bound debug buffers and retention. Test slow/disconnected UI clients and
+- [x] Bound debug buffers and retention. Test slow/disconnected UI clients and
   measure the tracing overhead without changing application semantics.
 
 Done when generic fixture/API regressions and browser verification demonstrate
@@ -94,14 +97,14 @@ services are outside this phase.
 
 ## Phase C — Supported service contracts and readiness
 
-- [ ] Verify readiness against the configured/discovered Functions inventory and
+- [x] Verify readiness against the configured/discovered Functions inventory and
   expose missing or failed handlers; a minimum count alone is insufficient.
   Use generic handlers to test discovery and lifecycle, not consumer business logic.
-- [ ] Capture the Functions host's required auxiliary startup requests. Preserve
+- [x] Capture the Functions host's required auxiliary startup requests. Preserve
   those contracts while ensuring unsupported Eventarc/Tasks delivery requests do
   not receive misleading success responses. General task/event emulation remains
   outside the first-release service profile.
-- [ ] Reuse existing passing contract coverage and fill genuine gaps in the
+- [x] Reuse existing passing contract coverage and fill genuine gaps in the
   supported service profile with oracle-backed regressions. Treat untested paths
   as coverage gaps, not automatically as product defects.
 
@@ -112,10 +115,10 @@ this qualification. No complete Eventarc/Tasks or general Pub/Sub emulator is ad
 
 ## Phase D — State lifecycle and failure recovery
 
-- [ ] Qualify supported native-state upgrades, clean/crash restart, failed or
+- [x] Qualify supported native-state upgrades, clean/crash restart, failed or
   interrupted export, low disk and rollback through completed portable exports.
   Retain user state; fail with an actionable recovery path when reuse is unsafe.
-- [ ] Reuse existing native reopen, dataset-isolation and export/import tests.
+- [x] Reuse existing native reopen, dataset-isolation and export/import tests.
   Add targeted fault cases and compatibility-version cases, not duplicate
   happy-path suites. Document which formats can reopen and when export/import
   is required; never use a fresh import as proof of native upgrade compatibility.
