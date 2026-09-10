@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "syntheticOnly": true,
-  "capturedAt": "2026-09-10T19:25:00.749Z",
+  "capturedAt": "2026-09-10T19:29:43.800Z",
   "project": "demo-fireside-coverage",
   "oracle": {
     "firestore": "1.22.0",
@@ -3974,6 +3974,613 @@
       }
     },
     {
+      "id": "map-diff-direction-size",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  function check() { let difference = {'left': 1, 'common': 1}.diff({'right': 1, 'common': 2}); return difference.addedKeys().hasOnly(['left']) && difference.removedKeys().hasOnly(['right']) && difference.affectedKeys().size() == 3; }\n  match /items/{item} { allow get: if check(); }\n }\n}",
+      "status": 200,
+      "before": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  function check() { let difference = {'left': 1, 'common': 1}.diff({'right': 1, 'common': 2}); return difference.addedKeys().hasOnly(['left']) && difference.removedKeys().hasOnly(['right']) && difference.affectedKeys().size() == 3; }\n  match /items/{item} { allow get: if check(); }\n }\n}",
+              "name": "firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 4,
+              "column": 22,
+              "currentOffset": 109,
+              "endOffset": 318
+            },
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 4,
+                  "column": 39,
+                  "currentOffset": 126,
+                  "endOffset": 179
+                },
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 4,
+                      "column": 39,
+                      "currentOffset": 126,
+                      "endOffset": 148
+                    }
+                  },
+                  {
+                    "sourcePosition": {
+                      "line": 4,
+                      "column": 69,
+                      "currentOffset": 156,
+                      "endOffset": 179
+                    }
+                  }
+                ]
+              },
+              {
+                "sourcePosition": {
+                  "line": 4,
+                  "column": 104,
+                  "currentOffset": 191,
+                  "endOffset": 318
+                },
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 4,
+                      "column": 104,
+                      "currentOffset": 191,
+                      "endOffset": 275
+                    },
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 4,
+                          "column": 104,
+                          "currentOffset": 191,
+                          "endOffset": 228
+                        },
+                        "children": [
+                          {
+                            "sourcePosition": {
+                              "line": 4,
+                              "column": 104,
+                              "currentOffset": 191,
+                              "endOffset": 210
+                            },
+                            "children": [
+                              {
+                                "sourcePosition": {
+                                  "line": 4,
+                                  "column": 104,
+                                  "currentOffset": 191,
+                                  "endOffset": 200
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "sourcePosition": {
+                              "line": 4,
+                              "column": 135,
+                              "currentOffset": 222,
+                              "endOffset": 228
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "sourcePosition": {
+                          "line": 4,
+                          "column": 148,
+                          "currentOffset": 235,
+                          "endOffset": 275
+                        },
+                        "children": [
+                          {
+                            "sourcePosition": {
+                              "line": 4,
+                              "column": 148,
+                              "currentOffset": 235,
+                              "endOffset": 256
+                            },
+                            "children": [
+                              {
+                                "sourcePosition": {
+                                  "line": 4,
+                                  "column": 148,
+                                  "currentOffset": 235,
+                                  "endOffset": 244
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "sourcePosition": {
+                              "line": 4,
+                              "column": 181,
+                              "currentOffset": 268,
+                              "endOffset": 275
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "sourcePosition": {
+                      "line": 4,
+                      "column": 195,
+                      "currentOffset": 282,
+                      "endOffset": 318
+                    },
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 4,
+                          "column": 195,
+                          "currentOffset": 282,
+                          "endOffset": 311
+                        },
+                        "children": [
+                          {
+                            "sourcePosition": {
+                              "line": 4,
+                              "column": 195,
+                              "currentOffset": 282,
+                              "endOffset": 304
+                            },
+                            "children": [
+                              {
+                                "sourcePosition": {
+                                  "line": 4,
+                                  "column": 195,
+                                  "currentOffset": 282,
+                                  "endOffset": 291
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 361,
+              "endOffset": 365
+            }
+          }
+        ]
+      },
+      "after": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  function check() { let difference = {'left': 1, 'common': 1}.diff({'right': 1, 'common': 2}); return difference.addedKeys().hasOnly(['left']) && difference.removedKeys().hasOnly(['right']) && difference.affectedKeys().size() == 3; }\n  match /items/{item} { allow get: if check(); }\n }\n}",
+              "name": "firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 4,
+              "column": 22,
+              "currentOffset": 109,
+              "endOffset": 318
+            },
+            "values": [
+              {
+                "value": {
+                  "boolValue": true
+                },
+                "count": 2
+              }
+            ],
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 4,
+                  "column": 39,
+                  "currentOffset": 126,
+                  "endOffset": 179
+                },
+                "values": [
+                  {
+                    "value": {
+                      "mapDiffValue": {
+                        "keyStatuses": {
+                          "right": "REMOVED",
+                          "common": "CHANGED",
+                          "left": "ADDED"
+                        }
+                      }
+                    },
+                    "count": 2
+                  }
+                ],
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 4,
+                      "column": 39,
+                      "currentOffset": 126,
+                      "endOffset": 148
+                    },
+                    "values": [
+                      {
+                        "value": {
+                          "mapValue": {
+                            "fields": {
+                              "left": {
+                                "intValue": "1"
+                              },
+                              "common": {
+                                "intValue": "1"
+                              }
+                            }
+                          }
+                        },
+                        "count": 2
+                      }
+                    ]
+                  },
+                  {
+                    "sourcePosition": {
+                      "line": 4,
+                      "column": 69,
+                      "currentOffset": 156,
+                      "endOffset": 179
+                    },
+                    "values": [
+                      {
+                        "value": {
+                          "mapValue": {
+                            "fields": {
+                              "right": {
+                                "intValue": "1"
+                              },
+                              "common": {
+                                "intValue": "2"
+                              }
+                            }
+                          }
+                        },
+                        "count": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "sourcePosition": {
+                  "line": 4,
+                  "column": 104,
+                  "currentOffset": 191,
+                  "endOffset": 318
+                },
+                "values": [
+                  {
+                    "value": {
+                      "boolValue": true
+                    },
+                    "count": 2
+                  }
+                ],
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 4,
+                      "column": 104,
+                      "currentOffset": 191,
+                      "endOffset": 275
+                    },
+                    "values": [
+                      {
+                        "value": {
+                          "boolValue": true
+                        },
+                        "count": 2
+                      }
+                    ],
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 4,
+                          "column": 104,
+                          "currentOffset": 191,
+                          "endOffset": 228
+                        },
+                        "values": [
+                          {
+                            "value": {
+                              "boolValue": true
+                            },
+                            "count": 2
+                          }
+                        ],
+                        "children": [
+                          {
+                            "sourcePosition": {
+                              "line": 4,
+                              "column": 104,
+                              "currentOffset": 191,
+                              "endOffset": 210
+                            },
+                            "values": [
+                              {
+                                "value": {
+                                  "setValue": {
+                                    "values": [
+                                      {
+                                        "stringValue": "left"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "count": 2
+                              }
+                            ],
+                            "children": [
+                              {
+                                "sourcePosition": {
+                                  "line": 4,
+                                  "column": 104,
+                                  "currentOffset": 191,
+                                  "endOffset": 200
+                                },
+                                "values": [
+                                  {
+                                    "value": {
+                                      "mapDiffValue": {
+                                        "keyStatuses": {
+                                          "right": "REMOVED",
+                                          "common": "CHANGED",
+                                          "left": "ADDED"
+                                        }
+                                      }
+                                    },
+                                    "count": 2
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "sourcePosition": {
+                              "line": 4,
+                              "column": 135,
+                              "currentOffset": 222,
+                              "endOffset": 228
+                            },
+                            "values": [
+                              {
+                                "value": {
+                                  "listValue": {
+                                    "values": [
+                                      {
+                                        "stringValue": "left"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "count": 2
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "sourcePosition": {
+                          "line": 4,
+                          "column": 148,
+                          "currentOffset": 235,
+                          "endOffset": 275
+                        },
+                        "values": [
+                          {
+                            "value": {
+                              "boolValue": true
+                            },
+                            "count": 2
+                          }
+                        ],
+                        "children": [
+                          {
+                            "sourcePosition": {
+                              "line": 4,
+                              "column": 148,
+                              "currentOffset": 235,
+                              "endOffset": 256
+                            },
+                            "values": [
+                              {
+                                "value": {
+                                  "setValue": {
+                                    "values": [
+                                      {
+                                        "stringValue": "right"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "count": 2
+                              }
+                            ],
+                            "children": [
+                              {
+                                "sourcePosition": {
+                                  "line": 4,
+                                  "column": 148,
+                                  "currentOffset": 235,
+                                  "endOffset": 244
+                                },
+                                "values": [
+                                  {
+                                    "value": {
+                                      "mapDiffValue": {
+                                        "keyStatuses": {
+                                          "right": "REMOVED",
+                                          "common": "CHANGED",
+                                          "left": "ADDED"
+                                        }
+                                      }
+                                    },
+                                    "count": 2
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "sourcePosition": {
+                              "line": 4,
+                              "column": 181,
+                              "currentOffset": 268,
+                              "endOffset": 275
+                            },
+                            "values": [
+                              {
+                                "value": {
+                                  "listValue": {
+                                    "values": [
+                                      {
+                                        "stringValue": "right"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "count": 2
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "sourcePosition": {
+                      "line": 4,
+                      "column": 195,
+                      "currentOffset": 282,
+                      "endOffset": 318
+                    },
+                    "values": [
+                      {
+                        "value": {
+                          "boolValue": true
+                        },
+                        "count": 2
+                      }
+                    ],
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 4,
+                          "column": 195,
+                          "currentOffset": 282,
+                          "endOffset": 311
+                        },
+                        "values": [
+                          {
+                            "value": {
+                              "intValue": "3"
+                            },
+                            "count": 2
+                          }
+                        ],
+                        "children": [
+                          {
+                            "sourcePosition": {
+                              "line": 4,
+                              "column": 195,
+                              "currentOffset": 282,
+                              "endOffset": 304
+                            },
+                            "values": [
+                              {
+                                "value": {
+                                  "setValue": {
+                                    "values": [
+                                      {
+                                        "stringValue": "right"
+                                      },
+                                      {
+                                        "stringValue": "common"
+                                      },
+                                      {
+                                        "stringValue": "left"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "count": 2
+                              }
+                            ],
+                            "children": [
+                              {
+                                "sourcePosition": {
+                                  "line": 4,
+                                  "column": 195,
+                                  "currentOffset": 282,
+                                  "endOffset": 291
+                                },
+                                "values": [
+                                  {
+                                    "value": {
+                                      "mapDiffValue": {
+                                        "keyStatuses": {
+                                          "right": "REMOVED",
+                                          "common": "CHANGED",
+                                          "left": "ADDED"
+                                        }
+                                      }
+                                    },
+                                    "count": 2
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 361,
+              "endOffset": 365
+            },
+            "values": [
+              {
+                "value": {
+                  "boolValue": true
+                },
+                "count": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "bytes",
       "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if hashing.sha256('hello'.toUtf8()).size() == 32; }\n }\n}",
       "status": 200,
@@ -4372,7 +4979,7 @@
                               "mapValue": {
                                 "fields": {
                                   "time": {
-                                    "timestampValue": "2026-09-10T19:25:02.409Z"
+                                    "timestampValue": "2026-09-10T19:29:45.465Z"
                                   },
                                   "auth": {
                                     "nullValue": null
@@ -4417,7 +5024,7 @@
                               "mapValue": {
                                 "fields": {
                                   "time": {
-                                    "timestampValue": "2026-09-10T19:25:02.414Z"
+                                    "timestampValue": "2026-09-10T19:29:45.469Z"
                                   },
                                   "auth": {
                                     "nullValue": null
@@ -4508,7 +5115,7 @@
                               "mapValue": {
                                 "fields": {
                                   "time": {
-                                    "timestampValue": "2026-09-10T19:25:02.409Z"
+                                    "timestampValue": "2026-09-10T19:29:45.465Z"
                                   },
                                   "auth": {
                                     "nullValue": null
@@ -4553,7 +5160,7 @@
                               "mapValue": {
                                 "fields": {
                                   "time": {
-                                    "timestampValue": "2026-09-10T19:25:02.414Z"
+                                    "timestampValue": "2026-09-10T19:29:45.469Z"
                                   },
                                   "auth": {
                                     "nullValue": null
@@ -4676,7 +5283,7 @@
                           "mapValue": {
                             "fields": {
                               "time": {
-                                "timestampValue": "2026-09-10T19:25:02.409Z"
+                                "timestampValue": "2026-09-10T19:29:45.465Z"
                               },
                               "auth": {
                                 "nullValue": null
@@ -4721,7 +5328,7 @@
                           "mapValue": {
                             "fields": {
                               "time": {
-                                "timestampValue": "2026-09-10T19:25:02.414Z"
+                                "timestampValue": "2026-09-10T19:29:45.469Z"
                               },
                               "auth": {
                                 "nullValue": null
@@ -4812,7 +5419,7 @@
                           "mapValue": {
                             "fields": {
                               "time": {
-                                "timestampValue": "2026-09-10T19:25:02.409Z"
+                                "timestampValue": "2026-09-10T19:29:45.465Z"
                               },
                               "auth": {
                                 "nullValue": null
@@ -4857,7 +5464,7 @@
                           "mapValue": {
                             "fields": {
                               "time": {
-                                "timestampValue": "2026-09-10T19:25:02.414Z"
+                                "timestampValue": "2026-09-10T19:29:45.469Z"
                               },
                               "auth": {
                                 "nullValue": null
@@ -4944,8 +5551,8 @@
           "booleanValue": true
         }
       },
-      "createTime": "2026-09-10T19:25:01.666142Z",
-      "updateTime": "2026-09-10T19:25:01.666142Z"
+      "createTime": "2026-09-10T19:29:44.763615Z",
+      "updateTime": "2026-09-10T19:29:44.763615Z"
     }
   },
   "invalidReload": {

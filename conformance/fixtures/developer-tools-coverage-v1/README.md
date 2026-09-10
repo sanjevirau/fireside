@@ -1,7 +1,7 @@
 # Expression coverage oracle
 
 Captured from the checksum-pinned official Firestore 1.22.0 jar with Node
-24.20.0, one synthetic document and twenty-six tiny rulesets. Run
+24.20.0, one synthetic document and twenty-seven tiny rulesets. Run
 `conformance/src/developer-tools/capture-coverage.mjs OUTPUT` in a fresh directory.
 Only the owned loopback jar is started/stopped; no cloud or consumer inputs.
 The capture records the actual Java version. Raw HTTP exchanges and process logs
@@ -20,6 +20,9 @@ method arguments, nested grouping, grouped literals and constant functions are
 also retained without normalizing their expression trees.
 The value profiles additionally exercise durations, sets, map differences,
 hashed bytes, timestamps and request context before implementing value capture.
+The complete map-difference profile records all four key statuses and an actual
+policy checking added/removed direction and affected-set cardinality. A separate
+compile rejection records that namespace names cannot be function parameters.
 
 Coverage counts are observed evaluator visits, not HTTP request counts. The jar
 can record an undefined preliminary evaluation before loading a resource. A
