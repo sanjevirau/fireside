@@ -47,6 +47,12 @@ const profiles = [
   { id: 'nested-grouping', source: source('((resource.data.visible))'), status: 200 },
   { id: 'grouped-literal', source: source("('hello').size() == 5"), status: 200 },
   { id: 'constant-function', source: source('accept()', '  function accept() { return true; }'), status: 200 },
+  { id: 'duration', source: source("duration.value(1, 's') == duration.value(1000, 'ms')"), status: 200 },
+  { id: 'set', source: source('[1, 2].toSet().hasAll([1])'), status: 200 },
+  { id: 'map-diff', source: source("{'x': 1}.diff({'x': 2}).changedKeys().hasOnly(['x'])"), status: 200 },
+  { id: 'bytes', source: source("hashing.sha256('hello'.toUtf8()).size() == 32"), status: 200 },
+  { id: 'timestamp', source: source('timestamp.date(2020, 1, 2).year() == 2020'), status: 200 },
+  { id: 'request', source: source('request.auth == null && request.method == "get"'), status: 200 },
 ];
 await writeFile(join(work, 'firestore.rules'), profiles[0].source);
 const child = spawn('java', ['-jar', jar, '--host', '127.0.0.1', '--port', String(port),

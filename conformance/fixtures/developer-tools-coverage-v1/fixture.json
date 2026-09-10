@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "syntheticOnly": true,
-  "capturedAt": "2026-09-10T19:14:00.417Z",
+  "capturedAt": "2026-09-10T19:18:53.053Z",
   "project": "demo-fireside-coverage",
   "oracle": {
     "firestore": "1.22.0",
@@ -3257,13 +3257,1119 @@
           }
         ]
       }
+    },
+    {
+      "id": "duration",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if duration.value(1, 's') == duration.value(1000, 'ms'); }\n }\n}",
+      "status": 200,
+      "before": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if duration.value(1, 's') == duration.value(1000, 'ms'); }\n }\n}",
+              "name": "firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 127,
+              "endOffset": 177
+            },
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 39,
+                  "currentOffset": 127,
+                  "endOffset": 147
+                }
+              },
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 65,
+                  "currentOffset": 153,
+                  "endOffset": 177
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "after": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if duration.value(1, 's') == duration.value(1000, 'ms'); }\n }\n}",
+              "name": "firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 127,
+              "endOffset": 177
+            },
+            "values": [
+              {
+                "value": {
+                  "boolValue": true
+                },
+                "count": 2
+              }
+            ],
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 39,
+                  "currentOffset": 127,
+                  "endOffset": 147
+                },
+                "values": [
+                  {
+                    "value": {
+                      "durationValue": "1s"
+                    },
+                    "count": 2
+                  }
+                ]
+              },
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 65,
+                  "currentOffset": 153,
+                  "endOffset": 177
+                },
+                "values": [
+                  {
+                    "value": {
+                      "durationValue": "1s"
+                    },
+                    "count": 2
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if [1, 2].toSet().hasAll([1]); }\n }\n}",
+      "status": 200,
+      "before": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if [1, 2].toSet().hasAll([1]); }\n }\n}",
+              "name": "firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 127,
+              "endOffset": 150
+            },
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 39,
+                  "currentOffset": 127,
+                  "endOffset": 138
+                },
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 39,
+                      "currentOffset": 127,
+                      "endOffset": 131
+                    }
+                  }
+                ]
+              },
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 61,
+                  "currentOffset": 149,
+                  "endOffset": 150
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "after": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if [1, 2].toSet().hasAll([1]); }\n }\n}",
+              "name": "firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 127,
+              "endOffset": 150
+            },
+            "values": [
+              {
+                "value": {
+                  "boolValue": true
+                },
+                "count": 2
+              }
+            ],
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 39,
+                  "currentOffset": 127,
+                  "endOffset": 138
+                },
+                "values": [
+                  {
+                    "value": {
+                      "setValue": {
+                        "values": [
+                          {
+                            "intValue": "1"
+                          },
+                          {
+                            "intValue": "2"
+                          }
+                        ]
+                      }
+                    },
+                    "count": 2
+                  }
+                ],
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 39,
+                      "currentOffset": 127,
+                      "endOffset": 131
+                    },
+                    "values": [
+                      {
+                        "value": {
+                          "listValue": {
+                            "values": [
+                              {
+                                "intValue": "1"
+                              },
+                              {
+                                "intValue": "2"
+                              }
+                            ]
+                          }
+                        },
+                        "count": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 61,
+                  "currentOffset": 149,
+                  "endOffset": 150
+                },
+                "values": [
+                  {
+                    "value": {
+                      "listValue": {
+                        "values": [
+                          {
+                            "intValue": "1"
+                          }
+                        ]
+                      }
+                    },
+                    "count": 2
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "map-diff",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if {'x': 1}.diff({'x': 2}).changedKeys().hasOnly(['x']); }\n }\n}",
+      "status": 200,
+      "before": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if {'x': 1}.diff({'x': 2}).changedKeys().hasOnly(['x']); }\n }\n}",
+              "name": "firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 127,
+              "endOffset": 176
+            },
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 39,
+                  "currentOffset": 127,
+                  "endOffset": 161
+                },
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 39,
+                      "currentOffset": 127,
+                      "endOffset": 147
+                    },
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 39,
+                          "currentOffset": 127,
+                          "endOffset": 133
+                        }
+                      },
+                      {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 53,
+                          "currentOffset": 141,
+                          "endOffset": 147
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 85,
+                  "currentOffset": 173,
+                  "endOffset": 176
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "after": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if {'x': 1}.diff({'x': 2}).changedKeys().hasOnly(['x']); }\n }\n}",
+              "name": "firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 127,
+              "endOffset": 176
+            },
+            "values": [
+              {
+                "value": {
+                  "boolValue": true
+                },
+                "count": 2
+              }
+            ],
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 39,
+                  "currentOffset": 127,
+                  "endOffset": 161
+                },
+                "values": [
+                  {
+                    "value": {
+                      "setValue": {
+                        "values": [
+                          {
+                            "stringValue": "x"
+                          }
+                        ]
+                      }
+                    },
+                    "count": 2
+                  }
+                ],
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 39,
+                      "currentOffset": 127,
+                      "endOffset": 147
+                    },
+                    "values": [
+                      {
+                        "value": {
+                          "mapDiffValue": {
+                            "keyStatuses": {
+                              "x": "CHANGED"
+                            }
+                          }
+                        },
+                        "count": 2
+                      }
+                    ],
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 39,
+                          "currentOffset": 127,
+                          "endOffset": 133
+                        },
+                        "values": [
+                          {
+                            "value": {
+                              "mapValue": {
+                                "fields": {
+                                  "x": {
+                                    "intValue": "1"
+                                  }
+                                }
+                              }
+                            },
+                            "count": 2
+                          }
+                        ]
+                      },
+                      {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 53,
+                          "currentOffset": 141,
+                          "endOffset": 147
+                        },
+                        "values": [
+                          {
+                            "value": {
+                              "mapValue": {
+                                "fields": {
+                                  "x": {
+                                    "intValue": "2"
+                                  }
+                                }
+                              }
+                            },
+                            "count": 2
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 85,
+                  "currentOffset": 173,
+                  "endOffset": 176
+                },
+                "values": [
+                  {
+                    "value": {
+                      "listValue": {
+                        "values": [
+                          {
+                            "stringValue": "x"
+                          }
+                        ]
+                      }
+                    },
+                    "count": 2
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "bytes",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if hashing.sha256('hello'.toUtf8()).size() == 32; }\n }\n}",
+      "status": 200,
+      "before": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if hashing.sha256('hello'.toUtf8()).size() == 32; }\n }\n}",
+              "name": "firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 127,
+              "endOffset": 171
+            },
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 39,
+                  "currentOffset": 127,
+                  "endOffset": 163
+                },
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 39,
+                      "currentOffset": 127,
+                      "endOffset": 155
+                    },
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 54,
+                          "currentOffset": 142,
+                          "endOffset": 155
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "after": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if hashing.sha256('hello'.toUtf8()).size() == 32; }\n }\n}",
+              "name": "firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 127,
+              "endOffset": 171
+            },
+            "values": [
+              {
+                "value": {
+                  "boolValue": true
+                },
+                "count": 2
+              }
+            ],
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 39,
+                  "currentOffset": 127,
+                  "endOffset": 163
+                },
+                "values": [
+                  {
+                    "value": {
+                      "intValue": "32"
+                    },
+                    "count": 2
+                  }
+                ],
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 39,
+                      "currentOffset": 127,
+                      "endOffset": 155
+                    },
+                    "values": [
+                      {
+                        "value": {
+                          "bytesValue": "LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ="
+                        },
+                        "count": 2
+                      }
+                    ],
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 54,
+                          "currentOffset": 142,
+                          "endOffset": 155
+                        },
+                        "values": [
+                          {
+                            "value": {
+                              "bytesValue": "aGVsbG8="
+                            },
+                            "count": 2
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "timestamp",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if timestamp.date(2020, 1, 2).year() == 2020; }\n }\n}",
+      "status": 200,
+      "before": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if timestamp.date(2020, 1, 2).year() == 2020; }\n }\n}",
+              "name": "firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 127,
+              "endOffset": 167
+            },
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 39,
+                  "currentOffset": 127,
+                  "endOffset": 157
+                },
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 39,
+                      "currentOffset": 127,
+                      "endOffset": 151
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "after": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if timestamp.date(2020, 1, 2).year() == 2020; }\n }\n}",
+              "name": "firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 127,
+              "endOffset": 167
+            },
+            "values": [
+              {
+                "value": {
+                  "boolValue": true
+                },
+                "count": 2
+              }
+            ],
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 39,
+                  "currentOffset": 127,
+                  "endOffset": 157
+                },
+                "values": [
+                  {
+                    "value": {
+                      "intValue": "2020"
+                    },
+                    "count": 2
+                  }
+                ],
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 39,
+                      "currentOffset": 127,
+                      "endOffset": 151
+                    },
+                    "values": [
+                      {
+                        "value": {
+                          "timestampValue": "2020-01-02T00:00:00Z"
+                        },
+                        "count": 2
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "request",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if request.auth == null && request.method == \"get\"; }\n }\n}",
+      "status": 200,
+      "before": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if request.auth == null && request.method == \"get\"; }\n }\n}",
+              "name": "firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 127,
+              "endOffset": 173
+            },
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 39,
+                  "currentOffset": 127,
+                  "endOffset": 146
+                },
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 39,
+                      "currentOffset": 127,
+                      "endOffset": 138
+                    },
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 39,
+                          "currentOffset": 127,
+                          "endOffset": 133
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 63,
+                  "currentOffset": 151,
+                  "endOffset": 173
+                },
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 63,
+                      "currentOffset": 151,
+                      "endOffset": 164
+                    },
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 63,
+                          "currentOffset": 151,
+                          "endOffset": 157
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "after": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if request.auth == null && request.method == \"get\"; }\n }\n}",
+              "name": "firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 127,
+              "endOffset": 173
+            },
+            "values": [
+              {
+                "value": {
+                  "boolValue": true
+                },
+                "count": 2
+              }
+            ],
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 39,
+                  "currentOffset": 127,
+                  "endOffset": 146
+                },
+                "values": [
+                  {
+                    "value": {
+                      "boolValue": true
+                    },
+                    "count": 2
+                  }
+                ],
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 39,
+                      "currentOffset": 127,
+                      "endOffset": 138
+                    },
+                    "values": [
+                      {
+                        "value": {
+                          "nullValue": null
+                        },
+                        "count": 2
+                      }
+                    ],
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 39,
+                          "currentOffset": 127,
+                          "endOffset": 133
+                        },
+                        "values": [
+                          {
+                            "value": {
+                              "mapValue": {
+                                "fields": {
+                                  "time": {
+                                    "timestampValue": "2026-09-10T19:18:54.879Z"
+                                  },
+                                  "auth": {
+                                    "nullValue": null
+                                  },
+                                  "inTransaction": {
+                                    "boolValue": false
+                                  },
+                                  "path": {
+                                    "pathValue": {
+                                      "segments": [
+                                        {
+                                          "simple": "databases"
+                                        },
+                                        {
+                                          "simple": "(default)"
+                                        },
+                                        {
+                                          "simple": "documents"
+                                        },
+                                        {
+                                          "simple": "items"
+                                        },
+                                        {
+                                          "simple": "one"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "fields": {
+                                    "nullValue": null
+                                  },
+                                  "method": {
+                                    "stringValue": "get"
+                                  }
+                                }
+                              }
+                            },
+                            "count": 1
+                          },
+                          {
+                            "value": {
+                              "mapValue": {
+                                "fields": {
+                                  "time": {
+                                    "timestampValue": "2026-09-10T19:18:54.883Z"
+                                  },
+                                  "auth": {
+                                    "nullValue": null
+                                  },
+                                  "inTransaction": {
+                                    "boolValue": false
+                                  },
+                                  "path": {
+                                    "pathValue": {
+                                      "segments": [
+                                        {
+                                          "simple": "databases"
+                                        },
+                                        {
+                                          "simple": "(default)"
+                                        },
+                                        {
+                                          "simple": "documents"
+                                        },
+                                        {
+                                          "simple": "items"
+                                        },
+                                        {
+                                          "simple": "one"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "fields": {
+                                    "nullValue": null
+                                  },
+                                  "method": {
+                                    "stringValue": "get"
+                                  }
+                                }
+                              }
+                            },
+                            "count": 1
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 63,
+                  "currentOffset": 151,
+                  "endOffset": 173
+                },
+                "values": [
+                  {
+                    "value": {
+                      "boolValue": true
+                    },
+                    "count": 2
+                  }
+                ],
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 63,
+                      "currentOffset": 151,
+                      "endOffset": 164
+                    },
+                    "values": [
+                      {
+                        "value": {
+                          "stringValue": "get"
+                        },
+                        "count": 2
+                      }
+                    ],
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 63,
+                          "currentOffset": 151,
+                          "endOffset": 157
+                        },
+                        "values": [
+                          {
+                            "value": {
+                              "mapValue": {
+                                "fields": {
+                                  "time": {
+                                    "timestampValue": "2026-09-10T19:18:54.879Z"
+                                  },
+                                  "auth": {
+                                    "nullValue": null
+                                  },
+                                  "inTransaction": {
+                                    "boolValue": false
+                                  },
+                                  "path": {
+                                    "pathValue": {
+                                      "segments": [
+                                        {
+                                          "simple": "databases"
+                                        },
+                                        {
+                                          "simple": "(default)"
+                                        },
+                                        {
+                                          "simple": "documents"
+                                        },
+                                        {
+                                          "simple": "items"
+                                        },
+                                        {
+                                          "simple": "one"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "fields": {
+                                    "nullValue": null
+                                  },
+                                  "method": {
+                                    "stringValue": "get"
+                                  }
+                                }
+                              }
+                            },
+                            "count": 1
+                          },
+                          {
+                            "value": {
+                              "mapValue": {
+                                "fields": {
+                                  "time": {
+                                    "timestampValue": "2026-09-10T19:18:54.883Z"
+                                  },
+                                  "auth": {
+                                    "nullValue": null
+                                  },
+                                  "inTransaction": {
+                                    "boolValue": false
+                                  },
+                                  "path": {
+                                    "pathValue": {
+                                      "segments": [
+                                        {
+                                          "simple": "databases"
+                                        },
+                                        {
+                                          "simple": "(default)"
+                                        },
+                                        {
+                                          "simple": "documents"
+                                        },
+                                        {
+                                          "simple": "items"
+                                        },
+                                        {
+                                          "simple": "one"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "fields": {
+                                    "nullValue": null
+                                  },
+                                  "method": {
+                                    "stringValue": "get"
+                                  }
+                                }
+                              }
+                            },
+                            "count": 1
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
     }
   ],
   "afterInvalidReload": {
     "rules": {
       "files": [
         {
-          "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  function accept() { return true; }\n  match /items/{item} { allow get: if accept(); }\n }\n}",
+          "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if request.auth == null && request.method == \"get\"; }\n }\n}",
           "name": "firestore.rules"
         }
       ]
@@ -3273,8 +4379,8 @@
         "sourcePosition": {
           "line": 5,
           "column": 39,
-          "currentOffset": 163,
-          "endOffset": 168
+          "currentOffset": 127,
+          "endOffset": 173
         },
         "values": [
           {
@@ -3282,6 +4388,280 @@
               "boolValue": true
             },
             "count": 2
+          }
+        ],
+        "children": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 127,
+              "endOffset": 146
+            },
+            "values": [
+              {
+                "value": {
+                  "boolValue": true
+                },
+                "count": 2
+              }
+            ],
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 39,
+                  "currentOffset": 127,
+                  "endOffset": 138
+                },
+                "values": [
+                  {
+                    "value": {
+                      "nullValue": null
+                    },
+                    "count": 2
+                  }
+                ],
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 39,
+                      "currentOffset": 127,
+                      "endOffset": 133
+                    },
+                    "values": [
+                      {
+                        "value": {
+                          "mapValue": {
+                            "fields": {
+                              "time": {
+                                "timestampValue": "2026-09-10T19:18:54.879Z"
+                              },
+                              "auth": {
+                                "nullValue": null
+                              },
+                              "inTransaction": {
+                                "boolValue": false
+                              },
+                              "path": {
+                                "pathValue": {
+                                  "segments": [
+                                    {
+                                      "simple": "databases"
+                                    },
+                                    {
+                                      "simple": "(default)"
+                                    },
+                                    {
+                                      "simple": "documents"
+                                    },
+                                    {
+                                      "simple": "items"
+                                    },
+                                    {
+                                      "simple": "one"
+                                    }
+                                  ]
+                                }
+                              },
+                              "fields": {
+                                "nullValue": null
+                              },
+                              "method": {
+                                "stringValue": "get"
+                              }
+                            }
+                          }
+                        },
+                        "count": 1
+                      },
+                      {
+                        "value": {
+                          "mapValue": {
+                            "fields": {
+                              "time": {
+                                "timestampValue": "2026-09-10T19:18:54.883Z"
+                              },
+                              "auth": {
+                                "nullValue": null
+                              },
+                              "inTransaction": {
+                                "boolValue": false
+                              },
+                              "path": {
+                                "pathValue": {
+                                  "segments": [
+                                    {
+                                      "simple": "databases"
+                                    },
+                                    {
+                                      "simple": "(default)"
+                                    },
+                                    {
+                                      "simple": "documents"
+                                    },
+                                    {
+                                      "simple": "items"
+                                    },
+                                    {
+                                      "simple": "one"
+                                    }
+                                  ]
+                                }
+                              },
+                              "fields": {
+                                "nullValue": null
+                              },
+                              "method": {
+                                "stringValue": "get"
+                              }
+                            }
+                          }
+                        },
+                        "count": 1
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 63,
+              "currentOffset": 151,
+              "endOffset": 173
+            },
+            "values": [
+              {
+                "value": {
+                  "boolValue": true
+                },
+                "count": 2
+              }
+            ],
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 63,
+                  "currentOffset": 151,
+                  "endOffset": 164
+                },
+                "values": [
+                  {
+                    "value": {
+                      "stringValue": "get"
+                    },
+                    "count": 2
+                  }
+                ],
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 63,
+                      "currentOffset": 151,
+                      "endOffset": 157
+                    },
+                    "values": [
+                      {
+                        "value": {
+                          "mapValue": {
+                            "fields": {
+                              "time": {
+                                "timestampValue": "2026-09-10T19:18:54.879Z"
+                              },
+                              "auth": {
+                                "nullValue": null
+                              },
+                              "inTransaction": {
+                                "boolValue": false
+                              },
+                              "path": {
+                                "pathValue": {
+                                  "segments": [
+                                    {
+                                      "simple": "databases"
+                                    },
+                                    {
+                                      "simple": "(default)"
+                                    },
+                                    {
+                                      "simple": "documents"
+                                    },
+                                    {
+                                      "simple": "items"
+                                    },
+                                    {
+                                      "simple": "one"
+                                    }
+                                  ]
+                                }
+                              },
+                              "fields": {
+                                "nullValue": null
+                              },
+                              "method": {
+                                "stringValue": "get"
+                              }
+                            }
+                          }
+                        },
+                        "count": 1
+                      },
+                      {
+                        "value": {
+                          "mapValue": {
+                            "fields": {
+                              "time": {
+                                "timestampValue": "2026-09-10T19:18:54.883Z"
+                              },
+                              "auth": {
+                                "nullValue": null
+                              },
+                              "inTransaction": {
+                                "boolValue": false
+                              },
+                              "path": {
+                                "pathValue": {
+                                  "segments": [
+                                    {
+                                      "simple": "databases"
+                                    },
+                                    {
+                                      "simple": "(default)"
+                                    },
+                                    {
+                                      "simple": "documents"
+                                    },
+                                    {
+                                      "simple": "items"
+                                    },
+                                    {
+                                      "simple": "one"
+                                    }
+                                  ]
+                                }
+                              },
+                              "fields": {
+                                "nullValue": null
+                              },
+                              "method": {
+                                "stringValue": "get"
+                              }
+                            }
+                          }
+                        },
+                        "count": 1
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -3311,8 +4691,8 @@
           "booleanValue": true
         }
       },
-      "createTime": "2026-09-10T19:14:01.498502Z",
-      "updateTime": "2026-09-10T19:14:01.498502Z"
+      "createTime": "2026-09-10T19:18:54.135808Z",
+      "updateTime": "2026-09-10T19:18:54.135808Z"
     }
   },
   "invalidReload": {
