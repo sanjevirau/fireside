@@ -1,18 +1,23 @@
 // Constructed, isolated filesystem fault regression; not a live official capture.
-// node verify-export-failure.mjs binary tools-root sdk-root emulator-cache fresh-output [isolated-volume [--working-disk]]
+// node verify-export-failure.mjs binary tools-root sdk-root emulator-cache fresh-output [isolated-volume [--working-disk] | --interrupt-export]
 import assert from 'node:assert/strict';
-import {spawn} from 'node:child_process';
+import {spawn,execFile} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {once} from 'node:events';
+import {watch} from 'node:fs';
 import {access,mkdir,readFile,writeFile,symlink,stat,statfs,open,readdir,unlink} from 'node:fs/promises';
 import {createServer,createConnection} from 'node:net';
 import {tmpdir} from 'node:os';
 import {resolve,dirname,join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
+import {promisify} from 'node:util';
 
 const workingDisk=process.argv[8]==='--working-disk';
+const interruptExport=process.argv[7]==='--interrupt-export';
+const verifyServices=workingDisk||interruptExport;
 assert([7,8].includes(process.argv.length)||(process.argv.length===9&&workingDisk),'binary tools-root sdk-root emulator-cache fresh-output [isolated-volume [--working-disk]]');
-const [binary,tools,sdk,cache,output,volume]=process.argv.slice(2,8).map(resolvePath=>resolve(resolvePath));
+assert(!interruptExport||process.platform!=='win32','process-crash diagnostic requires Unix process groups');
+const [binary,tools,sdk,cache,output,volume]=process.argv.slice(2,interruptExport?7:8).map(resolvePath=>resolve(resolvePath));
 assert.equal(JSON.parse(await readFile(join(tools,'package.json'))).version,'15.22.0');
 assert.equal(JSON.parse(await readFile(join(sdk,'package.json'))).version,'7.2.5');
 await mkdir(output,{mode:0o700});
@@ -52,9 +57,10 @@ await Promise.all(reservations.map(listener=>new Promise(resolve=>listener.close
 const exists=path=>access(path).then(()=>true,()=>false);
 const listening=port=>new Promise(resolve=>{const socket=createConnection({host:'127.0.0.1',port});const done=value=>{socket.destroy();resolve(value);};socket.setTimeout(1000,()=>done(true));socket.once('connect',()=>done(true));socket.once('error',()=>done(false));});
 let active;
-const record={passed:false,acceptance:false,syntheticOnly:true,fault:workingDisk?'ENOSPC on native working-data and export filesystem':volume?'ENOSPC on isolated export filesystem':'export parent becomes a regular file after readiness',filesystem,binarySha256:sha(await readFile(binary)),driverSha256:sha(await readFile(new URL(import.meta.url))),node:process.version,launches:[]};
+const record={passed:false,acceptance:false,syntheticOnly:true,fault:interruptExport?'owned process-group crash during incomplete export staging':workingDisk?'ENOSPC on native working-data and export filesystem':volume?'ENOSPC on isolated export filesystem':'export parent becomes a regular file after readiness',filesystem,binarySha256:sha(await readFile(binary)),driverSha256:sha(await readFile(new URL(import.meta.url))),node:process.version,launches:[]};
+if(interruptExport)record.contractSha256=sha(await readFile(new URL('../../../benchmarks/phase-d-interrupted-export.json',import.meta.url)));
 async function launch(name,extra=[]){
-  const child=spawn(binary,[...args,...extra],{cwd:output,env,stdio:['pipe','pipe','pipe']});
+  const child=spawn(binary,[...args,...extra],{cwd:output,env,stdio:['pipe','pipe','pipe'],detached:interruptExport});
   const handle={child,name,log:'',finished:once(child,'exit')};active=handle;
   for(const stream of [child.stdout,child.stderr])stream.on('data',chunk=>{handle.log+=chunk;});
   const start=performance.now();
@@ -63,7 +69,9 @@ async function launch(name,extra=[]){
   const ping=await fetch(`http://127.0.0.1:${ports.functions}/${project}/us-central1/ping`,{signal:AbortSignal.timeout(15000)});assert.equal(ping.status,200);await ping.arrayBuffer();
 }
 async function stop(){
-  const handle=active;if(handle.child.exitCode===null&&handle.child.signalCode===null)handle.child.stdin.end('FIRESIDE_SHUTDOWN\n');
+  const handle=active;
+  if(handle.stopped){handle.child.kill('SIGCONT');handle.stopped=false;}
+  if(handle.child.exitCode===null&&handle.child.signalCode===null)handle.child.stdin.end('FIRESIDE_SHUTDOWN\n');
   const exit=await Promise.race([handle.finished,delay(45000,null,{ref:false})]);
   await writeFile(join(output,handle.name+'.log'),handle.log);assert(exit,'owned suite shutdown deadline; leave live process for diagnosis');active=null;
   return {exit,log:handle.log};
@@ -78,10 +86,59 @@ async function serviceRequest(service,path,body,method='POST',raw=false){
 const uploadPath=name=>`/upload/storage/v1/b/${bucket}/o?uploadType=media&name=${name}`;
 const downloadPath=name=>`/download/storage/v1/b/${bucket}/o/${name}?alt=media`;
 const documentName=name=>`projects/${project}/databases/(default)/documents/items/${name}`;
+async function inventory(root){
+  const files={};for(const name of (await readdir(root,{recursive:true})).sort()){
+    const path=join(root,name);if((await stat(path)).isFile())files[name]=sha(await readFile(path));
+  }return files;
+}
+async function crashDuringExport(){
+  await mkdir(faultRoot);
+  const destination=join(faultRoot,'export');
+  const baseline=await serviceRequest('hub','/_admin/export',{path:destination});assert.equal(baseline.status,200,baseline.body);
+  record.previousExport=await inventory(destination);
+  assert(record.previousExport['firebase-export-metadata.json']);
+  for(let start=0;start<4096;start+=128){
+    const writes=Array.from({length:128},(_,i)=>({update:{name:`projects/${project}/databases/(default)/documents/interruption-fixture/${start+i}`,fields:{ordinal:{integerValue:String(start+i)},payload:{stringValue:'x'.repeat(2048)}}}}));
+    const result=await serviceRequest('firestore',`/v1/projects/${project}/databases/(default)/documents:commit`,{writes});assert.equal(result.status,200,result.body);
+  }
+  record.acknowledgedAdditionalDocuments=4096;
+  const handle=active;let staging;
+  const watcher=watch(faultRoot,(_event,name)=>{
+    if(!staging&&name?.startsWith('.fireside-export-')&&!name.startsWith('.fireside-export-backup-')){
+      staging=join(faultRoot,name);handle.stopped=handle.child.kill('SIGSTOP');
+    }
+  });
+  // Keep the pending request observed even when the injected crash closes it.
+  const request=serviceRequest('hub','/_admin/export',{path:destination}).then(result=>result,error=>({error:String(error)}));
+  try{
+    const deadline=performance.now()+5000;
+    while(!handle.stopped){assert(performance.now()<deadline,'export staging checkpoint missed');await delay(5);}
+    while(true){
+      const {stdout}=await promisify(execFile)('ps',['-o','stat=','-p',String(handle.child.pid)]);
+      if(stdout.includes('T'))break;
+      assert(performance.now()<deadline,'owned process did not reach stopped state');await delay(5);
+    }
+    record.interruptedStagingPaths=await readdir(staging,{recursive:true});
+    record.incompleteStagingObserved=!(await exists(join(staging,'firebase-export-metadata.json')));
+    assert(record.incompleteStagingObserved,'missed incomplete export checkpoint; no crash coverage claimed');
+    assert.deepEqual(await inventory(destination),record.previousExport);
+    process.kill(-handle.child.pid,'SIGKILL');handle.stopped=false;
+    const exit=await Promise.race([handle.finished,delay(45000,null,{ref:false})]);assert.deepEqual(exit,[null,'SIGKILL']);
+    await writeFile(join(output,handle.name+'.log'),handle.log);active=null;
+    record.crashExit=exit;record.interruptedRequest=await request;
+    const closeDeadline=performance.now()+5000;
+    while(await Promise.all(Object.values(ports).map(listening)).then(values=>values.some(Boolean))){
+      assert(performance.now()<closeDeadline,'owned port remains after injected group crash');await delay(20);
+    }
+    record.openPortsAfterCrash=[];
+    assert.deepEqual(await inventory(destination),record.previousExport);record.previousExportByteIdentical=true;
+    return {exit,log:handle.log};
+  }finally{watcher.close();}
+}
 try{
   await launch('failed-export',['--export-on-exit',join(faultRoot,'export')]);
   const write=await fetch(doc,{method:'PATCH',headers:{authorization:'Bearer owner','content-type':'application/json'},body:JSON.stringify({fields:{text:{stringValue:'acknowledged 火🔥'}}}),signal:AbortSignal.timeout(10000)});assert.equal(write.status,200);await write.arrayBuffer();
-  if(workingDisk){
+  if(verifyServices){
     assert.equal((await serviceRequest('auth',authPath,{localId:'acknowledged-user',email:'synthetic@example.test'})).status,200);
     assert.equal((await serviceRequest('storage',uploadPath('acknowledged'),'acknowledged object 火🔥','POST',true)).status,200);
   }
@@ -100,7 +157,7 @@ try{
     finally{await filler.close();}
     const full=await statfs(volume);filesystem.availableAtExportBytes=full.bavail*full.bsize;filesystem.fillerBytes=(await stat(join(faultRoot,'capacity-fill'))).size;
     assert.equal(filesystem.availableAtExportBytes,0,'tiny export filesystem must actually have no available space');
-  }else await writeFile(faultRoot,'controlled export-parent fault\n');
+  }else if(!interruptExport)await writeFile(faultRoot,'controlled export-parent fault\n');
   if(workingDisk){
     const batch={writes:['attempt-left','attempt-right'].map(name=>({update:{name:documentName(name),fields:{payload:{stringValue:largeBody}}}}))};
     record.fullDiskRequests={};
@@ -114,26 +171,30 @@ try{
     record.writeFence=await serviceRequest('firestore',`/v1/projects/${project}/databases/(default)/documents:commit`,batch);
     assert.equal(record.writeFence.status,503);assert.match(record.writeFence.body,/reopen the store to recover before writing/);
   }
-  const stopped=await stop();record.failedExportExit=stopped.exit;
+  const stopped=interruptExport?await crashDuringExport():await stop();record.failedExportExit=stopped.exit;
   record.exportErrorReported=volume?/No space left on device|os error 28/i.test(stopped.log):/failed to create export parent/.test(stopped.log);
   record.functionsDrained=/functions host: stopping/.test(stopped.log);
   record.openPorts=[];for(const [name,port] of Object.entries(ports))if(await listening(port))record.openPorts.push(name);
   record.locatorRemaining=await exists(join(tmpdir(),'hub-'+project+'.json'));
   record.nativeReceiptRetained=await exists(join(stateDirectory,'native-state.json'));
-  record.incompleteExportNotPublished=!(await exists(join(faultRoot,'export/firebase-export-metadata.json')));
+  record.incompleteExportNotPublished=interruptExport?record.previousExportByteIdentical:!(await exists(join(faultRoot,'export/firebase-export-metadata.json')));
   if(volume)record.partialExportPaths=(await readdir(faultRoot,{recursive:true})).filter(path=>path!=='capacity-fill');
   await json('result.json',record);
-  assert.notEqual(stopped.exit[0],0);assert(record.exportErrorReported);
-  assert(record.functionsDrained,'Functions must receive orderly shutdown even when export fails');
-  assert.deepEqual(record.openPorts,[]);assert.equal(record.locatorRemaining,false);assert(record.nativeReceiptRetained&&record.incompleteExportNotPublished);
+  assert.notEqual(stopped.exit[0],0);
+  if(!interruptExport){
+    assert(record.exportErrorReported);assert(record.functionsDrained,'Functions must receive orderly shutdown even when export fails');
+    assert.equal(record.locatorRemaining,false);
+  }
+  assert.deepEqual(record.openPorts,[]);assert(record.nativeReceiptRetained&&record.incompleteExportNotPublished);
   if(workingDisk){await unlink(join(faultRoot,'capacity-fill'));record.onlySyntheticFillerRemoved=true;}
   await launch('native-recovery',['--export-on-exit',join(output,'recovered-export')]);
   const read=await fetch(doc,{headers:{authorization:'Bearer owner'},signal:AbortSignal.timeout(10000)});assert.equal(read.status,200);assert.equal((await read.json()).fields.text.stringValue,'acknowledged 火🔥');
   assert(record.launches.at(-1).resumed);record.acknowledgedWriteRecovered=true;
-  if(workingDisk){
+  if(verifyServices){
     const users=await serviceRequest('auth',authPath+':batchGet',undefined,'GET');assert.equal(users.status,200);
     assert(JSON.parse(users.body).users.some(user=>user.localId==='acknowledged-user'&&user.email==='synthetic@example.test'));
     assert.deepEqual(await serviceRequest('storage',downloadPath('acknowledged'),undefined,'GET'),{status:200,body:'acknowledged object 火🔥'});
+    if(workingDisk){
     const attempts=[];
     for(const name of ['attempt-left','attempt-right']){
       const found=await serviceRequest('firestore','/v1/'+documentName(name),undefined,'GET');assert([200,404].includes(found.status));
@@ -143,10 +204,24 @@ try{
     record.unacknowledgedBatchRecoveredStatuses=attempts;
     const blob=await serviceRequest('storage',downloadPath('attempt-object'),undefined,'GET');assert([200,404].includes(blob.status));
     if(blob.status===200)assert.equal(blob.body,largeBody);record.unacknowledgedObjectRecoveredStatus=blob.status;
+    }
+    if(interruptExport){
+      const result=await serviceRequest('firestore',`/v1/projects/${project}/databases/(default)/documents:runQuery`,{structuredQuery:{from:[{collectionId:'interruption-fixture'}]}});
+      assert.equal(result.status,200,result.body);const documents=JSON.parse(result.body).filter(row=>row.document).map(row=>row.document);
+      assert.equal(documents.length,4096);const ordinals=new Set();
+      for(const document of documents){assert.equal(document.fields.payload.stringValue,'x'.repeat(2048));ordinals.add(Number(document.fields.ordinal.integerValue));}
+      assert.equal(ordinals.size,4096);for(let i=0;i<4096;i++)assert(ordinals.has(i));
+      record.allAdditionalAcknowledgedDocumentsRecovered=true;
+    }
     record.acknowledgedAuthAndStorageRecovered=true;
     const next=await serviceRequest('firestore','/v1/'+documentName('after-recovery'),{fields:{ok:{booleanValue:true}}},'PATCH');assert.equal(next.status,200);record.writesResumeAfterRecovery=true;
   }
   const recovered=await stop();assert.equal(recovered.exit[0],0,recovered.log);record.recoveryExit=recovered.exit;
+  if(interruptExport){
+    assert.equal(await exists(join(tmpdir(),'hub-'+project+'.json')),false);
+    for(const port of Object.values(ports))assert.equal(await listening(port),false);
+    record.recoveryLocatorRemoved=true;record.recoveryPortsClosed=true;
+  }
   assert(await exists(join(output,'recovered-export/firebase-export-metadata.json')));record.completedRecoveryExport=true;record.passed=true;
 }catch(error){record.error=String(error);throw error;}
 finally{if(active)await stop();record.ownedSuiteExited=!active;await json('result.json',record);}
