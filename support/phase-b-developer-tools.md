@@ -236,17 +236,34 @@ These are local results until that exact candidate passes all seven CI jobs.
 Paired diagnostic overhead and the remaining explicit failure/reconnect cases
 are not implied by the happy-path browser pass.
 
-The complete synthetic suite browser check has exposed and reproduced missing
+Earlier short attempts of the complete synthetic suite browser check reproduced missing
 Requests discovery, REST document/collection listing, Auth tenant discovery and
 Storage bucket inventory. Each protocol correction follows a committed official
-capture. The current local attempt passes fourteen browser checkpoints and a
-real Functions HTTP request, but its subsequent shutdown exceeded the short
-diagnostic deadline. It is **not a full-suite pass**. Shutdown is being investigated
-before an integrated receipt or Phase B completion is claimed. The browser driver
+capture. Attempt r7 passed fourteen browser checkpoints and a real Functions
+HTTP request, but its subsequent shutdown exceeded the short diagnostic deadline.
+It remains **not a full-suite pass**; r8 is the separate corrected pass described
+above, not a relabeling of r7. The browser driver
 now waits for acknowledged upload success rather than an optimistic table row,
 and its overall result includes cleanup success. Earlier failed attempts remain
 preserved. The REST malformed-page-size timeout and bucket-lifecycle limitations
 are explicit in DESIGN.md.
+
+The [short overhead receipt](../benchmarks/results/phase-b/README.md) preserves
+all 45,000 measured operations across nine runs and recomputes every frozen
+criterion in a permanent test. It passed all six enabled-versus-disabled
+comparisons, with identical verified final documents. It is native Firestore
+component evidence only, predates the later Logging fix, and is not a release,
+full-stack or official-emulator performance claim.
+
+Source inspection then reproduced two Logging defects before implementation:
+record count did not bound serialized bytes, and an idle disconnected browser
+retained its receiver. The committed Logging limits and failing regressions
+precede bounded serialization, bounded child-line ingestion, atomic replay/live
+subscription and cancellation-aware WebSocket delivery. Tests cover escaped and
+oversized data, four-client admission, abrupt disconnect, reconnect, shutdown,
+virtual-time blocked sends and real TCP non-readers for both Logs and Requests.
+The latter retain connected peers that stop reading rather than relying only
+on a mocked sink. Exact-head CI and combined browser checks remain required.
 
 1. Qualify the connected Requests and coverage components through the complete
    supported suite, including reconnect, disabled diagnostics and cleanup.

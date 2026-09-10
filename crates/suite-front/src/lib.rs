@@ -6,18 +6,19 @@
 
 #![forbid(unsafe_code)]
 
+mod logging;
 mod requests;
+pub use logging::LoggingRuntime;
 #[cfg(test)]
 mod logging_tests;
 pub use requests::requests_router;
 
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Display, Formatter, Write as _};
 use std::path::{Path as FilePath, PathBuf};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Mutex, MutexGuard};
 
-use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
-use axum::extract::{Request, State};
+use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post, put};
@@ -26,8 +27,6 @@ use fireside_functions_bridge::TriggerRegistry;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue, json};
 use sha2::{Digest as _, Sha256};
-use time::OffsetDateTime;
-use time::format_description::well_known::Rfc3339;
 use tokio::sync::{mpsc, oneshot};
 use tower_http::services::{ServeDir, ServeFile};
 
@@ -407,112 +406,6 @@ pub struct LogRecord {
     pub message: String,
 }
 
-/// Bounded Logging WebSocket producer and router.
-#[derive(Clone)]
-pub struct LoggingRuntime {
-    state: LoggingState,
-}
-
-impl Default for LoggingRuntime {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl LoggingRuntime {
-    /// Creates an empty bounded log buffer.
-    #[must_use]
-    pub fn new() -> Self {
-        let (live, _) = tokio::sync::broadcast::channel(LOG_REPLAY_CAPACITY);
-        Self {
-            state: LoggingState {
-                history: Arc::new(Mutex::new(VecDeque::new())),
-                live,
-            },
-        }
-    }
-
-    /// Router accepting raw WebSocket connections on any path.
-    pub fn application(&self) -> Router {
-        Router::new()
-            .fallback(get(logging_websocket))
-            .with_state(self.state.clone())
-    }
-
-    /// Records one entry and broadcasts it to connected clients.
-    pub fn record(&self, level: &str, emulator: Option<&str>, message: impl Into<String>) {
-        let message = message.into();
-        let data = emulator.map_or_else(
-            || json!({}),
-            |name| json!({ "metadata": { "emulator": { "name": name }, "message": message } }),
-        );
-        let now = OffsetDateTime::now_utc();
-        let record = LogRecord {
-            level: level.to_owned(),
-            data,
-            timestamp: now
-                .format(&Rfc3339)
-                .unwrap_or_else(|_| now.unix_timestamp().to_string()),
-            message,
-        };
-        let mut history = lock(&self.state.history);
-        if history.len() == LOG_REPLAY_CAPACITY {
-            history.pop_front();
-        }
-        history.push_back(record.clone());
-        drop(history);
-        let _ = self.state.live.send(record);
-    }
-
-    /// Current bounded record count.
-    #[must_use]
-    pub fn len(&self) -> usize {
-        lock(&self.state.history).len()
-    }
-
-    /// Whether no entries have been recorded.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-}
-
-#[derive(Clone)]
-struct LoggingState {
-    history: Arc<Mutex<VecDeque<LogRecord>>>,
-    live: tokio::sync::broadcast::Sender<LogRecord>,
-}
-
-async fn logging_websocket(
-    State(state): State<LoggingState>,
-    websocket: WebSocketUpgrade,
-    _request: Request,
-) -> impl IntoResponse {
-    websocket.on_upgrade(move |socket| logging_session(state, socket))
-}
-
-async fn logging_session(state: LoggingState, mut socket: WebSocket) {
-    let replay = lock(&state.history).iter().cloned().collect::<Vec<_>>();
-    let mut live = state.live.subscribe();
-    for record in replay {
-        if send_record(&mut socket, &record).await.is_err() {
-            return;
-        }
-    }
-    loop {
-        match live.recv().await {
-            Ok(record) if send_record(&mut socket, &record).await.is_ok() => {}
-            Ok(_) | Err(tokio::sync::broadcast::error::RecvError::Closed) => return,
-            Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {}
-        }
-    }
-}
-
-async fn send_record(socket: &mut WebSocket, record: &LogRecord) -> Result<(), axum::Error> {
-    let encoded = serde_json::to_string(record).expect("LogRecord is JSON serializable");
-    socket.send(Message::Text(encoded.into())).await
-}
-
 struct LocatorFile {
     path: PathBuf,
     expected: Vec<u8>,
@@ -741,9 +634,13 @@ mod tests {
         }
         assert_eq!(logging.len(), LOG_REPLAY_CAPACITY);
         let history = lock(&logging.state.history);
-        assert_eq!(history.front().expect("first").message, "record-10-火🔥");
+        let decode = |record: &str| serde_json::from_str::<LogRecord>(record).unwrap();
         assert_eq!(
-            history.back().expect("last").message,
+            decode(history.front().expect("first")).message,
+            "record-10-火🔥"
+        );
+        assert_eq!(
+            decode(history.back().expect("last")).message,
             format!("record-{}-火🔥", LOG_REPLAY_CAPACITY + 9)
         );
     }
