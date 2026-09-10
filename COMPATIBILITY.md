@@ -15,7 +15,7 @@ Fireside is not yet a universal Firebase Emulator Suite replacement.
 
 Firestore Requests/rule-evaluation tracing and rules-coverage tooling remain
 unfinished. Closing these developer-tool gaps is a required
-[first-release priority](ROADMAP.md#priority-1--functional-developer-tools), not
+[first-release priority](ROADMAP.md#phase-b--functional-developer-tools), not
 a capability claimed by the current preview. Auxiliary Eventarc/Tasks ports
 support host integration only and do not establish general delivery semantics.
 
