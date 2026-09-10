@@ -6,9 +6,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use base64::Engine as _;
+use fireside_core_store::Write;
 use fireside_rules_engine::{
-    AllowDecision, Auth, EvaluationRequest, EvaluationResult, EvaluationTrace, Query,
-    RequestOperation, Resource, Timestamp, Value,
+    AllowDecision, Auth, EvaluationRequest, EvaluationResult, EvaluationTrace, RequestOperation,
+    Resource, Timestamp, Value,
 };
 use serde::ser::{Error as _, SerializeMap};
 use serde::{Serialize, Serializer};
@@ -17,6 +18,15 @@ use time::format_description::well_known::Rfc3339;
 
 use crate::InstalledRules;
 use crate::request_history::RequestHistory;
+
+#[path = "request_event_metadata.rs"]
+mod metadata;
+
+#[derive(Clone, Copy, Default)]
+pub(crate) struct Metadata<'a> {
+    pub in_read_write_transaction: bool,
+    pub write: Option<&'a Write>,
+}
 
 static NEXT_EVENT: AtomicU64 = AtomicU64::new(1);
 
@@ -45,7 +55,7 @@ impl RequestRecorder {
         request: &EvaluationRequest,
         result: &EvaluationResult,
         trace: &EvaluationTrace,
-        atomic: bool,
+        metadata: Metadata<'_>,
     ) {
         let id = format!(
             "{}-{}",
@@ -71,7 +81,7 @@ impl RequestRecorder {
                 "deny"
             },
             granular_allow_outcomes: Outcomes(trace),
-            rules_context: Context { request, atomic },
+            rules_context: Context { request, metadata },
         });
     }
 }
@@ -330,13 +340,20 @@ fn method(operation: RequestOperation) -> &'static str {
 
 struct Context<'a> {
     request: &'a EvaluationRequest,
-    atomic: bool,
+    metadata: Metadata<'a>,
 }
 impl Serialize for Context<'_> {
     fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         let mut map = s.serialize_map(Some(5))?;
         map.serialize_entry("method", method(self.request.operation))?;
-        map.serialize_entry("path", &self.request.path)?;
+        if self.request.operation == RequestOperation::List {
+            map.serialize_entry(
+                "path",
+                &metadata::query_domain(self.request).map_err(S::Error::custom)?,
+            )?;
+        } else {
+            map.serialize_entry("path", &self.request.path)?;
+        }
         map.serialize_entry("time", &DebugTime(self.request.time))?;
         map.serialize_entry("request", &RequestValue(self))?;
         if let Some(resource) = &self.request.resource {
@@ -382,20 +399,45 @@ impl Serialize for RequestFields<'_> {
             },
         )?;
         map.serialize_entry("auth", &AuthValue(request.auth.as_ref()))?;
-        map.serialize_entry("inTransaction", &Typed(&Value::Bool(self.0.atomic)))?;
-        map.serialize_entry("path", &PathValue(&request.path))?;
+        let writing = matches!(
+            request.operation,
+            RequestOperation::Create | RequestOperation::Update | RequestOperation::Delete
+        );
+        map.serialize_entry(
+            "inTransaction",
+            &Typed(&Value::Bool(
+                writing || self.0.metadata.in_read_write_transaction,
+            )),
+        )?;
+        if request.operation == RequestOperation::List {
+            map.serialize_entry("path", &metadata::QueryPath(request))?;
+        } else {
+            map.serialize_entry("path", &PathValue(&request.path))?;
+        }
         map.serialize_entry("method", &TypedString(method(request.operation)))?;
         match request.operation {
             RequestOperation::Get | RequestOperation::List => {
                 map.serialize_entry("fields", &Typed(&Value::Null))?;
                 if request.operation == RequestOperation::List {
-                    map.serialize_entry("query", &QueryValue(&request.query))?;
+                    map.serialize_entry("query", &metadata::QueryValue(request))?;
                 }
             }
             _ => {
-                for key in ["transforms", "writeFields", "readFields"] {
-                    map.serialize_entry(key, &Typed(&Value::Null))?;
-                }
+                map.serialize_entry(
+                    "transforms",
+                    &metadata::WritePaths {
+                        write: self.0.metadata.write,
+                        transforms_only: true,
+                    },
+                )?;
+                map.serialize_entry(
+                    "writeFields",
+                    &metadata::WritePaths {
+                        write: self.0.metadata.write,
+                        transforms_only: false,
+                    },
+                )?;
+                map.serialize_entry("readFields", &Typed(&Value::Null))?;
                 if let Some(resource) = &request.request_resource {
                     map.serialize_entry("resource", &ResourceValue(resource))?;
                 } else {
@@ -406,56 +448,6 @@ impl Serialize for RequestFields<'_> {
         map.end()
     }
 }
-// Only options actually supplied to the evaluator are reported. The richer jar
-// query planner metadata (kind, parent, select/grouping) is not fabricated here.
-struct QueryValue<'a>(&'a Query);
-impl Serialize for QueryValue<'_> {
-    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        struct QueryFields<'a>(&'a Query);
-        impl Serialize for QueryFields<'_> {
-            fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-                struct Orders<'a>(&'a BTreeMap<String, String>);
-                impl Serialize for Orders<'_> {
-                    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-                        s.collect_map(self.0.iter().map(|(k, v)| (k, TypedString(v))))
-                    }
-                }
-                struct OrderMap<'a>(&'a BTreeMap<String, String>);
-                impl Serialize for OrderMap<'_> {
-                    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-                        if self.0.is_empty() {
-                            return tagged(s, "mapValue", &Empty {});
-                        }
-                        tagged(
-                            s,
-                            "mapValue",
-                            &WithFields {
-                                fields: Orders(self.0),
-                            },
-                        )
-                    }
-                }
-                let mut map = s.serialize_map(None)?;
-                if let Some(v) = self.0.limit {
-                    map.serialize_entry("limit", &Typed(&Value::Integer(v)))?;
-                }
-                if let Some(v) = self.0.offset {
-                    map.serialize_entry("offset", &Typed(&Value::Integer(v)))?;
-                }
-                map.serialize_entry("orderBy", &OrderMap(&self.0.order_by))?;
-                map.end()
-            }
-        }
-        tagged(
-            s,
-            "mapValue",
-            &WithFields {
-                fields: QueryFields(self.0),
-            },
-        )
-    }
-}
-
 #[cfg(test)]
 #[path = "request_event_tests.rs"]
 mod tests;

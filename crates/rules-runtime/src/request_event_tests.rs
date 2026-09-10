@@ -23,6 +23,12 @@ fn fixture() -> Json {
     ))
     .unwrap()
 }
+fn metadata_fixture() -> Json {
+    serde_json::from_str(include_str!(
+        "../../../conformance/fixtures/developer-tools-request-metadata-v1/fixture.json"
+    ))
+    .unwrap()
+}
 fn decode(value: &Json) -> Value {
     let (kind, v) = value.as_object().unwrap().iter().next().unwrap();
     match kind.as_str() {
@@ -243,4 +249,238 @@ async fn parsed_auth_is_reported_without_the_original_bearer_and_reload_is_snaps
         events[0]["rulesContext"]["request"]["mapValue"]["fields"]["auth"],
         json!({"mapValue":{"fields":{"uid":{"stringValue":"synthetic-reader"},"token":{"mapValue":{"fields":{"role":{"stringValue":"reader"}}}}}}})
     );
+}
+
+#[tokio::test]
+async fn query_domains_and_options_match_the_captured_root_nested_and_group_contexts() {
+    use fireside_rules_engine::QueryScope;
+
+    let fixture = metadata_fixture();
+    let cases = [
+        QueryScope::Collection("values".into()),
+        QueryScope::Collection("values".into()),
+        QueryScope::CollectionGroup {
+            collection_id: "values".into(),
+            ancestor: None,
+        },
+        QueryScope::Collection("parents/p/values".into()),
+        QueryScope::CollectionGroup {
+            collection_id: "values".into(),
+            ancestor: Some("parents/p".into()),
+        },
+    ];
+    let history = RequestHistory::default();
+    let runtime = RulesRuntime::with_request_history(history.clone());
+    runtime.install_default(ALLOW).unwrap();
+    for (index, scope) in cases.into_iter().enumerate() {
+        let mut req = request(RequestOperation::List);
+        req.path = "/databases/(default)/documents/values/rules-candidate".into();
+        req.query.scope = Some(scope);
+        if index == 0 {
+            req.query.limit = Some(2);
+            req.query.offset = Some(0);
+            req.query.order_by.insert("negative".into(), "ASC".into());
+        }
+        assert!(
+            runtime
+                .evaluate(PROJECT, &Authorization::Client(None), &req, &access())
+                .allowed
+        );
+        let events = next(&history).await;
+        let actual = &events[index]["rulesContext"];
+        let expected = &fixture["messages"][index + 5]["rulesContext"];
+        assert_eq!(actual["path"], expected["path"]);
+        for field in ["query", "path", "fields", "inTransaction"] {
+            assert_eq!(
+                actual["request"]["mapValue"]["fields"][field],
+                expected["request"]["mapValue"]["fields"][field],
+                "case {index}, {field}"
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn write_preview_preserves_captured_masks_transforms_and_escaped_field_names() {
+    use fireside_core_store::{
+        DatabaseName, DocumentKey, FieldPath, FieldTransform, Precondition, TransformOperation,
+    };
+
+    let fixture = metadata_fixture();
+    let history = RequestHistory::default();
+    let runtime = RulesRuntime::with_request_history(history.clone());
+    let plain = RulesRuntime::default();
+    runtime.install_default(ALLOW).unwrap();
+    plain.install_default(ALLOW).unwrap();
+    let key = DocumentKey::new(
+        DatabaseName::new(PROJECT, "(default)").unwrap(),
+        "values/typed",
+    )
+    .unwrap();
+    let cases = [
+        (vec![FieldPath::top("text").unwrap()], vec![], 12),
+        (
+            vec![
+                FieldPath::top("a.b").unwrap(),
+                FieldPath::new(["nested", "active"]).unwrap(),
+            ],
+            vec![],
+            14,
+        ),
+        (
+            vec![FieldPath::top("yes").unwrap()],
+            vec![FieldTransform {
+                path: FieldPath::top("negative").unwrap(),
+                operation: TransformOperation::Increment(fireside_core_store::Value::Integer(1)),
+            }],
+            16,
+        ),
+    ];
+    let store = Store::default();
+    store
+        .commit(&[Write::Create {
+            key: key.clone(),
+            fields: BTreeMap::new(),
+        }])
+        .unwrap();
+    let snapshot = store.snapshot();
+    let time = fireside_core_store::Timestamp::new(1_577_934_245, 0).unwrap();
+    for (index, (update_mask, transforms, message)) in cases.into_iter().enumerate() {
+        let writes = [Write::Patch {
+            key: key.clone(),
+            fields: BTreeMap::new(),
+            update_mask,
+            transforms,
+            precondition: Precondition::None,
+        }];
+        let result = runtime
+            .evaluate_writes(
+                PROJECT,
+                &Authorization::Client(None),
+                &writes,
+                &snapshot,
+                time,
+            )
+            .unwrap();
+        assert_eq!(
+            result,
+            plain
+                .evaluate_writes(
+                    PROJECT,
+                    &Authorization::Client(None),
+                    &writes,
+                    &snapshot,
+                    time
+                )
+                .unwrap()
+        );
+        assert!(result.allowed);
+        let events = next(&history).await;
+        let actual = &events[index]["rulesContext"]["request"]["mapValue"]["fields"];
+        let expected =
+            &fixture["messages"][message]["rulesContext"]["request"]["mapValue"]["fields"];
+        for field in ["writeFields", "transforms", "readFields", "inTransaction"] {
+            assert_eq!(actual[field], expected[field], "case {index}, {field}");
+        }
+    }
+    assert!(
+        store.snapshot().get(&key).unwrap().fields().is_empty(),
+        "diagnostics/preview must not commit the write"
+    );
+}
+
+#[tokio::test]
+async fn read_batches_are_not_mislabeled_as_read_write_transactions() {
+    let fixture = metadata_fixture();
+    let history = RequestHistory::default();
+    let runtime = RulesRuntime::with_request_history(history.clone());
+    let plain = RulesRuntime::default();
+    runtime.install_default(ALLOW).unwrap();
+    plain.install_default(ALLOW).unwrap();
+    let requests = [request(RequestOperation::Get)];
+    for (index, (read_write, message)) in [(false, 17), (false, 18), (true, 19)]
+        .into_iter()
+        .enumerate()
+    {
+        let auth = Authorization::Client(None);
+        let result = runtime.evaluate_atomic_with_read_transaction(
+            PROJECT,
+            &auth,
+            &requests,
+            &access(),
+            read_write,
+        );
+        assert_eq!(
+            result,
+            plain.evaluate_atomic(PROJECT, &auth, &requests, &access())
+        );
+        let events = next(&history).await;
+        assert_eq!(
+            events[index]["rulesContext"]["request"]["mapValue"]["fields"]["inTransaction"],
+            fixture["messages"][message]["rulesContext"]["request"]["mapValue"]["fields"]["inTransaction"]
+        );
+    }
+}
+
+#[test]
+fn replacement_transform_and_empty_mask_metadata_match_the_additional_live_capture() {
+    use fireside_core_store::{
+        DatabaseName, DocumentKey, FieldPath, FieldTransform, Precondition, TransformOperation,
+    };
+
+    let fixture = metadata_fixture();
+    let key = DocumentKey::new(
+        DatabaseName::new(PROJECT, "(default)").unwrap(),
+        "values/typed",
+    )
+    .unwrap();
+    let replacement = Write::Set {
+        key: key.clone(),
+        fields: BTreeMap::new(),
+        transforms: vec![FieldTransform {
+            path: FieldPath::top("negative").unwrap(),
+            operation: TransformOperation::Increment(fireside_core_store::Value::Integer(1)),
+        }],
+        precondition: Precondition::None,
+    };
+    let empty = Write::Patch {
+        key,
+        fields: BTreeMap::new(),
+        update_mask: vec![],
+        transforms: vec![],
+        precondition: Precondition::None,
+    };
+    for (write, message) in [(replacement, 21), (empty, 23)] {
+        let expected =
+            &fixture["messages"][message]["rulesContext"]["request"]["mapValue"]["fields"];
+        for (transforms_only, field) in [(false, "writeFields"), (true, "transforms")] {
+            assert_eq!(
+                serde_json::to_value(metadata::WritePaths {
+                    write: Some(&write),
+                    transforms_only
+                })
+                .unwrap(),
+                expected[field]
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn missing_query_domain_omits_diagnostics_without_changing_authorization() {
+    let history = RequestHistory::default();
+    let runtime = RulesRuntime::with_request_history(history.clone());
+    runtime.install_default(ALLOW).unwrap();
+    assert!(
+        runtime
+            .evaluate(
+                PROJECT,
+                &Authorization::Client(None),
+                &request(RequestOperation::List),
+                &access()
+            )
+            .allowed
+    );
+    assert_eq!(next(&history).await, json!([]));
+    assert_eq!(history.maintain().unwrap().omitted_events, 1);
 }

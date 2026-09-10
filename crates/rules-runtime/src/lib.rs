@@ -123,6 +123,20 @@ impl RulesRuntime {
         request: &EvaluationRequest,
         access: &SnapshotAccess,
     ) -> EvaluationResult {
+        self.evaluate_with_read_transaction(project, authorization, request, access, false)
+    }
+
+    /// Evaluates once with the resolved transaction mode for diagnostic reads.
+    /// The flag does not change policy, snapshots or access accounting.
+    #[must_use]
+    pub fn evaluate_with_read_transaction(
+        &self,
+        project: &str,
+        authorization: &Authorization,
+        request: &EvaluationRequest,
+        access: &SnapshotAccess,
+        in_read_write_transaction: bool,
+    ) -> EvaluationResult {
         let Some(installed) = self.installed_for(project) else {
             return allowed_result();
         };
@@ -135,7 +149,17 @@ impl RulesRuntime {
             return installed.rules.evaluate(&request, access);
         };
         let (result, trace) = installed.rules.evaluate_with_trace(&request, access);
-        recorder.record(project, &installed, &request, &result, &trace, false);
+        recorder.record(
+            project,
+            &installed,
+            &request,
+            &result,
+            &trace,
+            request_event::Metadata {
+                in_read_write_transaction,
+                write: None,
+            },
+        );
         result
     }
 
@@ -148,6 +172,40 @@ impl RulesRuntime {
         requests: &[EvaluationRequest],
         access: &SnapshotAccess,
     ) -> fireside_rules_engine::AtomicEvaluationResult {
+        self.evaluate_atomic_with_read_transaction(project, authorization, requests, access, false)
+    }
+
+    /// Shared-accounting read batch with its resolved transaction mode. A batch
+    /// alone is not a transaction; read-only transactions also pass false.
+    #[must_use]
+    pub fn evaluate_atomic_with_read_transaction(
+        &self,
+        project: &str,
+        authorization: &Authorization,
+        requests: &[EvaluationRequest],
+        access: &SnapshotAccess,
+        in_read_write_transaction: bool,
+    ) -> AtomicEvaluationResult {
+        self.evaluate_atomic_context(
+            project,
+            authorization,
+            requests,
+            access,
+            AtomicContext {
+                in_read_write_transaction,
+                writes: None,
+            },
+        )
+    }
+
+    fn evaluate_atomic_context(
+        &self,
+        project: &str,
+        authorization: &Authorization,
+        requests: &[EvaluationRequest],
+        access: &SnapshotAccess,
+        context: AtomicContext<'_>,
+    ) -> AtomicEvaluationResult {
         let Some(installed) = self.installed_for(project) else {
             return fireside_rules_engine::AtomicEvaluationResult {
                 allowed: true,
@@ -178,8 +236,23 @@ impl RulesRuntime {
         let (result, traces) = installed
             .rules
             .evaluate_atomic_with_trace(&requests, access);
-        for ((request, operation), trace) in requests.iter().zip(&result.operations).zip(&traces) {
-            recorder.record(project, &installed, request, operation, trace, true);
+        for (index, ((request, operation), trace)) in requests
+            .iter()
+            .zip(&result.operations)
+            .zip(&traces)
+            .enumerate()
+        {
+            recorder.record(
+                project,
+                &installed,
+                request,
+                operation,
+                trace,
+                request_event::Metadata {
+                    in_read_write_transaction: context.in_read_write_transaction,
+                    write: context.writes.and_then(|writes| writes.get(index)),
+                },
+            );
         }
         result
     }
@@ -224,8 +297,23 @@ impl RulesRuntime {
                 )
             })
             .collect::<Vec<_>>();
-        Ok(self.evaluate_atomic(project, authorization, &requests, &access))
+        Ok(self.evaluate_atomic_context(
+            project,
+            authorization,
+            &requests,
+            &access,
+            AtomicContext {
+                in_read_write_transaction: false,
+                writes: Some(writes),
+            },
+        ))
     }
+}
+
+#[derive(Clone, Copy)]
+struct AtomicContext<'a> {
+    in_read_write_transaction: bool,
+    writes: Option<&'a [Write]>,
 }
 
 /// Held while one rules-protected write is evaluated and committed.
