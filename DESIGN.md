@@ -322,6 +322,28 @@ signal, closing idle diagnostic clients. No unbounded per-connection history is
 introduced. These defaults still require the predeclared paired-overhead checks
 before Phase B qualification; enabling diagnostics is not an efficiency claim.
 
+### Bounded Logging delivery and child output
+
+The captured log object shape is unchanged. The predeclared Logging contract
+adds a 1,024-record history, 8 KiB complete serialized-record cap and four-client
+admission. Immutable serialized entries are shared by the history and live ring;
+each connection retains at most one bounded history snapshot plus one in-flight
+record. Oversized labels, JSON-escaped records and child lines produce a fixed,
+payload-free omission warning instead of retaining or logging the discarded data.
+Functions output is drained incrementally with at most 8 KiB line accumulation;
+invalid UTF-8 is also reported without retaining it. Upload/document data and
+Functions execution are not truncated—only this diagnostic output is bounded.
+
+Subscription and replay snapshot share the recording lock, avoiding a lost or
+duplicated replay/live boundary. Socket input is consumed even with no new logs,
+so a closed idle browser releases its slot. Owner shutdown cancels both idle
+and blocked sends. Each network send has a 30-second deadline; lagged subscribers
+receive an explicit reconnect close, and timed-out sends produce a payload-free
+local warning. Replay is retained-history delivery, not a persistent audit log
+or exactly-once delivery across reconnects. Excess clients receive HTTP 429.
+Virtual-time tests exercise deadline/owner loss; real TCP non-readers saturate
+kernel buffers and verify slot reclamation without waiting in producers.
+
 ## Auth, Storage and exports
 
 ### Official UI discovery and Firestore REST browsing

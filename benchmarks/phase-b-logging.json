@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Logging-specific bounds recorded before correcting the reproduced oversized-record and idle-disconnect gaps; Requests and coverage criteria are unchanged",
+  "maximumHistoryRecords": 1024,
+  "maximumSerializedRecordBytes": 8192,
+  "maximumHistoryBytes": 8388608,
+  "maximumSubscribers": 4,
+  "maximumReplayBytesPerSubscriber": 8388608,
+  "maximumInFlightRecordBytesPerSubscriber": 8192,
+  "sendDeadlineSeconds": 30,
+  "maximumInputLineBytes": 8192,
+  "overflowPolicy": "Replace an oversized record or input line with a payload-free explicit omission warning. Share immutable serialized records between history and live delivery. Disconnect lagging, excess or stalled readers explicitly. Never wait for a UI reader to consume a log.",
+  "ordering": "Subscribe and snapshot under the same recording lock so replay and live delivery have one atomic boundary. Reconnect replays retained records without claiming exactly-once delivery across connections.",
+  "cleanup": "Idle close, protocol error, owner shutdown and send timeout release the subscription. A disconnected browser must not leave an idle receiver alive.",
+  "scope": "Local emulator logs only, not a persistent audit log. No private consumer logs enter public test fixtures. These caps supplement the unchanged Requests and coverage manifests."
+}

@@ -168,6 +168,55 @@ async fn a_producer_omission_closes_the_feed_even_with_no_later_event() {
 struct BlockedSink(Option<oneshot::Sender<()>>);
 
 #[tokio::test]
+async fn kernel_backed_nonreader_releases_requests_replay_without_blocking_recording() {
+    let history = RequestHistory::default();
+    // A valid, complete synthetic event large enough to exceed the TCP window.
+    assert_eq!(
+        history.record(&json!({"evaluation":{"synthetic":"x".repeat(8*1024*1024)}})),
+        RecordOutcome::Recorded
+    );
+    let server = Server::start(Some(history.clone())).await;
+    let address = server
+        .url
+        .strip_prefix("ws://")
+        .unwrap()
+        .strip_suffix("/requests")
+        .unwrap()
+        .parse()
+        .unwrap();
+    let socket = tokio::net::TcpSocket::new_v4().unwrap();
+    socket.set_recv_buffer_size(1024).unwrap();
+    let socket = socket.connect(address).await.unwrap();
+    let (client, _) = tokio_tungstenite::client_async(&server.url, socket)
+        .await
+        .unwrap();
+    slots(&history, 1).await;
+    let began = std::time::Instant::now();
+    assert_eq!(
+        history.record(&json!({"evaluation":{"synthetic":"continues"}})),
+        RecordOutcome::Recorded
+    );
+    assert!(began.elapsed() < Duration::from_secs(1));
+    let reclaimed = tokio::time::timeout(Duration::from_secs(35), async {
+        loop {
+            if history
+                .maintain()
+                .is_some_and(|stats| stats.subscribers == 0)
+            {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+    })
+    .await;
+    drop(client);
+    assert!(
+        reclaimed.is_ok(),
+        "nonreader retained Requests replay beyond send deadline"
+    );
+}
+
+#[tokio::test]
 async fn actual_rest_rule_evaluations_arrive_on_the_requests_socket() {
     use axum::body::Body;
     use axum::http::Request;

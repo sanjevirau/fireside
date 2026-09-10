@@ -42,7 +42,7 @@ use futures_util::StreamExt as _;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use time::OffsetDateTime;
-use tokio::io::{AsyncBufReadExt as _, BufReader};
+use tokio::io::BufReader;
 use tokio::net::TcpListener;
 use tokio::process::{Child, Command};
 use tokio::sync::{mpsc, watch};
@@ -56,6 +56,7 @@ const IMPORT_BATCH_LOGICAL_BYTES: u64 = 8 * 1024 * 1024;
 const READY_TIMEOUT: Duration = Duration::from_secs(120);
 
 mod control;
+mod log_input;
 mod native_state;
 mod shutdown_io;
 pub use control::wait_for_shutdown;
@@ -263,7 +264,7 @@ pub async fn run(config: SuiteConfig) -> Result<SuiteOutcome, SuiteRuntimeError>
             storage: storage.application(),
             hub: hub.application(),
             ui,
-            logging: logging.application(),
+            logging: logging.application_with_shutdown(shutdown.subscribe()),
         },
         &shutdown,
         &server_failure,
@@ -963,8 +964,8 @@ async fn spawn_functions_host(
     if let Some(stdout) = child.stdout.take() {
         let logging = logging.clone();
         tokio::spawn(async move {
-            let mut lines = BufReader::new(stdout).lines();
-            while let Ok(Some(line)) = lines.next_line().await {
+            let mut lines = BufReader::new(stdout);
+            while let Ok(Some(line)) = log_input::next(&mut lines).await {
                 if line.starts_with("FIRESIDE_FUNCTIONS_HOST_READY ") {
                     let _ = ready_sender.send(true);
                 }
@@ -976,8 +977,8 @@ async fn spawn_functions_host(
     if let Some(stderr) = child.stderr.take() {
         let logging = logging.clone();
         tokio::spawn(async move {
-            let mut lines = BufReader::new(stderr).lines();
-            while let Ok(Some(line)) = lines.next_line().await {
+            let mut lines = BufReader::new(stderr);
+            while let Ok(Some(line)) = log_input::next(&mut lines).await {
                 eprintln!("{line}");
                 logging.record("WARN", Some("functions"), line);
             }
