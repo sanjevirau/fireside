@@ -658,6 +658,8 @@ dependencies = [
  "fireside-rules-engine",
  "serde",
  "serde_json",
+ "sha2",
+ "time",
  "tokio",
 ]
 
@@ -688,7 +690,10 @@ name = "fireside-suite-front"
 version = "0.0.1"
 dependencies = [
  "axum",
+ "fireside-core-store",
  "fireside-functions-bridge",
+ "fireside-query-engine",
+ "fireside-rest-front",
  "fireside-rules-runtime",
  "futures-util",
  "serde",

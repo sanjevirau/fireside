@@ -1,0 +1,1323 @@
+{
+  "schemaVersion": 1,
+  "syntheticOnly": true,
+  "capturedAt": "2026-09-10T17:29:03.110Z",
+  "project": "demo-fireside-request-values",
+  "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /values/{item} {\n   allow read, write: if true;\n  }\n }\n}\n",
+  "oracle": {
+    "firestore": "1.22.0",
+    "jarSha256": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c",
+    "node": "24.20.0",
+    "java": "java version \"25.0.1\" 2025-10-21 LTS\nJava(TM) SE Runtime Environment (build 25.0.1+8-LTS-27)\nJava HotSpot(TM) 64-Bit Server VM (build 25.0.1+8-LTS-27, mixed mode, sharing)"
+  },
+  "operations": [
+    {
+      "id": "create-typed",
+      "path": "/values/typed",
+      "method": "PATCH",
+      "body": {
+        "fields": {
+          "nil": {
+            "nullValue": null
+          },
+          "yes": {
+            "booleanValue": true
+          },
+          "integer": {
+            "integerValue": "9007199254740993"
+          },
+          "negative": {
+            "integerValue": "-7"
+          },
+          "double": {
+            "doubleValue": 1.25
+          },
+          "nan": {
+            "doubleValue": "NaN"
+          },
+          "infinity": {
+            "doubleValue": "Infinity"
+          },
+          "negativeInfinity": {
+            "doubleValue": "-Infinity"
+          },
+          "text": {
+            "stringValue": "Synthetic 中文 🚀"
+          },
+          "bytes": {
+            "bytesValue": "AAEC/w=="
+          },
+          "timestamp": {
+            "timestampValue": "2020-01-02T03:04:05.123456789Z"
+          },
+          "reference": {
+            "referenceValue": "projects/demo-fireside-request-values/databases/(default)/documents/values/other"
+          },
+          "point": {
+            "geoPointValue": {
+              "latitude": 1.25,
+              "longitude": -2.5
+            }
+          },
+          "list": {
+            "arrayValue": {
+              "values": [
+                {
+                  "integerValue": "1"
+                },
+                {
+                  "stringValue": "🚀"
+                },
+                {
+                  "nullValue": null
+                }
+              ]
+            }
+          },
+          "emptyList": {
+            "arrayValue": {
+              "values": []
+            }
+          },
+          "emptyMap": {
+            "mapValue": {
+              "fields": {}
+            }
+          },
+          "nested": {
+            "mapValue": {
+              "fields": {
+                "active": {
+                  "booleanValue": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "authenticated": false,
+      "status": 200,
+      "response": {
+        "name": "projects/demo-fireside-request-values/databases/(default)/documents/values/typed",
+        "fields": {
+          "nil": {
+            "nullValue": null
+          },
+          "yes": {
+            "booleanValue": true
+          },
+          "integer": {
+            "integerValue": "9007199254740993"
+          },
+          "negative": {
+            "integerValue": "-7"
+          },
+          "double": {
+            "doubleValue": 1.25
+          },
+          "nan": {
+            "doubleValue": "NaN"
+          },
+          "infinity": {
+            "doubleValue": "Infinity"
+          },
+          "negativeInfinity": {
+            "doubleValue": "-Infinity"
+          },
+          "text": {
+            "stringValue": "Synthetic 中文 🚀"
+          },
+          "bytes": {
+            "bytesValue": "AAEC/w=="
+          },
+          "timestamp": {
+            "timestampValue": "2020-01-02T03:04:05.123456Z"
+          },
+          "reference": {
+            "referenceValue": "projects/demo-fireside-request-values/databases/(default)/documents/values/other"
+          },
+          "point": {
+            "geoPointValue": {
+              "latitude": 1.25,
+              "longitude": -2.5
+            }
+          },
+          "list": {
+            "arrayValue": {
+              "values": [
+                {
+                  "integerValue": "1"
+                },
+                {
+                  "stringValue": "🚀"
+                },
+                {
+                  "nullValue": null
+                }
+              ]
+            }
+          },
+          "emptyList": {
+            "arrayValue": {}
+          },
+          "emptyMap": {
+            "mapValue": {}
+          },
+          "nested": {
+            "mapValue": {
+              "fields": {
+                "active": {
+                  "booleanValue": false
+                }
+              }
+            }
+          }
+        },
+        "createTime": "<request-time>",
+        "updateTime": "<request-time>"
+      },
+      "firstMessage": 1,
+      "endMessage": 3
+    },
+    {
+      "id": "get-typed",
+      "path": "/values/typed",
+      "method": "GET",
+      "body": null,
+      "authenticated": false,
+      "status": 200,
+      "response": {
+        "name": "projects/demo-fireside-request-values/databases/(default)/documents/values/typed",
+        "fields": {
+          "nil": {
+            "nullValue": null
+          },
+          "yes": {
+            "booleanValue": true
+          },
+          "integer": {
+            "integerValue": "9007199254740993"
+          },
+          "negative": {
+            "integerValue": "-7"
+          },
+          "double": {
+            "doubleValue": 1.25
+          },
+          "nan": {
+            "doubleValue": "NaN"
+          },
+          "infinity": {
+            "doubleValue": "Infinity"
+          },
+          "negativeInfinity": {
+            "doubleValue": "-Infinity"
+          },
+          "text": {
+            "stringValue": "Synthetic 中文 🚀"
+          },
+          "bytes": {
+            "bytesValue": "AAEC/w=="
+          },
+          "timestamp": {
+            "timestampValue": "2020-01-02T03:04:05.123456Z"
+          },
+          "reference": {
+            "referenceValue": "projects/demo-fireside-request-values/databases/(default)/documents/values/other"
+          },
+          "point": {
+            "geoPointValue": {
+              "latitude": 1.25,
+              "longitude": -2.5
+            }
+          },
+          "list": {
+            "arrayValue": {
+              "values": [
+                {
+                  "integerValue": "1"
+                },
+                {
+                  "stringValue": "🚀"
+                },
+                {
+                  "nullValue": null
+                }
+              ]
+            }
+          },
+          "emptyList": {
+            "arrayValue": {}
+          },
+          "emptyMap": {
+            "mapValue": {}
+          },
+          "nested": {
+            "mapValue": {
+              "fields": {
+                "active": {
+                  "booleanValue": false
+                }
+              }
+            }
+          }
+        },
+        "createTime": "<request-time>",
+        "updateTime": "<request-time>"
+      },
+      "firstMessage": 3,
+      "endMessage": 4
+    },
+    {
+      "id": "get-authenticated",
+      "path": "/values/typed",
+      "method": "GET",
+      "body": null,
+      "authenticated": true,
+      "status": 200,
+      "response": {
+        "name": "projects/demo-fireside-request-values/databases/(default)/documents/values/typed",
+        "fields": {
+          "nil": {
+            "nullValue": null
+          },
+          "yes": {
+            "booleanValue": true
+          },
+          "integer": {
+            "integerValue": "9007199254740993"
+          },
+          "negative": {
+            "integerValue": "-7"
+          },
+          "double": {
+            "doubleValue": 1.25
+          },
+          "nan": {
+            "doubleValue": "NaN"
+          },
+          "infinity": {
+            "doubleValue": "Infinity"
+          },
+          "negativeInfinity": {
+            "doubleValue": "-Infinity"
+          },
+          "text": {
+            "stringValue": "Synthetic 中文 🚀"
+          },
+          "bytes": {
+            "bytesValue": "AAEC/w=="
+          },
+          "timestamp": {
+            "timestampValue": "2020-01-02T03:04:05.123456Z"
+          },
+          "reference": {
+            "referenceValue": "projects/demo-fireside-request-values/databases/(default)/documents/values/other"
+          },
+          "point": {
+            "geoPointValue": {
+              "latitude": 1.25,
+              "longitude": -2.5
+            }
+          },
+          "list": {
+            "arrayValue": {
+              "values": [
+                {
+                  "integerValue": "1"
+                },
+                {
+                  "stringValue": "🚀"
+                },
+                {
+                  "nullValue": null
+                }
+              ]
+            }
+          },
+          "emptyList": {
+            "arrayValue": {}
+          },
+          "emptyMap": {
+            "mapValue": {}
+          },
+          "nested": {
+            "mapValue": {
+              "fields": {
+                "active": {
+                  "booleanValue": false
+                }
+              }
+            }
+          }
+        },
+        "createTime": "<request-time>",
+        "updateTime": "<request-time>"
+      },
+      "firstMessage": 4,
+      "endMessage": 5
+    },
+    {
+      "id": "query",
+      "path": ":runQuery",
+      "method": "POST",
+      "body": {
+        "structuredQuery": {
+          "from": [
+            {
+              "collectionId": "values"
+            }
+          ],
+          "orderBy": [
+            {
+              "field": {
+                "fieldPath": "negative"
+              },
+              "direction": "ASCENDING"
+            }
+          ],
+          "limit": 2,
+          "offset": 0
+        }
+      },
+      "authenticated": false,
+      "status": 200,
+      "response": [
+        {
+          "document": {
+            "name": "projects/demo-fireside-request-values/databases/(default)/documents/values/typed",
+            "fields": {
+              "nil": {
+                "nullValue": null
+              },
+              "yes": {
+                "booleanValue": true
+              },
+              "integer": {
+                "integerValue": "9007199254740993"
+              },
+              "negative": {
+                "integerValue": "-7"
+              },
+              "double": {
+                "doubleValue": 1.25
+              },
+              "nan": {
+                "doubleValue": "NaN"
+              },
+              "infinity": {
+                "doubleValue": "Infinity"
+              },
+              "negativeInfinity": {
+                "doubleValue": "-Infinity"
+              },
+              "text": {
+                "stringValue": "Synthetic 中文 🚀"
+              },
+              "bytes": {
+                "bytesValue": "AAEC/w=="
+              },
+              "timestamp": {
+                "timestampValue": "2020-01-02T03:04:05.123456Z"
+              },
+              "reference": {
+                "referenceValue": "projects/demo-fireside-request-values/databases/(default)/documents/values/other"
+              },
+              "point": {
+                "geoPointValue": {
+                  "latitude": 1.25,
+                  "longitude": -2.5
+                }
+              },
+              "list": {
+                "arrayValue": {
+                  "values": [
+                    {
+                      "integerValue": "1"
+                    },
+                    {
+                      "stringValue": "🚀"
+                    },
+                    {
+                      "nullValue": null
+                    }
+                  ]
+                }
+              },
+              "emptyList": {
+                "arrayValue": {}
+              },
+              "emptyMap": {
+                "mapValue": {}
+              },
+              "nested": {
+                "mapValue": {
+                  "fields": {
+                    "active": {
+                      "booleanValue": false
+                    }
+                  }
+                }
+              }
+            },
+            "createTime": "<request-time>",
+            "updateTime": "<request-time>"
+          },
+          "readTime": "<request-time>",
+          "done": true
+        }
+      ],
+      "firstMessage": 5,
+      "endMessage": 6
+    },
+    {
+      "id": "delete",
+      "path": "/values/typed",
+      "method": "DELETE",
+      "body": null,
+      "authenticated": false,
+      "status": 200,
+      "response": {},
+      "firstMessage": 6,
+      "endMessage": 7
+    },
+    {
+      "id": "get-missing",
+      "path": "/values/missing",
+      "method": "GET",
+      "body": null,
+      "authenticated": false,
+      "status": 404,
+      "response": {
+        "error": {
+          "code": 404,
+          "message": "Document (projects/demo-fireside-request-values/databases/(default)/documents/values/missing) not found.",
+          "status": "NOT_FOUND"
+        }
+      },
+      "firstMessage": 7,
+      "endMessage": 8
+    }
+  ],
+  "messages": [
+    [],
+    {
+      "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /values/{item} {\n   allow read, write: if true;\n  }\n }\n}\n",
+      "time": "<request-time>",
+      "rulesReleaseKey": "projects/demo-fireside-request-values/releases/cloud.firestore<release-id>",
+      "requestId": "request-1",
+      "outcome": "allow",
+      "granularAllowOutcomes": [
+        {
+          "line": 5,
+          "outcome": true
+        }
+      ],
+      "rulesContext": {
+        "method": "create",
+        "path": "/databases/(default)/documents/values/typed",
+        "time": "<request-time>",
+        "request": {
+          "mapValue": {
+            "fields": {
+              "time": {
+                "timestampValue": "<request-time>"
+              },
+              "auth": {
+                "nullValue": null
+              },
+              "inTransaction": {
+                "boolValue": true
+              },
+              "path": {
+                "pathValue": {
+                  "segments": [
+                    {
+                      "simple": "databases"
+                    },
+                    {
+                      "simple": "(default)"
+                    },
+                    {
+                      "simple": "documents"
+                    },
+                    {
+                      "simple": "values"
+                    },
+                    {
+                      "simple": "typed"
+                    }
+                  ]
+                }
+              },
+              "transforms": {
+                "nullValue": null
+              },
+              "writeFields": {
+                "nullValue": null
+              },
+              "readFields": {
+                "nullValue": null
+              },
+              "resource": {
+                "mapValue": {
+                  "fields": {
+                    "data": {
+                      "mapValue": {
+                        "fields": {
+                          "nil": {
+                            "nullValue": null
+                          },
+                          "yes": {
+                            "boolValue": true
+                          },
+                          "integer": {
+                            "intValue": "9007199254740993"
+                          },
+                          "negative": {
+                            "intValue": "-7"
+                          },
+                          "double": {
+                            "floatValue": 1.25
+                          },
+                          "nan": {
+                            "floatValue": "NaN"
+                          },
+                          "infinity": {
+                            "floatValue": "Infinity"
+                          },
+                          "negativeInfinity": {
+                            "floatValue": "-Infinity"
+                          },
+                          "text": {
+                            "stringValue": "Synthetic 中文 🚀"
+                          },
+                          "bytes": {
+                            "bytesValue": "AAEC/w=="
+                          },
+                          "timestamp": {
+                            "timestampValue": "2020-01-02T03:04:05.123456Z"
+                          },
+                          "reference": {
+                            "pathValue": {
+                              "segments": [
+                                {
+                                  "simple": "databases"
+                                },
+                                {
+                                  "simple": "(default)"
+                                },
+                                {
+                                  "simple": "documents"
+                                },
+                                {
+                                  "simple": "values"
+                                },
+                                {
+                                  "simple": "other"
+                                }
+                              ]
+                            }
+                          },
+                          "point": {
+                            "latlngValue": {
+                              "latitude": 1.25,
+                              "longitude": -2.5
+                            }
+                          },
+                          "list": {
+                            "listValue": {
+                              "values": [
+                                {
+                                  "intValue": "1"
+                                },
+                                {
+                                  "stringValue": "🚀"
+                                },
+                                {
+                                  "nullValue": null
+                                }
+                              ]
+                            }
+                          },
+                          "emptyList": {
+                            "listValue": {}
+                          },
+                          "emptyMap": {
+                            "mapValue": {}
+                          },
+                          "nested": {
+                            "mapValue": {
+                              "fields": {
+                                "active": {
+                                  "boolValue": false
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "__name__": {
+                      "pathValue": {
+                        "segments": [
+                          {
+                            "simple": "databases"
+                          },
+                          {
+                            "simple": "(default)"
+                          },
+                          {
+                            "simple": "documents"
+                          },
+                          {
+                            "simple": "values"
+                          },
+                          {
+                            "simple": "typed"
+                          }
+                        ]
+                      }
+                    },
+                    "id": {
+                      "stringValue": "typed"
+                    }
+                  }
+                }
+              },
+              "method": {
+                "stringValue": "create"
+              }
+            }
+          }
+        },
+        "resource": {
+          "undefined": {}
+        }
+      }
+    },
+    {
+      "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /values/{item} {\n   allow read, write: if true;\n  }\n }\n}\n",
+      "time": "<request-time>",
+      "rulesReleaseKey": "projects/demo-fireside-request-values/releases/cloud.firestore<release-id>",
+      "requestId": "request-2",
+      "outcome": "allow",
+      "granularAllowOutcomes": [
+        {
+          "line": 5,
+          "outcome": true
+        },
+        {
+          "line": 5,
+          "outcome": true
+        }
+      ],
+      "rulesContext": {
+        "method": "update",
+        "path": "/databases/(default)/documents/values/typed",
+        "time": "<request-time>",
+        "request": {
+          "mapValue": {
+            "fields": {
+              "time": {
+                "timestampValue": "<request-time>"
+              },
+              "auth": {
+                "nullValue": null
+              },
+              "inTransaction": {
+                "boolValue": true
+              },
+              "path": {
+                "pathValue": {
+                  "segments": [
+                    {
+                      "simple": "databases"
+                    },
+                    {
+                      "simple": "(default)"
+                    },
+                    {
+                      "simple": "documents"
+                    },
+                    {
+                      "simple": "values"
+                    },
+                    {
+                      "simple": "typed"
+                    }
+                  ]
+                }
+              },
+              "transforms": {
+                "nullValue": null
+              },
+              "writeFields": {
+                "nullValue": null
+              },
+              "readFields": {
+                "nullValue": null
+              },
+              "resource": {
+                "mapValue": {
+                  "fields": {
+                    "data": {
+                      "mapValue": {
+                        "fields": {
+                          "nil": {
+                            "nullValue": null
+                          },
+                          "yes": {
+                            "boolValue": true
+                          },
+                          "integer": {
+                            "intValue": "9007199254740993"
+                          },
+                          "negative": {
+                            "intValue": "-7"
+                          },
+                          "double": {
+                            "floatValue": 1.25
+                          },
+                          "nan": {
+                            "floatValue": "NaN"
+                          },
+                          "infinity": {
+                            "floatValue": "Infinity"
+                          },
+                          "negativeInfinity": {
+                            "floatValue": "-Infinity"
+                          },
+                          "text": {
+                            "stringValue": "Synthetic 中文 🚀"
+                          },
+                          "bytes": {
+                            "bytesValue": "AAEC/w=="
+                          },
+                          "timestamp": {
+                            "timestampValue": "2020-01-02T03:04:05.123456Z"
+                          },
+                          "reference": {
+                            "pathValue": {
+                              "segments": [
+                                {
+                                  "simple": "databases"
+                                },
+                                {
+                                  "simple": "(default)"
+                                },
+                                {
+                                  "simple": "documents"
+                                },
+                                {
+                                  "simple": "values"
+                                },
+                                {
+                                  "simple": "other"
+                                }
+                              ]
+                            }
+                          },
+                          "point": {
+                            "latlngValue": {
+                              "latitude": 1.25,
+                              "longitude": -2.5
+                            }
+                          },
+                          "list": {
+                            "listValue": {
+                              "values": [
+                                {
+                                  "intValue": "1"
+                                },
+                                {
+                                  "stringValue": "🚀"
+                                },
+                                {
+                                  "nullValue": null
+                                }
+                              ]
+                            }
+                          },
+                          "emptyList": {
+                            "listValue": {}
+                          },
+                          "emptyMap": {
+                            "mapValue": {}
+                          },
+                          "nested": {
+                            "mapValue": {
+                              "fields": {
+                                "active": {
+                                  "boolValue": false
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "__name__": {
+                      "pathValue": {
+                        "segments": [
+                          {
+                            "simple": "databases"
+                          },
+                          {
+                            "simple": "(default)"
+                          },
+                          {
+                            "simple": "documents"
+                          },
+                          {
+                            "simple": "values"
+                          },
+                          {
+                            "simple": "typed"
+                          }
+                        ]
+                      }
+                    },
+                    "id": {
+                      "stringValue": "typed"
+                    }
+                  }
+                }
+              },
+              "method": {
+                "stringValue": "update"
+              }
+            }
+          }
+        },
+        "resource": {
+          "undefined": {}
+        }
+      }
+    },
+    {
+      "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /values/{item} {\n   allow read, write: if true;\n  }\n }\n}\n",
+      "time": "<request-time>",
+      "rulesReleaseKey": "projects/demo-fireside-request-values/releases/cloud.firestore<release-id>",
+      "requestId": "request-3",
+      "outcome": "allow",
+      "granularAllowOutcomes": [
+        {
+          "line": 5,
+          "outcome": true
+        }
+      ],
+      "rulesContext": {
+        "method": "get",
+        "path": "/databases/(default)/documents/values/typed",
+        "time": "<request-time>",
+        "request": {
+          "mapValue": {
+            "fields": {
+              "time": {
+                "timestampValue": "<request-time>"
+              },
+              "auth": {
+                "nullValue": null
+              },
+              "inTransaction": {
+                "boolValue": false
+              },
+              "path": {
+                "pathValue": {
+                  "segments": [
+                    {
+                      "simple": "databases"
+                    },
+                    {
+                      "simple": "(default)"
+                    },
+                    {
+                      "simple": "documents"
+                    },
+                    {
+                      "simple": "values"
+                    },
+                    {
+                      "simple": "typed"
+                    }
+                  ]
+                }
+              },
+              "fields": {
+                "nullValue": null
+              },
+              "method": {
+                "stringValue": "get"
+              }
+            }
+          }
+        },
+        "resource": {
+          "undefined": {}
+        }
+      }
+    },
+    {
+      "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /values/{item} {\n   allow read, write: if true;\n  }\n }\n}\n",
+      "time": "<request-time>",
+      "rulesReleaseKey": "projects/demo-fireside-request-values/releases/cloud.firestore<release-id>",
+      "requestId": "request-4",
+      "outcome": "allow",
+      "granularAllowOutcomes": [
+        {
+          "line": 5,
+          "outcome": true
+        }
+      ],
+      "rulesContext": {
+        "method": "get",
+        "path": "/databases/(default)/documents/values/typed",
+        "time": "<request-time>",
+        "request": {
+          "mapValue": {
+            "fields": {
+              "time": {
+                "timestampValue": "<request-time>"
+              },
+              "auth": {
+                "mapValue": {
+                  "fields": {
+                    "uid": {
+                      "stringValue": "synthetic-reader"
+                    },
+                    "token": {
+                      "mapValue": {
+                        "fields": {
+                          "aud": {
+                            "stringValue": "demo-fireside-request-values"
+                          },
+                          "iss": {
+                            "stringValue": "https://securetoken.google.com/demo-fireside-request-values"
+                          },
+                          "sub": {
+                            "stringValue": "synthetic-reader"
+                          },
+                          "user_id": {
+                            "stringValue": "synthetic-reader"
+                          },
+                          "iat": {
+                            "intValue": "1789061334"
+                          },
+                          "exp": {
+                            "intValue": "1789061944"
+                          },
+                          "email": {
+                            "stringValue": "reader@example.invalid"
+                          },
+                          "email_verified": {
+                            "boolValue": true
+                          },
+                          "firebase": {
+                            "mapValue": {
+                              "fields": {
+                                "sign_in_provider": {
+                                  "stringValue": "custom"
+                                }
+                              }
+                            }
+                          },
+                          "role": {
+                            "stringValue": "reader"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "inTransaction": {
+                "boolValue": false
+              },
+              "path": {
+                "pathValue": {
+                  "segments": [
+                    {
+                      "simple": "databases"
+                    },
+                    {
+                      "simple": "(default)"
+                    },
+                    {
+                      "simple": "documents"
+                    },
+                    {
+                      "simple": "values"
+                    },
+                    {
+                      "simple": "typed"
+                    }
+                  ]
+                }
+              },
+              "fields": {
+                "nullValue": null
+              },
+              "method": {
+                "stringValue": "get"
+              }
+            }
+          }
+        },
+        "resource": {
+          "undefined": {}
+        }
+      }
+    },
+    {
+      "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /values/{item} {\n   allow read, write: if true;\n  }\n }\n}\n",
+      "time": "<request-time>",
+      "rulesReleaseKey": "projects/demo-fireside-request-values/releases/cloud.firestore<release-id>",
+      "requestId": "request-5",
+      "outcome": "allow",
+      "granularAllowOutcomes": [
+        {
+          "line": 5,
+          "outcome": true
+        }
+      ],
+      "rulesContext": {
+        "method": "list",
+        "path": "/databases/(default)/documents/values/*",
+        "time": "<request-time>",
+        "request": {
+          "mapValue": {
+            "fields": {
+              "time": {
+                "timestampValue": "<request-time>"
+              },
+              "auth": {
+                "nullValue": null
+              },
+              "inTransaction": {
+                "boolValue": false
+              },
+              "fields": {
+                "nullValue": null
+              },
+              "query": {
+                "mapValue": {
+                  "fields": {
+                    "distinct": {
+                      "boolValue": false
+                    },
+                    "selectOnlyKeys": {
+                      "boolValue": false
+                    },
+                    "groupBy": {
+                      "mapValue": {}
+                    },
+                    "kind": {
+                      "stringValue": "values"
+                    },
+                    "parent": {
+                      "nullValue": null
+                    },
+                    "orderBy": {
+                      "mapValue": {
+                        "fields": {
+                          "negative": {
+                            "stringValue": "ASC"
+                          }
+                        }
+                      }
+                    },
+                    "limit": {
+                      "intValue": "2"
+                    },
+                    "offset": {
+                      "intValue": "0"
+                    },
+                    "allDescendants": {
+                      "boolValue": false
+                    }
+                  }
+                }
+              },
+              "path": {
+                "pathValue": {
+                  "segments": [
+                    {
+                      "simple": "databases"
+                    },
+                    {
+                      "simple": "(default)"
+                    },
+                    {
+                      "simple": "documents"
+                    },
+                    {
+                      "simple": "values"
+                    }
+                  ]
+                }
+              },
+              "method": {
+                "stringValue": "list"
+              }
+            }
+          }
+        },
+        "resource": {
+          "mapValue": {
+            "fields": {
+              "data": {
+                "mapValue": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /values/{item} {\n   allow read, write: if true;\n  }\n }\n}\n",
+      "time": "<request-time>",
+      "rulesReleaseKey": "projects/demo-fireside-request-values/releases/cloud.firestore<release-id>",
+      "requestId": "request-6",
+      "outcome": "allow",
+      "granularAllowOutcomes": [
+        {
+          "line": 5,
+          "outcome": true
+        }
+      ],
+      "rulesContext": {
+        "method": "delete",
+        "path": "/databases/(default)/documents/values/typed",
+        "time": "<request-time>",
+        "request": {
+          "mapValue": {
+            "fields": {
+              "time": {
+                "timestampValue": "<request-time>"
+              },
+              "auth": {
+                "nullValue": null
+              },
+              "inTransaction": {
+                "boolValue": true
+              },
+              "path": {
+                "pathValue": {
+                  "segments": [
+                    {
+                      "simple": "databases"
+                    },
+                    {
+                      "simple": "(default)"
+                    },
+                    {
+                      "simple": "documents"
+                    },
+                    {
+                      "simple": "values"
+                    },
+                    {
+                      "simple": "typed"
+                    }
+                  ]
+                }
+              },
+              "transforms": {
+                "nullValue": null
+              },
+              "writeFields": {
+                "nullValue": null
+              },
+              "readFields": {
+                "nullValue": null
+              },
+              "resource": {
+                "nullValue": null
+              },
+              "method": {
+                "stringValue": "delete"
+              }
+            }
+          }
+        },
+        "resource": {
+          "undefined": {}
+        }
+      }
+    },
+    {
+      "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /values/{item} {\n   allow read, write: if true;\n  }\n }\n}\n",
+      "time": "<request-time>",
+      "rulesReleaseKey": "projects/demo-fireside-request-values/releases/cloud.firestore<release-id>",
+      "requestId": "request-7",
+      "outcome": "allow",
+      "granularAllowOutcomes": [
+        {
+          "line": 5,
+          "outcome": true
+        }
+      ],
+      "rulesContext": {
+        "method": "get",
+        "path": "/databases/(default)/documents/values/missing",
+        "time": "<request-time>",
+        "request": {
+          "mapValue": {
+            "fields": {
+              "time": {
+                "timestampValue": "<request-time>"
+              },
+              "auth": {
+                "nullValue": null
+              },
+              "inTransaction": {
+                "boolValue": false
+              },
+              "path": {
+                "pathValue": {
+                  "segments": [
+                    {
+                      "simple": "databases"
+                    },
+                    {
+                      "simple": "(default)"
+                    },
+                    {
+                      "simple": "documents"
+                    },
+                    {
+                      "simple": "values"
+                    },
+                    {
+                      "simple": "missing"
+                    }
+                  ]
+                }
+              },
+              "fields": {
+                "nullValue": null
+              },
+              "method": {
+                "stringValue": "get"
+              }
+            }
+          }
+        },
+        "resource": {
+          "undefined": {}
+        }
+      }
+    }
+  ],
+  "exit": [
+    130,
+    null
+  ],
+  "normalization": {
+    "requestIds": "stable encounter order",
+    "time": "2026 request timestamps only; synthetic 2020 field timestamp preserved",
+    "releases": "opaque release suffix",
+    "credentials": "no bearer token retained; synthetic decoded claims only"
+  }
+}

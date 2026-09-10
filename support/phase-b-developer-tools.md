@@ -70,6 +70,34 @@ Requests endpoint uses the new component yet. Browser controls, kernel slow-read
 qualification and paired-overhead measurements remain pending. Full exact-head
 seven-job CI is required before this increment can merge.
 
+The transport candidate `7b9d227d9c930860e76820053c8720475a1a74cd` passed
+[all seven CI jobs](https://github.com/sanjevirau/fireside/actions/runs/34506167515)
+and merged in [PR #5](https://github.com/sanjevirau/fireside/pull/5).
+
+## Fourth increment: opt-in real evaluation producer
+
+Before product changes, a second tiny official-jar capture pinned the typed
+Requests context: integers, finite/non-finite floats, nested and empty containers,
+bytes, timestamps, references, geographic values, decoded auth claims, query and
+delete contexts. The [fixture](../conformance/fixtures/developer-tools-request-values-v1/README.md)
+contains six HTTP operations and seven live evaluation messages plus initial
+empty history. It preserves the jar's lazy resource and preliminary-write behavior.
+
+An opt-in runtime now serializes its actual evaluation result and bounded allow
+trace into history without a second evaluation or cloned JSON document tree.
+Tests cover typed-resource equality against that fixture, unchanged verdicts and
+access accounting, atomic shared reads, owner/open bypass, immutable reload
+identity, oversized context and truncated traces. A combined REST-handler/real
+WebSocket test exercises allow, deny, error, current-resource details and replay.
+Default runtime behavior and the installed CLI/suite remain unchanged.
+
+Full exact-head CI is still required for this increment. Before wiring the
+shipping suite, resolve query-domain rendering and transport-specific metadata
+(masks/transforms/read transactions); qualify browser rendering and diagnostic
+overhead. The producer currently reports the evaluator's available context,
+which is not the jar's lazy-resource/planner model. No complete Requests, coverage,
+performance or Phase B pass is claimed from these component tests.
+
 ## Remaining before Phase B completion
 
 1. Feed the real traces into bounded Requests history and subscriber queues;
