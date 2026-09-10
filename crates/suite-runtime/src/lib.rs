@@ -62,6 +62,8 @@ mod shutdown_io;
 pub use control::wait_for_shutdown;
 
 #[cfg(test)]
+mod auxiliary_tests;
+#[cfg(test)]
 mod diagnostics_tests;
 #[cfg(test)]
 mod transport_tests;
