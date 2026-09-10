@@ -510,10 +510,10 @@ async fn finish_suite(
     mut suite: ShutdownSuite,
     failure_reason: Option<String>,
 ) -> Result<SuiteOutcome, SuiteRuntimeError> {
+    let mut failures: Vec<String> = failure_reason.iter().cloned().collect();
     if failure_reason.is_none()
         && let Some(destination) = &suite.config.export_on_exit
-    {
-        export_suite(
+        && let Err(error) = export_suite(
             destination,
             &BTreeSet::new(),
             &suite.config,
@@ -521,7 +521,17 @@ async fn finish_suite(
             &suite.auth,
             &suite.storage,
         )
-        .await?;
+        .await
+    {
+        let recovery = if suite.config.firestore_in_memory {
+            "in-memory Firestore state is not recoverable after exit"
+        } else {
+            "correct the export destination and reopen the retained disk state before retrying export"
+        };
+        failures.push(format!(
+            "{error}; working files retained at {}; {recovery}",
+            suite.config.state_dir.display()
+        ));
     }
     suite.scheduler.shutdown().await;
     // Drain background delivery while both the Node workload host and the Rust
@@ -530,15 +540,16 @@ async fn finish_suite(
     // work. Stopping either side before this drain can strand handlers that use
     // Admin SDK calls and make firebase-tools wait until the hard timeout.
     let delivery = suite.delivery.shutdown().await.into();
-    stop_functions_host(&mut suite.functions).await?;
+    if let Err(error) = stop_functions_host(&mut suite.functions).await {
+        failures.push(error.to_string());
+    }
     let _ = suite.shutdown.send(true);
     for server in suite.servers {
         let _ = server.await;
     }
-    suite
-        .hub
-        .remove_locator()
-        .map_err(|error| failure(format!("failed to remove Hub locator: {error}")))?;
+    if let Err(error) = suite.hub.remove_locator() {
+        failures.push(format!("failed to remove Hub locator: {error}"));
+    }
     drop(suite.hub);
     suite.exporter.abort();
     let _ = suite.exporter.await;
@@ -546,15 +557,16 @@ async fn finish_suite(
     let firestore_documents = suite.store.snapshot().logical_memory_usage().entries;
     let storage_objects = suite.storage.object_count();
     let storage_bytes = suite.storage.object_bytes();
-    let storage = Arc::try_unwrap(suite.storage)
-        .map_err(|_| failure("Storage runtime still has active owners"))?;
-    storage
-        .shutdown()
-        .await
-        .map_err(|error| failure(format!("Storage shutdown failed: {error}")))?;
-
-    if let Some(reason) = failure_reason {
-        return Err(failure(reason));
+    match Arc::try_unwrap(suite.storage) {
+        Ok(storage) => {
+            if let Err(error) = storage.shutdown().await {
+                failures.push(format!("Storage shutdown failed: {error}"));
+            }
+        }
+        Err(_) => failures.push("Storage runtime still has active owners".to_owned()),
+    }
+    if !failures.is_empty() {
+        return Err(failure(failures.join("; ")));
     }
     Ok(SuiteOutcome {
         functions: suite.function_count,

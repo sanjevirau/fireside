@@ -112,6 +112,14 @@ jobs:
           "$HOME/.cache/firebase/emulators"
           "$RUNNER_TEMP/fireside-developer-ui-evidence"
           --topic-reload
+      - name: Verify retained native state and cleanup after failed export
+        run: >-
+          node conformance/src/suite/verify-export-failure.mjs
+          target/debug/fireside
+          "$RUNNER_TEMP/fireside-devtools/node_modules/firebase-tools"
+          "$RUNNER_TEMP/fireside-devtools/node_modules/firebase-functions"
+          "$HOME/.cache/firebase/emulators"
+          "$RUNNER_TEMP/fireside-export-failure-evidence"
       - name: Verify owned admission against real pinned Functions discovery
         run: >-
           node conformance/src/suite/capture-functions-readiness.mjs
@@ -127,6 +135,7 @@ jobs:
           name: synthetic-developer-ui
           path: |
             ${{ runner.temp }}/fireside-developer-ui-evidence/result.json
+            ${{ runner.temp }}/fireside-export-failure-evidence/result.json
             ${{ runner.temp }}/fireside-developer-ui-evidence/failure.json
             ${{ runner.temp }}/fireside-developer-ui-evidence/browser-failure.json
             ${{ runner.temp }}/fireside-developer-ui-evidence/*.png
