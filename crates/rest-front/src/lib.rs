@@ -54,6 +54,7 @@ const JSON_CONTENT_TYPE: HeaderValue = HeaderValue::from_static("application/jso
 
 mod coverage;
 mod listing;
+mod read_json;
 mod read_options;
 #[cfg(test)]
 mod read_options_tests;
