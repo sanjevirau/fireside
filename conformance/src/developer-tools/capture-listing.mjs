@@ -49,9 +49,12 @@ try{
   await request('list-invalid-size','/notes?pageSize=invalid','GET',undefined,true,undefined,true);
   const page=await request('list-page-1','/notes?pageSize=1');
   assert(page.nextPageToken);
-  await request('list-page-2','/notes?pageSize=1&pageToken='+encodeURIComponent(page.nextPageToken),'GET',undefined,true,'list-page-1');
+  const lastPage=await request('list-page-2','/notes?pageSize=1&pageToken='+encodeURIComponent(page.nextPageToken),'GET',undefined,true,'list-page-1');
+  assert(lastPage.nextPageToken);
+  await request('list-page-3','/notes?pageSize=1&pageToken='+encodeURIComponent(lastPage.nextPageToken),'GET',undefined,true,'list-page-2');
   const ids=await request('ids-page-1',':listCollectionIds','POST',{pageSize:1});assert(ids.nextPageToken);
-  await request('ids-page-2',':listCollectionIds','POST',{pageSize:1,pageToken:ids.nextPageToken},true,'ids-page-1');
+  const lastIds=await request('ids-page-2',':listCollectionIds','POST',{pageSize:1,pageToken:ids.nextPageToken},true,'ids-page-1');
+  if(lastIds.nextPageToken)await request('ids-page-3',':listCollectionIds','POST',{pageSize:1,pageToken:lastIds.nextPageToken},true,'ids-page-2');
 }finally{
   if(child.exitCode===null)child.kill('SIGINT');
   record.exit=await Promise.race([exited,delay(20000,null,{ref:false})]);await writeFile(join(output,'oracle.log'),log);await writeFile(join(output,'raw.json'),JSON.stringify(record,null,2)+'\n');assert(record.exit);
