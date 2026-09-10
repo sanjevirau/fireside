@@ -5,6 +5,7 @@ import {createHash} from 'node:crypto';
 import {readFile, realpath, writeFile} from 'node:fs/promises';
 import {createRequire} from 'node:module';
 import os from 'node:os';
+import {dirname, resolve} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import {promisify} from 'node:util';
 
@@ -18,7 +19,8 @@ export async function profileStorage({pid, binary, dependencies, origin, project
   const oracleBytes = await readFile(new URL('../../fixtures/firebase-suite-v1/storage-content-encoding/fixture.json', import.meta.url));
   const oracle = JSON.parse(oracleBytes);
   const require = createRequire(await realpath(dependencies + '/node_modules/firebase-functions/package.json'));
-  const sdkVersion = require('@google-cloud/storage/package.json').version;
+  const sdkManifest = resolve(dirname(require.resolve('@google-cloud/storage')), '../../../package.json');
+  const sdkVersion = JSON.parse(await readFile(sdkManifest, 'utf8')).version;
   assert.equal(sdkVersion, oracle.sdkVersions.googleCloudStorage);
   const {Storage} = require('@google-cloud/storage');
   const priorHost = process.env.STORAGE_EMULATOR_HOST;
