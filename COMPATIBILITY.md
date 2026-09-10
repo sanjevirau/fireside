@@ -13,6 +13,12 @@ Fireside is not yet a universal Firebase Emulator Suite replacement.
 | Other services | None claimed | Realtime Database, Hosting, App Hosting, Data Connect and universal extensions |
 | CLI | Complete local suite, explicit setup, doctor, start/exec, state/resume | Arbitrary service subsets, cloud deploy or real-project configuration |
 
+Firestore Requests/rule-evaluation tracing and rules-coverage tooling remain
+unfinished. Closing these developer-tool gaps is a required
+[first-release priority](ROADMAP.md#priority-1--functional-developer-tools), not
+a capability claimed by the current preview. Auxiliary Eventarc/Tasks ports
+support host integration only and do not establish general delivery semantics.
+
 The package supports only its enumerated native targets after their exact
 candidate checks pass. Linux musl, Windows ARM64/32-bit, network-filesystem
 durability and Windows power-loss recovery are not qualified.

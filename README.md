@@ -57,7 +57,9 @@ node --test packaging/*.test.mjs
 ```
 
 [DESIGN.md](DESIGN.md) describes the component boundaries;
-[COMPATIBILITY.md](COMPATIBILITY.md) records limits. Contributions follow
+[COMPATIBILITY.md](COMPATIBILITY.md) records limits and
+[ROADMAP.md](ROADMAP.md) records first-release priorities, including functional
+developer tools. Contributions follow
 [CONTRIBUTING.md](CONTRIBUTING.md). Use
 [local packages](packaging/LOCAL-DEVELOPMENT.md) to test a reviewed candidate in
 your own application without publishing it.
