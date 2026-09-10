@@ -119,6 +119,8 @@ pub struct RequestSubscription {
     receiver: mpsc::Receiver<QueuedFrame>,
     disconnected: Arc<AtomicBool>,
     active: Arc<AtomicUsize>,
+    omitted: Arc<AtomicUsize>,
+    admitted_omissions: usize,
 }
 
 impl Drop for RequestSubscription {
@@ -128,15 +130,23 @@ impl Drop for RequestSubscription {
 }
 
 impl RequestSubscription {
+    /// Whether overflow or a newly omitted producer event made this live stream
+    /// incomplete. A transport must close/report it, including while idle.
+    #[must_use]
+    pub fn is_incomplete(&self) -> bool {
+        self.disconnected.load(Ordering::Acquire)
+            || self.omitted.load(Ordering::Acquire) != self.admitted_omissions
+    }
+
     /// Returns the initial snapshot followed by live events. A lagged reader gets
     /// no further data; its transport must close rather than imply a complete feed.
     pub async fn recv(&mut self) -> Option<QueuedFrame> {
-        if self.disconnected.load(Ordering::Acquire) {
+        if self.is_incomplete() {
             self.receiver.close();
             return None;
         }
         let frame = self.receiver.recv().await;
-        if self.disconnected.load(Ordering::Acquire) {
+        if self.is_incomplete() {
             self.receiver.close();
             None
         } else {
@@ -209,6 +219,7 @@ impl RequestHistory {
 
     fn subscribe_at(&self, now: Instant) -> Result<RequestSubscription, SubscribeError> {
         let mut state = self.state.try_lock().map_err(|_| SubscribeError::Busy)?;
+        let admitted_omissions = self.omitted.load(Ordering::Acquire);
         state.expire(now);
         if self.active.load(Ordering::Acquire) >= MAXIMUM_SUBSCRIBERS {
             return Err(SubscribeError::SubscriberLimit);
@@ -235,6 +246,8 @@ impl RequestHistory {
             receiver,
             disconnected: subscriber.disconnected.clone(),
             active: self.active.clone(),
+            omitted: self.omitted.clone(),
+            admitted_omissions,
         };
         state.subscribers.push(subscriber);
         Ok(subscription)

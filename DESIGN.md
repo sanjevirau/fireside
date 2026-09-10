@@ -108,9 +108,9 @@ Each of at most four subscription handles has a bounded queue and a 16 MiB byte
 budget that remains charged until its send guard is dropped, not merely dequeued.
 Overflow disconnects that reader without waiting or discarding history for other
 readers. Disconnected handles retain their connection slots until dropped. A
-future transport must enforce the declared 30-second send deadline and close on
-lag, report omissions without payloads, distinguish disabled/error from empty,
-and drive idle expiry. These obligations are not qualified by buffer unit tests.
+transport must enforce the declared 30-second send deadline and close on lag,
+report omissions without payloads, distinguish disabled/error from empty, and
+drive idle expiry. These obligations are not qualified by buffer unit tests.
 
 Producers use `try_lock`, never wait behind a diagnostic reader, and return an
 explicit, counted omission on contention. Serialization happens only after that
@@ -119,6 +119,34 @@ JSON buffers. Oversized or invalid events never leave partial JSON in history.
 The serving runtime does not yet call this buffer; it is not a claim that Requests
 or coverage work in the current preview. Request omission policy and paired
 overhead still require integrated checks before enabling it.
+
+### Requests transport component (Phase B, producer integration pending)
+
+`suite-front::requests_router` serves the committed oracle's initial JSON array
+and subsequent event objects over a real WebSocket. Reconnection replays retained,
+immutable events; it does not synthesize the jar's later enrichment of old events.
+The production suite runtime is not yet attached to this component.
+
+The component refuses upgrades with HTTP 503 if no producer is supplied, during
+shutdown or on contended admission, and HTTP 429 at four active clients. These
+explicit bounded-resource responses are Fireside safety behavior, not captured
+claims about the jar. A new producer omission invalidates existing live feeds;
+overflow/omission closes them with code 1013 rather than silently continuing.
+Reconnect starts a new subscription boundary; it cannot recover omitted events.
+Persistent cumulative omission counters are reported in payload-free stderr
+warnings, not added as invented fields to the oracle's wire objects.
+
+Every send retains its byte permit until completion and has a 30-second timeout
+that shutdown interrupts. Incoming client messages/frames are capped at 4 KiB.
+Disconnect, receive error, overflow, send failure and shutdown drop subscription
+handles. One-second housekeeping attempts idle expiry and emits changed counters;
+it stops when its owner signals shutdown or drops the watch sender. Expired entries
+are removed on access or the next successful maintenance pass, not by a hard
+real-time timer at precisely 600 seconds. Idle connections check omissions on the
+same cadence. Socket tests cover captured frame delivery, replay, overload,
+unavailability, ping/pong, oversized input and cleanup. Virtual-clock blocked-sink
+tests cover send deadlines and shutdown; these are not kernel slow-reader or
+browser qualification, nor a diagnostics-overhead measurement.
 
 ## Auth, Storage and exports
 

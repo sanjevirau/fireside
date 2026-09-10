@@ -239,9 +239,31 @@ async fn concurrent_subscription_boundary_has_no_missing_or_duplicate_admitted_e
         }
     };
     let recorded = producer.join().unwrap();
+    if subscription.is_incomplete() {
+        // An omitted producer now explicitly invalidates an already-open feed,
+        // rather than exposing an apparently continuous stream with a gap.
+        assert!(subscription.recv().await.is_none());
+        assert!(history.maintain().unwrap().omitted_events > 0);
+        return;
+    }
     let mut received = receive(&mut subscription).await.as_array().unwrap().clone();
     while let Ok(frame) = subscription.receiver.try_recv() {
         received.push(serde_json::from_str(frame.text()).unwrap());
     }
     assert_eq!(received, recorded);
+}
+
+#[tokio::test]
+async fn producer_omission_invalidates_a_live_feed_but_not_a_new_subscription() {
+    let history = RequestHistory::default();
+    let mut subscription = history.subscribe().unwrap();
+    receive(&mut subscription).await;
+    assert_eq!(history.record(&json!([])), RecordOutcome::Invalid);
+    assert!(subscription.is_incomplete());
+    assert!(subscription.recv().await.is_none());
+    drop(subscription);
+    let mut reconnected = history.subscribe().unwrap();
+    assert!(!reconnected.is_incomplete());
+    assert_eq!(receive(&mut reconnected).await, json!([]));
+    assert_eq!(history.maintain().unwrap().omitted_events, 1);
 }
