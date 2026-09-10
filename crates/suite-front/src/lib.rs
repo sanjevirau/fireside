@@ -622,6 +622,32 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn ui_config_advertises_the_captured_firestore_requests_address() {
+        let fixture: JsonValue = serde_json::from_str(include_str!(
+            "../../../conformance/fixtures/developer-tools-v1/fixture.json"
+        ))
+        .unwrap();
+        let mut directory = directory();
+        directory.services.insert(
+            "firestore".into(),
+            ServiceInfo::listening("firestore", "127.0.0.1", 31000),
+        );
+        directory.services.insert(
+            "firestore.websocket".into(),
+            ServiceInfo::listening("firestore.websocket", "127.0.0.1", 31001),
+        );
+        let Json(actual) = ui_config(State(UiState { directory })).await;
+        let oracle = &fixture["config"]["firestore"];
+        assert_eq!(
+            actual["firestore"]["webSocketHost"],
+            oracle["webSocketHost"]
+        );
+        assert_eq!(oracle["webSocketPort"], "websocket");
+        assert_eq!(actual["firestore"]["webSocketPort"], 31001);
+        assert_eq!(actual["firestore"]["reservedPorts"], json!([31001]));
+    }
+
+    #[tokio::test]
     async fn hub_replays_locator_directory_export_guard_and_controls() {
         let locator = temporary("locator").join("hub-demo.json");
         let (exports, mut commands) = mpsc::channel(1);

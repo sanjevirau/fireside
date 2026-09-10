@@ -6,7 +6,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from 'playwright';
 
 // Locators were first observed in the pinned official UI, not invented DOM models.
-export async function observeDeveloperUi({origin,project,work,output,requestId}) {
+export async function observeDeveloperUi({origin,project,work,output,requestId,readyLog='All emulators ready!'}) {
   const executablePath=[process.env.PHASE4_BROWSER_EXECUTABLE,
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','/usr/bin/google-chrome','/usr/bin/chromium'].find(path=>path&&existsSync(path));
   const browser=await chromium.launch({headless:true,...(executablePath?{executablePath}:{})});
@@ -117,8 +117,8 @@ export async function observeDeveloperUi({origin,project,work,output,requestId})
     checked('storage-clear-control');
     await page.goto(`${origin('ui')}/logs`);
     await page.getByRole('link',{name:'Logs',exact:true}).waitFor();
-    await page.getByText('All emulators ready!',{exact:false}).waitFor();
-    await checkpoint('logs-history-rendered',async()=>(await page.locator('body').innerText()).includes('All emulators ready!'));
+    await page.getByText(readyLog,{exact:false}).waitFor();
+    await checkpoint('logs-history-rendered',async()=>(await page.locator('body').innerText()).includes(readyLog));
     await Promise.all(pending);assert.deepEqual(errors,[]);
     return {browserVersion:browser.version(),checks,coverage,errors,exchanges};
   } catch(error) {
