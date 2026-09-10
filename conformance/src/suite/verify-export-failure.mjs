@@ -105,14 +105,14 @@ try{
     const batch={writes:['attempt-left','attempt-right'].map(name=>({update:{name:documentName(name),fields:{payload:{stringValue:largeBody}}}}))};
     record.fullDiskRequests={};
     record.fullDiskRequests.firestore=await serviceRequest('firestore',`/v1/projects/${project}/databases/(default)/documents:commit`,batch);
-    record.fullDiskRequests.auth=await serviceRequest('auth',authPath,{localId:'attempt-user',email:'attempt@example.test',displayName:largeBody});
+    record.fullDiskRequests.auth=await serviceRequest('auth',authPath,{localId:'attempt-user',email:'attempt@example.test',displayName:'Synthetic attempted account'});
     record.fullDiskRequests.storage=await serviceRequest('storage',uploadPath('attempt-object'),largeBody,'POST',true);
     for(const result of Object.values(record.fullDiskRequests)){
       assert(result.status>=400&&result.status<600,JSON.stringify(result));
       assert.match(result.body,/No space left on device|os error 28/i);
     }
     record.writeFence=await serviceRequest('firestore',`/v1/projects/${project}/databases/(default)/documents:commit`,batch);
-    assert(record.writeFence.status>=400);assert.match(record.writeFence.body,/restart/i);
+    assert.equal(record.writeFence.status,503);assert.match(record.writeFence.body,/reopen the store to recover before writing/);
   }
   const stopped=await stop();record.failedExportExit=stopped.exit;
   record.exportErrorReported=volume?/No space left on device|os error 28/i.test(stopped.log):/failed to create export parent/.test(stopped.log);
