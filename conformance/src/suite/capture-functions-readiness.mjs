@@ -69,7 +69,11 @@ try{
     const peer=new Constructor({host:'127.0.0.1',port:upstream});peers.push({name,peer});await peer.start();await proxy(name,upstream,port);
   }
   const http=await backend('http'),auxiliary=await backend('auxiliary'),broken=await backend('broken');
-  for(const [mode,backends] of [['healthy',[http,auxiliary]],['failed-codebase',[http,broken]],['missing-auxiliary',[http,auxiliary]]]){
+  // A local, predefined Extension-shaped backend exercises the pinned host's
+  // normalizer without downloading an extension or contacting its registry.
+  const predefined={...http,codebase:'extension',extensionInstanceId:'synthetic-extension',
+    predefinedTriggers:[{name:'alpha',entryPoint:'alpha',platform:'gcfv1',regions:['us-central1'],httpsTrigger:{}}]};
+  for(const [mode,backends] of [['healthy',[http,auxiliary]],['failed-codebase',[http,broken]],['missing-auxiliary',[http,auxiliary]],['predefined-backend',[predefined]]]){
     if(mode==='missing-auxiliary'){
       EmulatorRegistry.clear(Emulators.EVENTARC);EmulatorRegistry.clear(Emulators.TASKS);
     }
@@ -78,7 +82,7 @@ try{
     const calls=[],original=emulator.discoverTriggers;
     emulator.discoverTriggers=async function(value){
       const call={codebase:value.codebase};calls.push(call);
-      try{const definitions=await original.call(this,value);call.ids=definitions.map(definition=>definition.id);return definitions;}
+      try{const definitions=await original.call(this,value);call.ids=definitions.map(definition=>definition.id);call.definitions=definitions;return definitions;}
       catch(error){call.error=String(error);throw error;}
     };
     try{
@@ -90,7 +94,7 @@ try{
       record.observations.push(normalize({mode,calls,connectError:connectError??null,status:response.status,inventory,triggerRecords}));
       if(mode==='failed-codebase')assert(calls.some(call=>call.codebase==='broken'&&call.error),'preserve swallowed discovery failure');
       else {
-        assert.equal(emulator.getTriggerDefinitions().length,4);
+        assert.equal(emulator.getTriggerDefinitions().length,mode==='predefined-backend'?1:4);
         assert.equal(triggerRecords.filter(row=>row.ignored).length,mode==='missing-auxiliary'?2:0);
       }
     }finally{await emulator.stop();EmulatorRegistry.clear(Emulators.FUNCTIONS);}

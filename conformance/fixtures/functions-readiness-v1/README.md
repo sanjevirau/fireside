@@ -26,6 +26,12 @@ was admitted. The pinned upstream record's ignored/enabled status is retained
 alongside the HTTP inventory. This is an intentional missing-peer scenario,
 not successful event/task emulation or a real provider outage.
 
+A fourth startup uses a constructed, local predefined Extension-shaped backend
+accepted by the real official Functions host. No Extension Hub lookup or
+download is involved. The published backend inventory keeps `regions` and omits
+`id`/`region`, while discovery/registration expands a regional definition with
+both fields. This pins normalization, not installation of a real extension.
+
 Only the fresh synthetic workspace directory in inventory fields is replaced by
 `<workspace>`. Loopback ports, source text, upstream errors and proxy-recorded
 bytes are unchanged. Capture and upstream source hashes are recorded. Reproduce
