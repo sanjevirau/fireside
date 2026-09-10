@@ -7,8 +7,9 @@
   "maximumRetainedProjects": 4,
   "maximumIdleAgeSeconds": 600,
   "maximumSerializedReportBytes": 33554432,
+  "maximumInFlightHttpReportsPerRouter": 1,
   "overflowPolicy": "Omit complete values or contended operations with visible counters; expire idle histories and evict oldest project histories. Never wait for a diagnostic lock or re-evaluate policy to manufacture oracle counts.",
   "countModel": "Actual evaluator visits, not the official jar's preliminary planner visits. Unvisited expressions have no values.",
-  "transportQualification": "Before exposing reports over HTTP, bound concurrent and in-flight serialized responses, including slow clients. The runtime byte limit alone is not transport qualification.",
+  "transportQualification": "One report permit covers queued serialization, the complete response body and cloned/sliced byte frames until their last owner drops. Excess callers receive 429 without waiting. Slow readers retain the slot rather than permitting unbounded response buffers; application operations continue. Browser fetches use a 30-second abort budget.",
   "overheadQualification": "Unchanged paired workload and all limits in phase-a-developer-tools.json; no measurement or passing result is claimed by this contract."
 }

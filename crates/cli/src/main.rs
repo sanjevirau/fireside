@@ -145,6 +145,10 @@ struct FirestoreArgs {
     port: u16,
     #[arg(long)]
     rules: Option<PathBuf>,
+    /// Enable bounded local Requests and expression coverage recording.
+    /// Diagnostic values can include document data and decoded auth claims.
+    #[arg(long)]
+    diagnostics: bool,
     #[arg(long = "functions_emulator", alias = "functions-emulator")]
     functions_emulator: Option<String>,
     #[arg(long = "seed_from_export", alias = "seed-from-export")]
@@ -742,7 +746,7 @@ async fn run_firestore(
             return ExitCode::FAILURE;
         }
     };
-    let rules = match load_rules(arguments.rules.as_deref()) {
+    let rules = match load_rules(arguments.rules.as_deref(), arguments.diagnostics) {
         Ok(rules) => rules,
         Err(error) => {
             eprintln!("{error}");
@@ -905,8 +909,17 @@ fn open_store(arguments: &FirestoreArgs) -> Result<Store, String> {
     }
 }
 
-fn load_rules(path: Option<&std::path::Path>) -> Result<RulesRuntime, String> {
-    let rules = RulesRuntime::default();
+fn load_rules(path: Option<&std::path::Path>, diagnostics: bool) -> Result<RulesRuntime, String> {
+    let rules = if diagnostics {
+        eprintln!(
+            "fireside local diagnostics enabled: bounded request/coverage values may contain document data and decoded auth claims; do not publish consumer reports"
+        );
+        RulesRuntime::with_request_history(
+            fireside_rules_runtime::request_history::RequestHistory::default(),
+        )
+    } else {
+        RulesRuntime::default()
+    };
     let Some(path) = path else {
         eprintln!("WARNING: fireside Security Rules are not configured; client access is open");
         return Ok(rules);
@@ -1020,6 +1033,28 @@ mod tests {
     use tower::ServiceExt as _;
 
     static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+    #[test]
+    fn standalone_diagnostics_are_explicit_and_disabled_reports_are_not_empty_successes() {
+        let cli = Cli::try_parse_from(["fireside", "firestore"]).unwrap();
+        let Command::Firestore(arguments) = cli.command else {
+            panic!("Firestore command");
+        };
+        assert!(!arguments.diagnostics);
+        assert_eq!(
+            load_rules(None, false).unwrap().coverage_json("demo-test"),
+            Err(fireside_rules_runtime::coverage::CoverageError::Disabled)
+        );
+        let cli = Cli::try_parse_from(["fireside", "firestore", "--diagnostics"]).unwrap();
+        let Command::Firestore(arguments) = cli.command else {
+            panic!("Firestore command");
+        };
+        assert!(arguments.diagnostics);
+        assert_eq!(
+            load_rules(None, true).unwrap().coverage_json("demo-test"),
+            Err(fireside_rules_runtime::coverage::CoverageError::NoRules)
+        );
+    }
 
     #[tokio::test]
     async fn one_http_router_serves_rest_and_webchannel() {

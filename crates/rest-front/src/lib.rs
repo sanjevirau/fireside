@@ -54,6 +54,8 @@ const CORS_ALLOWED_METHODS: HeaderValue =
     HeaderValue::from_static("DELETE,GET,HEAD,PATCH,POST,PUT");
 const JSON_CONTENT_TYPE: HeaderValue = HeaderValue::from_static("application/json");
 
+mod coverage;
+
 /// Creates the HTTP/1 router that shares the Firestore store with gRPC.
 pub fn router(store: Store) -> Router {
     router_with_query_policy(store, QueryPolicy::default())
@@ -129,6 +131,11 @@ pub fn router_with_query_policy_memory_rules_and_triggers(
         .route(EVENTARC_ROUTE, axum::routing::post(post_eventarc_trigger))
         .route(CLEAR_ROUTE, axum::routing::delete(clear_database))
         .route(DEBUG_MEMORY_ROUTE, get(debug_memory))
+        .route("/emulator/v1/coverage.js", get(coverage::script))
+        .route(
+            "/emulator/v1/projects/{operation}",
+            get(coverage::report).fallback(project_operation),
+        )
         .fallback(project_operation)
         .with_state(RestState {
             store,
@@ -136,6 +143,9 @@ pub fn router_with_query_policy_memory_rules_and_triggers(
             rules,
             triggers,
             allocator_memory_reporter,
+            coverage_slots: Arc::new(tokio::sync::Semaphore::new(
+                coverage::MAXIMUM_IN_FLIGHT_REPORTS,
+            )),
         })
         .layer(middleware::from_fn(browser_cors))
 }
@@ -257,6 +267,7 @@ struct RestState {
     rules: RulesRuntime,
     triggers: TriggerRegistry,
     allocator_memory_reporter: Option<Arc<dyn AllocatorMemoryReporter>>,
+    coverage_slots: Arc<tokio::sync::Semaphore>,
 }
 
 #[derive(Deserialize)]
@@ -2725,6 +2736,9 @@ mod tests {
     #[tokio::test]
     async fn debug_memory_exposes_versioned_store_accounting() {
         let state = RestState {
+            coverage_slots: Arc::new(tokio::sync::Semaphore::new(
+                coverage::MAXIMUM_IN_FLIGHT_REPORTS,
+            )),
             store: Store::default(),
             query_policy: QueryPolicy::default(),
             rules: RulesRuntime::default(),
