@@ -1,0 +1,127 @@
+{
+  "passed": true,
+  "acceptance": false,
+  "syntheticOnly": true,
+  "fault": "ENOSPC on native working-data and export filesystem",
+  "filesystem": {
+    "type": 25,
+    "capacityBytes": 67067904,
+    "availableBeforeBytes": 65499136,
+    "separateFromWorkingState": false,
+    "observedWriteError": "ENOSPC",
+    "availableAtExportBytes": 0,
+    "fillerBytes": 48885760
+  },
+  "binarySha256": "5a54dd47c72b3865506d8fe18a88abc1a0734c4b35b34967111eea60f15ad91e",
+  "driverSha256": "4b4e1bbc927120a53b59c65dcdabfba9ef96c6016532d40643bb353e4be6e7c5",
+  "node": "v24.20.0",
+  "launches": [
+    {
+      "name": "failed-export",
+      "readyMilliseconds": 13885.893,
+      "resumed": false
+    },
+    {
+      "name": "native-recovery",
+      "readyMilliseconds": 7729.057290999999,
+      "resumed": true
+    }
+  ],
+  "fullDiskRequests": {
+    "firestore": {
+      "status": 503,
+      "body": "{\"error\":{\"code\":503,\"message\":\"durable store is unavailable: disk I/O failed: No space left on device (os error 28)\",\"status\":\"UNAVAILABLE\"}}"
+    },
+    "auth": {
+      "status": 500,
+      "body": "{\"error\":{\"code\":500,\"errors\":[{\"domain\":\"global\",\"message\":\"failed to write Auth state: No space left on device (os error 28)\",\"reason\":\"invalid\"}],\"message\":\"failed to write Auth state: No space left on device (os error 28)\"}}"
+    },
+    "storage": {
+      "status": 500,
+      "body": "{\"error\":{\"code\":500,\"message\":\"Storage I/O failure: No space left on device (os error 28)\"}}"
+    }
+  },
+  "writeFence": {
+    "status": 503,
+    "body": "{\"error\":{\"code\":503,\"message\":\"durable store is unavailable: persistence outcome is ambiguous; reopen the store to recover before writing\",\"status\":\"UNAVAILABLE\"}}"
+  },
+  "failedExportExit": [
+    1,
+    null
+  ],
+  "exportErrorReported": true,
+  "functionsDrained": true,
+  "openPorts": [],
+  "locatorRemaining": false,
+  "nativeReceiptRetained": true,
+  "incompleteExportNotPublished": true,
+  "partialExportPaths": [
+    "working",
+    "working/.fireside-suite.lock",
+    "working/auth-state.json",
+    "working/firestore",
+    "working/functions-host.cjs",
+    "working/native-state.json",
+    "working/storage",
+    "working/ui-v1.15.0",
+    "working/ui-v1.15.0/client",
+    "working/ui-v1.15.0/server",
+    "working/ui-v1.15.0/server/server.mjs",
+    "working/ui-v1.15.0/server/server.mjs.map",
+    "working/ui-v1.15.0/client/android-chrome-192x192.png",
+    "working/ui-v1.15.0/client/android-chrome-512x512.png",
+    "working/ui-v1.15.0/client/apple-touch-icon.png",
+    "working/ui-v1.15.0/client/assets",
+    "working/ui-v1.15.0/client/browserconfig.xml",
+    "working/ui-v1.15.0/client/favicon-16x16.png",
+    "working/ui-v1.15.0/client/favicon-32x32.png",
+    "working/ui-v1.15.0/client/favicon.ico",
+    "working/ui-v1.15.0/client/index.html",
+    "working/ui-v1.15.0/client/manifest.json",
+    "working/ui-v1.15.0/client/mstile-150x150.png",
+    "working/ui-v1.15.0/client/robots.txt",
+    "working/ui-v1.15.0/client/safari-pinned-tab.svg",
+    "working/ui-v1.15.0/client/assets/extensions",
+    "working/ui-v1.15.0/client/assets/img",
+    "working/ui-v1.15.0/client/assets/index-BX-A56oj.js",
+    "working/ui-v1.15.0/client/assets/index-BX-A56oj.js.map",
+    "working/ui-v1.15.0/client/assets/index-CjB9C900.css",
+    "working/ui-v1.15.0/client/assets/provider-icons",
+    "working/ui-v1.15.0/client/assets/provider-icons/auth_service_apple.svg",
+    "working/ui-v1.15.0/client/assets/provider-icons/auth_service_email.svg",
+    "working/ui-v1.15.0/client/assets/provider-icons/auth_service_facebook.svg",
+    "working/ui-v1.15.0/client/assets/provider-icons/auth_service_game_center.svg",
+    "working/ui-v1.15.0/client/assets/provider-icons/auth_service_github.svg",
+    "working/ui-v1.15.0/client/assets/provider-icons/auth_service_google.svg",
+    "working/ui-v1.15.0/client/assets/provider-icons/auth_service_mslive.svg",
+    "working/ui-v1.15.0/client/assets/provider-icons/auth_service_oidc.svg",
+    "working/ui-v1.15.0/client/assets/provider-icons/auth_service_phone.svg",
+    "working/ui-v1.15.0/client/assets/provider-icons/auth_service_play_games.svg",
+    "working/ui-v1.15.0/client/assets/provider-icons/auth_service_saml.svg",
+    "working/ui-v1.15.0/client/assets/provider-icons/auth_service_twitter.svg",
+    "working/ui-v1.15.0/client/assets/provider-icons/auth_service_yahoo.svg",
+    "working/ui-v1.15.0/client/assets/img/database.png",
+    "working/ui-v1.15.0/client/assets/extensions/default-extension.png",
+    "working/storage/metadata.json",
+    "working/storage/metadata.redb",
+    "working/storage/objects",
+    "working/storage/uploads",
+    "working/storage/objects/kc713dCFkwvpSLSeCKJqKq_oXmcPezo7ZJy7X1bjVps",
+    "working/firestore/fireside.redb",
+    "working/firestore/fireside.wal"
+  ],
+  "onlySyntheticFillerRemoved": true,
+  "acknowledgedWriteRecovered": true,
+  "unacknowledgedBatchRecoveredStatuses": [
+    404,
+    404
+  ],
+  "unacknowledgedObjectRecoveredStatus": 404,
+  "acknowledgedAuthAndStorageRecovered": true,
+  "writesResumeAfterRecovery": true,
+  "recoveryExit": [
+    0,
+    null
+  ],
+  "completedRecoveryExport": true
+}

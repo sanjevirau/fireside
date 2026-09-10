@@ -1,0 +1,72 @@
+{
+  "passed": true,
+  "acceptance": false,
+  "syntheticOnly": true,
+  "fault": "owned process-group crash during incomplete export staging",
+  "binarySha256": "5a54dd47c72b3865506d8fe18a88abc1a0734c4b35b34967111eea60f15ad91e",
+  "driverSha256": "ad785cf28b84c0cabeb3b47811cf22815229cfa643033693174a7f23be2d28e1",
+  "node": "v24.20.0",
+  "launches": [
+    {
+      "name": "failed-export",
+      "readyMilliseconds": 14210.022833,
+      "resumed": false
+    },
+    {
+      "name": "native-recovery",
+      "readyMilliseconds": 8014.067958,
+      "resumed": true
+    }
+  ],
+  "contractSha256": "5a309d042ba982df02df4f2014509c3eb0bfafc43ed4f18fbae8687b216e25b3",
+  "previousExport": {
+    "auth_export/accounts.json": "bd239268cac1ca6000ff950dad1ecdb7acbce5459f63880bcbf05995d824b0a2",
+    "auth_export/config.json": "3a2b8136d1408c31c25d159e253dc68b9fcfda0d7b5baab207591e0e33ecf45e",
+    "firebase-export-metadata.json": "25cc5b4ef567aea8a32361a0ac42b3469aae5b2ae546a21e56fe6d01b89bfae9",
+    "firestore_export/all_namespaces/all_kinds/all_namespaces_all_kinds.export_metadata": "b68f98dd2eb39a5faaa405a7e374a5c8fb5423a32acbdb37f8a51755db0246af",
+    "firestore_export/all_namespaces/all_kinds/output-0": "c2bedae7ac9fc64a373b9d7f7709b412010aafeb8a4cc68bb56b42b6452b2437",
+    "firestore_export/firestore_export.overall_export_metadata": "1a01a8216f99daffd15975bcbc222a8ca9ca882edd1ee580c3921ea228cd0c0f",
+    "storage_export/blobs/Ya2kl_ioDpcpSl8_ZcY8Q--jhjXh4fWGfP1Rw4nlqZQ": "6795dc2e2145f0081e212b96c0a0b9fd3a7903495cb3ee0b79db182f14a51307",
+    "storage_export/buckets.json": "04fa91532304700ae58438bfd7aee92619fe378fc5b36e102c954b3a9c08e4b9",
+    "storage_export/metadata/Ya2kl_ioDpcpSl8_ZcY8Q--jhjXh4fWGfP1Rw4nlqZQ.json": "ccc1f6bb032f9db1ac5dc24570e66bcfad3fc0149c3ba9aece286b1e734bb87a"
+  },
+  "acknowledgedAdditionalDocuments": 4096,
+  "interruptedStagingPaths": [
+    ".fireside-export-92906-1",
+    ".fireside-export-92906-1/all_namespaces",
+    ".fireside-export-92906-1/all_namespaces/all_kinds",
+    ".fireside-export-92906-1/all_namespaces/all_kinds/output-0"
+  ],
+  "incompleteStagingObserved": true,
+  "crashExit": [
+    null,
+    "SIGKILL"
+  ],
+  "interruptedRequest": {
+    "error": "TypeError: fetch failed"
+  },
+  "openPortsAfterCrash": [],
+  "previousExportByteIdentical": true,
+  "failedExportExit": [
+    null,
+    "SIGKILL"
+  ],
+  "exportErrorReported": false,
+  "functionsDrained": false,
+  "openPorts": [],
+  "locatorRemaining": true,
+  "nativeReceiptRetained": true,
+  "incompleteExportNotPublished": true,
+  "acknowledgedWriteRecovered": true,
+  "allAdditionalAcknowledgedDocumentsRecovered": true,
+  "acknowledgedAuthAndStorageRecovered": true,
+  "writesResumeAfterRecovery": true,
+  "recoveryExit": [
+    0,
+    null
+  ],
+  "recoveryLocatorRemoved": true,
+  "recoveryPortsClosed": true,
+  "completedRecoveryExport": true,
+  "ownedSuiteExited": true
+}

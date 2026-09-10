@@ -1,0 +1,19 @@
+{
+  "schemaVersion":1,
+  "recordedBeforeMeasurement":true,
+  "scope":"Short constructed native working-data ENOSPC fault; no host disk filling or live official-oracle claim",
+  "filesystem":"Fresh separate disposable filesystem of at most 64 MiB; all evidence and original seed outside it",
+  "sequence":[
+    "Start native disk/WAL suite and acknowledge one Unicode document, one Auth account and one Storage object",
+    "Fill only the exclusive synthetic capacity-fill file until the OS returns ENOSPC even for a one-byte allocation and available space is zero",
+    "Attempt a two-document atomic batch, an Auth account mutation and a Storage upload; each must fail actionably with the OS no-space error",
+    "Further Firestore writes must be fenced with an explicit restart requirement",
+    "Shutdown/export fails nonzero but drains owned components and retains native state",
+    "Remove only the synthetic filler after shutdown, then reopen the same native store",
+    "Recover every acknowledged value; an unacknowledged batch may be present or absent but never partial, and an unacknowledged object may be complete or absent but never partial",
+    "A fresh write and portable export must succeed after recovery"
+  ],
+  "criteriaChanged":false,
+  "unchangedDriverDeadlinesMilliseconds":{"readiness":90000,"request":10000,"shutdown":45000},
+  "limitations":"Not host power-loss qualification, network-filesystem support or final full-data acceptance. Test disk image and exact failed/successful evidence are retained."
+}

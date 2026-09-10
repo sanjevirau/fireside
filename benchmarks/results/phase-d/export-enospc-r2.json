@@ -1,0 +1,47 @@
+{
+  "passed": true,
+  "acceptance": false,
+  "syntheticOnly": true,
+  "fault": "ENOSPC on isolated export filesystem",
+  "filesystem": {
+    "type": 25,
+    "capacityBytes": 16736256,
+    "availableBeforeBytes": 16347136,
+    "separateFromWorkingState": true,
+    "observedWriteError": "ENOSPC",
+    "availableAtExportBytes": 0,
+    "fillerBytes": 16347136
+  },
+  "binarySha256": "5a54dd47c72b3865506d8fe18a88abc1a0734c4b35b34967111eea60f15ad91e",
+  "driverSha256": "212ea79db04aaa7d1382205f0b556c70057e45ff2cb1b95fada0265c2747399b",
+  "node": "v24.20.0",
+  "launches": [
+    {
+      "name": "failed-export",
+      "readyMilliseconds": 14396.019916000001,
+      "resumed": false
+    },
+    {
+      "name": "native-recovery",
+      "readyMilliseconds": 8228.613249999999,
+      "resumed": true
+    }
+  ],
+  "failedExportExit": [
+    1,
+    null
+  ],
+  "exportErrorReported": true,
+  "functionsDrained": true,
+  "openPorts": [],
+  "locatorRemaining": false,
+  "nativeReceiptRetained": true,
+  "incompleteExportNotPublished": true,
+  "partialExportPaths": [],
+  "acknowledgedWriteRecovered": true,
+  "recoveryExit": [
+    0,
+    null
+  ],
+  "completedRecoveryExport": true
+}

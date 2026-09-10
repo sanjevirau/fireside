@@ -123,6 +123,21 @@ jobs:
           "$RUNNER_TEMP/fireside-export-failure-evidence"
       - name: Install exact previous native engine without package scripts
         run: npm install --prefix "$RUNNER_TEMP/fireside-previous-engine" --ignore-scripts --no-audit --no-fund @fireside-dev/linux-x64@0.1.0-next.3
+      - name: Verify crash during incomplete export staging and native recovery
+        run: >-
+          node conformance/src/suite/verify-export-failure.mjs
+          target/debug/fireside "$RUNNER_TEMP/fireside-devtools/node_modules/firebase-tools"
+          "$RUNNER_TEMP/fireside-devtools/node_modules/firebase-functions"
+          "$HOME/.cache/firebase/emulators" "$RUNNER_TEMP/fireside-interrupted-export-evidence"
+          --interrupt-export
+      - name: Verify real ENOSPC on isolated export and native working filesystems
+        run: |
+          for mode in export working; do
+            bash conformance/src/suite/with-fault-filesystem.sh \
+              target/debug/fireside "$RUNNER_TEMP/fireside-devtools/node_modules/firebase-tools" \
+              "$RUNNER_TEMP/fireside-devtools/node_modules/firebase-functions" \
+              "$HOME/.cache/firebase/emulators" "$RUNNER_TEMP/fireside-enospc-$mode-evidence" "$mode"
+          done
       - name: Verify previous native upgrade and portable rollback
         run: |
           node conformance/node_modules/playwright/cli.js install --with-deps chromium
@@ -147,6 +162,11 @@ jobs:
           path: |
             ${{ runner.temp }}/fireside-developer-ui-evidence/result.json
             ${{ runner.temp }}/fireside-export-failure-evidence/result.json
+            ${{ runner.temp }}/fireside-interrupted-export-evidence/result.json
+            ${{ runner.temp }}/fireside-interrupted-export-evidence/*.log
+            ${{ runner.temp }}/fireside-enospc-*-evidence/result.json
+            ${{ runner.temp }}/fireside-enospc-*-evidence/*.log
+            ${{ runner.temp }}/fireside-enospc-*-evidence/fault.img
             ${{ runner.temp }}/fireside-native-upgrade-evidence/result.json
             ${{ runner.temp }}/fireside-native-upgrade-evidence/failure.json
             ${{ runner.temp }}/fireside-developer-ui-evidence/failure.json

@@ -1,0 +1,44 @@
+{
+  "passed": false,
+  "acceptance": false,
+  "syntheticOnly": true,
+  "fault": "ENOSPC on native working-data and export filesystem",
+  "filesystem": {
+    "type": 25,
+    "capacityBytes": 67067904,
+    "availableBeforeBytes": 65499136,
+    "separateFromWorkingState": false,
+    "observedWriteError": "ENOSPC",
+    "availableAtExportBytes": 0,
+    "fillerBytes": 48885760
+  },
+  "binarySha256": "5a54dd47c72b3865506d8fe18a88abc1a0734c4b35b34967111eea60f15ad91e",
+  "driverSha256": "66a394410a49cc53a4c5cd9ada63130b0ca5837c8ec46bd3d0d7d80f75ab8185",
+  "node": "v24.20.0",
+  "launches": [
+    {
+      "name": "failed-export",
+      "readyMilliseconds": 14188.83525,
+      "resumed": false
+    }
+  ],
+  "fullDiskRequests": {
+    "firestore": {
+      "status": 503,
+      "body": "{\"error\":{\"code\":503,\"message\":\"durable store is unavailable: disk I/O failed: No space left on device (os error 28)\",\"status\":\"UNAVAILABLE\"}}"
+    },
+    "auth": {
+      "status": 500,
+      "body": "{\"error\":{\"code\":500,\"errors\":[{\"domain\":\"global\",\"message\":\"failed to write Auth state: No space left on device (os error 28)\",\"reason\":\"invalid\"}],\"message\":\"failed to write Auth state: No space left on device (os error 28)\"}}"
+    },
+    "storage": {
+      "status": 500,
+      "body": "{\"error\":{\"code\":500,\"message\":\"Storage I/O failure: No space left on device (os error 28)\"}}"
+    }
+  },
+  "writeFence": {
+    "status": 503,
+    "body": "{\"error\":{\"code\":503,\"message\":\"durable store is unavailable: persistence outcome is ambiguous; reopen the store to recover before writing\",\"status\":\"UNAVAILABLE\"}}"
+  },
+  "error": "AssertionError [ERR_ASSERTION]: The input did not match the regular expression /restart/i. Input:\n\n'{\"error\":{\"code\":503,\"message\":\"durable store is unavailable: persistence outcome is ambiguous; reopen the store to recover before writing\",\"status\":\"UNAVAILABLE\"}}'\n"
+}
