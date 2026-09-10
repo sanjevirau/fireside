@@ -123,7 +123,9 @@ actual get/batch service calls, non-mutating write previews, missing-domain loss
 reporting, collection/group queries and unchanged traced/untraced decisions.
 The targeted rules-runtime/gRPC/suite-front suite has 96 passing tests; nine
 generic fixture-integrity tests and strict targeted Clippy also pass locally.
-All seven exact-head CI jobs are required before this increment can merge.
+Candidate `049deda821f30d0ac7085762976816c54a07c25f` passed
+[all seven CI jobs](https://github.com/sanjevirau/fireside/actions/runs/34518150892)
+and merged in [PR #7](https://github.com/sanjevirau/fireside/pull/7).
 
 REST read masks and explicit read-transaction handling were found unqualified
 during source inspection. Track them for Phase C reproduction; the new debug
