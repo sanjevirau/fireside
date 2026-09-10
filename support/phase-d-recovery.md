@@ -24,3 +24,9 @@ verifies the acknowledged document and completes a portable recovery export.
 All working state, logs and failed evidence are retained in its fresh output.
 No live consumer data or host disk filling is involved. ENOSPC and interrupted
 publication remain separate cases; this test does not claim to cover them.
+
+The [before/after receipts](../benchmarks/results/phase-d/) retain the reproduced
+missing orderly drain and the corrected native reopen/recovery export. The
+corrected run used runtime `365ad2a`; all 30 suite-runtime unit tests and strict
+Clippy also passed locally. Exact seven-job CI and platform checks remain required
+before merging this correction.
