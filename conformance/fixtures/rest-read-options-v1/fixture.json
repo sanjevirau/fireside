@@ -1,0 +1,634 @@
+{
+  "schemaVersion": 1,
+  "syntheticOnly": true,
+  "project": "demo-fireside-rest-reads",
+  "rules": "rules_version = '2'; service cloud.firestore { match /databases/{db}/documents/{path=**} { allow read,write: if false; } }\n",
+  "capturedAt": "2026-09-10T20:35:24.462Z",
+  "captureSha256": "31b370d28e38ea0966ca3fa6f00e263de8f4125cf6e8a5b0529a0728c4a93b57",
+  "oracle": {
+    "firestore": "1.22.0",
+    "jarSha256": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c",
+    "node": "v24.20.0",
+    "java": "java version \"25.0.1\" 2025-10-21 LTS\nJava(TM) SE Runtime Environment (build 25.0.1+8-LTS-27)\nJava HotSpot(TM) 64-Bit Server VM (build 25.0.1+8-LTS-27, mixed mode, sharing)"
+  },
+  "exchanges": [
+    {
+      "id": "seed",
+      "path": "/notes/a",
+      "method": "PATCH",
+      "body": {
+        "fields": {
+          "title": {
+            "stringValue": "before 火🔥"
+          },
+          "visible": {
+            "booleanValue": true
+          },
+          "nested": {
+            "mapValue": {
+              "fields": {
+                "one": {
+                  "integerValue": "1"
+                },
+                "two": {
+                  "integerValue": "2"
+                }
+              }
+            }
+          }
+        }
+      },
+      "owner": true,
+      "bindings": {},
+      "status": 200,
+      "response": {
+        "name": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+        "fields": {
+          "title": {
+            "stringValue": "before 火🔥"
+          },
+          "visible": {
+            "booleanValue": true
+          },
+          "nested": {
+            "mapValue": {
+              "fields": {
+                "one": {
+                  "integerValue": "1"
+                },
+                "two": {
+                  "integerValue": "2"
+                }
+              }
+            }
+          }
+        },
+        "createTime": "2026-09-10T20:35:25.241297Z",
+        "updateTime": "2026-09-10T20:35:25.241297Z"
+      }
+    },
+    {
+      "id": "get-mask",
+      "path": "/notes/a?mask.fieldPaths=title",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "bindings": {},
+      "status": 200,
+      "response": {
+        "name": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+        "fields": {
+          "title": {
+            "stringValue": "before 火🔥"
+          }
+        },
+        "createTime": "2026-09-10T20:35:25.241297Z",
+        "updateTime": "2026-09-10T20:35:25.241297Z"
+      }
+    },
+    {
+      "id": "get-nested-mask",
+      "path": "/notes/a?mask.fieldPaths=nested.one",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "bindings": {},
+      "status": 200,
+      "response": {
+        "name": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+        "fields": {
+          "nested": {
+            "mapValue": {
+              "fields": {
+                "one": {
+                  "integerValue": "1"
+                }
+              }
+            }
+          }
+        },
+        "createTime": "2026-09-10T20:35:25.241297Z",
+        "updateTime": "2026-09-10T20:35:25.241297Z"
+      }
+    },
+    {
+      "id": "get-absent-mask",
+      "path": "/notes/a?mask.fieldPaths=absent",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "bindings": {},
+      "status": 200,
+      "response": {
+        "name": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+        "createTime": "2026-09-10T20:35:25.241297Z",
+        "updateTime": "2026-09-10T20:35:25.241297Z"
+      }
+    },
+    {
+      "id": "get-repeated-mask",
+      "path": "/notes/a?mask.fieldPaths=title&mask.fieldPaths=visible",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "bindings": {},
+      "status": 200,
+      "response": {
+        "name": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+        "fields": {
+          "visible": {
+            "booleanValue": true
+          },
+          "title": {
+            "stringValue": "before 火🔥"
+          }
+        },
+        "createTime": "2026-09-10T20:35:25.241297Z",
+        "updateTime": "2026-09-10T20:35:25.241297Z"
+      }
+    },
+    {
+      "id": "get-invalid-mask",
+      "path": "/notes/a?mask.fieldPaths=a..b",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "bindings": {},
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Invalid property path \"a..b\". Unquoted property paths must match regex ([a-zA-Z_][a-zA-Z_0-9]*), and quoted property paths must match regex (`(?:[^`\\\\]|(?:\\\\.))+`)",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "id": "get-anonymous",
+      "path": "/notes/a?mask.fieldPaths=title",
+      "method": "GET",
+      "body": null,
+      "owner": false,
+      "bindings": {},
+      "status": 403,
+      "response": {
+        "error": {
+          "code": 403,
+          "message": "\nfalse for 'get' @ L1",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "begin-read-only",
+      "path": ":beginTransaction",
+      "method": "POST",
+      "body": {
+        "options": {
+          "readOnly": {}
+        }
+      },
+      "owner": true,
+      "bindings": {},
+      "status": 200,
+      "response": {
+        "transaction": "EQcAAAAAAAAA"
+      }
+    },
+    {
+      "id": "get-in-read-only",
+      "path": "/notes/a?transaction=EQcAAAAAAAAA",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "bindings": {
+        "transactionFrom": "begin-read-only"
+      },
+      "status": null,
+      "error": "TimeoutError",
+      "deadlineMilliseconds": 10000
+    },
+    {
+      "id": "mutate",
+      "path": "/notes/a",
+      "method": "PATCH",
+      "body": {
+        "fields": {
+          "title": {
+            "stringValue": "after"
+          },
+          "visible": {
+            "booleanValue": true
+          },
+          "nested": {
+            "mapValue": {
+              "fields": {
+                "one": {
+                  "integerValue": "1"
+                },
+                "two": {
+                  "integerValue": "2"
+                }
+              }
+            }
+          }
+        }
+      },
+      "owner": true,
+      "bindings": {},
+      "status": 200,
+      "response": {
+        "name": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+        "fields": {
+          "title": {
+            "stringValue": "after"
+          },
+          "visible": {
+            "booleanValue": true
+          },
+          "nested": {
+            "mapValue": {
+              "fields": {
+                "one": {
+                  "integerValue": "1"
+                },
+                "two": {
+                  "integerValue": "2"
+                }
+              }
+            }
+          }
+        },
+        "createTime": "2026-09-10T20:35:25.241297Z",
+        "updateTime": "2026-09-10T20:35:35.412104Z"
+      }
+    },
+    {
+      "id": "get-current",
+      "path": "/notes/a",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "bindings": {},
+      "status": 200,
+      "response": {
+        "name": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+        "fields": {
+          "title": {
+            "stringValue": "after"
+          },
+          "visible": {
+            "booleanValue": true
+          },
+          "nested": {
+            "mapValue": {
+              "fields": {
+                "one": {
+                  "integerValue": "1"
+                },
+                "two": {
+                  "integerValue": "2"
+                }
+              }
+            }
+          }
+        },
+        "createTime": "2026-09-10T20:35:25.241297Z",
+        "updateTime": "2026-09-10T20:35:35.412104Z"
+      }
+    },
+    {
+      "id": "get-read-only-after-mutation",
+      "path": "/notes/a?transaction=EQcAAAAAAAAA&mask.fieldPaths=title",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "bindings": {
+        "transactionFrom": "begin-read-only"
+      },
+      "status": null,
+      "error": "TimeoutError",
+      "deadlineMilliseconds": 10000
+    },
+    {
+      "id": "get-read-time",
+      "path": "/notes/a?readTime=2026-09-10T20%3A35%3A25.241297Z",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "bindings": {
+        "readTimeFrom": "seed"
+      },
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Only timestamps past epoch are supported.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "id": "get-selector-conflict",
+      "path": "/notes/a?transaction=EQcAAAAAAAAA&readTime=2026-09-10T20%3A35%3A25.241297Z",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "bindings": {
+        "transactionFrom": "begin-read-only",
+        "readTimeFrom": "seed"
+      },
+      "status": null,
+      "error": "TimeoutError",
+      "deadlineMilliseconds": 10000
+    },
+    {
+      "id": "get-invalid-transaction",
+      "path": "/notes/a?transaction=YmFk",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "bindings": {},
+      "status": null,
+      "error": "TimeoutError",
+      "deadlineMilliseconds": 10000
+    },
+    {
+      "id": "get-invalid-read-time",
+      "path": "/notes/a?readTime=not-a-timestamp",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "bindings": {},
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Only timestamps past epoch are supported.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "id": "batch-mask",
+      "path": ":batchGet",
+      "method": "POST",
+      "body": {
+        "documents": [
+          "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+          "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/missing"
+        ],
+        "mask": {
+          "fieldPaths": [
+            "title"
+          ]
+        }
+      },
+      "owner": true,
+      "bindings": {},
+      "status": 200,
+      "response": [
+        {
+          "found": {
+            "name": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+            "fields": {
+              "title": {
+                "stringValue": "after"
+              }
+            },
+            "createTime": "2026-09-10T20:35:25.241297Z",
+            "updateTime": "2026-09-10T20:35:35.412104Z"
+          },
+          "readTime": "2026-09-10T20:36:05.479076Z"
+        },
+        {
+          "missing": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/missing",
+          "readTime": "2026-09-10T20:36:05.479076Z"
+        }
+      ]
+    },
+    {
+      "id": "batch-read-only",
+      "path": ":batchGet",
+      "method": "POST",
+      "body": {
+        "documents": [
+          "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+          "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/missing"
+        ],
+        "transaction": "EQcAAAAAAAAA",
+        "mask": {
+          "fieldPaths": [
+            "title"
+          ]
+        }
+      },
+      "owner": true,
+      "bindings": {
+        "transactionFrom": "begin-read-only"
+      },
+      "status": 200,
+      "response": [
+        {
+          "found": {
+            "name": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+            "fields": {
+              "title": {
+                "stringValue": "before 火🔥"
+              }
+            },
+            "createTime": "2026-09-10T20:35:25.241297Z",
+            "updateTime": "2026-09-10T20:35:25.241297Z"
+          },
+          "readTime": "2026-09-10T20:35:25.367781Z"
+        },
+        {
+          "missing": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/missing",
+          "readTime": "2026-09-10T20:35:25.367781Z"
+        }
+      ]
+    },
+    {
+      "id": "batch-new-read-only",
+      "path": ":batchGet",
+      "method": "POST",
+      "body": {
+        "documents": [
+          "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+          "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/missing"
+        ],
+        "newTransaction": {
+          "readOnly": {}
+        },
+        "mask": {
+          "fieldPaths": [
+            "nested.one"
+          ]
+        }
+      },
+      "owner": true,
+      "bindings": {},
+      "status": 200,
+      "response": [
+        {
+          "transaction": "EQsAAAAAAAAA"
+        },
+        {
+          "found": {
+            "name": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+            "fields": {
+              "nested": {
+                "mapValue": {
+                  "fields": {
+                    "one": {
+                      "integerValue": "1"
+                    }
+                  }
+                }
+              }
+            },
+            "createTime": "2026-09-10T20:35:25.241297Z",
+            "updateTime": "2026-09-10T20:35:35.412104Z"
+          },
+          "readTime": "2026-09-10T20:36:05.495170Z"
+        },
+        {
+          "missing": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/missing",
+          "readTime": "2026-09-10T20:36:05.495170Z"
+        }
+      ]
+    },
+    {
+      "id": "batch-read-time",
+      "path": ":batchGet",
+      "method": "POST",
+      "body": {
+        "documents": [
+          "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+          "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/missing"
+        ],
+        "readTime": "2026-09-10T20:35:25.241297Z"
+      },
+      "owner": true,
+      "bindings": {
+        "readTimeFrom": "seed"
+      },
+      "status": 200,
+      "response": [
+        {
+          "found": {
+            "name": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+            "fields": {
+              "title": {
+                "stringValue": "before 火🔥"
+              },
+              "visible": {
+                "booleanValue": true
+              },
+              "nested": {
+                "mapValue": {
+                  "fields": {
+                    "one": {
+                      "integerValue": "1"
+                    },
+                    "two": {
+                      "integerValue": "2"
+                    }
+                  }
+                }
+              }
+            },
+            "createTime": "2026-09-10T20:35:25.241297Z",
+            "updateTime": "2026-09-10T20:35:25.241297Z"
+          },
+          "readTime": "2026-09-10T20:35:25.241297Z"
+        },
+        {
+          "missing": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/missing",
+          "readTime": "2026-09-10T20:35:25.241297Z"
+        }
+      ]
+    },
+    {
+      "id": "rollback",
+      "path": ":rollback",
+      "method": "POST",
+      "body": {
+        "transaction": "EQcAAAAAAAAA"
+      },
+      "owner": true,
+      "bindings": {
+        "transactionFrom": "begin-read-only"
+      },
+      "status": 200,
+      "response": {}
+    },
+    {
+      "id": "get-rolled-back",
+      "path": "/notes/a?transaction=EQcAAAAAAAAA",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "bindings": {
+        "transactionFrom": "begin-read-only"
+      },
+      "status": null,
+      "error": "TimeoutError",
+      "deadlineMilliseconds": 10000
+    }
+  ],
+  "grpc": [
+    {
+      "id": "get-in-read-only",
+      "status": 0,
+      "response": {
+        "fields": {
+          "title": {
+            "stringValue": "before 火🔥",
+            "valueType": "stringValue"
+          }
+        },
+        "name": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+        "createTime": {
+          "seconds": "1789072525",
+          "nanos": 241297000
+        },
+        "updateTime": {
+          "seconds": "1789072525",
+          "nanos": 241297000
+        }
+      }
+    },
+    {
+      "id": "get-read-only-after-mutation",
+      "status": 0,
+      "response": {
+        "fields": {
+          "title": {
+            "stringValue": "before 火🔥",
+            "valueType": "stringValue"
+          }
+        },
+        "name": "projects/demo-fireside-rest-reads/databases/(default)/documents/notes/a",
+        "createTime": {
+          "seconds": "1789072525",
+          "nanos": 241297000
+        },
+        "updateTime": {
+          "seconds": "1789072525",
+          "nanos": 241297000
+        }
+      }
+    },
+    {
+      "id": "get-rolled-back",
+      "status": 10,
+      "details": "The referenced transaction has expired or is no longer valid."
+    }
+  ],
+  "passed": true,
+  "exit": [
+    130,
+    null
+  ]
+}
