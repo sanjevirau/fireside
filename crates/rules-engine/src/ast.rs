@@ -160,6 +160,7 @@ pub(crate) enum PatternSegment {
 
 #[derive(Clone, Debug)]
 pub(crate) struct Function {
+    pub(crate) body_start: usize,
     pub(crate) parameters: Vec<String>,
     pub(crate) lets: Vec<(String, Expr)>,
     pub(crate) result: Expr,
@@ -182,79 +183,95 @@ pub(crate) enum Operation {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) enum Expr {
+pub(crate) struct Expr {
+    pub(crate) kind: ExprKind,
+    /// Half-open UTF-8 source span. Coverage converts to its scalar positions.
+    pub(crate) span: std::ops::Range<usize>,
+}
+
+impl Expr {
+    pub(crate) const fn new(kind: ExprKind, start: usize, end: usize) -> Self {
+        Self {
+            kind,
+            span: start..end,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum ExprKind {
     Null,
     Bool(bool),
     Integer(i64),
     Float(f64),
     String(String),
-    List(Vec<Self>),
-    Map(Vec<(String, Self)>),
+    List(Vec<Expr>),
+    Map(Vec<(String, Expr)>),
     Path(Vec<PathPart>),
     Variable(String),
     Field {
-        base: Box<Self>,
+        base: Box<Expr>,
         name: String,
     },
     Index {
-        base: Box<Self>,
-        index: Box<Self>,
+        base: Box<Expr>,
+        index: Box<Expr>,
     },
     Slice {
-        base: Box<Self>,
-        start: Option<Box<Self>>,
-        end: Option<Box<Self>>,
+        base: Box<Expr>,
+        start: Option<Box<Expr>>,
+        end: Option<Box<Expr>>,
     },
     Call {
-        callee: Box<Self>,
-        arguments: Vec<Self>,
+        callee: Box<Expr>,
+        arguments: Vec<Expr>,
     },
     Unary {
         operator: UnaryOperator,
-        operand: Box<Self>,
+        operand: Box<Expr>,
     },
     Binary {
         operator: BinaryOperator,
-        left: Box<Self>,
-        right: Box<Self>,
+        left: Box<Expr>,
+        right: Box<Expr>,
     },
     Is {
-        value: Box<Self>,
+        value: Box<Expr>,
         expected: TypeName,
     },
 }
 
 impl Expr {
     fn node_count(&self) -> usize {
-        1 + match self {
-            Self::List(values) => values.iter().map(Self::node_count).sum(),
-            Self::Map(entries) => entries.iter().map(|(_, value)| value.node_count()).sum(),
-            Self::Path(parts) => parts
+        1 + match &self.kind {
+            ExprKind::List(values) => values.iter().map(Self::node_count).sum(),
+            ExprKind::Map(entries) => entries.iter().map(|(_, value)| value.node_count()).sum(),
+            ExprKind::Path(parts) => parts
                 .iter()
                 .map(|part| match part {
                     PathPart::Literal(_) => 0,
                     PathPart::Interpolation(expression) => expression.node_count(),
                 })
                 .sum(),
-            Self::Field { base, .. } => base.node_count(),
-            Self::Index { base, index } => base.node_count() + index.node_count(),
-            Self::Slice { base, start, end } => {
+            ExprKind::Field { base, .. } => base.node_count(),
+            ExprKind::Index { base, index } => base.node_count() + index.node_count(),
+            ExprKind::Slice { base, start, end } => {
                 base.node_count()
                     + start.as_deref().map_or(0, Self::node_count)
                     + end.as_deref().map_or(0, Self::node_count)
             }
-            Self::Call { callee, arguments } => {
+            ExprKind::Call { callee, arguments } => {
                 callee.node_count() + arguments.iter().map(Self::node_count).sum::<usize>()
             }
-            Self::Unary { operand, .. } => operand.node_count(),
-            Self::Binary { left, right, .. } => left.node_count() + right.node_count(),
-            Self::Is { value, .. } => value.node_count(),
-            Self::Null
-            | Self::Bool(_)
-            | Self::Integer(_)
-            | Self::Float(_)
-            | Self::String(_)
-            | Self::Variable(_) => 0,
+            ExprKind::Unary { operand, .. } => operand.node_count(),
+            ExprKind::Binary { left, right, .. } => left.node_count() + right.node_count(),
+            ExprKind::Is { value, .. } => value.node_count(),
+            ExprKind::Null
+            | ExprKind::Bool(_)
+            | ExprKind::Integer(_)
+            | ExprKind::Float(_)
+            | ExprKind::String(_)
+            | ExprKind::Variable(_) => 0,
         }
     }
 }

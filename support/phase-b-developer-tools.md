@@ -131,6 +131,26 @@ metadata is not evidence that those REST features work. Shipping suite attachmen
 expression coverage, actual browser qualification and paired overhead remain
 Phase B work. No phase checkbox is completed from this increment alone.
 
+## Sixth increment: oracle-backed coverage source layout
+
+Fixture commits `87f9fcc`, `a4661c6` and `d873f4e` capture nineteen synthetic policies with
+the pinned official jar before product changes. They cover constant policies,
+short-circuiting, fields/errors, functions, list/map expressions, CJK/emoji/CRLF,
+parentheses, indexing, slicing, type checks, method calls, empty containers and
+path interpolation. The capture also
+records counters after two reads and preservation after an invalid reload.
+
+The engine now exposes the source-only dynamic expression hierarchy, compared
+exactly with every captured pre-evaluation report. Unicode scalar coordinates
+are separate from compiler byte offsets. Inline AST ranges preserve evaluation
+semantics; the layout performs no evaluation or document reads. No live coverage
+values, endpoint, rendered UI or overhead claim follows from this foundation.
+Those remain required work, including the explicitly documented lazy-planner
+count differences. The targeted engine/runtime/gRPC/suite tests pass locally
+(126 test functions, including the existing 1,024-case expression corpus), along
+with thirteen developer-tool fixture checks and strict targeted Clippy.
+Exact-head CI is required before merging this increment.
+
 ## Remaining before Phase B completion
 
 1. Feed the real traces into bounded Requests history and subscriber queues;

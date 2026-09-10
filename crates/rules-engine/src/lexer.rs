@@ -2,6 +2,7 @@
 pub(crate) struct Token {
     pub(crate) kind: TokenKind,
     pub(crate) offset: usize,
+    pub(crate) end_offset: usize,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -114,11 +115,13 @@ impl<'a> Lexer<'a> {
             self.tokens.push(Token {
                 kind,
                 offset: start,
+                end_offset: self.offset,
             });
         }
         self.tokens.push(Token {
             kind: TokenKind::Eof,
             offset: self.source.len(),
+            end_offset: self.source.len(),
         });
         Ok(self.tokens)
     }
