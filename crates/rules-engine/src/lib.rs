@@ -7,6 +7,7 @@
 
 mod ast;
 mod coverage_layout;
+mod coverage_observer;
 mod evaluator;
 mod lexer;
 mod model;
@@ -14,6 +15,9 @@ mod parser;
 mod trace;
 
 pub use coverage_layout::{CoverageNode, SourcePosition};
+pub use coverage_observer::{
+    CoverageObserver, ExpressionKey, ExpressionValue, MapDifference, MapKeyStatus,
+};
 
 pub use trace::{
     AllowDecision, AllowLocation, AllowOutcome, EvaluationTrace, MAXIMUM_TRACE_OUTCOMES,
@@ -108,6 +112,29 @@ impl Ruleset {
         access: &A,
     ) -> (EvaluationResult, EvaluationTrace) {
         evaluator::evaluate_with_trace(&self.program, request, access)
+    }
+
+    /// Evaluate once with bounded allow tracing and a trusted borrowed coverage
+    /// observer. The observer must obey its nonblocking, bounded-storage contract.
+    #[must_use]
+    pub fn evaluate_with_coverage<A: DocumentAccess + ?Sized>(
+        &self,
+        request: &EvaluationRequest,
+        access: &A,
+        observer: &mut dyn CoverageObserver,
+    ) -> (EvaluationResult, EvaluationTrace) {
+        evaluator::evaluate_with_coverage(&self.program, request, access, observer)
+    }
+
+    /// Observe atomic operations without changing shared access budgets/caches.
+    #[must_use]
+    pub fn evaluate_atomic_with_coverage<A: DocumentAccess + ?Sized>(
+        &self,
+        requests: &[EvaluationRequest],
+        access: &A,
+        observer: &mut dyn CoverageObserver,
+    ) -> (AtomicEvaluationResult, Vec<EvaluationTrace>) {
+        evaluator::evaluate_atomic_with_coverage(&self.program, requests, access, observer)
     }
 
     /// Evaluates an atomic request with one trace per operation, in request order.

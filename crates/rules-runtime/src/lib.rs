@@ -4,6 +4,7 @@
 
 use std::collections::BTreeMap;
 
+pub mod coverage;
 mod query;
 mod request_event;
 pub mod request_history;
@@ -38,6 +39,7 @@ pub struct RulesRuntime {
     state: Arc<RwLock<RuntimeState>>,
     write_guard: Arc<Mutex<()>>,
     recorder: Option<request_event::RequestRecorder>,
+    coverage: Option<Arc<coverage::CoverageStore>>,
 }
 
 #[derive(Default)]
@@ -67,6 +69,7 @@ impl RulesRuntime {
     pub fn with_request_history(history: request_history::RequestHistory) -> Self {
         Self {
             recorder: Some(request_event::RequestRecorder::new(history)),
+            coverage: Some(Arc::new(coverage::CoverageStore::default())),
             ..Self::default()
         }
     }
@@ -95,6 +98,22 @@ impl RulesRuntime {
     pub fn rules_for(&self, project: &str) -> Option<Arc<Ruleset>> {
         self.installed_for(project)
             .map(|installed| installed.rules.clone())
+    }
+
+    /// Serialize the active project's bounded coverage without evaluating rules.
+    /// Disabled, missing-source and contended diagnostics are explicit failures.
+    ///
+    /// # Errors
+    /// Returns the relevant diagnostic error rather than a healthy empty report.
+    pub fn coverage_json(&self, project: &str) -> Result<Vec<u8>, coverage::CoverageError> {
+        let coverage = self
+            .coverage
+            .as_ref()
+            .ok_or(coverage::CoverageError::Disabled)?;
+        let installed = self
+            .installed_for(project)
+            .ok_or(coverage::CoverageError::NoRules)?;
+        coverage.report(project, &installed.rules)
     }
 
     fn installed_for(&self, project: &str) -> Option<Arc<InstalledRules>> {
@@ -148,7 +167,23 @@ impl RulesRuntime {
         let Some(recorder) = &self.recorder else {
             return installed.rules.evaluate(&request, access);
         };
-        let (result, trace) = installed.rules.evaluate_with_trace(&request, access);
+        let mut coverage = self.coverage.as_ref().and_then(|coverage| {
+            coverage.session(
+                project,
+                &installed.rules,
+                AtomicContext {
+                    in_read_write_transaction,
+                    writes: None,
+                },
+            )
+        });
+        let (result, trace) = match coverage.as_mut() {
+            Some(observer) => installed
+                .rules
+                .evaluate_with_coverage(&request, access, observer),
+            None => installed.rules.evaluate_with_trace(&request, access),
+        };
+        drop(coverage);
         recorder.record(
             project,
             &installed,
@@ -233,9 +268,19 @@ impl RulesRuntime {
         let Some(recorder) = &self.recorder else {
             return installed.rules.evaluate_atomic(&requests, access);
         };
-        let (result, traces) = installed
-            .rules
-            .evaluate_atomic_with_trace(&requests, access);
+        let mut coverage = self
+            .coverage
+            .as_ref()
+            .and_then(|coverage| coverage.session(project, &installed.rules, context));
+        let (result, traces) = match coverage.as_mut() {
+            Some(observer) => installed
+                .rules
+                .evaluate_atomic_with_coverage(&requests, access, observer),
+            None => installed
+                .rules
+                .evaluate_atomic_with_trace(&requests, access),
+        };
+        drop(coverage);
         for (index, ((request, operation), trace)) in requests
             .iter()
             .zip(&result.operations)

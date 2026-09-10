@@ -1,4 +1,5 @@
 //! Source-only report layout. Counts/values come from actual evaluation later.
+use std::collections::BTreeSet;
 use std::ops::Range;
 
 use crate::ast::{Expr, ExprKind, Function, MatchBlock, PathPart, Program};
@@ -19,6 +20,8 @@ pub struct SourcePosition {
 /// One dynamic expression or function body in the source-only coverage tree.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CoverageNode {
+    /// Stable internal expression identity within this immutable source.
+    pub expression_key: crate::ExpressionKey,
     /// Range observed by the coverage protocol, not a byte slicing range.
     pub source_position: SourcePosition,
     /// Dynamic child expressions in source order; literals are omitted.
@@ -65,14 +68,24 @@ impl SourceIndex {
         }
     }
 
-    fn expression(&self, expression: &Expr) -> Option<CoverageNode> {
+    fn expression(&self, expression: &Expr, bound: &BTreeSet<String>) -> Option<CoverageNode> {
         let children: Vec<&Expr> = match &expression.kind {
             ExprKind::Null
             | ExprKind::Bool(_)
             | ExprKind::Integer(_)
             | ExprKind::Float(_)
             | ExprKind::String(_) => return None,
-            ExprKind::Variable(_) => vec![],
+            ExprKind::Variable(name) => {
+                if !bound.contains(name)
+                    && matches!(
+                        name.as_str(),
+                        "duration" | "hashing" | "latlng" | "math" | "timestamp"
+                    )
+                {
+                    return None;
+                }
+                vec![]
+            }
             ExprKind::Field { base, .. } => vec![base],
             ExprKind::Index { base, index } => vec![base, index],
             ExprKind::Slice { base, start, end } => {
@@ -103,10 +116,14 @@ impl SourceIndex {
             ExprKind::Is { value, .. } => vec![value],
         };
         Some(CoverageNode {
+            expression_key: crate::ExpressionKey {
+                start: expression.span.start,
+                end: expression.span.end,
+            },
             source_position: self.position(expression.span.start..Self::report_end(expression)),
             children: children
                 .into_iter()
-                .filter_map(|child| self.expression(child))
+                .filter_map(|child| self.expression(child, bound))
                 .collect(),
         })
     }
@@ -134,51 +151,70 @@ impl SourceIndex {
         }
     }
 
-    fn function(&self, function: &Function) -> Option<CoverageNode> {
+    fn function(&self, function: &Function, inherited: &BTreeSet<String>) -> Option<CoverageNode> {
+        let mut bound = inherited.clone();
+        bound.extend(function.parameters.iter().cloned());
         if function.lets.is_empty() {
-            return self.expression(&function.result);
+            return self.expression(&function.result, &bound);
         }
-        let children = function
-            .lets
-            .iter()
-            .map(|(_, value)| value)
-            .chain(std::iter::once(&function.result))
-            .filter_map(|expression| self.expression(expression))
-            .collect();
+        let mut children = Vec::new();
+        for (name, expression) in &function.lets {
+            children.extend(self.expression(expression, &bound));
+            bound.insert(name.clone());
+        }
+        children.extend(self.expression(&function.result, &bound));
         Some(CoverageNode {
+            expression_key: crate::ExpressionKey {
+                start: function.body_start,
+                end: function.result.span.end,
+            },
             source_position: self.position(function.body_start..Self::report_end(&function.result)),
             children,
         })
     }
 
-    fn block(&self, block: &MatchBlock, nodes: &mut Vec<CoverageNode>) {
+    fn block(
+        &self,
+        block: &MatchBlock,
+        nodes: &mut Vec<CoverageNode>,
+        inherited: &BTreeSet<String>,
+    ) {
+        let mut bound = inherited.clone();
+        for part in &block.pattern {
+            if let crate::ast::PatternSegment::Wildcard(name)
+            | crate::ast::PatternSegment::RecursiveWildcard(name) = part
+            {
+                bound.insert(name.clone());
+            }
+        }
         nodes.extend(
             block
                 .functions
                 .values()
-                .filter_map(|function| self.function(function)),
+                .filter_map(|function| self.function(function, &bound)),
         );
         nodes.extend(
             block
                 .allows
                 .iter()
-                .filter_map(|allow| self.expression(&allow.condition)),
+                .filter_map(|allow| self.expression(&allow.condition, &bound)),
         );
         for child in &block.children {
-            self.block(child, nodes);
+            self.block(child, nodes, &bound);
         }
     }
 }
 
 pub(crate) fn layout(program: &Program, source: &str) -> Vec<CoverageNode> {
     let index = SourceIndex::new(source);
+    let bound = BTreeSet::new();
     let mut nodes: Vec<_> = program
         .functions
         .values()
-        .filter_map(|function| index.function(function))
+        .filter_map(|function| index.function(function, &bound))
         .collect();
     for block in &program.matches {
-        index.block(block, &mut nodes);
+        index.block(block, &mut nodes, &bound);
     }
     nodes.sort_by_key(|node| node.source_position.current_offset);
     nodes

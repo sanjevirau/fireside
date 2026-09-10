@@ -242,6 +242,48 @@ counter integration must observe real evaluation, never re-evaluate policy or
 perform extra reads to manufacture the jar's planner visit counts. Other syntax
 shapes remain unqualified until captured. HTML/UI and overhead checks remain open.
 
+### Live bounded coverage observations (Phase B component)
+
+The fixture now includes 27 policies, adding duration, sets, map differences,
+bytes, timestamps and request context. A borrowed observer records the original
+evaluation's dynamic values and function-body outcomes. It performs no extra
+document reads, cloned resource-tree retention or policy re-evaluation. The full
+1,024-case expression corpus compares observed and ordinary verdicts and access
+accounting. Errors preserve their original expression position when propagated.
+
+The opt-in runtime exposes serialized coverage to its caller; this component is
+not yet wired to shipping HTTP/HTML reports. Successful reloads (even identical
+source) reset counters, invalid reloads preserve them, and project histories are
+isolated. Namespace expressions are omitted from source layout. The new capture
+also records the jar rejecting a function parameter named `duration`; Fireside's
+compiler currently accepts it. That is a tracked Phase C correction, not a
+claim of complete compiler compatibility.
+
+Coverage uses actual evaluator visits. Unlike the jar's preliminary/lazy planner,
+unvisited nodes have no values, and available resource values are not replaced
+with manufactured undefined visits. Runtime error cause text remains Fireside's
+actual message. Symbolic proof values are omitted visibly, not fabricated as
+concrete rows. Set membership is preserved, but serialized set order is not a
+compatibility guarantee. Fixture comparisons retain all members and duplicates
+while ignoring only the observed map-difference set's hash iteration order.
+
+`benchmarks/phase-b-coverage.json` pins coverage-specific limits before overhead
+qualification: 16 MiB charged retained state, four project histories, ten-minute
+idle expiry, 128 distinct complete values per expression, 64 KiB per value and
+32 MiB per complete JSON report. Tree/index/source metadata is conservatively
+charged before admission. Contended operations do not wait for diagnostics;
+omissions and evictions appear explicitly in `firesideCoverage`. Complete values
+are serialized directly through capped writers; bytes use streaming base64.
+These bounds supplement the unchanged Requests/overhead contract, not replace
+it. HTTP integration must additionally bound in-flight responses and slow clients.
+No measured overhead or full Phase B pass is claimed yet.
+
+The additional live map-difference fixture exposed an enforcement defect:
+`receiver.diff(argument).addedKeys()` means receiver-only keys, and removed keys
+are argument-only. Changed keys must occur only once in `affectedKeys()`.
+The engine now follows those captured directions and unique-set cardinality;
+the correction is shared by ordinary and observed evaluation.
+
 ## Auth, Storage and exports
 
 Auth browser helpers implement the fixture-tested local Google popup/redirect
