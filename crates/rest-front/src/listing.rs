@@ -172,7 +172,7 @@ fn authorized<T>(value: T, headers: &HeaderMap) -> Result<tonic::Request<T>, Res
     Ok(request)
 }
 
-fn status(error: &tonic::Status) -> RestError {
+pub(super) fn status(error: &tonic::Status) -> RestError {
     use tonic::Code;
     let (http, code) = match error.code() {
         Code::InvalidArgument | Code::OutOfRange => (StatusCode::BAD_REQUEST, "INVALID_ARGUMENT"),
@@ -182,6 +182,8 @@ fn status(error: &tonic::Status) -> RestError {
         Code::FailedPrecondition => (StatusCode::BAD_REQUEST, "FAILED_PRECONDITION"),
         Code::ResourceExhausted => (StatusCode::TOO_MANY_REQUESTS, "RESOURCE_EXHAUSTED"),
         Code::Unavailable => (StatusCode::SERVICE_UNAVAILABLE, "UNAVAILABLE"),
+        Code::Aborted => (StatusCode::CONFLICT, "ABORTED"),
+        Code::DeadlineExceeded => (StatusCode::GATEWAY_TIMEOUT, "DEADLINE_EXCEEDED"),
         _ => (StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL"),
     };
     RestError {

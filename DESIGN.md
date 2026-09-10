@@ -396,6 +396,38 @@ documents through the official emulator.
 
 ## Distribution and trust boundaries
 
+### REST document reads and transaction boundary
+
+`rest-read-options-v1` records independent official-jar HTTP observations before
+the corresponding correction. GetDocument now applies repeated/nested/absent
+`mask.fieldPaths`; batchGet applies its JSON mask. Both transcode into the same
+native service used by gRPC, including snapshot selection, rules evaluation and
+projection. REST supplies an explicit client-authentication source even when
+the Authorization header is absent; it never inherits gRPC's implicit owner
+behavior. Begin/rollback and explicit transaction commits use the same transaction
+registry. Read-set conflicts and read-only write rejection are retained, not
+silently ignored. Batch newTransaction emits its opaque token in a separate
+first array item, matching the captured REST representation.
+
+Native protobuf serialization alone is not the REST wire contract. The existing
+map oracle and SDK CI caught a regression in the first read-adapter candidate:
+enum-style nulls and `+00:00` timestamps differed from the established REST/SDK
+representation, and non-finite doubles required explicit spelling. REST now
+encodes typed document values, retaining JSON null, `NaN`/`Infinity` strings and
+UTC `Z` timestamps, including nested values and transaction responses. It never
+normalizes arbitrary user field names or string contents. The failed candidate
+remains recorded in CI run 34529854577; it was not merged.
+
+The pinned Java REST GET adapter timed out on transaction query parameters and
+returned 400 for a valid readTime, while its gRPC transaction reads and REST JSON
+batch historical reads succeeded. Fireside deliberately provides finite native
+snapshot semantics for these GET selectors instead of reproducing that hang.
+This is a disclosed adapter deviation, not exact HTTP parity. Rolled-back and
+unknown transactions return a finite INVALID_ARGUMENT response; the official
+gRPC observation uses ABORTED. Tests compare projected payloads/status codes
+where directly observable, not exact human-readable error strings or dynamic
+timestamps. Replay covers both memory and disk/WAL, including anonymous denial.
+
 The pinned Functions host's successful discovery and `/backends` response do
 not prove registration. The independent `functions-readiness-v1` capture shows
 that missing auxiliary peers leave discovered handlers in the inventory with

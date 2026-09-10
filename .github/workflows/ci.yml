@@ -59,6 +59,7 @@ jobs:
           node --test conformance/test/developer-overhead-receipt.test.mjs
           node --test conformance/test/functions-readiness-fixture.test.mjs
           node --test conformance/test/functions-readiness-receipts.test.mjs
+          node --test conformance/test/rest-read-options-fixture.test.mjs
       - name: Verify package and publication safety contracts
         run: node --test packaging/*.test.mjs
 
@@ -92,6 +93,8 @@ jobs:
         run: npm test --prefix conformance
       - name: Verify real Auth popup and redirect against the official fixture
         run: node --test conformance/test/auth-popup.test.mjs
+      - name: Replay REST read options in memory and disk/WAL
+        run: node --test conformance/test/rest-read-options-replay.test.mjs
       - name: Verify native coverage reports in a real browser
         run: node --test conformance/test/developer-coverage-browser.test.mjs
       - name: Prepare pinned official developer UI compatibility peers
