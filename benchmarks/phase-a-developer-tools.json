@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "phase": "A",
+  "purpose": "Starting contract and short diagnostic baseline, not release qualification",
+  "sourceBeforePhaseA": "a2c0bbd5e51af47d896236a7eddbd86a4388df56",
+  "npmBaseline": "0.1.0-next.3",
+  "engineBaseline": "5cb2437112039a91f1389c70545f97fb030e79c8",
+  "oracle": {
+    "firebaseToolsCompatibilityHost": "15.22.0",
+    "firestore": "1.22.0",
+    "ui": "1.15.0",
+    "storageRules": "1.1.3",
+    "broaderConformanceFirebaseTools": "15.28.1",
+    "node": "24.20.0",
+    "browserClient": "12.18.0",
+    "pinnedSdkIntegrationRevision": "6cde0c0230b4c1da01d4a058333daa7663322fd1",
+    "javaPolicy": "Record actual Java identity; local captures do not claim the Java 26 release matrix"
+  },
+  "baseline": {
+    "project": "demo-fireside-developer-baseline",
+    "mode": "disk-wal",
+    "documents": 200,
+    "collections": 10,
+    "payloadAsciiBytes": 1024,
+    "sequentialGets": 40,
+    "parallelCollectionReads": 10,
+    "parallelReadTransport": "POST documents:runQuery with a single collection scope",
+    "diagnosticNote": "The initial probe used REST ListDocuments and received 400. Preserve that unsupported-route observation separately; the completed baseline measures the supported RunQuery contract, not a repaired ListDocuments route.",
+    "nativeReopens": 1,
+    "rssSampleIntervalMs": 100,
+    "readinessDeadlineMs": 10000,
+    "shutdownDeadlineMs": 10000,
+    "measurementScope": "One owned native Firestore process. Not the complete installed suite; Functions, Storage rules, browser and caller excluded.",
+    "claims": "Diagnostic only while host has unrelated work. No performance winner, full-data scaling or endurance claim. RSS is not PSS. Separate official suite startup/RSS is captured but is not an equivalent baseline."
+  },
+  "phaseBChecksBeforeImplementation": {
+    "historyMaximumEvents": 256,
+    "historyMaximumSerializedBytes": 16777216,
+    "historyMaximumAgeSeconds": 600,
+    "maximumDebugSubscribers": 4,
+    "maximumQueuedBytesPerSubscriber": 16777216,
+    "slowSubscriberDeadlineSeconds": 30,
+    "overflowPolicy": "Evict oldest history entries; reject/disconnect excess or slow debug clients with an actionable diagnostic. Never block database operations. Preserve complete retained events; report an oversized omitted event without copying its payload into logs.",
+    "semantics": "Rules decisions, data, listener delivery and acknowledged durability must be identical with debugging enabled, disabled, disconnected and slow. Replay retained IDs in order and preserve captured evaluation shapes. Bounded retention is a documented deviation from any unbounded oracle history.",
+    "overheadProtocol": "Same binary and host, debugging disabled versus enabled, three paired repetitions after warm-up, fixed 200-document inputs and 5000 operations per repetition. Report all samples, medians and tails; compare no-subscriber and one active subscriber. These measurements run in Phase B, not this baseline.",
+    "maximumP99Increase": "larger of 20 percent or 2 milliseconds",
+    "maximumThroughputReductionPercent": 10,
+    "maximumSettledRssIncreaseBytes": 67108864,
+    "maximumActiveRssIncreaseBytes": 134217728,
+    "additionalCases": ["empty history", "normal and denied operations", "rule evaluation error", "admin bypass", "reload and reconnect", "TTL expiry", "event and byte cap", "oversized event", "slow reader", "subscriber limit", "client disconnect cleanup", "HTML coverage rendering", "debugging disabled does not claim a healthy empty feed"]
+  }
+}

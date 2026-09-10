@@ -55,6 +55,7 @@ jobs:
           npm run test:storage-fixtures --prefix conformance
           npm run test:rules:query-fixtures --prefix conformance
           npm run test:serialization:fixtures --prefix conformance
+          npm run test:developer-tools-fixtures --prefix conformance
       - name: Verify package and publication safety contracts
         run: node --test packaging/*.test.mjs
 
