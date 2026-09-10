@@ -6,7 +6,7 @@ one independent synthetic document on isolated loopback ports; no consumer data,
 production traffic or bearer token is retained. Java version and capture identity
 are recorded in the fixture. The plain mode retains the typed-values profile.
 
-The completed capture contains 21 HTTP operations, 21 live evaluation messages
+The completed capture contains 23 HTTP operations, 25 live evaluation messages
 and initial empty history. Begin/rollback controls emit no rule evaluations.
 Top-level collection queries pass; collection-group and nested queries are denied
 because the rule covers only the top-level collection. Their contexts are still
@@ -23,6 +23,9 @@ Observed details:
 - Masked writes list changed paths; transformed fields join that list and also
   appear in `transforms`. Literal dots in a field segment use backslash escaping
   (`a\\.b`), not the REST mask's backticks.
+- A replacement with transforms lists the transform paths in both `writeFields`
+  and `transforms`, despite having no update mask. An explicit empty update mask
+  is an empty `listValue` object, distinct from a null full-replacement mask.
 - Unbounded queries have null limit, integer zero offset and empty order map.
   Collection-group `request.path` is undefined, while the outer context path is
   the matching domain. Normal collections have a concrete collection path.

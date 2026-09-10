@@ -119,6 +119,13 @@ try {
     const writeTransaction=await request('begin-write-transaction',':beginTransaction','POST',{options:{readWrite:{}}});
     await request('write-transaction-get',':batchGet','POST',{documents:[`projects/${project}/databases/(default)/documents/values/typed`],transaction:writeTransaction.transaction});
     await request('write-rollback',':rollback','POST',{transaction:writeTransaction.transaction});
+    await request('commit-replacement-transform',':commit','POST',{writes:[{
+      update:{name:`projects/${project}/databases/(default)/documents/values/typed`,fields:{yes:{booleanValue:true}}},
+      updateTransforms:[{fieldPath:'negative',increment:{integerValue:'1'}}]
+    }]});
+    await request('commit-empty-mask',':commit','POST',{writes:[{
+      update:{name:`projects/${project}/databases/(default)/documents/values/typed`,fields:{}},updateMask:{fieldPaths:[]}
+    }]});
   }
   await request('delete','/values/typed','DELETE');
   await request('get-missing','/values/missing','GET',undefined,undefined,404);

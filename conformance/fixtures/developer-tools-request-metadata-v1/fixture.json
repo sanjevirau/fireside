@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "syntheticOnly": true,
-  "capturedAt": "2026-09-10T18:05:39.874Z",
+  "capturedAt": "2026-09-10T19:02:20.188Z",
   "project": "demo-fireside-request-values",
   "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /values/{item} {\n   allow read, write: if true;\n  }\n }\n}\n",
   "profile": "request-metadata",
@@ -1161,6 +1161,80 @@
       "endMessage": 20
     },
     {
+      "id": "commit-replacement-transform",
+      "path": ":commit",
+      "method": "POST",
+      "body": {
+        "writes": [
+          {
+            "update": {
+              "name": "projects/demo-fireside-request-values/databases/(default)/documents/values/typed",
+              "fields": {
+                "yes": {
+                  "booleanValue": true
+                }
+              }
+            },
+            "updateTransforms": [
+              {
+                "fieldPath": "negative",
+                "increment": {
+                  "integerValue": "1"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "authenticated": false,
+      "status": 200,
+      "response": {
+        "writeResults": [
+          {
+            "updateTime": "<request-time>",
+            "transformResults": [
+              {
+                "integerValue": "1"
+              }
+            ]
+          }
+        ],
+        "commitTime": "<request-time>"
+      },
+      "firstMessage": 20,
+      "endMessage": 22
+    },
+    {
+      "id": "commit-empty-mask",
+      "path": ":commit",
+      "method": "POST",
+      "body": {
+        "writes": [
+          {
+            "update": {
+              "name": "projects/demo-fireside-request-values/databases/(default)/documents/values/typed",
+              "fields": {}
+            },
+            "updateMask": {
+              "fieldPaths": []
+            }
+          }
+        ]
+      },
+      "authenticated": false,
+      "status": 200,
+      "response": {
+        "writeResults": [
+          {
+            "updateTime": "<request-time>"
+          }
+        ],
+        "commitTime": "<request-time>"
+      },
+      "firstMessage": 22,
+      "endMessage": 24
+    },
+    {
       "id": "delete",
       "path": "/values/typed",
       "method": "DELETE",
@@ -1168,8 +1242,8 @@
       "authenticated": false,
       "status": 200,
       "response": {},
-      "firstMessage": 20,
-      "endMessage": 21
+      "firstMessage": 24,
+      "endMessage": 25
     },
     {
       "id": "get-missing",
@@ -1185,8 +1259,8 @@
           "status": "NOT_FOUND"
         }
       },
-      "firstMessage": 21,
-      "endMessage": 22
+      "firstMessage": 25,
+      "endMessage": 26
     }
   ],
   "messages": [
@@ -1692,10 +1766,10 @@
                             "stringValue": "synthetic-reader"
                           },
                           "iat": {
-                            "intValue": "1789063531"
+                            "intValue": "1789066931"
                           },
                           "exp": {
-                            "intValue": "1789064141"
+                            "intValue": "1789067541"
                           },
                           "email": {
                             "stringValue": "reader@example.invalid"
@@ -3029,6 +3103,326 @@
         }
       ],
       "rulesContext": {
+        "method": "create",
+        "path": "/databases/(default)/documents/values/typed",
+        "time": "<request-time>",
+        "request": {
+          "mapValue": {
+            "fields": {
+              "time": {
+                "timestampValue": "<request-time>"
+              },
+              "auth": {
+                "nullValue": null
+              },
+              "inTransaction": {
+                "boolValue": true
+              },
+              "path": {
+                "pathValue": {
+                  "segments": [
+                    {
+                      "simple": "databases"
+                    },
+                    {
+                      "simple": "(default)"
+                    },
+                    {
+                      "simple": "documents"
+                    },
+                    {
+                      "simple": "values"
+                    },
+                    {
+                      "simple": "typed"
+                    }
+                  ]
+                }
+              },
+              "transforms": {
+                "listValue": {
+                  "values": [
+                    {
+                      "stringValue": "negative"
+                    }
+                  ]
+                }
+              },
+              "writeFields": {
+                "listValue": {
+                  "values": [
+                    {
+                      "stringValue": "negative"
+                    }
+                  ]
+                }
+              },
+              "readFields": {
+                "nullValue": null
+              },
+              "resource": {
+                "undefined": {}
+              },
+              "method": {
+                "stringValue": "create"
+              }
+            }
+          }
+        },
+        "resource": {
+          "undefined": {}
+        }
+      }
+    },
+    {
+      "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /values/{item} {\n   allow read, write: if true;\n  }\n }\n}\n",
+      "time": "<request-time>",
+      "rulesReleaseKey": "projects/demo-fireside-request-values/releases/cloud.firestore<release-id>",
+      "requestId": "request-21",
+      "outcome": "allow",
+      "granularAllowOutcomes": [
+        {
+          "line": 5,
+          "outcome": true
+        },
+        {
+          "line": 5,
+          "outcome": true
+        }
+      ],
+      "rulesContext": {
+        "method": "update",
+        "path": "/databases/(default)/documents/values/typed",
+        "time": "<request-time>",
+        "request": {
+          "mapValue": {
+            "fields": {
+              "time": {
+                "timestampValue": "<request-time>"
+              },
+              "auth": {
+                "nullValue": null
+              },
+              "inTransaction": {
+                "boolValue": true
+              },
+              "path": {
+                "pathValue": {
+                  "segments": [
+                    {
+                      "simple": "databases"
+                    },
+                    {
+                      "simple": "(default)"
+                    },
+                    {
+                      "simple": "documents"
+                    },
+                    {
+                      "simple": "values"
+                    },
+                    {
+                      "simple": "typed"
+                    }
+                  ]
+                }
+              },
+              "transforms": {
+                "listValue": {
+                  "values": [
+                    {
+                      "stringValue": "negative"
+                    }
+                  ]
+                }
+              },
+              "writeFields": {
+                "listValue": {
+                  "values": [
+                    {
+                      "stringValue": "negative"
+                    }
+                  ]
+                }
+              },
+              "readFields": {
+                "nullValue": null
+              },
+              "resource": {
+                "undefined": {}
+              },
+              "method": {
+                "stringValue": "update"
+              }
+            }
+          }
+        },
+        "resource": {
+          "undefined": {}
+        }
+      }
+    },
+    {
+      "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /values/{item} {\n   allow read, write: if true;\n  }\n }\n}\n",
+      "time": "<request-time>",
+      "rulesReleaseKey": "projects/demo-fireside-request-values/releases/cloud.firestore<release-id>",
+      "requestId": "request-22",
+      "outcome": "allow",
+      "granularAllowOutcomes": [
+        {
+          "line": 5,
+          "outcome": true
+        }
+      ],
+      "rulesContext": {
+        "method": "create",
+        "path": "/databases/(default)/documents/values/typed",
+        "time": "<request-time>",
+        "request": {
+          "mapValue": {
+            "fields": {
+              "time": {
+                "timestampValue": "<request-time>"
+              },
+              "auth": {
+                "nullValue": null
+              },
+              "inTransaction": {
+                "boolValue": true
+              },
+              "path": {
+                "pathValue": {
+                  "segments": [
+                    {
+                      "simple": "databases"
+                    },
+                    {
+                      "simple": "(default)"
+                    },
+                    {
+                      "simple": "documents"
+                    },
+                    {
+                      "simple": "values"
+                    },
+                    {
+                      "simple": "typed"
+                    }
+                  ]
+                }
+              },
+              "transforms": {
+                "nullValue": null
+              },
+              "writeFields": {
+                "listValue": {}
+              },
+              "readFields": {
+                "nullValue": null
+              },
+              "resource": {
+                "undefined": {}
+              },
+              "method": {
+                "stringValue": "create"
+              }
+            }
+          }
+        },
+        "resource": {
+          "undefined": {}
+        }
+      }
+    },
+    {
+      "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /values/{item} {\n   allow read, write: if true;\n  }\n }\n}\n",
+      "time": "<request-time>",
+      "rulesReleaseKey": "projects/demo-fireside-request-values/releases/cloud.firestore<release-id>",
+      "requestId": "request-23",
+      "outcome": "allow",
+      "granularAllowOutcomes": [
+        {
+          "line": 5,
+          "outcome": true
+        },
+        {
+          "line": 5,
+          "outcome": true
+        }
+      ],
+      "rulesContext": {
+        "method": "update",
+        "path": "/databases/(default)/documents/values/typed",
+        "time": "<request-time>",
+        "request": {
+          "mapValue": {
+            "fields": {
+              "time": {
+                "timestampValue": "<request-time>"
+              },
+              "auth": {
+                "nullValue": null
+              },
+              "inTransaction": {
+                "boolValue": true
+              },
+              "path": {
+                "pathValue": {
+                  "segments": [
+                    {
+                      "simple": "databases"
+                    },
+                    {
+                      "simple": "(default)"
+                    },
+                    {
+                      "simple": "documents"
+                    },
+                    {
+                      "simple": "values"
+                    },
+                    {
+                      "simple": "typed"
+                    }
+                  ]
+                }
+              },
+              "transforms": {
+                "nullValue": null
+              },
+              "writeFields": {
+                "listValue": {}
+              },
+              "readFields": {
+                "nullValue": null
+              },
+              "resource": {
+                "undefined": {}
+              },
+              "method": {
+                "stringValue": "update"
+              }
+            }
+          }
+        },
+        "resource": {
+          "undefined": {}
+        }
+      }
+    },
+    {
+      "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /values/{item} {\n   allow read, write: if true;\n  }\n }\n}\n",
+      "time": "<request-time>",
+      "rulesReleaseKey": "projects/demo-fireside-request-values/releases/cloud.firestore<release-id>",
+      "requestId": "request-24",
+      "outcome": "allow",
+      "granularAllowOutcomes": [
+        {
+          "line": 5,
+          "outcome": true
+        }
+      ],
+      "rulesContext": {
         "method": "delete",
         "path": "/databases/(default)/documents/values/typed",
         "time": "<request-time>",
@@ -3092,7 +3486,7 @@
       "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /values/{item} {\n   allow read, write: if true;\n  }\n }\n}\n",
       "time": "<request-time>",
       "rulesReleaseKey": "projects/demo-fireside-request-values/releases/cloud.firestore<release-id>",
-      "requestId": "request-21",
+      "requestId": "request-25",
       "outcome": "allow",
       "granularAllowOutcomes": [
         {
