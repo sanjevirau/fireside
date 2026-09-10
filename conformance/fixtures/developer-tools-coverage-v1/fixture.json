@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "syntheticOnly": true,
-  "capturedAt": "2026-09-10T19:21:33.378Z",
+  "capturedAt": "2026-09-10T19:25:00.749Z",
   "project": "demo-fireside-coverage",
   "oracle": {
     "firestore": "1.22.0",
@@ -3734,6 +3734,246 @@
       }
     },
     {
+      "id": "map-diff-statuses",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if {'same': 1, 'removed': 1, 'changed': 1}.diff({'same': 1, 'added': 1, 'changed': 2}).affectedKeys().hasOnly(['removed', 'added', 'changed']); }\n }\n}",
+      "status": 200,
+      "before": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if {'same': 1, 'removed': 1, 'changed': 1}.diff({'same': 1, 'added': 1, 'changed': 2}).affectedKeys().hasOnly(['removed', 'added', 'changed']); }\n }\n}",
+              "name": "firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 127,
+              "endOffset": 263
+            },
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 39,
+                  "currentOffset": 127,
+                  "endOffset": 222
+                },
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 39,
+                      "currentOffset": 127,
+                      "endOffset": 207
+                    },
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 39,
+                          "currentOffset": 127,
+                          "endOffset": 164
+                        }
+                      },
+                      {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 84,
+                          "currentOffset": 172,
+                          "endOffset": 207
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 146,
+                  "currentOffset": 234,
+                  "endOffset": 263
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "after": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if {'same': 1, 'removed': 1, 'changed': 1}.diff({'same': 1, 'added': 1, 'changed': 2}).affectedKeys().hasOnly(['removed', 'added', 'changed']); }\n }\n}",
+              "name": "firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 39,
+              "currentOffset": 127,
+              "endOffset": 263
+            },
+            "values": [
+              {
+                "value": {
+                  "boolValue": true
+                },
+                "count": 2
+              }
+            ],
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 39,
+                  "currentOffset": 127,
+                  "endOffset": 222
+                },
+                "values": [
+                  {
+                    "value": {
+                      "setValue": {
+                        "values": [
+                          {
+                            "stringValue": "added"
+                          },
+                          {
+                            "stringValue": "changed"
+                          },
+                          {
+                            "stringValue": "removed"
+                          }
+                        ]
+                      }
+                    },
+                    "count": 2
+                  }
+                ],
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 39,
+                      "currentOffset": 127,
+                      "endOffset": 207
+                    },
+                    "values": [
+                      {
+                        "value": {
+                          "mapDiffValue": {
+                            "keyStatuses": {
+                              "same": "UNCHANGED",
+                              "added": "REMOVED",
+                              "changed": "CHANGED",
+                              "removed": "ADDED"
+                            }
+                          }
+                        },
+                        "count": 2
+                      }
+                    ],
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 39,
+                          "currentOffset": 127,
+                          "endOffset": 164
+                        },
+                        "values": [
+                          {
+                            "value": {
+                              "mapValue": {
+                                "fields": {
+                                  "same": {
+                                    "intValue": "1"
+                                  },
+                                  "removed": {
+                                    "intValue": "1"
+                                  },
+                                  "changed": {
+                                    "intValue": "1"
+                                  }
+                                }
+                              }
+                            },
+                            "count": 2
+                          }
+                        ]
+                      },
+                      {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 84,
+                          "currentOffset": 172,
+                          "endOffset": 207
+                        },
+                        "values": [
+                          {
+                            "value": {
+                              "mapValue": {
+                                "fields": {
+                                  "same": {
+                                    "intValue": "1"
+                                  },
+                                  "added": {
+                                    "intValue": "1"
+                                  },
+                                  "changed": {
+                                    "intValue": "2"
+                                  }
+                                }
+                              }
+                            },
+                            "count": 2
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 146,
+                  "currentOffset": 234,
+                  "endOffset": 263
+                },
+                "values": [
+                  {
+                    "value": {
+                      "listValue": {
+                        "values": [
+                          {
+                            "stringValue": "removed"
+                          },
+                          {
+                            "stringValue": "added"
+                          },
+                          {
+                            "stringValue": "changed"
+                          }
+                        ]
+                      }
+                    },
+                    "count": 2
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "bytes",
       "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n\n  match /items/{item} { allow get: if hashing.sha256('hello'.toUtf8()).size() == 32; }\n }\n}",
       "status": 200,
@@ -4132,7 +4372,7 @@
                               "mapValue": {
                                 "fields": {
                                   "time": {
-                                    "timestampValue": "2026-09-10T19:21:35.048Z"
+                                    "timestampValue": "2026-09-10T19:25:02.409Z"
                                   },
                                   "auth": {
                                     "nullValue": null
@@ -4177,7 +4417,7 @@
                               "mapValue": {
                                 "fields": {
                                   "time": {
-                                    "timestampValue": "2026-09-10T19:21:35.052Z"
+                                    "timestampValue": "2026-09-10T19:25:02.414Z"
                                   },
                                   "auth": {
                                     "nullValue": null
@@ -4268,7 +4508,7 @@
                               "mapValue": {
                                 "fields": {
                                   "time": {
-                                    "timestampValue": "2026-09-10T19:21:35.048Z"
+                                    "timestampValue": "2026-09-10T19:25:02.409Z"
                                   },
                                   "auth": {
                                     "nullValue": null
@@ -4313,7 +4553,7 @@
                               "mapValue": {
                                 "fields": {
                                   "time": {
-                                    "timestampValue": "2026-09-10T19:21:35.052Z"
+                                    "timestampValue": "2026-09-10T19:25:02.414Z"
                                   },
                                   "auth": {
                                     "nullValue": null
@@ -4436,7 +4676,7 @@
                           "mapValue": {
                             "fields": {
                               "time": {
-                                "timestampValue": "2026-09-10T19:21:35.048Z"
+                                "timestampValue": "2026-09-10T19:25:02.409Z"
                               },
                               "auth": {
                                 "nullValue": null
@@ -4481,7 +4721,7 @@
                           "mapValue": {
                             "fields": {
                               "time": {
-                                "timestampValue": "2026-09-10T19:21:35.052Z"
+                                "timestampValue": "2026-09-10T19:25:02.414Z"
                               },
                               "auth": {
                                 "nullValue": null
@@ -4572,7 +4812,7 @@
                           "mapValue": {
                             "fields": {
                               "time": {
-                                "timestampValue": "2026-09-10T19:21:35.048Z"
+                                "timestampValue": "2026-09-10T19:25:02.409Z"
                               },
                               "auth": {
                                 "nullValue": null
@@ -4617,7 +4857,7 @@
                           "mapValue": {
                             "fields": {
                               "time": {
-                                "timestampValue": "2026-09-10T19:21:35.052Z"
+                                "timestampValue": "2026-09-10T19:25:02.414Z"
                               },
                               "auth": {
                                 "nullValue": null
@@ -4704,8 +4944,8 @@
           "booleanValue": true
         }
       },
-      "createTime": "2026-09-10T19:21:34.305991Z",
-      "updateTime": "2026-09-10T19:21:34.305991Z"
+      "createTime": "2026-09-10T19:25:01.666142Z",
+      "updateTime": "2026-09-10T19:25:01.666142Z"
     }
   },
   "invalidReload": {

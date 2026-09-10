@@ -1,7 +1,7 @@
 # Expression coverage oracle
 
 Captured from the checksum-pinned official Firestore 1.22.0 jar with Node
-24.20.0, one synthetic document and twenty-five tiny rulesets. Run
+24.20.0, one synthetic document and twenty-six tiny rulesets. Run
 `conformance/src/developer-tools/capture-coverage.mjs OUTPUT` in a fresh directory.
 Only the owned loopback jar is started/stopped; no cloud or consumer inputs.
 The capture records the actual Java version. Raw HTTP exchanges and process logs

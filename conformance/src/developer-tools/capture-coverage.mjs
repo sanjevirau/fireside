@@ -50,6 +50,7 @@ const profiles = [
   { id: 'duration', source: source("duration.value(1, 's') == duration.value(1000, 'ms')"), status: 200 },
   { id: 'set', source: source('[1, 2].toSet().hasAll([1])'), status: 200 },
   { id: 'map-diff', source: source("{'x': 1}.diff({'x': 2}).changedKeys().hasOnly(['x'])"), status: 200 },
+  { id: 'map-diff-statuses', source: source("{'same': 1, 'removed': 1, 'changed': 1}.diff({'same': 1, 'added': 1, 'changed': 2}).affectedKeys().hasOnly(['removed', 'added', 'changed'])"), status: 200 },
   { id: 'bytes', source: source("hashing.sha256('hello'.toUtf8()).size() == 32"), status: 200 },
   { id: 'timestamp', source: source('timestamp.date(2020, 1, 2).year() == 2020'), status: 200 },
   { id: 'request', source: source('request.auth == null && request.method == "get"'), status: 200 },
