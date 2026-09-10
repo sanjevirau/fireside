@@ -404,6 +404,10 @@ Initial configured-backend readiness now checks each discovered definition again
 the upstream registered record, requiring enabled and not ignored. It observes
 the single discovery owned by `connect()`, not a second execution of user code.
 Missing registration fails with the handler identifier before READY. This
+also verifies record ownership: a later codebase cannot silently shadow an
+earlier codebase with the same function identity. Startup rejection awaits the
+owned host's drain/stop and exits nonzero.
+This
 includes predefined Extension backends; the local fixture qualifies their
 regional identity normalization, not downloading/installing every extension.
 The host emits a compact count and SHA-256 of admitted `[id,name,region,platform]`

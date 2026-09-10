@@ -58,6 +58,7 @@ jobs:
           npm run test:developer-tools-fixtures --prefix conformance
           node --test conformance/test/developer-overhead-receipt.test.mjs
           node --test conformance/test/functions-readiness-fixture.test.mjs
+          node --test conformance/test/functions-readiness-receipts.test.mjs
       - name: Verify package and publication safety contracts
         run: node --test packaging/*.test.mjs
 
@@ -105,6 +106,14 @@ jobs:
           "$RUNNER_TEMP/fireside-devtools/node_modules/firebase-functions"
           "$HOME/.cache/firebase/emulators"
           "$RUNNER_TEMP/fireside-developer-ui-evidence"
+      - name: Verify owned admission against real pinned Functions discovery
+        run: >-
+          node conformance/src/suite/capture-functions-readiness.mjs
+          target/debug/fireside
+          "$RUNNER_TEMP/fireside-devtools/node_modules/firebase-tools"
+          "$RUNNER_TEMP/fireside-devtools/node_modules/firebase-functions"
+          "$RUNNER_TEMP/fireside-functions-readiness-evidence"
+          --verify-owned-adapter
       - name: Preserve synthetic developer UI evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -115,6 +124,7 @@ jobs:
             ${{ runner.temp }}/fireside-developer-ui-evidence/failure.json
             ${{ runner.temp }}/fireside-developer-ui-evidence/browser-failure.json
             ${{ runner.temp }}/fireside-developer-ui-evidence/*.png
+            ${{ runner.temp }}/fireside-functions-readiness-evidence/fixture.json
           if-no-files-found: ignore
       - name: Verify query rules oracle fixtures
         run: npm run test:rules:query-fixtures --prefix conformance
