@@ -1,7 +1,8 @@
 # Phase D recovery qualification
 
-This is work in progress, not release acceptance. Tiny isolated fault tests do
-not replace final full-data lifecycle qualification.
+The named short source checks are qualified in the [B–D audit](phase-bcd-qualification.md),
+not as release acceptance. Tiny isolated fault tests do not replace final
+full-data lifecycle qualification. Earlier attempts below retain their outcomes.
 
 ## Export failure must not bypass shutdown
 

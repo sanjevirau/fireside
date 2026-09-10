@@ -6,11 +6,15 @@ universal-compatibility, publication or performance-win claim is made here.
 | Phase | Current state | Remaining qualification |
 | --- | --- | --- |
 | A | Baseline/oracle PR #3 merged, exact CI recorded | Reuse those immutable inputs; capture newly demonstrated gaps before fixes |
-| B | Developer inspection, Requests, coverage, bounded diagnostics and UI corrections implemented with generic tests | Complete current-candidate integrated browser/resource/overhead evidence audit |
-| C | REST read options, rule-binding compatibility and Functions reload reviewed and merged as #15–17 | Combined-candidate regression receipt; retain documented oracle deviations |
-| D | Export failure/teardown #18 and upgrade, ENOSPC, interrupted-export qualification #19–20 reviewed and merged; Linux and all-platform checks pass | Repeat applicable lifecycle checks on the final combined candidate |
-| E | Narrow REST normalization optimization #21; profiles, current-binary overhead, complete synthetic UI and local package checks pass | Exact-head CI and representative workload profiling |
+| B | Named short source qualification complete: UI controls, Requests, coverage, bounded diagnostics and overhead | Repeat applicable interfaces/resource checks on the Phase F candidate |
+| C | Named source contract corrections qualified in combined seven-job CI, including discovery/reload and existing generic service contracts | Retain documented oracle deviations; Phase F consumer integration |
+| D | Upgrade, real ENOSPC, interrupted export and normal recovery qualified in combined seven-job CI | Repeat applicable lifecycle checks on the final combined candidate |
+| E | REST optimization #21 merged; component, overhead, Storage/lifecycle and equivalent-query observations preserved | Remaining evidence PR review/CI and combined qualification; no blanket efficiency claim |
 | F | Not started | Qualified combined packages, cheap consumer prerequisites, full acceptance and honest final report |
+
+The [B–D audit](phase-bcd-qualification.md) maps each checked requirement to its
+actual executable/browser evidence and states the scope limitations. Checking
+those source phases does not certify the installed preview or complete Phase F.
 
 The exact checked heads and all seven CI/six package-job conclusions for #15–17
 are retained in [the merge receipt](../benchmarks/results/phase-c/merged-ci-receipts.json).

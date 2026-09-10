@@ -39,3 +39,31 @@ test('native baseline repeat preserves both binaries, all cycles and the unchang
     }
   }
 });
+
+test('separate equivalent-query repeats omit only the asymmetric listing probe',async()=>{
+  const root=new URL('../../',import.meta.url),hash=b=>createHash('sha256').update(b).digest('hex');
+  const contract=await readFile(new URL('benchmarks/phase-e-equivalent-queries.json',root));
+  assert.equal(hash(contract),'e1aa52bd23a9ff13da0a9dae273e7f0ed78cb5df120685d18e88bce0989a01cd');
+  const sums=(await readFile(new URL('benchmarks/results/phase-e/SHA256SUMS',root),'utf8')).trim().split('\n');
+  let prior=0;
+  for(const pair of [1,2,3])for(const variant of pair===2?['candidate','published']:['published','candidate']){
+    const name=`equivalent-queries-pair${pair}-${variant}.json.gz`;
+    const bytes=await readFile(new URL('benchmarks/results/phase-e/'+name,root));
+    assert(sums.includes(hash(bytes)+'  '+name));const r=JSON.parse(gunzipSync(bytes));
+    assert.equal(r.passed,true);assert.equal(r.listProbeOmittedForComparability,true);
+    assert.equal(r.comparisonContractSha256,hash(contract));
+    assert.equal(r.driverSha256,'83eaf5e6ccaeb8a1beb82ac34813e899a17fd12cf826e2f7435ec6214b10db72');
+    assert.equal(r.binarySha256,variant==='published'?'82a8f81e31b0b62a21c3c1d8e531b93ec72edf496c9c10d1fee735760a248054':'63df176389dd697c9057777d570eecde7ef46ae9215d1538b4c454f4b5b91145');
+    assert(Date.parse(r.capturedAt)>prior);prior=Date.parse(r.capturedAt);
+    assert.equal(r.cycles.length,2);
+    for(const [index,c] of r.cycles.entries()){
+      assert.equal(c.restListDocumentsProbe,undefined);assert.equal(c.verifiedDocuments,200);
+      assert.equal(c.operations.length,index===0?250:50);
+      for(const [name,count] of [['seed',index===0?200:0],['get',40],['collection-query',10]])assert.equal(c.operations.filter(o=>o.name===name).length,count);
+      for(const o of c.operations){assert.equal(o.status,200);assert(Number.isFinite(o.elapsedMs)&&o.elapsedMs>=0);}
+      assert(Number.isFinite(c.parallelReadsMs)&&c.parallelReadsMs>0);
+      assert(c.rssSamples.length>0&&c.rssSamples.every(s=>s.rssBytes>0));
+      assert(c.exit.code===0&&c.exit.signal===null||c.exit.code===null&&c.exit.signal==='SIGINT');
+    }
+  }
+});

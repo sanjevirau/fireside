@@ -1,6 +1,9 @@
 # Phase B: developer tools implementation
 
-Status: in progress. This is not a completed phase or release qualification.
+Status: named short source checks are now qualified in the
+[B–D audit](phase-bcd-qualification.md). The chronological increments below
+retain their original pending/failed states; those are not current release claims.
+Combined Phase F acceptance and new-engine platform qualification remain separate.
 
 The committed [Phase A oracle](phase-a-developer-tools.md) and
 [predeclared resource/overhead checks](../benchmarks/phase-a-developer-tools.json)
