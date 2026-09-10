@@ -81,12 +81,18 @@ test('candidate checks reject missing platforms, wrong identity, corrupted bytes
     } finally {rmSync(root, {recursive: true, force: true});}
   }
 });
-test('manual candidate workflow preserves the separate release-pinned verification path', () => {
-  const workflow = readFileSync(new URL('../.github/workflows/packages.yml', import.meta.url), 'utf8');
+function assertWorkflowSeparation(workflow) {
   assert.match(workflow, /candidate\?process.env.CANDIDATE_REVISION:r.engineRevision/);
   assert.match(workflow, /github.event.pull_request.head.sha \|\| github.sha/);
   assert.match(workflow, /if: inputs.candidate \|\| github.event_name == 'pull_request'/);
   assert.match(workflow, /node packaging\/check-local-platforms.mjs dist "\$CANDIDATE_REVISION"/);
-  assert.match(workflow, /if: \$\{\{ !inputs.candidate && github.event_name != 'pull_request' \}\}\n\s+run: node packaging\/publish-packages.mjs dist --check/);
+  assert.match(workflow, /if: \$\{\{ !inputs.candidate && github.event_name != 'pull_request' \}\}\r?\n\s+run: node packaging\/publish-packages.mjs dist --check/);
   assert.doesNotMatch(workflow, /--publish|id-token: write/);
+}
+test('manual candidate workflow preserves the separate release-pinned verification path with LF and CRLF', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/packages.yml', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  for (const text of [workflow, workflow.replace(/\n/g, '\r\n')]) {
+    assertWorkflowSeparation(text);
+    assert.throws(() => assertWorkflowSeparation(text.replace('!inputs.candidate', 'inputs.candidate')));
+  }
 });
