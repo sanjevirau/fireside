@@ -21,8 +21,7 @@ use fireside_functions_bridge::{DeliveryPolicy, DeliveryRuntime, TriggerRegistry
 use fireside_grpc_front::FirestoreService;
 use fireside_query_engine::{DatabaseEdition as QueryDatabaseEdition, IndexCatalog, QueryPolicy};
 use fireside_rest_front::{
-    AllocatorMemoryReporter, AllocatorMemoryUsage,
-    router_with_query_policy_memory_rules_and_triggers as rest_router,
+    AllocatorMemoryReporter, AllocatorMemoryUsage, router_with_shared_service as rest_router,
 };
 use fireside_rules_runtime::RulesRuntime;
 use fireside_suite_runtime::{StorageBucketConfig, SuiteConfig, SuitePorts, run as run_suite};
@@ -909,6 +908,7 @@ fn firestore_http_router(
         allocator_memory_reporter,
         rules,
         triggers,
+        service.clone(),
     )
     .merge(webchannel_router(FirestoreBackend::new(service)))
 }

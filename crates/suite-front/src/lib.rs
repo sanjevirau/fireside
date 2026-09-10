@@ -350,6 +350,14 @@ struct UiState {
 
 async fn ui_config(State(state): State<UiState>) -> Json<JsonValue> {
     let mut value = state.directory.wire_services();
+    if let (Some(_), Some(websocket)) = (
+        state.directory.services.get("firestore"),
+        state.directory.services.get("firestore.websocket"),
+    ) {
+        value["firestore"]["webSocketHost"] = json!(websocket.host);
+        value["firestore"]["webSocketPort"] = json!(websocket.port);
+        value["firestore"]["reservedPorts"] = json!([websocket.port]);
+    }
     value["projectId"] = json!(state.directory.project());
     value["experiments"] = json!([
         "functionsv2deployoptimizations",
@@ -619,6 +627,32 @@ mod tests {
                 .expect("body"),
         )
         .expect("JSON")
+    }
+
+    #[tokio::test]
+    async fn ui_config_advertises_the_captured_firestore_requests_address() {
+        let fixture: JsonValue = serde_json::from_str(include_str!(
+            "../../../conformance/fixtures/developer-tools-v1/fixture.json"
+        ))
+        .unwrap();
+        let mut directory = directory();
+        directory.services.insert(
+            "firestore".into(),
+            ServiceInfo::listening("firestore", "127.0.0.1", 31000),
+        );
+        directory.services.insert(
+            "firestore.websocket".into(),
+            ServiceInfo::listening("firestore.websocket", "127.0.0.1", 31001),
+        );
+        let Json(actual) = ui_config(State(UiState { directory })).await;
+        let oracle = &fixture["config"]["firestore"];
+        assert_eq!(
+            actual["firestore"]["webSocketHost"],
+            oracle["webSocketHost"]
+        );
+        assert_eq!(oracle["webSocketPort"], "websocket");
+        assert_eq!(actual["firestore"]["webSocketPort"], 31001);
+        assert_eq!(actual["firestore"]["reservedPorts"], json!([31001]));
     }
 
     #[tokio::test]

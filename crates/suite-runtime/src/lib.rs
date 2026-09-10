@@ -29,7 +29,7 @@ use fireside_functions_bridge::{
 use fireside_grpc_front::FirestoreService;
 use fireside_pubsub_front::{SchedulerRuntime, router as pubsub_router};
 use fireside_query_engine::{DatabaseEdition, IndexCatalog, QueryPolicy};
-use fireside_rest_front::router_with_query_policy_memory_rules_and_triggers as rest_router;
+use fireside_rest_front::router_with_shared_service as rest_router;
 use fireside_rules_runtime::RulesRuntime;
 use fireside_rules_runtime::request_history::RequestHistory;
 use fireside_storage_front::{BucketRules, RulesRuntimeConfig, StorageConfig, StorageRuntime};
@@ -408,6 +408,7 @@ async fn prepare_suite(config: &SuiteConfig) -> Result<PreparedSuite, SuiteRunti
         None,
         firestore_rules,
         triggers.clone(),
+        service.clone(),
     )
     .merge(webchannel_router(FirestoreBackend::new(service.clone())));
     let firestore_routes =

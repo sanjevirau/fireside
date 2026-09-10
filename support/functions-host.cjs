@@ -167,10 +167,13 @@ async function stop(signal) {
     if (functionsEmulator) await functionsEmulator.stop();
     EmulatorRegistry.clear(Emulators.FUNCTIONS);
     EmulatorRegistry.clear(Emulators.EXTENSIONS);
-    process.exitCode = 0;
+    // The upstream runtime leaves its 30-second socket-discovery timer alive
+    // even after a successful invocation. Like the official CLI, terminate this
+    // owned host only after its work queue, workers and HTTP server have stopped.
+    process.exit(0);
   } catch (error) {
     process.stderr.write(`fireside functions host shutdown failed: ${String(error)}\n`);
-    process.exitCode = 1;
+    process.exit(1);
   }
 }
 

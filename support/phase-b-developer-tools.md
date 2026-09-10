@@ -225,6 +225,29 @@ are still required for this increment.
 
 ## Remaining before Phase B completion
 
+The subsequent local short suite attempt passed all fourteen UI checkpoints,
+the synthetic Functions `ping` request and clean process exit. The captured
+official CLI exited promptly after the same request; the native wrapper now
+exits only after upstream drain/stop completes instead of waiting for its unused
+socket-discovery timer. Unit regressions verify drain-before-exit, duplicate
+signals and failure exit codes. This full synthetic browser check is added to
+the differential CI job using the pinned UI, Storage rules and Functions peers.
+These are local results until that exact candidate passes all seven CI jobs.
+Paired diagnostic overhead and the remaining explicit failure/reconnect cases
+are not implied by the happy-path browser pass.
+
+The complete synthetic suite browser check has exposed and reproduced missing
+Requests discovery, REST document/collection listing, Auth tenant discovery and
+Storage bucket inventory. Each protocol correction follows a committed official
+capture. The current local attempt passes fourteen browser checkpoints and a
+real Functions HTTP request, but its subsequent shutdown exceeded the short
+diagnostic deadline. It is **not a full-suite pass**. Shutdown is being investigated
+before an integrated receipt or Phase B completion is claimed. The browser driver
+now waits for acknowledged upload success rather than an optimistic table row,
+and its overall result includes cleanup success. Earlier failed attempts remain
+preserved. The REST malformed-page-size timeout and bucket-lifecycle limitations
+are explicit in DESIGN.md.
+
 1. Qualify the connected Requests and coverage components through the complete
    supported suite, including reconnect, disabled diagnostics and cleanup.
 2. Retain the component TTL/slow-reader/source/value bounds regressions in CI;

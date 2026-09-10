@@ -1,0 +1,528 @@
+{
+  "schemaVersion": 1,
+  "syntheticOnly": true,
+  "capturedAt": "2026-09-10T19:58:34.609Z",
+  "project": "demo-fireside-listing",
+  "rules": "rules_version = '2'; service cloud.firestore { match /databases/{db}/documents/{path=**} { allow read, write: if false; } }\n",
+  "oracle": {
+    "firestore": "1.22.0",
+    "jarSha256": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c",
+    "node": "24.20.0",
+    "java": "java version \"25.0.1\" 2025-10-21 LTS\nJava(TM) SE Runtime Environment (build 25.0.1+8-LTS-27)\nJava HotSpot(TM) 64-Bit Server VM (build 25.0.1+8-LTS-27, mixed mode, sharing)"
+  },
+  "exchanges": [
+    {
+      "id": "seed-notes/a",
+      "path": "/notes/a",
+      "method": "PATCH",
+      "body": {
+        "fields": {
+          "title": {
+            "stringValue": "Alpha"
+          },
+          "visible": {
+            "booleanValue": true
+          }
+        }
+      },
+      "owner": true,
+      "previousToken": null,
+      "status": 200,
+      "response": {
+        "name": "projects/demo-fireside-listing/databases/(default)/documents/notes/a",
+        "fields": {
+          "title": {
+            "stringValue": "Alpha"
+          },
+          "visible": {
+            "booleanValue": true
+          }
+        },
+        "createTime": "2026-09-10T19:58:35.534496Z",
+        "updateTime": "2026-09-10T19:58:35.534496Z"
+      }
+    },
+    {
+      "id": "seed-notes/b",
+      "path": "/notes/b",
+      "method": "PATCH",
+      "body": {
+        "fields": {
+          "title": {
+            "stringValue": "Beta"
+          },
+          "visible": {
+            "booleanValue": true
+          }
+        }
+      },
+      "owner": true,
+      "previousToken": null,
+      "status": 200,
+      "response": {
+        "name": "projects/demo-fireside-listing/databases/(default)/documents/notes/b",
+        "fields": {
+          "title": {
+            "stringValue": "Beta"
+          },
+          "visible": {
+            "booleanValue": true
+          }
+        },
+        "createTime": "2026-09-10T19:58:35.574113Z",
+        "updateTime": "2026-09-10T19:58:35.574113Z"
+      }
+    },
+    {
+      "id": "seed-notes/missing/children/one",
+      "path": "/notes/missing/children/one",
+      "method": "PATCH",
+      "body": {
+        "fields": {
+          "title": {
+            "stringValue": "Nested"
+          },
+          "visible": {
+            "booleanValue": true
+          }
+        }
+      },
+      "owner": true,
+      "previousToken": null,
+      "status": 200,
+      "response": {
+        "name": "projects/demo-fireside-listing/databases/(default)/documents/notes/missing/children/one",
+        "fields": {
+          "title": {
+            "stringValue": "Nested"
+          },
+          "visible": {
+            "booleanValue": true
+          }
+        },
+        "createTime": "2026-09-10T19:58:35.582821Z",
+        "updateTime": "2026-09-10T19:58:35.582821Z"
+      }
+    },
+    {
+      "id": "seed-other/z",
+      "path": "/other/z",
+      "method": "PATCH",
+      "body": {
+        "fields": {
+          "title": {
+            "stringValue": "Other"
+          },
+          "visible": {
+            "booleanValue": true
+          }
+        }
+      },
+      "owner": true,
+      "previousToken": null,
+      "status": 200,
+      "response": {
+        "name": "projects/demo-fireside-listing/databases/(default)/documents/other/z",
+        "fields": {
+          "title": {
+            "stringValue": "Other"
+          },
+          "visible": {
+            "booleanValue": true
+          }
+        },
+        "createTime": "2026-09-10T19:58:35.587962Z",
+        "updateTime": "2026-09-10T19:58:35.587962Z"
+      }
+    },
+    {
+      "id": "root-ids-empty-body",
+      "path": ":listCollectionIds",
+      "method": "POST",
+      "body": null,
+      "owner": true,
+      "previousToken": null,
+      "status": 200,
+      "response": {
+        "collectionIds": [
+          "notes",
+          "other"
+        ]
+      }
+    },
+    {
+      "id": "nested-ids-empty-body",
+      "path": "/notes/missing:listCollectionIds",
+      "method": "POST",
+      "body": null,
+      "owner": true,
+      "previousToken": null,
+      "status": 200,
+      "response": {
+        "collectionIds": [
+          "children"
+        ]
+      }
+    },
+    {
+      "id": "ids-anonymous",
+      "path": ":listCollectionIds",
+      "method": "POST",
+      "body": null,
+      "owner": false,
+      "previousToken": null,
+      "status": 403,
+      "response": {
+        "error": {
+          "code": 403,
+          "message": "Metadata operations require admin authentication.",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "list-default",
+      "path": "/notes",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "previousToken": null,
+      "status": 200,
+      "response": {
+        "documents": [
+          {
+            "name": "projects/demo-fireside-listing/databases/(default)/documents/notes/a",
+            "fields": {
+              "title": {
+                "stringValue": "Alpha"
+              },
+              "visible": {
+                "booleanValue": true
+              }
+            },
+            "createTime": "2026-09-10T19:58:35.534496Z",
+            "updateTime": "2026-09-10T19:58:35.534496Z"
+          },
+          {
+            "name": "projects/demo-fireside-listing/databases/(default)/documents/notes/b",
+            "fields": {
+              "title": {
+                "stringValue": "Beta"
+              },
+              "visible": {
+                "booleanValue": true
+              }
+            },
+            "createTime": "2026-09-10T19:58:35.574113Z",
+            "updateTime": "2026-09-10T19:58:35.574113Z"
+          }
+        ]
+      }
+    },
+    {
+      "id": "list-show-missing",
+      "path": "/notes?showMissing=true",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "previousToken": null,
+      "status": 200,
+      "response": {
+        "documents": [
+          {
+            "name": "projects/demo-fireside-listing/databases/(default)/documents/notes/a",
+            "fields": {
+              "title": {
+                "stringValue": "Alpha"
+              },
+              "visible": {
+                "booleanValue": true
+              }
+            },
+            "createTime": "2026-09-10T19:58:35.534496Z",
+            "updateTime": "2026-09-10T19:58:35.534496Z"
+          },
+          {
+            "name": "projects/demo-fireside-listing/databases/(default)/documents/notes/b",
+            "fields": {
+              "title": {
+                "stringValue": "Beta"
+              },
+              "visible": {
+                "booleanValue": true
+              }
+            },
+            "createTime": "2026-09-10T19:58:35.574113Z",
+            "updateTime": "2026-09-10T19:58:35.574113Z"
+          },
+          {
+            "name": "projects/demo-fireside-listing/databases/(default)/documents/notes/missing"
+          }
+        ]
+      }
+    },
+    {
+      "id": "list-desc",
+      "path": "/notes?orderBy=title%20desc",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "previousToken": null,
+      "status": 200,
+      "response": {
+        "documents": [
+          {
+            "name": "projects/demo-fireside-listing/databases/(default)/documents/notes/b",
+            "fields": {
+              "title": {
+                "stringValue": "Beta"
+              },
+              "visible": {
+                "booleanValue": true
+              }
+            },
+            "createTime": "2026-09-10T19:58:35.574113Z",
+            "updateTime": "2026-09-10T19:58:35.574113Z"
+          },
+          {
+            "name": "projects/demo-fireside-listing/databases/(default)/documents/notes/a",
+            "fields": {
+              "title": {
+                "stringValue": "Alpha"
+              },
+              "visible": {
+                "booleanValue": true
+              }
+            },
+            "createTime": "2026-09-10T19:58:35.534496Z",
+            "updateTime": "2026-09-10T19:58:35.534496Z"
+          }
+        ]
+      }
+    },
+    {
+      "id": "list-mask",
+      "path": "/notes?mask.fieldPaths=title",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "previousToken": null,
+      "status": 200,
+      "response": {
+        "documents": [
+          {
+            "name": "projects/demo-fireside-listing/databases/(default)/documents/notes/a",
+            "fields": {
+              "title": {
+                "stringValue": "Alpha"
+              }
+            },
+            "createTime": "2026-09-10T19:58:35.534496Z",
+            "updateTime": "2026-09-10T19:58:35.534496Z"
+          },
+          {
+            "name": "projects/demo-fireside-listing/databases/(default)/documents/notes/b",
+            "fields": {
+              "title": {
+                "stringValue": "Beta"
+              }
+            },
+            "createTime": "2026-09-10T19:58:35.574113Z",
+            "updateTime": "2026-09-10T19:58:35.574113Z"
+          }
+        ]
+      }
+    },
+    {
+      "id": "list-empty-mask",
+      "path": "/notes?mask.fieldPaths=absent",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "previousToken": null,
+      "status": 200,
+      "response": {
+        "documents": [
+          {
+            "name": "projects/demo-fireside-listing/databases/(default)/documents/notes/a",
+            "createTime": "2026-09-10T19:58:35.534496Z",
+            "updateTime": "2026-09-10T19:58:35.534496Z"
+          },
+          {
+            "name": "projects/demo-fireside-listing/databases/(default)/documents/notes/b",
+            "createTime": "2026-09-10T19:58:35.574113Z",
+            "updateTime": "2026-09-10T19:58:35.574113Z"
+          }
+        ]
+      }
+    },
+    {
+      "id": "list-anonymous",
+      "path": "/notes",
+      "method": "GET",
+      "body": null,
+      "owner": false,
+      "previousToken": null,
+      "status": 403,
+      "response": {
+        "error": {
+          "code": 403,
+          "message": "\nfalse for 'list' @ L1",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "list-empty",
+      "path": "/empty",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "previousToken": null,
+      "status": 200,
+      "response": {}
+    },
+    {
+      "id": "list-conflicting-order",
+      "path": "/notes?showMissing=true&orderBy=title",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "previousToken": null,
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "cannot specify an order when show_missing is true",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "id": "list-invalid-size",
+      "path": "/notes?pageSize=invalid",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "status": null,
+      "deadlineMilliseconds": 10000,
+      "error": "TimeoutError"
+    },
+    {
+      "id": "list-page-1",
+      "path": "/notes?pageSize=1",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "previousToken": null,
+      "status": 200,
+      "response": {
+        "documents": [
+          {
+            "name": "projects/demo-fireside-listing/databases/(default)/documents/notes/a",
+            "fields": {
+              "title": {
+                "stringValue": "Alpha"
+              },
+              "visible": {
+                "booleanValue": true
+              }
+            },
+            "createTime": "2026-09-10T19:58:35.534496Z",
+            "updateTime": "2026-09-10T19:58:35.534496Z"
+          }
+        ],
+        "nextPageToken": "CkRwcm9qZWN0cy9kZW1vLWZpcmVzaWRlLWxpc3RpbmcvZGF0YWJhc2VzLyhkZWZhdWx0KS9kb2N1bWVudHMvbm90ZXMvYRIIgq7GejCYclY="
+      }
+    },
+    {
+      "id": "list-page-2",
+      "path": "/notes?pageSize=1&pageToken=CkRwcm9qZWN0cy9kZW1vLWZpcmVzaWRlLWxpc3RpbmcvZGF0YWJhc2VzLyhkZWZhdWx0KS9kb2N1bWVudHMvbm90ZXMvYRIIgq7GejCYclY%3D",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "previousToken": "list-page-1",
+      "status": 200,
+      "response": {
+        "documents": [
+          {
+            "name": "projects/demo-fireside-listing/databases/(default)/documents/notes/b",
+            "fields": {
+              "title": {
+                "stringValue": "Beta"
+              },
+              "visible": {
+                "booleanValue": true
+              }
+            },
+            "createTime": "2026-09-10T19:58:35.574113Z",
+            "updateTime": "2026-09-10T19:58:35.574113Z"
+          }
+        ],
+        "nextPageToken": "CkRwcm9qZWN0cy9kZW1vLWZpcmVzaWRlLWxpc3RpbmcvZGF0YWJhc2VzLyhkZWZhdWx0KS9kb2N1bWVudHMvbm90ZXMvYhIIVXZZZ+l29PE="
+      }
+    },
+    {
+      "id": "list-page-3",
+      "path": "/notes?pageSize=1&pageToken=CkRwcm9qZWN0cy9kZW1vLWZpcmVzaWRlLWxpc3RpbmcvZGF0YWJhc2VzLyhkZWZhdWx0KS9kb2N1bWVudHMvbm90ZXMvYhIIVXZZZ%2Bl29PE%3D",
+      "method": "GET",
+      "body": null,
+      "owner": true,
+      "previousToken": "list-page-2",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "id": "ids-page-1",
+      "path": ":listCollectionIds",
+      "method": "POST",
+      "body": {
+        "pageSize": 1
+      },
+      "owner": true,
+      "previousToken": null,
+      "status": 200,
+      "response": {
+        "collectionIds": [
+          "notes"
+        ],
+        "nextPageToken": "CgVub3RlcxIIhjRddEJ5CYg="
+      }
+    },
+    {
+      "id": "ids-page-2",
+      "path": ":listCollectionIds",
+      "method": "POST",
+      "body": {
+        "pageSize": 1,
+        "pageToken": "CgVub3RlcxIIhjRddEJ5CYg="
+      },
+      "owner": true,
+      "previousToken": "ids-page-1",
+      "status": 200,
+      "response": {
+        "collectionIds": [
+          "other"
+        ],
+        "nextPageToken": "CgVvdGhlchIINmJ2uRlzGvY="
+      }
+    },
+    {
+      "id": "ids-page-3",
+      "path": ":listCollectionIds",
+      "method": "POST",
+      "body": {
+        "pageSize": 1,
+        "pageToken": "CgVvdGhlchIINmJ2uRlzGvY="
+      },
+      "owner": true,
+      "previousToken": "ids-page-2",
+      "status": 200,
+      "response": {}
+    }
+  ],
+  "exit": [
+    130,
+    null
+  ]
+}

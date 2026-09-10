@@ -114,7 +114,7 @@ fn applications(enabled: bool) -> StaticApplications {
     };
     runtime.install_default("rules_version = '2'; service cloud.firestore { match /databases/{db}/documents/items/{id} { allow get: if request.method == 'get'; } }").unwrap();
     let history = runtime.request_history();
-    let rest = rest_router(
+    let rest = fireside_rest_front::router_with_query_policy_memory_rules_and_triggers(
         Store::default(),
         QueryPolicy::default(),
         None,
