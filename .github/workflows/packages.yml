@@ -2,9 +2,20 @@ name: Installable packages
 
 on:
   pull_request:
-    paths: ['packages/**', 'packaging/**', '.github/workflows/packages.yml', '.github/workflows/release-npm.yml']
+    paths: ['crates/**', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'support/functions-host.cjs', 'conformance/fixtures/**', 'packages/**', 'packaging/**', '.github/workflows/packages.yml', '.github/workflows/release-npm.yml']
   workflow_dispatch:
+    inputs:
+      candidate:
+        description: 'Build this exact workflow commit as private non-publishable candidate packages'
+        type: boolean
+        required: false
+        default: false
   workflow_call:
+    inputs:
+      candidate:
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -29,6 +40,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 24.20.0
@@ -44,18 +57,15 @@ jobs:
           node packaging/check-release.mjs
       - name: Resolve pinned engine source
         id: engine
-        run: node -e 'const fs=require("node:fs"); const r=require("./packages/cli/release.json"); fs.appendFileSync(process.env.GITHUB_OUTPUT,`revision=${r.engineRevision}\ntoolchain=${r.rustToolchain}\n`);'
+        env:
+          CANDIDATE_BUILD: ${{ inputs.candidate || github.event_name == 'pull_request' }}
+          CANDIDATE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          node -e 'const fs=require("node:fs"),assert=require("node:assert/strict"); const r=require("./packages/cli/release.json"); const candidate=process.env.CANDIDATE_BUILD==="true"; const revision=candidate?process.env.CANDIDATE_REVISION:r.engineRevision; assert(/^[a-f0-9]{40}$/.test(revision)); fs.appendFileSync(process.env.GITHUB_OUTPUT,`revision=${revision}\nlocal_revision=${candidate?revision:""}\ntoolchain=${r.rustToolchain}\n`);'
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ steps.engine.outputs.revision }}
           path: accepted-engine
-          sparse-checkout: |
-            crates
-            support
-            packaging/fixtures
-            conformance/fixtures/firebase-suite-v1/auth-refresh-reuse
-            conformance/fixtures/firebase-suite-v1/auth-identity-toolkit-and-admin
-            conformance/fixtures/firebase-suite-v1/auth-import-export-and-trigger-dispatch
       - name: Clean locked native build
         env:
           TOOLCHAIN: ${{ steps.engine.outputs.toolchain }}
@@ -72,7 +82,12 @@ jobs:
           cargo "+$TOOLCHAIN" test --manifest-path accepted-engine/Cargo.toml --locked --release -p fireside-auth-front --lib password_tests
           cargo "+$TOOLCHAIN" test --manifest-path accepted-engine/Cargo.toml --locked --release -p fireside-auth-front --lib tests::oauth
       - name: Pack actual public artifacts
-        run: node packaging/build-packages.mjs accepted-engine/target/${{ matrix.target-directory }}release/fireside${{ matrix.extension }} ${{ matrix.platform }} dist/${{ matrix.platform }}
+        env:
+          LOCAL_REVISION: ${{ steps.engine.outputs.local_revision }}
+        run: |
+          extra=()
+          if [[ -n "$LOCAL_REVISION" ]]; then extra=("$LOCAL_REVISION"); fi
+          node packaging/build-packages.mjs accepted-engine/target/${{ matrix.target-directory }}release/fireside${{ matrix.extension }} ${{ matrix.platform }} dist/${{ matrix.platform }} "${extra[@]}"
       - name: Install and run actual tarballs with dependency scripts disabled
         run: |
           node packaging/smoke-packed.mjs dist/${{ matrix.platform }} npm
@@ -93,6 +108,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 24.20.0
@@ -100,4 +117,11 @@ jobs:
       - uses: actions/download-artifact@484a0b528fb4d7bd804637ccb632e47a0e638317
         with:
           path: dist
-      - run: node packaging/publish-packages.mjs dist --check
+      - name: Verify exact non-publishing candidate platform set
+        if: inputs.candidate || github.event_name == 'pull_request'
+        env:
+          CANDIDATE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node packaging/check-local-platforms.mjs dist "$CANDIDATE_REVISION"
+      - name: Verify release-pinned artifact set
+        if: ${{ !inputs.candidate && github.event_name != 'pull_request' }}
+        run: node packaging/publish-packages.mjs dist --check
