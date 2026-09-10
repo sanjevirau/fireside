@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "syntheticOnly": true,
+  "acceptance": false,
+  "scope": "Release REST document encoder microprofile, not HTTP, emulator RSS, full application, or official comparison",
+  "contractSha256": "9e87dd54fc75202e4678d26960f6ed6b38a2ce299f9f7b875e3df3faab6f18ce",
+  "beforeCommit": "4a39ad0f48d693f9d400d948456aef39f9723126",
+  "host": {
+    "model": "Mac14,9",
+    "architecture": "arm64",
+    "memoryBytes": 34359738368,
+    "os": "Darwin 25.6.0",
+    "rust": "1.98.0",
+    "quiescent": false
+  },
+  "iterations": 500,
+  "outputBytes": 66309,
+  "outputSha256": "bec2520cf22cf5b7ba917ea2a20aaaf6cd8dc218b904a025a21c9f2f1d9f0b7b",
+  "binarySha256": {
+    "before": "0d9c5bc8bb68bb73b1195b314eced112810c03daa4dced1fae1299991cd0c72c",
+    "intermediate": "f5688dfc59c48c24195d52cdbeeb860f1f3e900295ccbabb8d3e66f6de5019ab",
+    "after": "795d1acdfd5fe951c7ecbb2cc5b8ba4d6c29c1fae6feba31ef8873c121227e47"
+  },
+  "initialExploration": {
+    "beforeElapsedNs": 80236125,
+    "intermediateElapsedNs": 56084666,
+    "intermediateChange": "Avoid serializing the typed complete document/map before normalization; json! still serializes and clones already normalized children at each map/array ancestor",
+    "finalChange": "Move normalized children into JSON objects/arrays instead of serializing them again",
+    "preservedIntermediateSourceSha256": "43f530a3a81a2d827dfaa8e84680a8939b19bd930870040271f623740928e27d"
+  },
+  "runs": [
+    {
+      "variant": "before",
+      "series": "grouped",
+      "elapsedNs": 72560875,
+      "maximumTestProcessRssBytes": 6275072,
+      "instructionsRetired": 858591797,
+      "outputSha256": "bec2520cf22cf5b7ba917ea2a20aaaf6cd8dc218b904a025a21c9f2f1d9f0b7b",
+      "exitCode": 0,
+      "rawOutput": "\nrunning 1 test\nrest-encoding-profile iterations=500 elapsed_ns=72560875 json_bytes=66309\ntest read_json::profile::nested_document_encoding_profile ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 0.07s\n\n        0.30 real         0.07 user         0.00 sys\n             6275072  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                 573  page reclaims\n                   0  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                  19  involuntary context switches\n           858591797  instructions retired\n           201728320  cycles elapsed\n             4718976  peak memory footprint\n"
+    },
+    {
+      "variant": "before",
+      "series": "grouped",
+      "elapsedNs": 59485500,
+      "maximumTestProcessRssBytes": 5013504,
+      "instructionsRetired": 853352566,
+      "outputSha256": "bec2520cf22cf5b7ba917ea2a20aaaf6cd8dc218b904a025a21c9f2f1d9f0b7b",
+      "exitCode": 0,
+      "rawOutput": "\nrunning 1 test\nrest-encoding-profile iterations=500 elapsed_ns=59485500 json_bytes=66309\ntest read_json::profile::nested_document_encoding_profile ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 0.06s\n\n        0.06 real         0.06 user         0.00 sys\n             5013504  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                 496  page reclaims\n                   0  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                   7  involuntary context switches\n           853352566  instructions retired\n           206681524  cycles elapsed\n             3424592  peak memory footprint\n"
+    },
+    {
+      "variant": "before",
+      "series": "grouped",
+      "elapsedNs": 59317375,
+      "maximumTestProcessRssBytes": 5013504,
+      "instructionsRetired": 853335269,
+      "outputSha256": "bec2520cf22cf5b7ba917ea2a20aaaf6cd8dc218b904a025a21c9f2f1d9f0b7b",
+      "exitCode": 0,
+      "rawOutput": "\nrunning 1 test\nrest-encoding-profile iterations=500 elapsed_ns=59317375 json_bytes=66309\ntest read_json::profile::nested_document_encoding_profile ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 0.06s\n\n        0.06 real         0.06 user         0.00 sys\n             5013504  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                 496  page reclaims\n                   0  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                   8  involuntary context switches\n           853335269  instructions retired\n           206224466  cycles elapsed\n             3424592  peak memory footprint\n"
+    },
+    {
+      "variant": "after",
+      "series": "grouped",
+      "elapsedNs": 9328500,
+      "maximumTestProcessRssBytes": 3735552,
+      "instructionsRetired": 86886276,
+      "outputSha256": "bec2520cf22cf5b7ba917ea2a20aaaf6cd8dc218b904a025a21c9f2f1d9f0b7b",
+      "exitCode": 0,
+      "rawOutput": "\nrunning 1 test\nrest-encoding-profile iterations=500 elapsed_ns=9328500 json_bytes=66309\ntest read_json::profile::nested_document_encoding_profile ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 0.01s\n\n        0.32 real         0.01 user         0.00 sys\n             3735552  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                 418  page reclaims\n                   0  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   1  voluntary context switches\n                  40  involuntary context switches\n            86886276  instructions retired\n            30924520  cycles elapsed\n             2195840  peak memory footprint\n"
+    },
+    {
+      "variant": "after",
+      "series": "grouped",
+      "elapsedNs": 4083500,
+      "maximumTestProcessRssBytes": 3538944,
+      "instructionsRetired": 80717795,
+      "outputSha256": "bec2520cf22cf5b7ba917ea2a20aaaf6cd8dc218b904a025a21c9f2f1d9f0b7b",
+      "exitCode": 0,
+      "rawOutput": "\nrunning 1 test\nrest-encoding-profile iterations=500 elapsed_ns=4083500 json_bytes=66309\ntest read_json::profile::nested_document_encoding_profile ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 0.00s\n\n        0.00 real         0.00 user         0.00 sys\n             3538944  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                 406  page reclaims\n                   0  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                   7  involuntary context switches\n            80717795  instructions retired\n            20149471  cycles elapsed\n             1966416  peak memory footprint\n"
+    },
+    {
+      "variant": "after",
+      "series": "grouped",
+      "elapsedNs": 3671208,
+      "maximumTestProcessRssBytes": 3555328,
+      "instructionsRetired": 81826400,
+      "outputSha256": "bec2520cf22cf5b7ba917ea2a20aaaf6cd8dc218b904a025a21c9f2f1d9f0b7b",
+      "exitCode": 0,
+      "rawOutput": "\nrunning 1 test\nrest-encoding-profile iterations=500 elapsed_ns=3671208 json_bytes=66309\ntest read_json::profile::nested_document_encoding_profile ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 0.00s\n\n        0.00 real         0.00 user         0.00 sys\n             3555328  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                 407  page reclaims\n                   0  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   1  voluntary context switches\n                   8  involuntary context switches\n            81826400  instructions retired\n            21104755  cycles elapsed\n             1999208  peak memory footprint\n"
+    },
+    {
+      "variant": "before",
+      "series": "interleaved",
+      "pair": 1,
+      "elapsedNs": 59293334,
+      "maximumTestProcessRssBytes": 5128192,
+      "instructionsRetired": 861705113,
+      "outputSha256": "bec2520cf22cf5b7ba917ea2a20aaaf6cd8dc218b904a025a21c9f2f1d9f0b7b",
+      "exitCode": 0,
+      "rawOutput": "\nrunning 1 test\nrest-encoding-profile iterations=500 elapsed_ns=59293334 json_bytes=66309\ntest read_json::profile::nested_document_encoding_profile ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 0.06s\n\n        0.06 real         0.06 user         0.00 sys\n             5128192  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                 407  page reclaims\n                  96  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                  49  involuntary context switches\n           861705113  instructions retired\n           210752965  cycles elapsed\n             3539280  peak memory footprint\n"
+    },
+    {
+      "variant": "after",
+      "series": "interleaved",
+      "pair": 1,
+      "elapsedNs": 3859125,
+      "maximumTestProcessRssBytes": 3555328,
+      "instructionsRetired": 89803921,
+      "outputSha256": "bec2520cf22cf5b7ba917ea2a20aaaf6cd8dc218b904a025a21c9f2f1d9f0b7b",
+      "exitCode": 0,
+      "rawOutput": "\nrunning 1 test\nrest-encoding-profile iterations=500 elapsed_ns=3859125 json_bytes=66309\ntest read_json::profile::nested_document_encoding_profile ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 0.01s\n\n        0.01 real         0.00 user         0.00 sys\n             3555328  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                 312  page reclaims\n                  95  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                  45  involuntary context switches\n            89803921  instructions retired\n            25805507  cycles elapsed\n             1982800  peak memory footprint\n"
+    },
+    {
+      "variant": "after",
+      "series": "interleaved",
+      "pair": 2,
+      "elapsedNs": 3730666,
+      "maximumTestProcessRssBytes": 3555328,
+      "instructionsRetired": 81144420,
+      "outputSha256": "bec2520cf22cf5b7ba917ea2a20aaaf6cd8dc218b904a025a21c9f2f1d9f0b7b",
+      "exitCode": 0,
+      "rawOutput": "\nrunning 1 test\nrest-encoding-profile iterations=500 elapsed_ns=3730666 json_bytes=66309\ntest read_json::profile::nested_document_encoding_profile ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 0.00s\n\n        0.00 real         0.00 user         0.00 sys\n             3555328  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                 407  page reclaims\n                   0  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                  10  involuntary context switches\n            81144420  instructions retired\n            20286054  cycles elapsed\n             1982800  peak memory footprint\n"
+    },
+    {
+      "variant": "before",
+      "series": "interleaved",
+      "pair": 2,
+      "elapsedNs": 59074000,
+      "maximumTestProcessRssBytes": 5013504,
+      "instructionsRetired": 853379452,
+      "outputSha256": "bec2520cf22cf5b7ba917ea2a20aaaf6cd8dc218b904a025a21c9f2f1d9f0b7b",
+      "exitCode": 0,
+      "rawOutput": "\nrunning 1 test\nrest-encoding-profile iterations=500 elapsed_ns=59074000 json_bytes=66309\ntest read_json::profile::nested_document_encoding_profile ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 0.06s\n\n        0.06 real         0.06 user         0.00 sys\n             5013504  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                 496  page reclaims\n                   0  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                   7  involuntary context switches\n           853379452  instructions retired\n           206063475  cycles elapsed\n             3424592  peak memory footprint\n"
+    },
+    {
+      "variant": "before",
+      "series": "interleaved",
+      "pair": 3,
+      "elapsedNs": 59385666,
+      "maximumTestProcessRssBytes": 5029888,
+      "instructionsRetired": 853885364,
+      "outputSha256": "bec2520cf22cf5b7ba917ea2a20aaaf6cd8dc218b904a025a21c9f2f1d9f0b7b",
+      "exitCode": 0,
+      "rawOutput": "\nrunning 1 test\nrest-encoding-profile iterations=500 elapsed_ns=59385666 json_bytes=66309\ntest read_json::profile::nested_document_encoding_profile ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 0.06s\n\n        0.06 real         0.06 user         0.00 sys\n             5029888  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                 497  page reclaims\n                   0  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   1  voluntary context switches\n                  13  involuntary context switches\n           853885364  instructions retired\n           206725264  cycles elapsed\n             3457384  peak memory footprint\n"
+    },
+    {
+      "variant": "after",
+      "series": "interleaved",
+      "pair": 3,
+      "elapsedNs": 3777625,
+      "maximumTestProcessRssBytes": 3555328,
+      "instructionsRetired": 82254947,
+      "outputSha256": "bec2520cf22cf5b7ba917ea2a20aaaf6cd8dc218b904a025a21c9f2f1d9f0b7b",
+      "exitCode": 0,
+      "rawOutput": "\nrunning 1 test\nrest-encoding-profile iterations=500 elapsed_ns=3777625 json_bytes=66309\ntest read_json::profile::nested_document_encoding_profile ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 0.00s\n\n        0.00 real         0.00 user         0.00 sys\n             3555328  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                 407  page reclaims\n                   0  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                   6  involuntary context switches\n            82254947  instructions retired\n            20842551  cycles elapsed\n             1982800  peak memory footprint\n"
+    }
+  ],
+  "limitations": [
+    "Small non-quiescent microprofile; short timings and whole-test-process RSS are not service or consumer memory measurements",
+    "Test inputs and 500-iteration body unchanged across measured binaries; ordinary regression and a scoped Clippy annotation were added afterwards without changing encoder logic",
+    "Initial grouped repetitions retained; additional interleaved before/after and after/before pairs reduce, but do not eliminate, warmup/order effects",
+    "No timing assertion or threshold weakening in CI; semantic regressions and exact output identity gate the optimization"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "recordedBeforeMeasurement": true,
+  "scope": "Short native REST document encoder microprofile, not HTTP, consumer, RSS or official-emulator performance qualification",
+  "hypothesis": "Serializing a complete typed map before replacing it with recursively normalized children serializes nested descendants repeatedly and retains unnecessary temporary JSON allocations",
+  "input": "One synthetic document with 16 nested map values around a 65536-byte ASCII string, plus null, timestamp and nonfinite-double siblings; below the supported document depth and size limits",
+  "iterations": 500,
+  "measurement": "Release test process; reuse immutable typed input, construct and drop normalized JSON each iteration, black-box output. Preserve time and output SHA-256 before and after on the same host with identical test code",
+  "verification": "Existing official-fixture REST read-options and document-map replay, all typed normalization unit tests and identical canonical output; every seven-job and platform check before merge",
+  "decision": "Only remove demonstrated redundant serialization. No cache, workload, protocol, durability, memory-limit or acceptance-threshold changes. A microprofile speedup alone is not a full-service improvement claim."
+}

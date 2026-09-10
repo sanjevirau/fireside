@@ -442,6 +442,15 @@ UTC `Z` timestamps, including nested values and transaction responses. It never
 normalizes arbitrary user field names or string contents. The failed candidate
 remains recorded in CI run 34529854577; it was not merged.
 
+The Phase E encoder keeps this typed normalization contract while constructing
+document JSON directly and moving normalized map/array children into their parent.
+It no longer serializes the full typed subtree before replacing it, nor uses a
+serializing JSON macro to copy already normalized descendants at each ancestor.
+Default document fields remain omitted; null, special doubles, empty containers
+and UTC timestamps retain their captured forms. The frozen
+`benchmarks/phase-e-rest-encoding.json` microprofile measures only this encoder;
+it does not establish full-service latency, RSS or startup improvements.
+
 The pinned Java REST GET adapter timed out on transaction query parameters and
 returned 400 for a valid readTime, while its gRPC transaction reads and REST JSON
 batch historical reads succeeded. Fireside deliberately provides finite native
