@@ -73,7 +73,7 @@ test('starting baseline matches its predeclared protocol and retains the unsuppo
   assert.equal(baseline.cycles.length,2);assert.equal(baseline.hostQuiescent,false);
   for(const cycle of baseline.cycles){
     assert.equal(cycle.verifiedDocuments,200);assert.ok(cycle.rssSamples.length>0);
-    assert.deepEqual(cycle.exit,{code:0,signal:null});
+    assert.deepEqual(cycle.exit,{code:null,signal:'SIGINT'},'this is direct native signal termination, not suite export/shutdown');
     assert.equal(cycle.restListDocumentsProbe.status,400);assert.equal(cycle.restListDocumentsProbe.body.error.status,'INVALID_ARGUMENT');
     assert.equal(cycle.operations.filter(o=>o.name==='get').length,40);
     assert.equal(cycle.operations.filter(o=>o.name==='collection-query').length,10);

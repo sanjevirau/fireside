@@ -106,7 +106,11 @@ verified before launch. The binary SHA-256 is
 | GET maximum, 40 samples | 4.00 ms | 4.51 ms |
 | Ten concurrent collection queries, total wall time | 3.81 ms | 3.62 ms |
 | Documents verified by query counts | 200 | 200 |
-| Clean shutdown | 2.73 ms | 1.23 ms |
+| SIGINT-to-process-exit | 2.73 ms | 1.23 ms |
+
+Both standalone native processes exited on SIGINT (not a normal exit code 0).
+The reopen verified the stored documents afterwards. This is **not** a test of
+the npm suite's graceful Functions drain or portable export-on-exit contract.
 
 These are **small, shared-host diagnostics**. Sampling can miss short peaks;
 allocator telemetry is retained separately. RSS is not PSS. No extrapolation to

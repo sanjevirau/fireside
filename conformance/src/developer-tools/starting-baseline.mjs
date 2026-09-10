@@ -71,7 +71,8 @@ for (let cycle=0;cycle<=config.nativeReopens;cycle++) {
     row.shutdownMs=performance.now()-stop;row.exit={code,signal};
     await writeFile(join(output,`cycle-${cycle}.log`),logs.join(''));
     await writeFile(join(output,'baseline.json'),JSON.stringify(receipt,null,2)+'\n');
-    assert.equal(code,0,'native baseline must exit cleanly');assert.equal(signal,null);
+    assert.ok((code===0&&signal===null)||(code===null&&signal==='SIGINT'),
+      'standalone native baseline must stop on the requested signal, not crash');
   }
 }
 receipt.passed=true;
