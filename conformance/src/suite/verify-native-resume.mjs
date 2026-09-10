@@ -1,5 +1,5 @@
 // Short, isolated synthetic native-state lifecycle regression.
-// Usage: node verify-native-resume.mjs binary dependency-root emulator-cache output
+// Usage: node verify-native-resume.mjs binary dependency-root emulator-cache output [previous-binary]
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
@@ -11,12 +11,19 @@ import {setTimeout as delay} from 'node:timers/promises';
 import {build} from 'esbuild';
 import {chromium} from 'playwright';
 
-assert.equal(process.argv.length,6,'binary dependency-root emulator-cache output');
-const [binary,dependencies,cache,output]=process.argv.slice(2).map(value=>resolve(value));
+assert([6,7].includes(process.argv.length),'binary dependency-root emulator-cache output [previous-binary]');
+const [binary,dependencies,cache,output,previous]=process.argv.slice(2).map(value=>resolve(value));
 const project='demo-native-resume',bucket=project+'.appspot.com';
 await mkdir(output,{mode:0o700});
 const json=async(name,value)=>writeFile(output+'/'+name,JSON.stringify(value,null,2)+'\n');
 const sha=value=>createHash('sha256').update(value).digest('hex');
+let previousReceipt=null;
+if(previous){
+  previousReceipt=JSON.parse(await readFile(resolve(dirname(previous),'../receipt.json'),'utf8'));
+  assert.equal(previousReceipt.version,'0.1.0-next.3');
+  assert.equal(previousReceipt.engineRevision,'5cb2437112039a91f1389c70545f97fb030e79c8');
+  assert.equal(sha(await readFile(previous)),previousReceipt.sha256);
+}
 assert.equal(JSON.parse(await readFile(dependencies+'/node_modules/firebase-tools/package.json','utf8')).version,'15.22.0');
 const reservations=[]; const ports={};
 for(const service of ['firestore','auth','storage','functions','pubsub','hub','ui','firestore-websocket','logging','eventarc','tasks']){
@@ -47,16 +54,16 @@ const request=async(service,path,method='GET',body)=>{
 };
 const docPath=collection=>`/v1/projects/${project}/databases/(default)/documents/${collection}/unicode`;
 const put=async value=>{for(const collection of ['items','other'])await request('firestore',docPath(collection),'PATCH',{fields:{value:{integerValue:String(value)},text:{stringValue:'火🔥 café'}}});};
-async function launch(name,extra){
+async function launch(name,extra,engine=binary){
   const started=performance.now();
-  const child=spawn(binary,[...shared,...extra],{cwd:output,env,stdio:['ignore','pipe','pipe']});
+  const child=spawn(engine,[...shared,...extra],{cwd:output,env,stdio:['ignore','pipe','pipe']});
   const handle={child,name,log:'',done:false};active=handle;
   handle.finished=new Promise((yes,no)=>{child.once('error',no);child.once('exit',(code,signal)=>{handle.done=true;yes({code,signal});});});
   for(const stream of ['stdout','stderr'])child[stream].on('data',data=>{handle.log+=data.toString();});
   while(!handle.log.includes('\nAll emulators ready\n')){
     assert(!handle.done,handle.log);assert(performance.now()-started<90000,'native suite startup deadline');await delay(100);
   }
-  launches.push({name,readyMilliseconds:performance.now()-started,imported:handle.log.includes('imported 2 Firestore'),resumed:handle.log.includes('resuming validated native state')});
+  launches.push({name,binarySha256:sha(await readFile(engine)),readyMilliseconds:performance.now()-started,imported:handle.log.includes('imported 2 Firestore'),resumed:handle.log.includes('resuming validated native state')});
 }
 async function stop(){
   if(!active)return;
@@ -72,7 +79,7 @@ try{
   await launch('seed-builder',['--state-dir',output+'/seed-builder-state','--export-on-exit',output+'/seed']);
   await put(0);await stop();
   const args=['--state-dir',output+'/working','--resume-state','--import',output+'/seed','--export-on-exit',output+'/export'];
-  await launch('first-import',args);
+  await launch('first-import',args,previous??binary);
   const {outputFiles}=await build({stdin:{contents:`
     import {initializeApp} from 'firebase/app';
     import {initializeFirestore,connectFirestoreEmulator,collection,onSnapshot} from 'firebase/firestore';
@@ -106,7 +113,17 @@ try{
   const events=await page.evaluate(()=>({seen:window.seen,listenerErrors:window.listenerErrors}));
   assert.deepEqual(events.listenerErrors,[]);assert.deepEqual(pageErrors,[]);
   await browser.close();browser=null;await stop();
-  await json('result.json',{passed:true,acceptance:false,binarySha256:sha(await readFile(binary)),driverSha256:sha(await readFile(new URL(import.meta.url))),node:process.version,launches,authUsersAfterReopen:1,storageBytesExact:true,localWritesPreserved:true,liveBrowserReconnected:true,modes:['long-poll','stream'],targets:['items','other'],events,pageErrors,seedSeparateFromExport:true});
+  let portableRollback=false;
+  if(previous){
+    assert.notEqual(launches[1].binarySha256,launches[2].binarySha256,'upgrade must actually use distinct binaries');
+    await launch('portable-rollback',['--state-dir',output+'/rollback-state','--resume-state','--import',output+'/export'],previous);
+    for(const collection of ['items','other'])assert.equal((await request('firestore',docPath(collection))).fields.value.integerValue,'2');
+    assert.equal((await request('auth',`/identitytoolkit.googleapis.com/v1/projects/${project}/accounts:batchGet`)).users.length,1);
+    const rollbackBlob=await fetch(`http://127.0.0.1:${ports.storage}/download/storage/v1/b/${bucket}/o/${encodeURIComponent(blobName)}?alt=media`,{headers:{authorization:'Bearer owner'},signal:AbortSignal.timeout(10000)});
+    assert.equal(rollbackBlob.status,200);assert.equal(await rollbackBlob.text(),blobText);
+    assert.equal(launches.at(-1).imported,true);assert.equal(launches.at(-1).resumed,false);await stop();portableRollback=true;
+  }
+  await json('result.json',{passed:true,acceptance:false,binarySha256:sha(await readFile(binary)),driverSha256:sha(await readFile(new URL(import.meta.url))),node:process.version,launches,previousReceipt,nativeUpgrade:previous!==undefined,portableRollback,authUsersAfterReopen:1,storageBytesExact:true,localWritesPreserved:true,liveBrowserReconnected:true,modes:['long-poll','stream'],targets:['items','other'],events,pageErrors,seedSeparateFromExport:true});
   console.log('Native resume live test passed: import, local writes, clean stop, reopen, both browser modes and two targets.');
 }catch(error){await json('failure.json',{error:String(error),stack:error.stack,launches,pageErrors});throw error;}
 finally{if(browser)await browser.close();if(active)await stop();if(web)await new Promise(resolve=>web.close(resolve));}
