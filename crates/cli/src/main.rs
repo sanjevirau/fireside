@@ -209,6 +209,9 @@ struct CaptureProxyArgs {
 
 #[derive(Debug, Args, PartialEq, Eq)]
 struct SuiteArgs {
+    /// Disable Requests/coverage recording; the debug endpoint reports unavailable.
+    #[arg(long)]
+    no_diagnostics: bool,
     #[arg(long, default_value = "127.0.0.1")]
     host: String,
     /// Firebase project root used as the Functions host working directory.
@@ -413,6 +416,7 @@ fn resolve_suite_config(arguments: &SuiteArgs) -> Result<SuiteConfig, String> {
         state_dir: absolute_path(&arguments.state_dir)?,
         resume_state: arguments.resume_state,
         firestore_in_memory: arguments.firestore_memory,
+        diagnostics: !arguments.no_diagnostics,
         firestore_rules: firestore
             .and_then(|config| config.rules.as_ref())
             .map(|path| project_path(&config_dir, path)),
@@ -716,25 +720,13 @@ async fn run_firestore(
         }
     };
 
-    let store = match open_store(arguments) {
+    let store = match open_seeded_store(arguments) {
         Ok(store) => store,
         Err(error) => {
-            eprintln!("Firestore storage failed to open: {error}");
+            eprintln!("{error}");
             return ExitCode::FAILURE;
         }
     };
-    if let Some(path) = &arguments.seed_from_export {
-        match seed_store_from_export(&store, path, arguments.project_id.as_deref()) {
-            Ok(count) => eprintln!(
-                "fireside imported {count} documents from {}",
-                path.display()
-            ),
-            Err(error) => {
-                eprintln!("Firestore import failed: {error}");
-                return ExitCode::FAILURE;
-            }
-        }
-    }
     let edition = match arguments.database_edition {
         DatabaseEdition::Standard => QueryDatabaseEdition::Standard,
         DatabaseEdition::Enterprise => QueryDatabaseEdition::Enterprise,
@@ -746,13 +738,25 @@ async fn run_firestore(
             return ExitCode::FAILURE;
         }
     };
-    let rules = match load_rules(arguments.rules.as_deref(), arguments.diagnostics) {
+    let rules = match load_rules(
+        arguments.rules.as_deref(),
+        arguments.diagnostics || arguments.websocket_port.is_some(),
+    ) {
         Ok(rules) => rules,
         Err(error) => {
             eprintln!("{error}");
             return ExitCode::FAILURE;
         }
     };
+    let (diagnostics_shutdown, _) = tokio::sync::watch::channel(false);
+    let requests_server =
+        match start_requests_listener(arguments, &rules, diagnostics_shutdown.subscribe()).await {
+            Ok(server) => server,
+            Err(error) => {
+                eprintln!("Requests listener failed: {error}");
+                return ExitCode::FAILURE;
+            }
+        };
     let triggers = TriggerRegistry::default();
     let delivery = match start_functions_delivery(arguments, &store, &triggers) {
         Ok(delivery) => delivery,
@@ -796,6 +800,10 @@ async fn run_firestore(
         server.serve(address).await
     };
 
+    let _ = diagnostics_shutdown.send(true);
+    if let Some(server) = requests_server {
+        let _ = server.await;
+    }
     stop_functions_delivery(delivery).await;
 
     match result {
@@ -805,6 +813,46 @@ async fn run_firestore(
             ExitCode::FAILURE
         }
     }
+}
+
+fn open_seeded_store(arguments: &FirestoreArgs) -> Result<Store, String> {
+    let store = open_store(arguments)
+        .map_err(|error| format!("Firestore storage failed to open: {error}"))?;
+    if let Some(path) = &arguments.seed_from_export {
+        let count = seed_store_from_export(&store, path, arguments.project_id.as_deref())
+            .map_err(|error| format!("Firestore import failed: {error}"))?;
+        eprintln!(
+            "fireside imported {count} documents from {}",
+            path.display()
+        );
+    }
+    Ok(store)
+}
+
+async fn start_requests_listener(
+    arguments: &FirestoreArgs,
+    rules: &RulesRuntime,
+    mut shutdown: tokio::sync::watch::Receiver<bool>,
+) -> Result<Option<tokio::task::JoinHandle<()>>, String> {
+    let Some(port) = arguments.websocket_port else {
+        return Ok(None);
+    };
+    let address = resolve_address(&arguments.host, port)?;
+    let listener = tokio::net::TcpListener::bind(address)
+        .await
+        .map_err(|error| error.to_string())?;
+    let application =
+        fireside_suite_front::requests_router(rules.request_history(), shutdown.clone());
+    Ok(Some(tokio::spawn(async move {
+        if let Err(error) = axum::serve(listener, application)
+            .with_graceful_shutdown(async move {
+                let _ = shutdown.wait_for(|stopping| *stopping).await;
+            })
+            .await
+        {
+            eprintln!("Requests listener failed: {error}");
+        }
+    })))
 }
 
 fn report_firestore_configuration(
@@ -1180,7 +1228,7 @@ mod tests {
 
     #[test]
     fn parses_complete_suite_command_and_storage_targets() {
-        let cli = Cli::try_parse_from([
+        let options = [
             "fireside",
             "suite",
             "--project-id",
@@ -1201,16 +1249,25 @@ mod tests {
             "default=demo-synthetic-app.appspot.com",
             "--storage-bucket",
             "assets=synthetic-objects.example.test",
-        ])
-        .expect("suite command should parse");
+        ];
+        let cli = Cli::try_parse_from(options).expect("suite command should parse");
         let Command::Suite(arguments) = cli.command else {
             panic!("expected suite command");
         };
         assert_eq!(arguments.project_id, "demo-synthetic-app");
+        assert!(!arguments.no_diagnostics);
         assert_eq!(
             parse_storage_overrides(&arguments.storage_buckets).expect("targets")["assets"],
             "synthetic-objects.example.test"
         );
+        let Command::Suite(disabled) =
+            Cli::try_parse_from(options.into_iter().chain(["--no-diagnostics"]))
+                .expect("suite diagnostics opt-out")
+                .command
+        else {
+            panic!("expected suite command");
+        };
+        assert!(disabled.no_diagnostics);
     }
 
     #[test]

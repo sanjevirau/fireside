@@ -74,6 +74,15 @@ impl RulesRuntime {
         }
     }
 
+    /// The history attached to this runtime's real evaluation producer.
+    /// `None` means diagnostics are disabled, never a healthy empty feed.
+    #[must_use]
+    pub fn request_history(&self) -> Option<request_history::RequestHistory> {
+        self.recorder
+            .as_ref()
+            .map(request_event::RequestRecorder::history)
+    }
+
     /// Compiles and installs the startup ruleset used by projects without a
     /// later project-specific hot reload.
     pub fn install_default(&self, source: &str) -> Result<(), LoadError> {

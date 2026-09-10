@@ -60,8 +60,12 @@ For source-development builds, bounded Firestore coverage can be enabled with
 `cargo run -p fireside -- firestore --diagnostics --rules firestore.rules`.
 Open `/emulator/v1/projects/demo-my-app:ruleCoverage.html` on that Firestore port
 for the report, or omit `.html` for JSON. Recording is opt-in for the standalone
-command; reports can contain document data and decoded auth claims, so keep them
-local. This source feature does not imply it is in an already published npm
+command; specifying `--websocket-port` also enables recording and serves the real
+Requests feed on that port. Source-built suites enable bounded diagnostics by
+default; `fireside emulators:start --no-diagnostics` (or native `suite
+--no-diagnostics`) disables recording and returns an explicit unavailable response
+from the debug endpoint. Reports can contain document data and decoded auth
+claims, so keep them local. These source features do not imply they are in an already published npm
 version or that the full suite's developer tools are qualified.
 
 [DESIGN.md](DESIGN.md) describes the component boundaries;

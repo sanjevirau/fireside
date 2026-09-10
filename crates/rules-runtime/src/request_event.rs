@@ -41,6 +41,10 @@ pub(crate) struct RequestRecorder {
 }
 
 impl RequestRecorder {
+    pub(crate) fn history(&self) -> RequestHistory {
+        self.history.clone()
+    }
+
     pub(crate) fn new(history: RequestHistory) -> Self {
         let time = SystemTime::now()
             .duration_since(UNIX_EPOCH)

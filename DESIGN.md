@@ -308,6 +308,20 @@ invalid-reload preservation and script-like/CJK/emoji text with no page/console
 errors. This qualifies this interface only; suite-default attachment, full UI
 controls and paired diagnostic overhead remain required before Phase B completion.
 
+### Serving-path attachment and opt-out
+
+The native suite now passes the same `RulesRuntime` history to its Firestore
+Requests listener. It no longer accepts an empty placeholder WebSocket. Suite
+recording defaults on and has an explicit `--no-diagnostics` option, forwarded by
+the npm launcher. Disabled Requests upgrades return 503 rather than an empty
+healthy history. The suite prints a local-data privacy warning when enabled.
+Standalone Firestore enables recording with either `--diagnostics` or the
+jar-compatible `--websocket_port`/`--websocket-port` option; the latter binds the
+real Requests transport. Transport shutdown shares the owning server's shutdown
+signal, closing idle diagnostic clients. No unbounded per-connection history is
+introduced. These defaults still require the predeclared paired-overhead checks
+before Phase B qualification; enabling diagnostics is not an efficiency claim.
+
 ## Auth, Storage and exports
 
 Auth browser helpers implement the fixture-tested local Google popup/redirect

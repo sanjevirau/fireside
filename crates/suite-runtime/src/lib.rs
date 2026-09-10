@@ -16,8 +16,6 @@ use std::time::Duration;
 use std::os::unix::process::ExitStatusExt as _;
 
 use axum::extract::Request;
-use axum::extract::ws::{Message, WebSocketUpgrade};
-use axum::routing::get;
 use axum::{Json, Router};
 use fireside_auth_front::AuthRuntime;
 use fireside_core_store::{
@@ -33,10 +31,11 @@ use fireside_pubsub_front::{SchedulerRuntime, router as pubsub_router};
 use fireside_query_engine::{DatabaseEdition, IndexCatalog, QueryPolicy};
 use fireside_rest_front::router_with_query_policy_memory_rules_and_triggers as rest_router;
 use fireside_rules_runtime::RulesRuntime;
+use fireside_rules_runtime::request_history::RequestHistory;
 use fireside_storage_front::{BucketRules, RulesRuntimeConfig, StorageConfig, StorageRuntime};
 use fireside_suite_front::{
     ExportCommand, HubConfig, HubRuntime, LoggingRuntime, ServiceInfo, SuiteDirectory, UiConfig,
-    ui_router,
+    requests_router, ui_router,
 };
 use fireside_webchannel_front::{FirestoreBackend, router as webchannel_router};
 use futures_util::StreamExt as _;
@@ -61,6 +60,8 @@ mod native_state;
 mod shutdown_io;
 pub use control::wait_for_shutdown;
 
+#[cfg(test)]
+mod diagnostics_tests;
 #[cfg(test)]
 mod transport_tests;
 
@@ -102,6 +103,8 @@ pub struct SuiteConfig {
     pub state_dir: PathBuf,
     pub resume_state: bool,
     pub firestore_in_memory: bool,
+    /// Bounded local Requests and coverage; may retain decoded document/auth values.
+    pub diagnostics: bool,
     pub firestore_rules: Option<PathBuf>,
     pub firestore_indexes: Option<PathBuf>,
     pub storage_buckets: Vec<StorageBucketConfig>,
@@ -205,6 +208,7 @@ struct PreparedSuite {
     auth: Arc<AuthRuntime>,
     storage: Arc<StorageRuntime>,
     firestore: tonic::service::Routes,
+    request_history: Option<RequestHistory>,
     logging: LoggingRuntime,
     hub: HubRuntime,
     ui: Router,
@@ -240,6 +244,7 @@ pub async fn run(config: SuiteConfig) -> Result<SuiteOutcome, SuiteRuntimeError>
         auth,
         storage,
         firestore,
+        request_history,
         logging,
         hub,
         ui,
@@ -253,6 +258,7 @@ pub async fn run(config: SuiteConfig) -> Result<SuiteOutcome, SuiteRuntimeError>
         &mut listeners,
         StaticApplications {
             firestore,
+            request_history,
             auth: auth.application(),
             storage: storage.application(),
             hub: hub.application(),
@@ -390,6 +396,7 @@ async fn prepare_suite(config: &SuiteConfig) -> Result<PreparedSuite, SuiteRunti
 
     let query_policy = query_policy(config)?;
     let firestore_rules = firestore_rules(config)?;
+    let request_history = firestore_rules.request_history();
     let service = FirestoreService::new_with_query_policy_and_rules(
         store.clone(),
         query_policy.clone(),
@@ -434,6 +441,7 @@ async fn prepare_suite(config: &SuiteConfig) -> Result<PreparedSuite, SuiteRunti
         auth,
         storage,
         firestore: firestore_routes,
+        request_history,
         logging,
         hub,
         ui,
@@ -582,7 +590,14 @@ fn suite_query_policy(indexes: Option<&str>) -> Result<QueryPolicy, SuiteRuntime
 }
 
 fn firestore_rules(config: &SuiteConfig) -> Result<RulesRuntime, SuiteRuntimeError> {
-    let runtime = RulesRuntime::default();
+    let runtime = if config.diagnostics {
+        eprintln!(
+            "fireside local diagnostics enabled: bounded request/coverage values may include document data and decoded auth claims; do not publish consumer reports"
+        );
+        RulesRuntime::with_request_history(RequestHistory::default())
+    } else {
+        RulesRuntime::default()
+    };
     if let Some(path) = &config.firestore_rules {
         let source = std::fs::read_to_string(path)
             .map_err(|error| failure(format!("failed to read Firestore rules: {error}")))?;
@@ -727,6 +742,7 @@ struct ListenerSet(std::collections::BTreeMap<&'static str, TcpListener>);
 
 struct StaticApplications {
     firestore: tonic::service::Routes,
+    request_history: Option<RequestHistory>,
     auth: Router,
     storage: Router,
     hub: Router,
@@ -828,7 +844,7 @@ fn spawn_static_servers(
     servers.push(spawn_axum(
         "firestore.websocket",
         listeners.take("firestore.websocket")?,
-        firestore_websocket_router(),
+        requests_router(applications.request_history, shutdown.subscribe()),
         shutdown.subscribe(),
         failed.clone(),
     ));
@@ -887,24 +903,6 @@ fn spawn_firestore(
 
 fn dependency_router() -> Router {
     Router::new().fallback(|_request: Request| async { Json(json!({})) })
-}
-
-fn firestore_websocket_router() -> Router {
-    Router::new().fallback(get(|upgrade: WebSocketUpgrade| async move {
-        upgrade.on_upgrade(|mut socket| async move {
-            while let Some(Ok(message)) = socket.next().await {
-                match message {
-                    Message::Ping(payload) => {
-                        if socket.send(Message::Pong(payload)).await.is_err() {
-                            break;
-                        }
-                    }
-                    Message::Close(_) => break,
-                    _ => {}
-                }
-            }
-        })
-    }))
 }
 
 async fn spawn_functions_host(

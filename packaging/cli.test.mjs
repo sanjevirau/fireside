@@ -63,6 +63,8 @@ test('options preserve argv; no ignored flags, duplicate options or shell interp
   const parsed = parseOptions(['--project=demo-a','--import','seed','--export-on-exit','--storage-bucket','default=demo-a','--','echo','hello;touch nope']);
   assert.equal(parsed.options['export-on-exit'],true);
   assert.deepEqual(parsed.command,['echo','hello;touch nope']);
+  assert.equal(parseOptions(['--no-diagnostics']).options['no-diagnostics'], true);
+  assert.throws(() => parseOptions(['--no-diagnostics=false']));
   for (const args of [['--wat'],['--project'],['--project=a','--project=b'],['--resume-state=false']]) assert.throws(()=>parseOptions(args));
 });
 test('existing config, project aliases and exact full --only selection', () => {
@@ -113,6 +115,8 @@ test('state and credential isolation stay outside original config and seed', () 
   assert.equal(readFileSync(join(dir,'firebase.json'),'utf8'),before);
   assert.ok(launch.args.includes('--state-dir'));
   assert.ok(!launch.args.includes('--firestore-memory'));
+  assert.ok(!launch.args.includes('--no-diagnostics'));
+  assert.ok(prepareLaunch(diagnostic, {...options, 'no-diagnostics': true}).args.includes('--no-diagnostics'));
   assert.equal(launch.env.GCLOUD_PROJECT,'demo-fixture');
   assert.equal(launch.env.FIREBASE_AUTH_EMULATOR_HOST,'127.0.0.1:9099');
   assert.equal(launch.env.FIREBASE_TOKEN,undefined);

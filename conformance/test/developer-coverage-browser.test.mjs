@@ -23,16 +23,20 @@ test('native coverage JSON and HTML render actual counts, reload, errors and saf
   const source = captured.source + '\n// 中文 🚀 </script><img src=x onerror="window.injected=true">\n';
   await writeFile(join(work, 'firestore.rules'), source);
   const socket = createServer(); socket.listen(0, '127.0.0.1'); await once(socket, 'listening');
-  const port = socket.address().port; await new Promise(resolve => socket.close(resolve));
+  const port = socket.address().port;
+  const websocketSocket = createServer(); websocketSocket.listen(0, '127.0.0.1'); await once(websocketSocket, 'listening');
+  const websocketPort = websocketSocket.address().port;
+  await Promise.all([socket, websocketSocket].map(server => new Promise(resolve => server.close(resolve))));
   const project = 'demo-fireside-coverage';
   const origin = `http://127.0.0.1:${port}`;
   const control = `${origin}/emulator/v1/projects/${project}`;
   const peer = spawn(join(metadata.target_directory, 'debug', process.platform === 'win32' ? 'fireside.exe' : 'fireside'),
-    ['firestore', '--host', '127.0.0.1', '--port', String(port), '--diagnostics', '--rules', join(work, 'firestore.rules')],
+    ['firestore', '--host', '127.0.0.1', '--port', String(port), '--websocket-port', String(websocketPort), '--rules', join(work, 'firestore.rules')],
     {cwd: work, env: {...process.env, FIRESIDE_CONTROL_STDIN: '1'}, stdio: ['pipe', 'pipe', 'pipe']});
   const exited = once(peer, 'exit');
   let log = ''; for (const stream of [peer.stdout, peer.stderr]) stream.on('data', chunk => { log += chunk; });
   let browser;
+  let requests;
   const errors = [];
   try {
     const deadline = Date.now() + 30000;
@@ -41,6 +45,18 @@ test('native coverage JSON and HTML render actual counts, reload, errors and saf
       try { const response = await fetch(`${control}:ruleCoverage`, {signal: AbortSignal.timeout(500)}); await response.arrayBuffer(); if (response.ok) break; } catch {}
       assert.ok(Date.now() < deadline, log); await delay(50);
     }
+    const frames = [];
+    requests = new WebSocket(`ws://127.0.0.1:${websocketPort}/requests`);
+    requests.addEventListener('message', event => frames.push(JSON.parse(event.data)));
+    const waitForFrames = async count => {
+      const deadline = Date.now() + 5000;
+      while (frames.length < count) {
+        assert.ok(Date.now() < deadline, 'Requests feed must deliver actual evaluations');
+        await delay(20);
+      }
+    };
+    await waitForFrames(1);
+    assert.deepEqual(frames[0], []);
     const executablePath = [process.env.PHASE4_BROWSER_EXECUTABLE,
       '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium'].find(path => path && existsSync(path));
     browser = await chromium.launch({headless: true, ...(executablePath ? {executablePath} : {})});
@@ -57,6 +73,17 @@ test('native coverage JSON and HTML render actual counts, reload, errors and saf
     assert.equal(await page.evaluate(() => window.injected), undefined);
     const read = await fetch(`${origin}/v1/projects/${project}/databases/(default)/documents/items/one`);
     assert.equal(read.status, 404); // allowed request, no seeded document
+    await waitForFrames(2);
+    assert.equal(frames[1].outcome, 'allow');
+    assert.equal(frames[1].rules, source);
+    assert.ok(frames[1].requestId);
+    const originalEvent = frames[1];
+    requests.close(); await once(requests, 'close');
+    frames.length = 0;
+    requests = new WebSocket(`ws://127.0.0.1:${websocketPort}/requests`);
+    requests.addEventListener('message', event => frames.push(JSON.parse(event.data)));
+    await waitForFrames(1);
+    assert.deepEqual(frames[0], [originalEvent], 'reconnect replays the same complete evaluation without re-evaluating');
     await page.getByRole('button', {name: 'Refresh coverage'}).click();
     await page.waitForFunction(() => document.querySelector('.coverage-expr summary')?.textContent.includes('1 retained visits'));
     await page.locator('.coverage-expr').first().locator('summary').click();
@@ -71,7 +98,7 @@ test('native coverage JSON and HTML render actual counts, reload, errors and saf
     assert.equal(await page.locator('#source').textContent(), source);
     await page.screenshot({path: join(work, 'coverage.png'), fullPage: true});
     assert.deepEqual(errors, []);
-    await writeFile(join(work, 'result.json'), JSON.stringify({passed:true, browser:browser.version(), checks:['source','counts','manual-refresh','reload','invalid-reload','unicode','no-script-injection','no-page-or-console-errors']}, null, 2));
+    await writeFile(join(work, 'result.json'), JSON.stringify({passed:true, browser:browser.version(), checks:['source','counts','native-requests-live-feed','requests-reconnect','manual-refresh','reload','invalid-reload','unicode','no-script-injection','no-page-or-console-errors']}, null, 2));
     console.log(`Coverage browser evidence: ${work}`);
   } catch (error) {
     const page = browser?.contexts()[0]?.pages()[0];
@@ -86,5 +113,9 @@ test('native coverage JSON and HTML render actual counts, reload, errors and saf
     if (!result && peer.exitCode === null && peer.signalCode === null) { peer.kill('SIGTERM'); await exited; }
     assert.ok(result, 'isolated peer must exit cleanly through its private shutdown pipe');
     assert.equal(result[0], 0, log);
+    if (requests && requests.readyState !== WebSocket.CLOSED) {
+      await Promise.race([once(requests, 'close'), delay(2000, null, {ref:false})]);
+    }
+    assert.ok(!requests || requests.readyState === WebSocket.CLOSED, 'shutdown closes an idle Requests client');
   }
 });
