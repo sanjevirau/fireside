@@ -44,6 +44,12 @@ must be wired and tested together with the real evaluator before UI qualificatio
 Eleven additional buffer tests are local unit-model evidence, not live endpoint
 or browser evidence; all prior Phase A recordings remain unchanged.
 
+Pre-merge review added a twelfth buffer regression: producer timestamps can be
+admitted out of order after thread preemption. The regression first reproduced
+an expired entry retained behind a newer entry. Expiry now examines all of the
+at-most-256 entries while preserving replay order and exact byte accounting.
+The correction requires fresh CI; the earlier candidate's checks do not cover it.
+
 ## Remaining before Phase B completion
 
 1. Feed the real traces into bounded Requests history and subscriber queues;

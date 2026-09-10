@@ -75,6 +75,34 @@ async fn expiry_uses_monotonic_age_and_runs_without_new_events() {
     );
 }
 
+#[test]
+fn expiry_does_not_assume_timestamps_follow_lock_admission_order() {
+    let history = RequestHistory::default();
+    let start = Instant::now();
+    // A producer can be descheduled after reading the clock but before trying
+    // the mutex. A newer timestamp may therefore be admitted first.
+    assert_eq!(
+        history.record_at(&event(1), start + Duration::from_secs(2)),
+        RecordOutcome::Recorded
+    );
+    assert_eq!(history.record_at(&event(2), start), RecordOutcome::Recorded);
+    let stats = history.maintain_at(start + MAXIMUM_AGE).unwrap();
+    assert_eq!(stats.retained_events, 1);
+    assert_eq!(stats.evicted_events, 1);
+    assert_eq!(
+        history
+            .state
+            .lock()
+            .unwrap()
+            .entries
+            .front()
+            .unwrap()
+            .text
+            .as_ref(),
+        serde_json::to_string(&event(1)).unwrap()
+    );
+}
+
 #[tokio::test]
 async fn subscriber_limit_and_drop_reclaim_slots() {
     let history = RequestHistory::default();

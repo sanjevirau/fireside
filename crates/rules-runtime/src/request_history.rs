@@ -273,13 +273,18 @@ impl State {
     }
 
     fn expire(&mut self, now: Instant) {
-        while self
-            .entries
-            .front()
-            .is_some_and(|entry| now.saturating_duration_since(entry.recorded) >= MAXIMUM_AGE)
-        {
-            self.evict();
-        }
+        // Clocks are sampled before producer lock admission. A descheduled
+        // producer may insert an older timestamp behind a newer one. Preserve
+        // admission/replay order but inspect all bounded entries for expiry.
+        self.entries.retain(|entry| {
+            if now.saturating_duration_since(entry.recorded) >= MAXIMUM_AGE {
+                self.bytes -= entry.text.len() + 1;
+                self.evicted += 1;
+                false
+            } else {
+                true
+            }
+        });
         self.subscribers
             .retain(|subscriber| !subscriber.sender.is_closed());
     }
