@@ -383,13 +383,22 @@ impl DocumentAccess for EmptyDocumentAccess {
 pub struct RuntimeError {
     /// Stable human-readable failure text.
     pub message: String,
+    pub(crate) expression_key: Option<crate::ExpressionKey>,
 }
 
 impl RuntimeError {
     pub(crate) fn new(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),
+            expression_key: None,
         }
+    }
+
+    /// Original expression that produced this error, preserved on propagation.
+    /// Compiler and non-expression failures may not carry an expression key.
+    #[must_use]
+    pub const fn expression_key(&self) -> Option<crate::ExpressionKey> {
+        self.expression_key
     }
 }
 

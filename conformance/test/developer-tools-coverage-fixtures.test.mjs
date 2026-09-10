@@ -15,9 +15,11 @@ test('coverage capture has pinned identity, inputs, outcomes and checksums', asy
   assert.equal(fixture.oracle.node, '24.20.0');
   assert.equal(fixture.oracle.jarSha256, '9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c');
   assert.equal(fixture.syntheticOnly, true);
-  assert.equal(fixture.profiles.length, 19);
+  assert.equal(fixture.profiles.length, 27);
   assert.equal(fixture.seed.status, 200);
   assert.equal(fixture.seed.owner, true);
+  assert.equal(fixture.compileRejections[0].status, 400);
+  assert.match(fixture.compileRejections[0].data.error.message, /duration is a package and cannot be used as variable name/);
   assert.ok(!/Bearer |\/Users\/|\/var\/folders\//.test(bytes.toString()));
   for (const value of fixture.profiles) {
     assert.equal(value.before.rules.files[0].content, value.source);

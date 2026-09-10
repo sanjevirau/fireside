@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
@@ -16,7 +16,7 @@ use crate::model::{
     AtomicEvaluationResult, Auth, DocumentAccess, EvaluationRequest, EvaluationResult, LatLng,
     Query, RequestOperation, Resource, RulesDuration, RuntimeError, Timestamp, Value,
 };
-use crate::{AllowDecision, EvaluationTrace};
+use crate::{AllowDecision, CoverageObserver, EvaluationTrace, ExpressionKey, ExpressionValue};
 
 #[path = "query_constraints.rs"]
 mod query_constraints;
@@ -32,7 +32,7 @@ pub(crate) fn evaluate<A: DocumentAccess + ?Sized>(
     access: &A,
 ) -> EvaluationResult {
     let mut state = AccessState::new(SINGLE_REQUEST_ACCESS_LIMIT);
-    evaluate_with_state(program, request, access, &mut state, None)
+    evaluate_with_state(program, request, access, &mut state, None, None)
 }
 
 pub(crate) fn evaluate_with_trace<A: DocumentAccess + ?Sized>(
@@ -42,7 +42,7 @@ pub(crate) fn evaluate_with_trace<A: DocumentAccess + ?Sized>(
 ) -> (EvaluationResult, EvaluationTrace) {
     let mut state = AccessState::new(SINGLE_REQUEST_ACCESS_LIMIT);
     let mut trace = EvaluationTrace::default();
-    let result = evaluate_with_state(program, request, access, &mut state, Some(&mut trace));
+    let result = evaluate_with_state(program, request, access, &mut state, Some(&mut trace), None);
     (result, trace)
 }
 
@@ -51,14 +51,67 @@ pub(crate) fn evaluate_atomic_with_trace<A: DocumentAccess + ?Sized>(
     requests: &[EvaluationRequest],
     access: &A,
 ) -> (AtomicEvaluationResult, Vec<EvaluationTrace>) {
+    evaluate_atomic_observed(program, requests, access, None)
+}
+
+pub(crate) fn evaluate_with_coverage<A: DocumentAccess + ?Sized>(
+    program: &Program,
+    request: &EvaluationRequest,
+    access: &A,
+    observer: &mut dyn CoverageObserver,
+) -> (EvaluationResult, EvaluationTrace) {
+    let mut state = AccessState::new(SINGLE_REQUEST_ACCESS_LIMIT);
+    let mut trace = EvaluationTrace::default();
+    let result = evaluate_with_state(
+        program,
+        request,
+        access,
+        &mut state,
+        Some(&mut trace),
+        Some(observer),
+    );
+    (result, trace)
+}
+
+pub(crate) fn evaluate_atomic_with_coverage<A: DocumentAccess + ?Sized>(
+    program: &Program,
+    requests: &[EvaluationRequest],
+    access: &A,
+    observer: &mut dyn CoverageObserver,
+) -> (AtomicEvaluationResult, Vec<EvaluationTrace>) {
+    evaluate_atomic_observed(program, requests, access, Some(observer))
+}
+
+fn evaluate_atomic_observed<A: DocumentAccess + ?Sized>(
+    program: &Program,
+    requests: &[EvaluationRequest],
+    access: &A,
+    mut observer: Option<&mut dyn CoverageObserver>,
+) -> (AtomicEvaluationResult, Vec<EvaluationTrace>) {
     let mut state = AccessState::new(MULTI_REQUEST_ACCESS_LIMIT);
     let mut traces = Vec::with_capacity(requests.len());
     let operations = requests
         .iter()
         .map(|request| {
             let mut trace = EvaluationTrace::default();
-            let result =
-                evaluate_with_state(program, request, access, &mut state, Some(&mut trace));
+            let result = match observer.as_mut() {
+                Some(observer) => evaluate_with_state(
+                    program,
+                    request,
+                    access,
+                    &mut state,
+                    Some(&mut trace),
+                    Some(&mut **observer),
+                ),
+                None => evaluate_with_state(
+                    program,
+                    request,
+                    access,
+                    &mut state,
+                    Some(&mut trace),
+                    None,
+                ),
+            };
             traces.push(trace);
             result
         })
@@ -82,7 +135,7 @@ pub(crate) fn evaluate_atomic<A: DocumentAccess + ?Sized>(
     let mut state = AccessState::new(MULTI_REQUEST_ACCESS_LIMIT);
     let operations = requests
         .iter()
-        .map(|request| evaluate_with_state(program, request, access, &mut state, None))
+        .map(|request| evaluate_with_state(program, request, access, &mut state, None, None))
         .collect::<Vec<_>>();
     AtomicEvaluationResult {
         allowed: operations.iter().all(|result| result.allowed),
@@ -98,10 +151,14 @@ fn evaluate_with_state<A: DocumentAccess + ?Sized>(
     access: &A,
     state: &mut AccessState,
     trace: Option<&mut EvaluationTrace>,
+    observer: Option<&mut dyn CoverageObserver>,
 ) -> EvaluationResult {
     let initial_accesses = state.document_accesses;
     let initial_cache_hits = state.document_cache_hits;
-    let mut evaluator = Evaluator::new(request, access, state, trace);
+    let mut evaluator = Evaluator::new(request, access, state, trace, observer);
+    if let Some(observer) = evaluator.observer.as_deref_mut() {
+        observer.begin_operation();
+    }
     let functions = program
         .functions
         .iter()
@@ -222,7 +279,7 @@ impl EvalValue {
     }
 }
 
-struct Evaluator<'a, A: DocumentAccess + ?Sized> {
+struct Evaluator<'a, 'observer, A: DocumentAccess + ?Sized> {
     request: &'a EvaluationRequest,
     access: &'a A,
     allowed: bool,
@@ -234,14 +291,16 @@ struct Evaluator<'a, A: DocumentAccess + ?Sized> {
     call_depth: usize,
     query_branch: Option<Vec<crate::FieldConstraint>>,
     trace: Option<&'a mut EvaluationTrace>,
+    observer: Option<&'a mut (dyn CoverageObserver + 'observer)>,
 }
 
-impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
+impl<'a, 'observer, A: DocumentAccess + ?Sized> Evaluator<'a, 'observer, A> {
     fn new(
         request: &'a EvaluationRequest,
         access: &'a A,
         state: &'a mut AccessState,
         trace: Option<&'a mut EvaluationTrace>,
+        observer: Option<&'a mut (dyn CoverageObserver + 'observer)>,
     ) -> Self {
         Self {
             request,
@@ -255,6 +314,7 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
             call_depth: 0,
             query_branch: None,
             trace,
+            observer,
         }
     }
 
@@ -350,6 +410,62 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
     }
 
     fn eval_expr<'program>(
+        &mut self,
+        expression: &'program Expr,
+        environment: &mut BTreeMap<String, EvalValue>,
+        functions: &BTreeMap<String, &'program Function>,
+    ) -> Result<EvalValue, RuntimeError> {
+        let mut result = self.eval_expr_inner(expression, environment, functions);
+        if let Err(error) = &mut result {
+            error.expression_key.get_or_insert(ExpressionKey {
+                start: expression.span.start,
+                end: expression.span.end,
+            });
+        }
+        if !matches!(
+            expression.kind,
+            ExprKind::Null
+                | ExprKind::Bool(_)
+                | ExprKind::Integer(_)
+                | ExprKind::Float(_)
+                | ExprKind::String(_)
+        ) {
+            self.observe(
+                ExpressionKey {
+                    start: expression.span.start,
+                    end: expression.span.end,
+                },
+                &result,
+            );
+        }
+        result
+    }
+
+    fn observe(&mut self, key: ExpressionKey, result: &Result<EvalValue, RuntimeError>) {
+        let Some(observer) = self.observer.as_deref_mut() else {
+            return;
+        };
+        let value = match result {
+            Err(error) => ExpressionValue::Error(error),
+            Ok(value) => match value {
+                EvalValue::Data(data) => ExpressionValue::Data(data),
+                EvalValue::Auth(auth) => ExpressionValue::Auth(auth),
+                EvalValue::Query(_) => ExpressionValue::Query(self.request),
+                EvalValue::Request => ExpressionValue::Request(self.request),
+                EvalValue::Resource(resource) => ExpressionValue::Resource(resource),
+                EvalValue::Set(values) => ExpressionValue::Set(values),
+                EvalValue::MapDiff(diff) => ExpressionValue::MapDiff(crate::MapDifference {
+                    left: &diff.left,
+                    right: &diff.right,
+                }),
+                EvalValue::Bytes { value, .. } => ExpressionValue::Bytes(value),
+                _ => ExpressionValue::Symbolic,
+            },
+        };
+        observer.observe(key, value);
+    }
+
+    fn eval_expr_inner<'program>(
         &mut self,
         expression: &'program Expr,
         environment: &mut BTreeMap<String, EvalValue>,
@@ -630,6 +746,15 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
             self.eval_expr(&function.result, &mut environment, functions)
         })();
         self.call_depth -= 1;
+        if !function.lets.is_empty() {
+            self.observe(
+                ExpressionKey {
+                    start: function.body_start,
+                    end: function.result.span.end,
+                },
+                &result,
+            );
+        }
         result
     }
 
@@ -1182,7 +1307,7 @@ fn eval_equal(left: &EvalValue, right: &EvalValue) -> bool {
 }
 
 #[allow(clippy::cast_precision_loss, clippy::float_cmp)]
-fn rules_equal(left: &Value, right: &Value) -> bool {
+pub(crate) fn rules_equal(left: &Value, right: &Value) -> bool {
     match (left, right) {
         (Value::Integer(left), Value::Float(right))
         | (Value::Float(right), Value::Integer(left)) => {
@@ -1502,15 +1627,15 @@ fn map_diff_method(
     no_arguments(name, arguments)?;
     let keys: Vec<String> = match name {
         "addedKeys" => diff
-            .right
-            .keys()
-            .filter(|key| !diff.left.contains_key(*key))
-            .cloned()
-            .collect(),
-        "removedKeys" => diff
             .left
             .keys()
             .filter(|key| !diff.right.contains_key(*key))
+            .cloned()
+            .collect(),
+        "removedKeys" => diff
+            .right
+            .keys()
+            .filter(|key| !diff.left.contains_key(*key))
             .cloned()
             .collect(),
         "changedKeys" => diff
@@ -1542,6 +1667,8 @@ fn map_diff_method(
                 _ => true,
             })
             .cloned()
+            .collect::<BTreeSet<_>>()
+            .into_iter()
             .collect(),
         _ => {
             return Err(RuntimeError::new(format!(

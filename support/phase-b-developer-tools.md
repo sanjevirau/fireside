@@ -153,6 +153,30 @@ count differences. The targeted engine/runtime/gRPC/suite tests pass locally
 with thirteen developer-tool fixture checks and strict targeted Clippy.
 Exact-head CI is required before merging this increment.
 
+## Seventh increment: live bounded coverage and map-difference correction
+
+Independent fixture commits `db0c5b6`, `cdbd0b8`, `667f10d` and `84cdc0c`
+extend the official-jar capture to 27 policies and preserve a reserved-namespace
+compile rejection. The capture identified reversed added/removed map-difference
+keys and duplicate affected keys in Fireside; the product correction follows the
+fixture and preserves every existing rules-corpus assertion.
+
+The opt-in runtime now counts actual dynamic expression visits and serializes
+borrowed values into bounded project histories. Tests cover captured source and
+typed values, error propagation, short-circuit omission, reload, project isolation,
+contention, value/byte/count caps and expiry. Oracle planner-count and set-order
+differences are explicit in DESIGN.md. The new coverage bounds are recorded before
+overhead qualification; no measured efficiency claim follows from unit tests.
+The reserved `duration` parameter compile rejection remains a Phase C gap.
+
+Local verification passes 134 targeted engine/runtime/gRPC/suite test functions
+(including the 1,024-case corpus), thirteen fixture-integrity checks and strict
+targeted Clippy. These are component checks, not a release or browser receipt.
+
+This is an internal runtime component: shipping HTTP/HTML report attachment,
+real browser qualification and paired overhead still remain. Exact-head CI and
+review are required before merging. No Phase B completion claim is made.
+
 ## Remaining before Phase B completion
 
 1. Feed the real traces into bounded Requests history and subscriber queues;

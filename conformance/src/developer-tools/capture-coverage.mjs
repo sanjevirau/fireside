@@ -47,6 +47,14 @@ const profiles = [
   { id: 'nested-grouping', source: source('((resource.data.visible))'), status: 200 },
   { id: 'grouped-literal', source: source("('hello').size() == 5"), status: 200 },
   { id: 'constant-function', source: source('accept()', '  function accept() { return true; }'), status: 200 },
+  { id: 'duration', source: source("duration.value(1, 's') == duration.value(1000, 'ms')"), status: 200 },
+  { id: 'set', source: source('[1, 2].toSet().hasAll([1])'), status: 200 },
+  { id: 'map-diff', source: source("{'x': 1}.diff({'x': 2}).changedKeys().hasOnly(['x'])"), status: 200 },
+  { id: 'map-diff-statuses', source: source("{'same': 1, 'removed': 1, 'changed': 1}.diff({'same': 1, 'added': 1, 'changed': 2}).affectedKeys().hasOnly(['removed', 'added', 'changed'])"), status: 200 },
+  { id: 'map-diff-direction-size', source: source("check()", "  function check() { let difference = {'left': 1, 'common': 1}.diff({'right': 1, 'common': 2}); return difference.addedKeys().hasOnly(['left']) && difference.removedKeys().hasOnly(['right']) && difference.affectedKeys().size() == 3; }"), status: 200 },
+  { id: 'bytes', source: source("hashing.sha256('hello'.toUtf8()).size() == 32"), status: 200 },
+  { id: 'timestamp', source: source('timestamp.date(2020, 1, 2).year() == 2020'), status: 200 },
+  { id: 'request', source: source('request.auth == null && request.method == "get"'), status: 200 },
 ];
 await writeFile(join(work, 'firestore.rules'), profiles[0].source);
 const child = spawn('java', ['-jar', jar, '--host', '127.0.0.1', '--port', String(port),
@@ -94,6 +102,10 @@ try {
   const retained = await request('coverage-after-invalid', `${control}:ruleCoverage`);
   assert.equal(retained.status, 200);
   record.afterInvalidReload = retained.data;
+  const rejectedSource = source("accept({'x': 1})", "  function accept(duration) { return duration.keys().hasOnly(['x']); }");
+  const rejected = await request('reserved-namespace-parameter', `${control}:securityRules`, 'PUT', { rules: { files: [{ name: 'firestore.rules', content: rejectedSource }] } });
+  assert.equal(rejected.status, 400);
+  record.compileRejections = [{ source: rejectedSource, ...rejected }];
 } catch (error) { failure = error; }
 finally {
   if (child.exitCode === null) child.kill('SIGINT');

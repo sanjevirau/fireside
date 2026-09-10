@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+#[cfg(test)]
 use base64::Engine as _;
 use fireside_core_store::Write;
 use fireside_rules_engine::{
@@ -21,6 +22,9 @@ use crate::request_history::RequestHistory;
 
 #[path = "request_event_metadata.rs"]
 mod metadata;
+
+#[path = "coverage_value.rs"]
+pub(crate) mod coverage_value;
 
 #[derive(Clone, Copy, Default)]
 pub(crate) struct Metadata<'a> {
@@ -148,6 +152,16 @@ impl Serialize for Decimal {
     }
 }
 
+struct Base64Value<'a>(&'a [u8]);
+impl Serialize for Base64Value<'_> {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.collect_str(&base64::display::Base64Display::new(
+            self.0,
+            &base64::engine::general_purpose::STANDARD,
+        ))
+    }
+}
+
 struct Typed<'a>(&'a Value);
 impl Serialize for Typed<'_> {
     fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
@@ -172,11 +186,7 @@ impl Serialize for Typed<'_> {
             Value::List(v) => tagged(s, "listValue", &ListValues(v)),
             Value::Timestamp(v) => tagged(s, "timestampValue", &DebugTime(*v)),
             Value::Path(v) => PathValue(v).serialize(s),
-            Value::Bytes(v) => tagged(
-                s,
-                "bytesValue",
-                &base64::engine::general_purpose::STANDARD.encode(v),
-            ),
+            Value::Bytes(v) => tagged(s, "bytesValue", &Base64Value(v)),
             Value::LatLng(v) => {
                 #[derive(Serialize)]
                 struct Point {

@@ -15,6 +15,18 @@ const LIMIT_PROBES: &str =
 const JAVA_ACCESS: &str =
     include_str!("../../../conformance/fixtures/rules-v2/java-access-accounting.json");
 
+#[derive(Default)]
+struct CoverageVisits(usize);
+impl fireside_rules_engine::CoverageObserver for CoverageVisits {
+    fn observe(
+        &mut self,
+        _: fireside_rules_engine::ExpressionKey,
+        _: fireside_rules_engine::ExpressionValue<'_>,
+    ) {
+        self.0 += 1;
+    }
+}
+
 #[test]
 fn replays_all_1024_production_expression_cases() {
     let fixture: JsonValue = serde_json::from_str(EXPRESSION_CORPUS).expect("valid corpus fixture");
@@ -30,6 +42,15 @@ fn replays_all_1024_production_expression_cases() {
         for (case, expected) in cases.iter().zip(results) {
             let request = evaluation_request(&case["request"], None);
             let actual = rules.evaluate(&request, &EmptyDocumentAccess);
+            let mut coverage = CoverageVisits::default();
+            assert_eq!(
+                actual,
+                rules
+                    .evaluate_with_coverage(&request, &EmptyDocumentAccess, &mut coverage)
+                    .0,
+                "coverage must preserve {}",
+                case["id"]
+            );
             assert_eq!(
                 actual,
                 rules.evaluate_with_trace(&request, &EmptyDocumentAccess).0,

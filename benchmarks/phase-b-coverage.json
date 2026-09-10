@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Coverage-specific retention limits recorded during implementation before overhead or release qualification; supplements, never replaces, the Phase A diagnostic contract",
+  "maximumChargedRetentionBytes": 16777216,
+  "maximumCompleteValueBytes": 65536,
+  "maximumDistinctValuesPerExpression": 128,
+  "maximumRetainedProjects": 4,
+  "maximumIdleAgeSeconds": 600,
+  "maximumSerializedReportBytes": 33554432,
+  "overflowPolicy": "Omit complete values or contended operations with visible counters; expire idle histories and evict oldest project histories. Never wait for a diagnostic lock or re-evaluate policy to manufacture oracle counts.",
+  "countModel": "Actual evaluator visits, not the official jar's preliminary planner visits. Unvisited expressions have no values.",
+  "transportQualification": "Before exposing reports over HTTP, bound concurrent and in-flight serialized responses, including slow clients. The runtime byte limit alone is not transport qualification.",
+  "overheadQualification": "Unchanged paired workload and all limits in phase-a-developer-tools.json; no measurement or passing result is claimed by this contract."
+}
