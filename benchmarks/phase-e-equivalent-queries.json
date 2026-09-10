@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "recordedBeforeMeasurement": true,
+  "acceptance": false,
+  "syntheticOnly": true,
+  "reason": "Earlier paired native baselines preserved an unmeasured ListDocuments probe that fails on the published version and succeeds on the corrected version. Omit only that preliminary probe on both binaries in this separate diagnostic to remove the warmup mismatch.",
+  "baselineManifest": "benchmarks/phase-a-developer-tools.json",
+  "changesToBaseline": ["Omit the unmeasured ListDocuments probe on both binaries"],
+  "unchanged": "Same 200 documents, ten collections, payloads, 40 sequential gets, ten parallel RunQuery reads, native reopen, sampler, readiness/shutdown/request budgets and expected results. Do not replace original receipts or change acceptance thresholds.",
+  "pairs": 3,
+  "order": "published-candidate, candidate-published, published-candidate; sequential same-host processes",
+  "claimBoundary": "Non-quiescent tiny synthetic diagnostic, not an official comparison, full-data scaling or endurance pass. Preserve every operation and sampled native RSS, including failures. No required winner. Investigate demonstrated causes rather than guessing from small elapsed-time differences."
+}
