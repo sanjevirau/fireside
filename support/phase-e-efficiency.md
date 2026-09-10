@@ -73,6 +73,41 @@ checkout was changed, and nothing was published to npm. The exact
 [checksums](../benchmarks/results/phase-e/SHA256SUMS) are retained. This local
 arm64 Mac check does not substitute for the five-platform CI matrix.
 
+## Unchanged small collection/lifecycle repeat
+
+The [before-measurement contract](../benchmarks/phase-e-native-baseline-repeat.json)
+reuses Phase A's exact 200-document, ten-collection workload. Six sequential runs
+alternate published/corrected order, each starting a fresh store and reopening
+that same store once. Published `next.3` and the corrected local package retain
+strict package/engine/hash checks. All twelve process cycles verify the full
+200-document collection result and expected get results, then exit on the
+requested signal. All operation and RSS samples are retained in the six
+`native-baseline-pair*.json.gz` files alongside the other Phase E receipts.
+
+| Small native diagnostic, median of three cycles | Published next.3 | Corrected 7f9a0f3 |
+| --- | ---: | ---: |
+| Empty-store readiness | 113.124 ms | 86.711 ms |
+| Same-store reopen readiness | 69.639 ms | 47.206 ms |
+| Ten parallel collection reads after seed | 9.683 ms | 12.494 ms |
+| Ten parallel collection reads after reopen | 7.216 ms | 7.257 ms |
+
+The slower post-seed collection observation is retained, not described as a win.
+Every corrected post-seed batch was slower than its paired published observation
+(18.186 vs 9.683, 12.494 vs 10.735, 8.773 vs 7.124 ms). Reopen observations
+overlap (6.640–8.160 ms corrected versus 5.082–8.627 ms published). These tiny
+non-quiescent measurements do not isolate a cause or establish a service-wide
+regression. In particular, the original unmeasured ListDocuments probe returns
+400, whereas the corrected supported endpoint returns documents before the query
+timing; this is a real functional/warmup difference, not an equivalent operation.
+No follow-on optimization is justified by these results alone. Representative
+collection/Storage profiling remains required before final acceptance.
+
+Sampled process peaks span 11.20–12.89 MiB published and 11.05–13.50 MiB corrected
+across these cycles. They include the native process only, not Functions, Java,
+consumer or browser memory, and do not measure full-data scaling. Empty-store
+readiness is neither initial import nor export/reimport. Prior full-data evidence
+must not be replaced with these tiny successful cycles.
+
 Reproduce the microprofile with `cargo test --release -p fireside-rest-front
 nested_document_encoding_profile -- --ignored --nocapture` at the original
 profile commit and corrected commit on the same host. Set

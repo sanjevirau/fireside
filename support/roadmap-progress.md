@@ -8,7 +8,7 @@ universal-compatibility, publication or performance-win claim is made here.
 | A | Baseline/oracle PR #3 merged, exact CI recorded | Reuse those immutable inputs; capture newly demonstrated gaps before fixes |
 | B | Developer inspection, Requests, coverage, bounded diagnostics and UI corrections implemented with generic tests | Complete current-candidate integrated browser/resource/overhead evidence audit |
 | C | REST read options, rule-binding compatibility and Functions reload reviewed and merged as #15–17 | Combined-candidate regression receipt; retain documented oracle deviations |
-| D | Upgrade, export failure/teardown, real isolated ENOSPC and interrupted-export local checks | Corrected Linux and all-platform CI for #18–20, then review/merge |
+| D | Export failure/teardown #18 reviewed and merged; upgrade, ENOSPC and interrupted-export local checks pass | Corrected Linux and all-platform CI for #19–20, then review/merge |
 | E | Narrow REST normalization optimization #21; profiles, current-binary overhead, complete synthetic UI and local package checks pass | Exact-head CI and representative workload profiling |
 | F | Not started | Qualified combined packages, cheap consumer prerequisites, full acceptance and honest final report |
 
@@ -16,6 +16,9 @@ The exact checked heads and all seven CI/six package-job conclusions for #15–1
 are retained in [the merge receipt](../benchmarks/results/phase-c/merged-ci-receipts.json).
 The package jobs comprise five native-platform installations and combined
 verification. Merges used exact-head guards; later changes need their own CI.
+
+The [#18 shutdown receipt](../benchmarks/results/phase-d/merged-shutdown-ci.json)
+records the same exact-head/all-checks review boundary for that recovery fix.
 
 Known failed attempts remain failures: the first REST read-adapter candidate
 failed its existing map/SDK encoding checks; the first Linux native-upgrade CI
