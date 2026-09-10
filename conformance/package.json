@@ -67,7 +67,10 @@
     "test:storage-fixtures": "node --test test/storage-fixture-integrity.test.mjs",
     "capture:storage:encoding": "node --import tsx src/suite/capture-storage-content-encoding.ts",
     "capture:storage:pagination": "node --import tsx src/suite/capture-storage-list-pagination.ts",
-    "capture:storage:missing": "node --import tsx src/suite/capture-storage-missing-object.ts"
+    "capture:storage:missing": "node --import tsx src/suite/capture-storage-missing-object.ts",
+    "capture:developer-tools": "node src/developer-tools/capture-oracle.mjs",
+    "benchmark:developer-tools:baseline": "node src/developer-tools/starting-baseline.mjs",
+    "test:developer-tools-fixtures": "node --test test/developer-tools-fixtures.test.mjs"
   },
   "devDependencies": {
     "@google-cloud/firestore": "9.0.0",

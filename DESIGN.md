@@ -51,6 +51,28 @@ oracles. Where they diverge, tests name the target rather than silently treating
 emulator behavior as production behavior. Rules query fixtures cover potential
 result sets, not just the rows present in the synthetic seed.
 
+## Developer inspection contract (observed; implementation pending)
+
+The [Phase A recording](support/phase-a-developer-tools.md) pins the official
+Firestore 1.22.0 / UI 1.15.0 Requests WebSocket separately from SDK WebChannel.
+`/requests` opens with a retained-history array and then evaluation objects.
+Correlated request IDs, rule text, request/resource context, overall outcome and
+line outcomes are required for useful UI details. Reconnected history can enrich
+granular outcomes already sent live; matching only a successful socket handshake
+or an empty JSON object is insufficient.
+
+The jar sends `rulesReleaseKey` and boolean granular outcomes. Intermediate rule
+errors can occur even in a successful HTTP operation. The JSON coverage endpoint
+returns positioned expression trees and value/count distributions; the HTML
+endpoint must actually render those data. UI mutation checks await persisted
+server state because the UI is optimistic. None of these observations claims the
+current Fireside preview implements the missing tracing/coverage surfaces.
+
+Before implementation, the Phase A manifest declares bounded debug history,
+subscriber queues and retention, slow-reader behavior, and paired overhead
+checks. Debug clients must never block application operations. Any finite-history
+deviation is explicit, and tracing must not alter authorization or durability.
+
 ## Auth, Storage and exports
 
 Auth browser helpers implement the fixture-tested local Google popup/redirect

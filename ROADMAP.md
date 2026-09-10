@@ -43,16 +43,21 @@ this scope; expanding scope or changing a frozen criterion requires explicit rev
 
 ## Phase A — Baseline and oracle fixtures
 
-- [ ] Record the current source/package identity, the pinned official emulator
+- [x] Record the current source/package identity, the pinned official emulator
   and UI versions, supported service/client profile and relevant existing tests.
   Separate known unsupported features, coverage gaps and reproduced defects.
-- [ ] Capture the missing developer-tool contracts with tiny synthetic data:
+- [x] Capture the missing developer-tool contracts with tiny synthetic data:
   normal and denied requests, tracing/coverage, UI data controls, service status
   and reconnect behavior. Reuse valid existing fixtures where the contract is
   already captured; commit new fixtures before the corresponding product change.
-- [ ] Record a short reproducible starting baseline for lifecycle, representative
+- [x] Record a short reproducible starting baseline for lifecycle, representative
   operations and memory, with separate process boundaries. Define the developer
   tool's buffer/retention and diagnostic-overhead checks before implementation.
+
+Local evidence and limitations are in the [Phase A report](support/phase-a-developer-tools.md).
+These local checkmarks do **not** mark the phase complete: exact-candidate CI
+and review of the resulting receipt remain required. No Phase B product changes
+are included in this oracle/baseline work.
 
 Done when Phase B has versioned fixture inputs, expected observations, provenance
 and a concrete verification plan. This is not a full re-audit of every consumer

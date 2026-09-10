@@ -1,0 +1,4462 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-10T15:53:07.094Z",
+  "project": "demo-fireside-developer-tools",
+  "syntheticOnly": true,
+  "oracle": {
+    "firebaseTools": "15.22.0",
+    "firestore": "1.22.0",
+    "ui": "1.15.0",
+    "storageRules": "1.1.3",
+    "node": "24.20.0",
+    "java": "java version \"25.0.1\" 2025-10-21 LTS\nJava(TM) SE Runtime Environment (build 25.0.1+8-LTS-27)\nJava HotSpot(TM) 64-Bit Server VM (build 25.0.1+8-LTS-27, mixed mode, sharing)",
+    "assets": {
+      "cloud-firestore-emulator-v1.22.0.jar": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c",
+      "cloud-storage-rules-runtime-v1.1.3.jar": "0cd52db6f6271d62078f805220706377c849220b73bd68aa27078d977df9c900",
+      "ui-v1.15.0.zip": "97d8c4c574e3f20c4d690a2ce8373eef76ab024da73279a062dba8517f88cf9a"
+    },
+    "sources": {
+      "package.json": "bdaec59ef8484658506c54fc4bd5910722aaf77a77f5a6a3f6a057bec0797abf",
+      "lib/emulator/controller.js": "9759fa0910a1b3430d80f75cfecdc0e8adb8a595e5810ea9aba5dcc3727ce196",
+      "lib/emulator/firestoreEmulator.js": "242e2d443427838ea720e6b646c3f57e522b6789271837d79c05108a94cde00e",
+      "lib/emulator/ui.js": "3cee76413feb86d49712518eae8377b16af758777e7a1f789edd6625fa3aa938"
+    },
+    "launchedJarVerified": true
+  },
+  "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+  "observations": [
+    {
+      "id": "coverage-before",
+      "method": "GET",
+      "path": "/emulator/v1/projects/demo-fireside-developer-tools:ruleCoverage",
+      "requestBody": null,
+      "admin": false,
+      "status": 200,
+      "headers": {
+        "content-length": "1922",
+        "content-type": "application/json"
+      },
+      "body": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+              "name": "<oracle-workdir>/firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 19,
+              "currentOffset": 130,
+              "endOffset": 158
+            },
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 19,
+                  "currentOffset": 130,
+                  "endOffset": 150
+                },
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 19,
+                      "currentOffset": 130,
+                      "endOffset": 142
+                    },
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 19,
+                          "currentOffset": 130,
+                          "endOffset": 137
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sourcePosition": {
+              "line": 6,
+              "column": 20,
+              "currentOffset": 180,
+              "endOffset": 216
+            },
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 6,
+                  "column": 20,
+                  "currentOffset": 180,
+                  "endOffset": 208
+                },
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 6,
+                      "column": 20,
+                      "currentOffset": 180,
+                      "endOffset": 200
+                    },
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 6,
+                          "column": 20,
+                          "currentOffset": 180,
+                          "endOffset": 195
+                        },
+                        "children": [
+                          {
+                            "sourcePosition": {
+                              "line": 6,
+                              "column": 20,
+                              "currentOffset": 180,
+                              "endOffset": 186
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "write-visible",
+      "method": "PATCH",
+      "path": "/v1/projects/demo-fireside-developer-tools/databases/(default)/documents/notes/visible",
+      "requestBody": {
+        "fields": {
+          "visible": {
+            "booleanValue": true
+          },
+          "title": {
+            "stringValue": "Synthetic 中文 🚀"
+          }
+        }
+      },
+      "admin": false,
+      "status": 200,
+      "headers": {
+        "content-length": "329",
+        "content-type": "application/json"
+      },
+      "body": {
+        "name": "projects/demo-fireside-developer-tools/databases/(default)/documents/notes/visible",
+        "fields": {
+          "visible": {
+            "booleanValue": true
+          },
+          "title": {
+            "stringValue": "Synthetic 中文 🚀"
+          }
+        },
+        "createTime": "<timestamp>",
+        "updateTime": "<timestamp>"
+      }
+    },
+    {
+      "id": "write-denied",
+      "method": "PATCH",
+      "path": "/v1/projects/demo-fireside-developer-tools/databases/(default)/documents/notes/denied",
+      "requestBody": {
+        "fields": {
+          "visible": {
+            "booleanValue": false
+          },
+          "title": {
+            "stringValue": "Synthetic 中文 🚀"
+          }
+        }
+      },
+      "admin": false,
+      "status": 403,
+      "headers": {
+        "content-length": "114",
+        "content-type": "application/json"
+      },
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "\nfalse for 'create' @ L6, false for 'update' @ L6",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "write-hidden",
+      "method": "PATCH",
+      "path": "/v1/projects/demo-fireside-developer-tools/databases/(default)/documents/notes/hidden",
+      "requestBody": {
+        "fields": {
+          "visible": {
+            "booleanValue": false
+          },
+          "title": {
+            "stringValue": "Synthetic 中文 🚀"
+          }
+        }
+      },
+      "admin": true,
+      "status": 200,
+      "headers": {
+        "content-length": "329",
+        "content-type": "application/json"
+      },
+      "body": {
+        "name": "projects/demo-fireside-developer-tools/databases/(default)/documents/notes/hidden",
+        "fields": {
+          "visible": {
+            "booleanValue": false
+          },
+          "title": {
+            "stringValue": "Synthetic 中文 🚀"
+          }
+        },
+        "createTime": "<timestamp>",
+        "updateTime": "<timestamp>"
+      }
+    },
+    {
+      "id": "read-visible",
+      "method": "GET",
+      "path": "/v1/projects/demo-fireside-developer-tools/databases/(default)/documents/notes/visible",
+      "requestBody": null,
+      "admin": false,
+      "status": 200,
+      "headers": {
+        "content-length": "329",
+        "content-type": "application/json"
+      },
+      "body": {
+        "name": "projects/demo-fireside-developer-tools/databases/(default)/documents/notes/visible",
+        "fields": {
+          "visible": {
+            "booleanValue": true
+          },
+          "title": {
+            "stringValue": "Synthetic 中文 🚀"
+          }
+        },
+        "createTime": "<timestamp>",
+        "updateTime": "<timestamp>"
+      }
+    },
+    {
+      "id": "read-hidden",
+      "method": "GET",
+      "path": "/v1/projects/demo-fireside-developer-tools/databases/(default)/documents/notes/hidden",
+      "requestBody": null,
+      "admin": false,
+      "status": 403,
+      "headers": {
+        "content-length": "128",
+        "content-type": "application/json"
+      },
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "\nevaluation error at L5:19 for 'get' @ L5, false for 'get' @ L5",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "read-missing",
+      "method": "GET",
+      "path": "/v1/projects/demo-fireside-developer-tools/databases/(default)/documents/notes/missing",
+      "requestBody": null,
+      "admin": false,
+      "status": 403,
+      "headers": {
+        "content-length": "140",
+        "content-type": "application/json"
+      },
+      "body": {
+        "error": {
+          "code": 403,
+          "message": "\nevaluation error at L5:19 for 'get' @ L5, Null value error. for 'get' @ L5",
+          "status": "PERMISSION_DENIED"
+        }
+      }
+    },
+    {
+      "id": "read-hidden-admin",
+      "method": "GET",
+      "path": "/v1/projects/demo-fireside-developer-tools/databases/(default)/documents/notes/hidden",
+      "requestBody": null,
+      "admin": true,
+      "status": 200,
+      "headers": {
+        "content-length": "329",
+        "content-type": "application/json"
+      },
+      "body": {
+        "name": "projects/demo-fireside-developer-tools/databases/(default)/documents/notes/hidden",
+        "fields": {
+          "visible": {
+            "booleanValue": false
+          },
+          "title": {
+            "stringValue": "Synthetic 中文 🚀"
+          }
+        },
+        "createTime": "<timestamp>",
+        "updateTime": "<timestamp>"
+      }
+    },
+    {
+      "id": "list-documents-admin",
+      "method": "GET",
+      "path": "/v1/projects/demo-fireside-developer-tools/databases/(default)/documents/notes?pageSize=1000",
+      "requestBody": null,
+      "admin": true,
+      "status": 200,
+      "headers": {
+        "content-length": "728",
+        "content-type": "application/json"
+      },
+      "body": {
+        "documents": [
+          {
+            "name": "projects/demo-fireside-developer-tools/databases/(default)/documents/notes/hidden",
+            "fields": {
+              "visible": {
+                "booleanValue": false
+              },
+              "title": {
+                "stringValue": "Synthetic 中文 🚀"
+              }
+            },
+            "createTime": "<timestamp>",
+            "updateTime": "<timestamp>"
+          },
+          {
+            "name": "projects/demo-fireside-developer-tools/databases/(default)/documents/notes/visible",
+            "fields": {
+              "visible": {
+                "booleanValue": true
+              },
+              "title": {
+                "stringValue": "Synthetic 中文 🚀"
+              }
+            },
+            "createTime": "<timestamp>",
+            "updateTime": "<timestamp>"
+          }
+        ]
+      }
+    },
+    {
+      "id": "coverage-after",
+      "method": "GET",
+      "path": "/emulator/v1/projects/demo-fireside-developer-tools:ruleCoverage",
+      "requestBody": null,
+      "admin": false,
+      "status": 200,
+      "headers": {
+        "content-length": "21538",
+        "content-type": "application/json"
+      },
+      "body": {
+        "rules": {
+          "files": [
+            {
+              "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+              "name": "<oracle-workdir>/firestore.rules"
+            }
+          ]
+        },
+        "report": [
+          {
+            "sourcePosition": {
+              "line": 5,
+              "column": 19,
+              "currentOffset": 130,
+              "endOffset": 158
+            },
+            "values": [
+              {
+                "value": {
+                  "undefined": {}
+                },
+                "count": 3
+              },
+              {
+                "value": {
+                  "boolValue": true
+                },
+                "count": 1
+              },
+              {
+                "value": {
+                  "boolValue": false
+                },
+                "count": 1
+              },
+              {
+                "value": {
+                  "undefined": {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 19,
+                      "currentOffset": 130,
+                      "endOffset": 137
+                    },
+                    "causeMessage": "Null value error."
+                  }
+                },
+                "count": 1
+              }
+            ],
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 5,
+                  "column": 19,
+                  "currentOffset": 130,
+                  "endOffset": 150
+                },
+                "values": [
+                  {
+                    "value": {
+                      "undefined": {}
+                    },
+                    "count": 3
+                  },
+                  {
+                    "value": {
+                      "boolValue": true
+                    },
+                    "count": 1
+                  },
+                  {
+                    "value": {
+                      "boolValue": false
+                    },
+                    "count": 1
+                  },
+                  {
+                    "value": {
+                      "undefined": {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 19,
+                          "currentOffset": 130,
+                          "endOffset": 137
+                        },
+                        "causeMessage": "Null value error."
+                      }
+                    },
+                    "count": 1
+                  }
+                ],
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 5,
+                      "column": 19,
+                      "currentOffset": 130,
+                      "endOffset": 142
+                    },
+                    "values": [
+                      {
+                        "value": {
+                          "undefined": {}
+                        },
+                        "count": 3
+                      },
+                      {
+                        "value": {
+                          "mapValue": {
+                            "fields": {
+                              "visible": {
+                                "boolValue": true
+                              },
+                              "title": {
+                                "stringValue": "Synthetic 中文 🚀"
+                              }
+                            }
+                          }
+                        },
+                        "count": 1
+                      },
+                      {
+                        "value": {
+                          "mapValue": {
+                            "fields": {
+                              "visible": {
+                                "boolValue": false
+                              },
+                              "title": {
+                                "stringValue": "Synthetic 中文 🚀"
+                              }
+                            }
+                          }
+                        },
+                        "count": 1
+                      },
+                      {
+                        "value": {
+                          "undefined": {
+                            "sourcePosition": {
+                              "line": 5,
+                              "column": 19,
+                              "currentOffset": 130,
+                              "endOffset": 137
+                            },
+                            "causeMessage": "Null value error."
+                          }
+                        },
+                        "count": 1
+                      }
+                    ],
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 5,
+                          "column": 19,
+                          "currentOffset": 130,
+                          "endOffset": 137
+                        },
+                        "values": [
+                          {
+                            "value": {
+                              "undefined": {}
+                            },
+                            "count": 3
+                          },
+                          {
+                            "value": {
+                              "mapValue": {
+                                "fields": {
+                                  "data": {
+                                    "mapValue": {
+                                      "fields": {
+                                        "visible": {
+                                          "boolValue": true
+                                        },
+                                        "title": {
+                                          "stringValue": "Synthetic 中文 🚀"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "__name__": {
+                                    "pathValue": {
+                                      "segments": [
+                                        {
+                                          "simple": "databases"
+                                        },
+                                        {
+                                          "simple": "(default)"
+                                        },
+                                        {
+                                          "simple": "documents"
+                                        },
+                                        {
+                                          "simple": "notes"
+                                        },
+                                        {
+                                          "simple": "visible"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "id": {
+                                    "stringValue": "visible"
+                                  }
+                                }
+                              }
+                            },
+                            "count": 1
+                          },
+                          {
+                            "value": {
+                              "mapValue": {
+                                "fields": {
+                                  "data": {
+                                    "mapValue": {
+                                      "fields": {
+                                        "visible": {
+                                          "boolValue": false
+                                        },
+                                        "title": {
+                                          "stringValue": "Synthetic 中文 🚀"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "__name__": {
+                                    "pathValue": {
+                                      "segments": [
+                                        {
+                                          "simple": "databases"
+                                        },
+                                        {
+                                          "simple": "(default)"
+                                        },
+                                        {
+                                          "simple": "documents"
+                                        },
+                                        {
+                                          "simple": "notes"
+                                        },
+                                        {
+                                          "simple": "hidden"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "id": {
+                                    "stringValue": "hidden"
+                                  }
+                                }
+                              }
+                            },
+                            "count": 1
+                          },
+                          {
+                            "value": {
+                              "nullValue": null
+                            },
+                            "count": 1
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "sourcePosition": {
+              "line": 6,
+              "column": 20,
+              "currentOffset": 180,
+              "endOffset": 216
+            },
+            "values": [
+              {
+                "value": {
+                  "boolValue": true
+                },
+                "count": 2
+              },
+              {
+                "value": {
+                  "boolValue": false
+                },
+                "count": 2
+              }
+            ],
+            "children": [
+              {
+                "sourcePosition": {
+                  "line": 6,
+                  "column": 20,
+                  "currentOffset": 180,
+                  "endOffset": 208
+                },
+                "values": [
+                  {
+                    "value": {
+                      "boolValue": true
+                    },
+                    "count": 2
+                  },
+                  {
+                    "value": {
+                      "boolValue": false
+                    },
+                    "count": 2
+                  }
+                ],
+                "children": [
+                  {
+                    "sourcePosition": {
+                      "line": 6,
+                      "column": 20,
+                      "currentOffset": 180,
+                      "endOffset": 200
+                    },
+                    "values": [
+                      {
+                        "value": {
+                          "mapValue": {
+                            "fields": {
+                              "visible": {
+                                "boolValue": true
+                              },
+                              "title": {
+                                "stringValue": "Synthetic 中文 🚀"
+                              }
+                            }
+                          }
+                        },
+                        "count": 2
+                      },
+                      {
+                        "value": {
+                          "mapValue": {
+                            "fields": {
+                              "visible": {
+                                "boolValue": false
+                              },
+                              "title": {
+                                "stringValue": "Synthetic 中文 🚀"
+                              }
+                            }
+                          }
+                        },
+                        "count": 2
+                      }
+                    ],
+                    "children": [
+                      {
+                        "sourcePosition": {
+                          "line": 6,
+                          "column": 20,
+                          "currentOffset": 180,
+                          "endOffset": 195
+                        },
+                        "values": [
+                          {
+                            "value": {
+                              "mapValue": {
+                                "fields": {
+                                  "data": {
+                                    "mapValue": {
+                                      "fields": {
+                                        "visible": {
+                                          "boolValue": true
+                                        },
+                                        "title": {
+                                          "stringValue": "Synthetic 中文 🚀"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "__name__": {
+                                    "pathValue": {
+                                      "segments": [
+                                        {
+                                          "simple": "databases"
+                                        },
+                                        {
+                                          "simple": "(default)"
+                                        },
+                                        {
+                                          "simple": "documents"
+                                        },
+                                        {
+                                          "simple": "notes"
+                                        },
+                                        {
+                                          "simple": "visible"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "id": {
+                                    "stringValue": "visible"
+                                  }
+                                }
+                              }
+                            },
+                            "count": 2
+                          },
+                          {
+                            "value": {
+                              "mapValue": {
+                                "fields": {
+                                  "data": {
+                                    "mapValue": {
+                                      "fields": {
+                                        "visible": {
+                                          "boolValue": false
+                                        },
+                                        "title": {
+                                          "stringValue": "Synthetic 中文 🚀"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "__name__": {
+                                    "pathValue": {
+                                      "segments": [
+                                        {
+                                          "simple": "databases"
+                                        },
+                                        {
+                                          "simple": "(default)"
+                                        },
+                                        {
+                                          "simple": "documents"
+                                        },
+                                        {
+                                          "simple": "notes"
+                                        },
+                                        {
+                                          "simple": "denied"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "id": {
+                                    "stringValue": "denied"
+                                  }
+                                }
+                              }
+                            },
+                            "count": 2
+                          }
+                        ],
+                        "children": [
+                          {
+                            "sourcePosition": {
+                              "line": 6,
+                              "column": 20,
+                              "currentOffset": 180,
+                              "endOffset": 186
+                            },
+                            "values": [
+                              {
+                                "value": {
+                                  "mapValue": {
+                                    "fields": {
+                                      "time": {
+                                        "timestampValue": "<timestamp>"
+                                      },
+                                      "auth": {
+                                        "nullValue": null
+                                      },
+                                      "inTransaction": {
+                                        "boolValue": true
+                                      },
+                                      "path": {
+                                        "pathValue": {
+                                          "segments": [
+                                            {
+                                              "simple": "databases"
+                                            },
+                                            {
+                                              "simple": "(default)"
+                                            },
+                                            {
+                                              "simple": "documents"
+                                            },
+                                            {
+                                              "simple": "notes"
+                                            },
+                                            {
+                                              "simple": "visible"
+                                            }
+                                          ]
+                                        }
+                                      },
+                                      "transforms": {
+                                        "nullValue": null
+                                      },
+                                      "writeFields": {
+                                        "nullValue": null
+                                      },
+                                      "readFields": {
+                                        "nullValue": null
+                                      },
+                                      "resource": {
+                                        "mapValue": {
+                                          "fields": {
+                                            "data": {
+                                              "mapValue": {
+                                                "fields": {
+                                                  "visible": {
+                                                    "boolValue": true
+                                                  },
+                                                  "title": {
+                                                    "stringValue": "Synthetic 中文 🚀"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "__name__": {
+                                              "pathValue": {
+                                                "segments": [
+                                                  {
+                                                    "simple": "databases"
+                                                  },
+                                                  {
+                                                    "simple": "(default)"
+                                                  },
+                                                  {
+                                                    "simple": "documents"
+                                                  },
+                                                  {
+                                                    "simple": "notes"
+                                                  },
+                                                  {
+                                                    "simple": "visible"
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            "id": {
+                                              "stringValue": "visible"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "method": {
+                                        "stringValue": "create"
+                                      }
+                                    }
+                                  }
+                                },
+                                "count": 1
+                              },
+                              {
+                                "value": {
+                                  "mapValue": {
+                                    "fields": {
+                                      "time": {
+                                        "timestampValue": "<timestamp>"
+                                      },
+                                      "auth": {
+                                        "nullValue": null
+                                      },
+                                      "inTransaction": {
+                                        "boolValue": true
+                                      },
+                                      "path": {
+                                        "pathValue": {
+                                          "segments": [
+                                            {
+                                              "simple": "databases"
+                                            },
+                                            {
+                                              "simple": "(default)"
+                                            },
+                                            {
+                                              "simple": "documents"
+                                            },
+                                            {
+                                              "simple": "notes"
+                                            },
+                                            {
+                                              "simple": "visible"
+                                            }
+                                          ]
+                                        }
+                                      },
+                                      "transforms": {
+                                        "nullValue": null
+                                      },
+                                      "writeFields": {
+                                        "nullValue": null
+                                      },
+                                      "readFields": {
+                                        "nullValue": null
+                                      },
+                                      "resource": {
+                                        "mapValue": {
+                                          "fields": {
+                                            "data": {
+                                              "mapValue": {
+                                                "fields": {
+                                                  "visible": {
+                                                    "boolValue": true
+                                                  },
+                                                  "title": {
+                                                    "stringValue": "Synthetic 中文 🚀"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "__name__": {
+                                              "pathValue": {
+                                                "segments": [
+                                                  {
+                                                    "simple": "databases"
+                                                  },
+                                                  {
+                                                    "simple": "(default)"
+                                                  },
+                                                  {
+                                                    "simple": "documents"
+                                                  },
+                                                  {
+                                                    "simple": "notes"
+                                                  },
+                                                  {
+                                                    "simple": "visible"
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            "id": {
+                                              "stringValue": "visible"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "method": {
+                                        "stringValue": "update"
+                                      }
+                                    }
+                                  }
+                                },
+                                "count": 1
+                              },
+                              {
+                                "value": {
+                                  "mapValue": {
+                                    "fields": {
+                                      "time": {
+                                        "timestampValue": "<timestamp>"
+                                      },
+                                      "auth": {
+                                        "nullValue": null
+                                      },
+                                      "inTransaction": {
+                                        "boolValue": true
+                                      },
+                                      "path": {
+                                        "pathValue": {
+                                          "segments": [
+                                            {
+                                              "simple": "databases"
+                                            },
+                                            {
+                                              "simple": "(default)"
+                                            },
+                                            {
+                                              "simple": "documents"
+                                            },
+                                            {
+                                              "simple": "notes"
+                                            },
+                                            {
+                                              "simple": "denied"
+                                            }
+                                          ]
+                                        }
+                                      },
+                                      "transforms": {
+                                        "nullValue": null
+                                      },
+                                      "writeFields": {
+                                        "nullValue": null
+                                      },
+                                      "readFields": {
+                                        "nullValue": null
+                                      },
+                                      "resource": {
+                                        "mapValue": {
+                                          "fields": {
+                                            "data": {
+                                              "mapValue": {
+                                                "fields": {
+                                                  "visible": {
+                                                    "boolValue": false
+                                                  },
+                                                  "title": {
+                                                    "stringValue": "Synthetic 中文 🚀"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "__name__": {
+                                              "pathValue": {
+                                                "segments": [
+                                                  {
+                                                    "simple": "databases"
+                                                  },
+                                                  {
+                                                    "simple": "(default)"
+                                                  },
+                                                  {
+                                                    "simple": "documents"
+                                                  },
+                                                  {
+                                                    "simple": "notes"
+                                                  },
+                                                  {
+                                                    "simple": "denied"
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            "id": {
+                                              "stringValue": "denied"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "method": {
+                                        "stringValue": "create"
+                                      }
+                                    }
+                                  }
+                                },
+                                "count": 1
+                              },
+                              {
+                                "value": {
+                                  "mapValue": {
+                                    "fields": {
+                                      "time": {
+                                        "timestampValue": "<timestamp>"
+                                      },
+                                      "auth": {
+                                        "nullValue": null
+                                      },
+                                      "inTransaction": {
+                                        "boolValue": true
+                                      },
+                                      "path": {
+                                        "pathValue": {
+                                          "segments": [
+                                            {
+                                              "simple": "databases"
+                                            },
+                                            {
+                                              "simple": "(default)"
+                                            },
+                                            {
+                                              "simple": "documents"
+                                            },
+                                            {
+                                              "simple": "notes"
+                                            },
+                                            {
+                                              "simple": "denied"
+                                            }
+                                          ]
+                                        }
+                                      },
+                                      "transforms": {
+                                        "nullValue": null
+                                      },
+                                      "writeFields": {
+                                        "nullValue": null
+                                      },
+                                      "readFields": {
+                                        "nullValue": null
+                                      },
+                                      "resource": {
+                                        "mapValue": {
+                                          "fields": {
+                                            "data": {
+                                              "mapValue": {
+                                                "fields": {
+                                                  "visible": {
+                                                    "boolValue": false
+                                                  },
+                                                  "title": {
+                                                    "stringValue": "Synthetic 中文 🚀"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "__name__": {
+                                              "pathValue": {
+                                                "segments": [
+                                                  {
+                                                    "simple": "databases"
+                                                  },
+                                                  {
+                                                    "simple": "(default)"
+                                                  },
+                                                  {
+                                                    "simple": "documents"
+                                                  },
+                                                  {
+                                                    "simple": "notes"
+                                                  },
+                                                  {
+                                                    "simple": "denied"
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            "id": {
+                                              "stringValue": "denied"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "method": {
+                                        "stringValue": "update"
+                                      }
+                                    }
+                                  }
+                                },
+                                "count": 1
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "coverage-html",
+      "method": "GET",
+      "path": "/emulator/v1/projects/demo-fireside-developer-tools:ruleCoverage.html",
+      "requestBody": null,
+      "admin": false,
+      "status": 200,
+      "headers": {
+        "content-length": "28845",
+        "content-type": "text/html"
+      },
+      "body": {
+        "byteLength": 28845,
+        "sha256": "e2318895087acc5c8a1a280480abeb17360d98d733fd72f3b7554b327a65913f",
+        "title": "Firestore Rule Coverage Report",
+        "embeddedCoverage": {
+          "rules": {
+            "files": [
+              {
+                "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+                "name": "<oracle-workdir>/firestore.rules"
+              }
+            ]
+          },
+          "report": [
+            {
+              "sourcePosition": {
+                "line": 5,
+                "column": 19,
+                "currentOffset": 130,
+                "endOffset": 158
+              },
+              "values": [
+                {
+                  "value": {
+                    "undefined": {}
+                  },
+                  "count": 3
+                },
+                {
+                  "value": {
+                    "boolValue": true
+                  },
+                  "count": 1
+                },
+                {
+                  "value": {
+                    "boolValue": false
+                  },
+                  "count": 1
+                },
+                {
+                  "value": {
+                    "undefined": {
+                      "sourcePosition": {
+                        "line": 5,
+                        "column": 19,
+                        "currentOffset": 130,
+                        "endOffset": 137
+                      },
+                      "causeMessage": "Null value error."
+                    }
+                  },
+                  "count": 1
+                }
+              ],
+              "children": [
+                {
+                  "sourcePosition": {
+                    "line": 5,
+                    "column": 19,
+                    "currentOffset": 130,
+                    "endOffset": 150
+                  },
+                  "values": [
+                    {
+                      "value": {
+                        "undefined": {}
+                      },
+                      "count": 3
+                    },
+                    {
+                      "value": {
+                        "boolValue": true
+                      },
+                      "count": 1
+                    },
+                    {
+                      "value": {
+                        "boolValue": false
+                      },
+                      "count": 1
+                    },
+                    {
+                      "value": {
+                        "undefined": {
+                          "sourcePosition": {
+                            "line": 5,
+                            "column": 19,
+                            "currentOffset": 130,
+                            "endOffset": 137
+                          },
+                          "causeMessage": "Null value error."
+                        }
+                      },
+                      "count": 1
+                    }
+                  ],
+                  "children": [
+                    {
+                      "sourcePosition": {
+                        "line": 5,
+                        "column": 19,
+                        "currentOffset": 130,
+                        "endOffset": 142
+                      },
+                      "values": [
+                        {
+                          "value": {
+                            "undefined": {}
+                          },
+                          "count": 3
+                        },
+                        {
+                          "value": {
+                            "mapValue": {
+                              "fields": {
+                                "visible": {
+                                  "boolValue": true
+                                },
+                                "title": {
+                                  "stringValue": "Synthetic 中文 🚀"
+                                }
+                              }
+                            }
+                          },
+                          "count": 1
+                        },
+                        {
+                          "value": {
+                            "mapValue": {
+                              "fields": {
+                                "visible": {
+                                  "boolValue": false
+                                },
+                                "title": {
+                                  "stringValue": "Synthetic 中文 🚀"
+                                }
+                              }
+                            }
+                          },
+                          "count": 1
+                        },
+                        {
+                          "value": {
+                            "undefined": {
+                              "sourcePosition": {
+                                "line": 5,
+                                "column": 19,
+                                "currentOffset": 130,
+                                "endOffset": 137
+                              },
+                              "causeMessage": "Null value error."
+                            }
+                          },
+                          "count": 1
+                        }
+                      ],
+                      "children": [
+                        {
+                          "sourcePosition": {
+                            "line": 5,
+                            "column": 19,
+                            "currentOffset": 130,
+                            "endOffset": 137
+                          },
+                          "values": [
+                            {
+                              "value": {
+                                "undefined": {}
+                              },
+                              "count": 3
+                            },
+                            {
+                              "value": {
+                                "mapValue": {
+                                  "fields": {
+                                    "data": {
+                                      "mapValue": {
+                                        "fields": {
+                                          "visible": {
+                                            "boolValue": true
+                                          },
+                                          "title": {
+                                            "stringValue": "Synthetic 中文 🚀"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "__name__": {
+                                      "pathValue": {
+                                        "segments": [
+                                          {
+                                            "simple": "databases"
+                                          },
+                                          {
+                                            "simple": "(default)"
+                                          },
+                                          {
+                                            "simple": "documents"
+                                          },
+                                          {
+                                            "simple": "notes"
+                                          },
+                                          {
+                                            "simple": "visible"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "id": {
+                                      "stringValue": "visible"
+                                    }
+                                  }
+                                }
+                              },
+                              "count": 1
+                            },
+                            {
+                              "value": {
+                                "mapValue": {
+                                  "fields": {
+                                    "data": {
+                                      "mapValue": {
+                                        "fields": {
+                                          "visible": {
+                                            "boolValue": false
+                                          },
+                                          "title": {
+                                            "stringValue": "Synthetic 中文 🚀"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "__name__": {
+                                      "pathValue": {
+                                        "segments": [
+                                          {
+                                            "simple": "databases"
+                                          },
+                                          {
+                                            "simple": "(default)"
+                                          },
+                                          {
+                                            "simple": "documents"
+                                          },
+                                          {
+                                            "simple": "notes"
+                                          },
+                                          {
+                                            "simple": "hidden"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "id": {
+                                      "stringValue": "hidden"
+                                    }
+                                  }
+                                }
+                              },
+                              "count": 1
+                            },
+                            {
+                              "value": {
+                                "nullValue": null
+                              },
+                              "count": 1
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "sourcePosition": {
+                "line": 6,
+                "column": 20,
+                "currentOffset": 180,
+                "endOffset": 216
+              },
+              "values": [
+                {
+                  "value": {
+                    "boolValue": true
+                  },
+                  "count": 2
+                },
+                {
+                  "value": {
+                    "boolValue": false
+                  },
+                  "count": 2
+                }
+              ],
+              "children": [
+                {
+                  "sourcePosition": {
+                    "line": 6,
+                    "column": 20,
+                    "currentOffset": 180,
+                    "endOffset": 208
+                  },
+                  "values": [
+                    {
+                      "value": {
+                        "boolValue": true
+                      },
+                      "count": 2
+                    },
+                    {
+                      "value": {
+                        "boolValue": false
+                      },
+                      "count": 2
+                    }
+                  ],
+                  "children": [
+                    {
+                      "sourcePosition": {
+                        "line": 6,
+                        "column": 20,
+                        "currentOffset": 180,
+                        "endOffset": 200
+                      },
+                      "values": [
+                        {
+                          "value": {
+                            "mapValue": {
+                              "fields": {
+                                "visible": {
+                                  "boolValue": true
+                                },
+                                "title": {
+                                  "stringValue": "Synthetic 中文 🚀"
+                                }
+                              }
+                            }
+                          },
+                          "count": 2
+                        },
+                        {
+                          "value": {
+                            "mapValue": {
+                              "fields": {
+                                "visible": {
+                                  "boolValue": false
+                                },
+                                "title": {
+                                  "stringValue": "Synthetic 中文 🚀"
+                                }
+                              }
+                            }
+                          },
+                          "count": 2
+                        }
+                      ],
+                      "children": [
+                        {
+                          "sourcePosition": {
+                            "line": 6,
+                            "column": 20,
+                            "currentOffset": 180,
+                            "endOffset": 195
+                          },
+                          "values": [
+                            {
+                              "value": {
+                                "mapValue": {
+                                  "fields": {
+                                    "data": {
+                                      "mapValue": {
+                                        "fields": {
+                                          "visible": {
+                                            "boolValue": true
+                                          },
+                                          "title": {
+                                            "stringValue": "Synthetic 中文 🚀"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "__name__": {
+                                      "pathValue": {
+                                        "segments": [
+                                          {
+                                            "simple": "databases"
+                                          },
+                                          {
+                                            "simple": "(default)"
+                                          },
+                                          {
+                                            "simple": "documents"
+                                          },
+                                          {
+                                            "simple": "notes"
+                                          },
+                                          {
+                                            "simple": "visible"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "id": {
+                                      "stringValue": "visible"
+                                    }
+                                  }
+                                }
+                              },
+                              "count": 2
+                            },
+                            {
+                              "value": {
+                                "mapValue": {
+                                  "fields": {
+                                    "data": {
+                                      "mapValue": {
+                                        "fields": {
+                                          "visible": {
+                                            "boolValue": false
+                                          },
+                                          "title": {
+                                            "stringValue": "Synthetic 中文 🚀"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "__name__": {
+                                      "pathValue": {
+                                        "segments": [
+                                          {
+                                            "simple": "databases"
+                                          },
+                                          {
+                                            "simple": "(default)"
+                                          },
+                                          {
+                                            "simple": "documents"
+                                          },
+                                          {
+                                            "simple": "notes"
+                                          },
+                                          {
+                                            "simple": "denied"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "id": {
+                                      "stringValue": "denied"
+                                    }
+                                  }
+                                }
+                              },
+                              "count": 2
+                            }
+                          ],
+                          "children": [
+                            {
+                              "sourcePosition": {
+                                "line": 6,
+                                "column": 20,
+                                "currentOffset": 180,
+                                "endOffset": 186
+                              },
+                              "values": [
+                                {
+                                  "value": {
+                                    "mapValue": {
+                                      "fields": {
+                                        "time": {
+                                          "timestampValue": "<timestamp>"
+                                        },
+                                        "auth": {
+                                          "nullValue": null
+                                        },
+                                        "inTransaction": {
+                                          "boolValue": true
+                                        },
+                                        "path": {
+                                          "pathValue": {
+                                            "segments": [
+                                              {
+                                                "simple": "databases"
+                                              },
+                                              {
+                                                "simple": "(default)"
+                                              },
+                                              {
+                                                "simple": "documents"
+                                              },
+                                              {
+                                                "simple": "notes"
+                                              },
+                                              {
+                                                "simple": "visible"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "transforms": {
+                                          "nullValue": null
+                                        },
+                                        "writeFields": {
+                                          "nullValue": null
+                                        },
+                                        "readFields": {
+                                          "nullValue": null
+                                        },
+                                        "resource": {
+                                          "mapValue": {
+                                            "fields": {
+                                              "data": {
+                                                "mapValue": {
+                                                  "fields": {
+                                                    "visible": {
+                                                      "boolValue": true
+                                                    },
+                                                    "title": {
+                                                      "stringValue": "Synthetic 中文 🚀"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "__name__": {
+                                                "pathValue": {
+                                                  "segments": [
+                                                    {
+                                                      "simple": "databases"
+                                                    },
+                                                    {
+                                                      "simple": "(default)"
+                                                    },
+                                                    {
+                                                      "simple": "documents"
+                                                    },
+                                                    {
+                                                      "simple": "notes"
+                                                    },
+                                                    {
+                                                      "simple": "visible"
+                                                    }
+                                                  ]
+                                                }
+                                              },
+                                              "id": {
+                                                "stringValue": "visible"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "method": {
+                                          "stringValue": "create"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "count": 1
+                                },
+                                {
+                                  "value": {
+                                    "mapValue": {
+                                      "fields": {
+                                        "time": {
+                                          "timestampValue": "<timestamp>"
+                                        },
+                                        "auth": {
+                                          "nullValue": null
+                                        },
+                                        "inTransaction": {
+                                          "boolValue": true
+                                        },
+                                        "path": {
+                                          "pathValue": {
+                                            "segments": [
+                                              {
+                                                "simple": "databases"
+                                              },
+                                              {
+                                                "simple": "(default)"
+                                              },
+                                              {
+                                                "simple": "documents"
+                                              },
+                                              {
+                                                "simple": "notes"
+                                              },
+                                              {
+                                                "simple": "visible"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "transforms": {
+                                          "nullValue": null
+                                        },
+                                        "writeFields": {
+                                          "nullValue": null
+                                        },
+                                        "readFields": {
+                                          "nullValue": null
+                                        },
+                                        "resource": {
+                                          "mapValue": {
+                                            "fields": {
+                                              "data": {
+                                                "mapValue": {
+                                                  "fields": {
+                                                    "visible": {
+                                                      "boolValue": true
+                                                    },
+                                                    "title": {
+                                                      "stringValue": "Synthetic 中文 🚀"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "__name__": {
+                                                "pathValue": {
+                                                  "segments": [
+                                                    {
+                                                      "simple": "databases"
+                                                    },
+                                                    {
+                                                      "simple": "(default)"
+                                                    },
+                                                    {
+                                                      "simple": "documents"
+                                                    },
+                                                    {
+                                                      "simple": "notes"
+                                                    },
+                                                    {
+                                                      "simple": "visible"
+                                                    }
+                                                  ]
+                                                }
+                                              },
+                                              "id": {
+                                                "stringValue": "visible"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "method": {
+                                          "stringValue": "update"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "count": 1
+                                },
+                                {
+                                  "value": {
+                                    "mapValue": {
+                                      "fields": {
+                                        "time": {
+                                          "timestampValue": "<timestamp>"
+                                        },
+                                        "auth": {
+                                          "nullValue": null
+                                        },
+                                        "inTransaction": {
+                                          "boolValue": true
+                                        },
+                                        "path": {
+                                          "pathValue": {
+                                            "segments": [
+                                              {
+                                                "simple": "databases"
+                                              },
+                                              {
+                                                "simple": "(default)"
+                                              },
+                                              {
+                                                "simple": "documents"
+                                              },
+                                              {
+                                                "simple": "notes"
+                                              },
+                                              {
+                                                "simple": "denied"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "transforms": {
+                                          "nullValue": null
+                                        },
+                                        "writeFields": {
+                                          "nullValue": null
+                                        },
+                                        "readFields": {
+                                          "nullValue": null
+                                        },
+                                        "resource": {
+                                          "mapValue": {
+                                            "fields": {
+                                              "data": {
+                                                "mapValue": {
+                                                  "fields": {
+                                                    "visible": {
+                                                      "boolValue": false
+                                                    },
+                                                    "title": {
+                                                      "stringValue": "Synthetic 中文 🚀"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "__name__": {
+                                                "pathValue": {
+                                                  "segments": [
+                                                    {
+                                                      "simple": "databases"
+                                                    },
+                                                    {
+                                                      "simple": "(default)"
+                                                    },
+                                                    {
+                                                      "simple": "documents"
+                                                    },
+                                                    {
+                                                      "simple": "notes"
+                                                    },
+                                                    {
+                                                      "simple": "denied"
+                                                    }
+                                                  ]
+                                                }
+                                              },
+                                              "id": {
+                                                "stringValue": "denied"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "method": {
+                                          "stringValue": "create"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "count": 1
+                                },
+                                {
+                                  "value": {
+                                    "mapValue": {
+                                      "fields": {
+                                        "time": {
+                                          "timestampValue": "<timestamp>"
+                                        },
+                                        "auth": {
+                                          "nullValue": null
+                                        },
+                                        "inTransaction": {
+                                          "boolValue": true
+                                        },
+                                        "path": {
+                                          "pathValue": {
+                                            "segments": [
+                                              {
+                                                "simple": "databases"
+                                              },
+                                              {
+                                                "simple": "(default)"
+                                              },
+                                              {
+                                                "simple": "documents"
+                                              },
+                                              {
+                                                "simple": "notes"
+                                              },
+                                              {
+                                                "simple": "denied"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "transforms": {
+                                          "nullValue": null
+                                        },
+                                        "writeFields": {
+                                          "nullValue": null
+                                        },
+                                        "readFields": {
+                                          "nullValue": null
+                                        },
+                                        "resource": {
+                                          "mapValue": {
+                                            "fields": {
+                                              "data": {
+                                                "mapValue": {
+                                                  "fields": {
+                                                    "visible": {
+                                                      "boolValue": false
+                                                    },
+                                                    "title": {
+                                                      "stringValue": "Synthetic 中文 🚀"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "__name__": {
+                                                "pathValue": {
+                                                  "segments": [
+                                                    {
+                                                      "simple": "databases"
+                                                    },
+                                                    {
+                                                      "simple": "(default)"
+                                                    },
+                                                    {
+                                                      "simple": "documents"
+                                                    },
+                                                    {
+                                                      "simple": "notes"
+                                                    },
+                                                    {
+                                                      "simple": "denied"
+                                                    }
+                                                  ]
+                                                }
+                                              },
+                                              "id": {
+                                                "stringValue": "denied"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "method": {
+                                          "stringValue": "update"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "count": 1
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "websocket": {
+    "firstConnection": [
+      [],
+      {
+        "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+        "time": "<timestamp>",
+        "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+        "requestId": "request-1",
+        "outcome": "allow",
+        "granularAllowOutcomes": [
+          {
+            "line": 6,
+            "outcome": true
+          }
+        ],
+        "rulesContext": {
+          "method": "create",
+          "path": "/databases/(default)/documents/notes/visible",
+          "time": "<timestamp>",
+          "request": {
+            "mapValue": {
+              "fields": {
+                "time": {
+                  "timestampValue": "<timestamp>"
+                },
+                "auth": {
+                  "nullValue": null
+                },
+                "inTransaction": {
+                  "boolValue": true
+                },
+                "path": {
+                  "pathValue": {
+                    "segments": [
+                      {
+                        "simple": "databases"
+                      },
+                      {
+                        "simple": "(default)"
+                      },
+                      {
+                        "simple": "documents"
+                      },
+                      {
+                        "simple": "notes"
+                      },
+                      {
+                        "simple": "visible"
+                      }
+                    ]
+                  }
+                },
+                "transforms": {
+                  "nullValue": null
+                },
+                "writeFields": {
+                  "nullValue": null
+                },
+                "readFields": {
+                  "nullValue": null
+                },
+                "resource": {
+                  "mapValue": {
+                    "fields": {
+                      "data": {
+                        "mapValue": {
+                          "fields": {
+                            "visible": {
+                              "boolValue": true
+                            },
+                            "title": {
+                              "stringValue": "Synthetic 中文 🚀"
+                            }
+                          }
+                        }
+                      },
+                      "__name__": {
+                        "pathValue": {
+                          "segments": [
+                            {
+                              "simple": "databases"
+                            },
+                            {
+                              "simple": "(default)"
+                            },
+                            {
+                              "simple": "documents"
+                            },
+                            {
+                              "simple": "notes"
+                            },
+                            {
+                              "simple": "visible"
+                            }
+                          ]
+                        }
+                      },
+                      "id": {
+                        "stringValue": "visible"
+                      }
+                    }
+                  }
+                },
+                "method": {
+                  "stringValue": "create"
+                }
+              }
+            }
+          },
+          "resource": {
+            "undefined": {}
+          }
+        }
+      },
+      {
+        "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+        "time": "<timestamp>",
+        "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+        "requestId": "request-2",
+        "outcome": "allow",
+        "granularAllowOutcomes": [
+          {
+            "line": 6,
+            "outcome": true
+          },
+          {
+            "line": 6,
+            "outcome": true
+          }
+        ],
+        "rulesContext": {
+          "method": "update",
+          "path": "/databases/(default)/documents/notes/visible",
+          "time": "<timestamp>",
+          "request": {
+            "mapValue": {
+              "fields": {
+                "time": {
+                  "timestampValue": "<timestamp>"
+                },
+                "auth": {
+                  "nullValue": null
+                },
+                "inTransaction": {
+                  "boolValue": true
+                },
+                "path": {
+                  "pathValue": {
+                    "segments": [
+                      {
+                        "simple": "databases"
+                      },
+                      {
+                        "simple": "(default)"
+                      },
+                      {
+                        "simple": "documents"
+                      },
+                      {
+                        "simple": "notes"
+                      },
+                      {
+                        "simple": "visible"
+                      }
+                    ]
+                  }
+                },
+                "transforms": {
+                  "nullValue": null
+                },
+                "writeFields": {
+                  "nullValue": null
+                },
+                "readFields": {
+                  "nullValue": null
+                },
+                "resource": {
+                  "mapValue": {
+                    "fields": {
+                      "data": {
+                        "mapValue": {
+                          "fields": {
+                            "visible": {
+                              "boolValue": true
+                            },
+                            "title": {
+                              "stringValue": "Synthetic 中文 🚀"
+                            }
+                          }
+                        }
+                      },
+                      "__name__": {
+                        "pathValue": {
+                          "segments": [
+                            {
+                              "simple": "databases"
+                            },
+                            {
+                              "simple": "(default)"
+                            },
+                            {
+                              "simple": "documents"
+                            },
+                            {
+                              "simple": "notes"
+                            },
+                            {
+                              "simple": "visible"
+                            }
+                          ]
+                        }
+                      },
+                      "id": {
+                        "stringValue": "visible"
+                      }
+                    }
+                  }
+                },
+                "method": {
+                  "stringValue": "update"
+                }
+              }
+            }
+          },
+          "resource": {
+            "undefined": {}
+          }
+        }
+      },
+      {
+        "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+        "time": "<timestamp>",
+        "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+        "requestId": "request-3",
+        "outcome": "deny",
+        "granularAllowOutcomes": [
+          {
+            "line": 6,
+            "outcome": false
+          }
+        ],
+        "rulesContext": {
+          "method": "create",
+          "path": "/databases/(default)/documents/notes/denied",
+          "time": "<timestamp>",
+          "request": {
+            "mapValue": {
+              "fields": {
+                "time": {
+                  "timestampValue": "<timestamp>"
+                },
+                "auth": {
+                  "nullValue": null
+                },
+                "inTransaction": {
+                  "boolValue": true
+                },
+                "path": {
+                  "pathValue": {
+                    "segments": [
+                      {
+                        "simple": "databases"
+                      },
+                      {
+                        "simple": "(default)"
+                      },
+                      {
+                        "simple": "documents"
+                      },
+                      {
+                        "simple": "notes"
+                      },
+                      {
+                        "simple": "denied"
+                      }
+                    ]
+                  }
+                },
+                "transforms": {
+                  "nullValue": null
+                },
+                "writeFields": {
+                  "nullValue": null
+                },
+                "readFields": {
+                  "nullValue": null
+                },
+                "resource": {
+                  "mapValue": {
+                    "fields": {
+                      "data": {
+                        "mapValue": {
+                          "fields": {
+                            "visible": {
+                              "boolValue": false
+                            },
+                            "title": {
+                              "stringValue": "Synthetic 中文 🚀"
+                            }
+                          }
+                        }
+                      },
+                      "__name__": {
+                        "pathValue": {
+                          "segments": [
+                            {
+                              "simple": "databases"
+                            },
+                            {
+                              "simple": "(default)"
+                            },
+                            {
+                              "simple": "documents"
+                            },
+                            {
+                              "simple": "notes"
+                            },
+                            {
+                              "simple": "denied"
+                            }
+                          ]
+                        }
+                      },
+                      "id": {
+                        "stringValue": "denied"
+                      }
+                    }
+                  }
+                },
+                "method": {
+                  "stringValue": "create"
+                }
+              }
+            }
+          },
+          "resource": {
+            "undefined": {}
+          }
+        }
+      },
+      {
+        "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+        "time": "<timestamp>",
+        "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+        "requestId": "request-4",
+        "outcome": "deny",
+        "granularAllowOutcomes": [
+          {
+            "line": 6,
+            "outcome": false
+          },
+          {
+            "line": 6,
+            "outcome": false
+          }
+        ],
+        "rulesContext": {
+          "method": "update",
+          "path": "/databases/(default)/documents/notes/denied",
+          "time": "<timestamp>",
+          "request": {
+            "mapValue": {
+              "fields": {
+                "time": {
+                  "timestampValue": "<timestamp>"
+                },
+                "auth": {
+                  "nullValue": null
+                },
+                "inTransaction": {
+                  "boolValue": true
+                },
+                "path": {
+                  "pathValue": {
+                    "segments": [
+                      {
+                        "simple": "databases"
+                      },
+                      {
+                        "simple": "(default)"
+                      },
+                      {
+                        "simple": "documents"
+                      },
+                      {
+                        "simple": "notes"
+                      },
+                      {
+                        "simple": "denied"
+                      }
+                    ]
+                  }
+                },
+                "transforms": {
+                  "nullValue": null
+                },
+                "writeFields": {
+                  "nullValue": null
+                },
+                "readFields": {
+                  "nullValue": null
+                },
+                "resource": {
+                  "mapValue": {
+                    "fields": {
+                      "data": {
+                        "mapValue": {
+                          "fields": {
+                            "visible": {
+                              "boolValue": false
+                            },
+                            "title": {
+                              "stringValue": "Synthetic 中文 🚀"
+                            }
+                          }
+                        }
+                      },
+                      "__name__": {
+                        "pathValue": {
+                          "segments": [
+                            {
+                              "simple": "databases"
+                            },
+                            {
+                              "simple": "(default)"
+                            },
+                            {
+                              "simple": "documents"
+                            },
+                            {
+                              "simple": "notes"
+                            },
+                            {
+                              "simple": "denied"
+                            }
+                          ]
+                        }
+                      },
+                      "id": {
+                        "stringValue": "denied"
+                      }
+                    }
+                  }
+                },
+                "method": {
+                  "stringValue": "update"
+                }
+              }
+            }
+          },
+          "resource": {
+            "undefined": {}
+          }
+        }
+      },
+      {
+        "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+        "time": "<timestamp>",
+        "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+        "requestId": "request-5",
+        "outcome": "error",
+        "granularAllowOutcomes": [
+          {
+            "line": 5,
+            "outcome": false
+          }
+        ],
+        "rulesContext": {
+          "method": "get",
+          "path": "/databases/(default)/documents/notes/visible",
+          "time": "<timestamp>",
+          "request": {
+            "mapValue": {
+              "fields": {
+                "time": {
+                  "timestampValue": "<timestamp>"
+                },
+                "auth": {
+                  "nullValue": null
+                },
+                "inTransaction": {
+                  "boolValue": false
+                },
+                "path": {
+                  "pathValue": {
+                    "segments": [
+                      {
+                        "simple": "databases"
+                      },
+                      {
+                        "simple": "(default)"
+                      },
+                      {
+                        "simple": "documents"
+                      },
+                      {
+                        "simple": "notes"
+                      },
+                      {
+                        "simple": "visible"
+                      }
+                    ]
+                  }
+                },
+                "fields": {
+                  "nullValue": null
+                },
+                "method": {
+                  "stringValue": "get"
+                }
+              }
+            }
+          },
+          "resource": {
+            "undefined": {}
+          }
+        }
+      },
+      {
+        "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+        "time": "<timestamp>",
+        "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+        "requestId": "request-6",
+        "outcome": "allow",
+        "granularAllowOutcomes": [
+          {
+            "line": 5,
+            "outcome": false
+          },
+          {
+            "line": 5,
+            "outcome": true
+          }
+        ],
+        "rulesContext": {
+          "method": "get",
+          "path": "/databases/(default)/documents/notes/visible",
+          "time": "<timestamp>",
+          "request": {
+            "mapValue": {
+              "fields": {
+                "time": {
+                  "timestampValue": "<timestamp>"
+                },
+                "auth": {
+                  "nullValue": null
+                },
+                "inTransaction": {
+                  "boolValue": false
+                },
+                "path": {
+                  "pathValue": {
+                    "segments": [
+                      {
+                        "simple": "databases"
+                      },
+                      {
+                        "simple": "(default)"
+                      },
+                      {
+                        "simple": "documents"
+                      },
+                      {
+                        "simple": "notes"
+                      },
+                      {
+                        "simple": "visible"
+                      }
+                    ]
+                  }
+                },
+                "fields": {
+                  "nullValue": null
+                },
+                "method": {
+                  "stringValue": "get"
+                }
+              }
+            }
+          },
+          "resource": {
+            "mapValue": {
+              "fields": {
+                "data": {
+                  "mapValue": {
+                    "fields": {
+                      "visible": {
+                        "boolValue": true
+                      },
+                      "title": {
+                        "stringValue": "Synthetic 中文 🚀"
+                      }
+                    }
+                  }
+                },
+                "__name__": {
+                  "pathValue": {
+                    "segments": [
+                      {
+                        "simple": "databases"
+                      },
+                      {
+                        "simple": "(default)"
+                      },
+                      {
+                        "simple": "documents"
+                      },
+                      {
+                        "simple": "notes"
+                      },
+                      {
+                        "simple": "visible"
+                      }
+                    ]
+                  }
+                },
+                "id": {
+                  "stringValue": "visible"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+        "time": "<timestamp>",
+        "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+        "requestId": "request-7",
+        "outcome": "error",
+        "granularAllowOutcomes": [
+          {
+            "line": 5,
+            "outcome": false
+          }
+        ],
+        "rulesContext": {
+          "method": "get",
+          "path": "/databases/(default)/documents/notes/hidden",
+          "time": "<timestamp>",
+          "request": {
+            "mapValue": {
+              "fields": {
+                "time": {
+                  "timestampValue": "<timestamp>"
+                },
+                "auth": {
+                  "nullValue": null
+                },
+                "inTransaction": {
+                  "boolValue": false
+                },
+                "path": {
+                  "pathValue": {
+                    "segments": [
+                      {
+                        "simple": "databases"
+                      },
+                      {
+                        "simple": "(default)"
+                      },
+                      {
+                        "simple": "documents"
+                      },
+                      {
+                        "simple": "notes"
+                      },
+                      {
+                        "simple": "hidden"
+                      }
+                    ]
+                  }
+                },
+                "fields": {
+                  "nullValue": null
+                },
+                "method": {
+                  "stringValue": "get"
+                }
+              }
+            }
+          },
+          "resource": {
+            "undefined": {}
+          }
+        }
+      },
+      {
+        "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+        "time": "<timestamp>",
+        "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+        "requestId": "request-8",
+        "outcome": "deny",
+        "granularAllowOutcomes": [
+          {
+            "line": 5,
+            "outcome": false
+          },
+          {
+            "line": 5,
+            "outcome": false
+          }
+        ],
+        "rulesContext": {
+          "method": "get",
+          "path": "/databases/(default)/documents/notes/hidden",
+          "time": "<timestamp>",
+          "request": {
+            "mapValue": {
+              "fields": {
+                "time": {
+                  "timestampValue": "<timestamp>"
+                },
+                "auth": {
+                  "nullValue": null
+                },
+                "inTransaction": {
+                  "boolValue": false
+                },
+                "path": {
+                  "pathValue": {
+                    "segments": [
+                      {
+                        "simple": "databases"
+                      },
+                      {
+                        "simple": "(default)"
+                      },
+                      {
+                        "simple": "documents"
+                      },
+                      {
+                        "simple": "notes"
+                      },
+                      {
+                        "simple": "hidden"
+                      }
+                    ]
+                  }
+                },
+                "fields": {
+                  "nullValue": null
+                },
+                "method": {
+                  "stringValue": "get"
+                }
+              }
+            }
+          },
+          "resource": {
+            "mapValue": {
+              "fields": {
+                "data": {
+                  "mapValue": {
+                    "fields": {
+                      "visible": {
+                        "boolValue": false
+                      },
+                      "title": {
+                        "stringValue": "Synthetic 中文 🚀"
+                      }
+                    }
+                  }
+                },
+                "__name__": {
+                  "pathValue": {
+                    "segments": [
+                      {
+                        "simple": "databases"
+                      },
+                      {
+                        "simple": "(default)"
+                      },
+                      {
+                        "simple": "documents"
+                      },
+                      {
+                        "simple": "notes"
+                      },
+                      {
+                        "simple": "hidden"
+                      }
+                    ]
+                  }
+                },
+                "id": {
+                  "stringValue": "hidden"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+        "time": "<timestamp>",
+        "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+        "requestId": "request-9",
+        "outcome": "error",
+        "granularAllowOutcomes": [
+          {
+            "line": 5,
+            "outcome": false
+          }
+        ],
+        "rulesContext": {
+          "method": "get",
+          "path": "/databases/(default)/documents/notes/missing",
+          "time": "<timestamp>",
+          "request": {
+            "mapValue": {
+              "fields": {
+                "time": {
+                  "timestampValue": "<timestamp>"
+                },
+                "auth": {
+                  "nullValue": null
+                },
+                "inTransaction": {
+                  "boolValue": false
+                },
+                "path": {
+                  "pathValue": {
+                    "segments": [
+                      {
+                        "simple": "databases"
+                      },
+                      {
+                        "simple": "(default)"
+                      },
+                      {
+                        "simple": "documents"
+                      },
+                      {
+                        "simple": "notes"
+                      },
+                      {
+                        "simple": "missing"
+                      }
+                    ]
+                  }
+                },
+                "fields": {
+                  "nullValue": null
+                },
+                "method": {
+                  "stringValue": "get"
+                }
+              }
+            }
+          },
+          "resource": {
+            "undefined": {}
+          }
+        }
+      },
+      {
+        "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+        "time": "<timestamp>",
+        "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+        "requestId": "request-10",
+        "outcome": "error",
+        "granularAllowOutcomes": [
+          {
+            "line": 5,
+            "outcome": false
+          },
+          {
+            "line": 5,
+            "outcome": false
+          }
+        ],
+        "rulesContext": {
+          "method": "get",
+          "path": "/databases/(default)/documents/notes/missing",
+          "time": "<timestamp>",
+          "request": {
+            "mapValue": {
+              "fields": {
+                "time": {
+                  "timestampValue": "<timestamp>"
+                },
+                "auth": {
+                  "nullValue": null
+                },
+                "inTransaction": {
+                  "boolValue": false
+                },
+                "path": {
+                  "pathValue": {
+                    "segments": [
+                      {
+                        "simple": "databases"
+                      },
+                      {
+                        "simple": "(default)"
+                      },
+                      {
+                        "simple": "documents"
+                      },
+                      {
+                        "simple": "notes"
+                      },
+                      {
+                        "simple": "missing"
+                      }
+                    ]
+                  }
+                },
+                "fields": {
+                  "nullValue": null
+                },
+                "method": {
+                  "stringValue": "get"
+                }
+              }
+            }
+          },
+          "resource": {
+            "nullValue": null
+          }
+        }
+      }
+    ],
+    "reconnected": [
+      [
+        {
+          "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+          "time": "<timestamp>",
+          "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+          "requestId": "request-1",
+          "outcome": "allow",
+          "granularAllowOutcomes": [
+            {
+              "line": 6,
+              "outcome": true
+            },
+            {
+              "line": 6,
+              "outcome": true
+            }
+          ],
+          "rulesContext": {
+            "method": "create",
+            "path": "/databases/(default)/documents/notes/visible",
+            "time": "<timestamp>",
+            "request": {
+              "mapValue": {
+                "fields": {
+                  "time": {
+                    "timestampValue": "<timestamp>"
+                  },
+                  "auth": {
+                    "nullValue": null
+                  },
+                  "inTransaction": {
+                    "boolValue": true
+                  },
+                  "path": {
+                    "pathValue": {
+                      "segments": [
+                        {
+                          "simple": "databases"
+                        },
+                        {
+                          "simple": "(default)"
+                        },
+                        {
+                          "simple": "documents"
+                        },
+                        {
+                          "simple": "notes"
+                        },
+                        {
+                          "simple": "visible"
+                        }
+                      ]
+                    }
+                  },
+                  "transforms": {
+                    "nullValue": null
+                  },
+                  "writeFields": {
+                    "nullValue": null
+                  },
+                  "readFields": {
+                    "nullValue": null
+                  },
+                  "resource": {
+                    "mapValue": {
+                      "fields": {
+                        "data": {
+                          "mapValue": {
+                            "fields": {
+                              "visible": {
+                                "boolValue": true
+                              },
+                              "title": {
+                                "stringValue": "Synthetic 中文 🚀"
+                              }
+                            }
+                          }
+                        },
+                        "__name__": {
+                          "pathValue": {
+                            "segments": [
+                              {
+                                "simple": "databases"
+                              },
+                              {
+                                "simple": "(default)"
+                              },
+                              {
+                                "simple": "documents"
+                              },
+                              {
+                                "simple": "notes"
+                              },
+                              {
+                                "simple": "visible"
+                              }
+                            ]
+                          }
+                        },
+                        "id": {
+                          "stringValue": "visible"
+                        }
+                      }
+                    }
+                  },
+                  "method": {
+                    "stringValue": "create"
+                  }
+                }
+              }
+            },
+            "resource": {
+              "undefined": {}
+            }
+          }
+        },
+        {
+          "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+          "time": "<timestamp>",
+          "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+          "requestId": "request-2",
+          "outcome": "allow",
+          "granularAllowOutcomes": [
+            {
+              "line": 6,
+              "outcome": true
+            },
+            {
+              "line": 6,
+              "outcome": true
+            }
+          ],
+          "rulesContext": {
+            "method": "update",
+            "path": "/databases/(default)/documents/notes/visible",
+            "time": "<timestamp>",
+            "request": {
+              "mapValue": {
+                "fields": {
+                  "time": {
+                    "timestampValue": "<timestamp>"
+                  },
+                  "auth": {
+                    "nullValue": null
+                  },
+                  "inTransaction": {
+                    "boolValue": true
+                  },
+                  "path": {
+                    "pathValue": {
+                      "segments": [
+                        {
+                          "simple": "databases"
+                        },
+                        {
+                          "simple": "(default)"
+                        },
+                        {
+                          "simple": "documents"
+                        },
+                        {
+                          "simple": "notes"
+                        },
+                        {
+                          "simple": "visible"
+                        }
+                      ]
+                    }
+                  },
+                  "transforms": {
+                    "nullValue": null
+                  },
+                  "writeFields": {
+                    "nullValue": null
+                  },
+                  "readFields": {
+                    "nullValue": null
+                  },
+                  "resource": {
+                    "mapValue": {
+                      "fields": {
+                        "data": {
+                          "mapValue": {
+                            "fields": {
+                              "visible": {
+                                "boolValue": true
+                              },
+                              "title": {
+                                "stringValue": "Synthetic 中文 🚀"
+                              }
+                            }
+                          }
+                        },
+                        "__name__": {
+                          "pathValue": {
+                            "segments": [
+                              {
+                                "simple": "databases"
+                              },
+                              {
+                                "simple": "(default)"
+                              },
+                              {
+                                "simple": "documents"
+                              },
+                              {
+                                "simple": "notes"
+                              },
+                              {
+                                "simple": "visible"
+                              }
+                            ]
+                          }
+                        },
+                        "id": {
+                          "stringValue": "visible"
+                        }
+                      }
+                    }
+                  },
+                  "method": {
+                    "stringValue": "update"
+                  }
+                }
+              }
+            },
+            "resource": {
+              "undefined": {}
+            }
+          }
+        },
+        {
+          "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+          "time": "<timestamp>",
+          "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+          "requestId": "request-3",
+          "outcome": "deny",
+          "granularAllowOutcomes": [
+            {
+              "line": 6,
+              "outcome": false
+            },
+            {
+              "line": 6,
+              "outcome": false
+            }
+          ],
+          "rulesContext": {
+            "method": "create",
+            "path": "/databases/(default)/documents/notes/denied",
+            "time": "<timestamp>",
+            "request": {
+              "mapValue": {
+                "fields": {
+                  "time": {
+                    "timestampValue": "<timestamp>"
+                  },
+                  "auth": {
+                    "nullValue": null
+                  },
+                  "inTransaction": {
+                    "boolValue": true
+                  },
+                  "path": {
+                    "pathValue": {
+                      "segments": [
+                        {
+                          "simple": "databases"
+                        },
+                        {
+                          "simple": "(default)"
+                        },
+                        {
+                          "simple": "documents"
+                        },
+                        {
+                          "simple": "notes"
+                        },
+                        {
+                          "simple": "denied"
+                        }
+                      ]
+                    }
+                  },
+                  "transforms": {
+                    "nullValue": null
+                  },
+                  "writeFields": {
+                    "nullValue": null
+                  },
+                  "readFields": {
+                    "nullValue": null
+                  },
+                  "resource": {
+                    "mapValue": {
+                      "fields": {
+                        "data": {
+                          "mapValue": {
+                            "fields": {
+                              "visible": {
+                                "boolValue": false
+                              },
+                              "title": {
+                                "stringValue": "Synthetic 中文 🚀"
+                              }
+                            }
+                          }
+                        },
+                        "__name__": {
+                          "pathValue": {
+                            "segments": [
+                              {
+                                "simple": "databases"
+                              },
+                              {
+                                "simple": "(default)"
+                              },
+                              {
+                                "simple": "documents"
+                              },
+                              {
+                                "simple": "notes"
+                              },
+                              {
+                                "simple": "denied"
+                              }
+                            ]
+                          }
+                        },
+                        "id": {
+                          "stringValue": "denied"
+                        }
+                      }
+                    }
+                  },
+                  "method": {
+                    "stringValue": "create"
+                  }
+                }
+              }
+            },
+            "resource": {
+              "undefined": {}
+            }
+          }
+        },
+        {
+          "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+          "time": "<timestamp>",
+          "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+          "requestId": "request-4",
+          "outcome": "deny",
+          "granularAllowOutcomes": [
+            {
+              "line": 6,
+              "outcome": false
+            },
+            {
+              "line": 6,
+              "outcome": false
+            }
+          ],
+          "rulesContext": {
+            "method": "update",
+            "path": "/databases/(default)/documents/notes/denied",
+            "time": "<timestamp>",
+            "request": {
+              "mapValue": {
+                "fields": {
+                  "time": {
+                    "timestampValue": "<timestamp>"
+                  },
+                  "auth": {
+                    "nullValue": null
+                  },
+                  "inTransaction": {
+                    "boolValue": true
+                  },
+                  "path": {
+                    "pathValue": {
+                      "segments": [
+                        {
+                          "simple": "databases"
+                        },
+                        {
+                          "simple": "(default)"
+                        },
+                        {
+                          "simple": "documents"
+                        },
+                        {
+                          "simple": "notes"
+                        },
+                        {
+                          "simple": "denied"
+                        }
+                      ]
+                    }
+                  },
+                  "transforms": {
+                    "nullValue": null
+                  },
+                  "writeFields": {
+                    "nullValue": null
+                  },
+                  "readFields": {
+                    "nullValue": null
+                  },
+                  "resource": {
+                    "mapValue": {
+                      "fields": {
+                        "data": {
+                          "mapValue": {
+                            "fields": {
+                              "visible": {
+                                "boolValue": false
+                              },
+                              "title": {
+                                "stringValue": "Synthetic 中文 🚀"
+                              }
+                            }
+                          }
+                        },
+                        "__name__": {
+                          "pathValue": {
+                            "segments": [
+                              {
+                                "simple": "databases"
+                              },
+                              {
+                                "simple": "(default)"
+                              },
+                              {
+                                "simple": "documents"
+                              },
+                              {
+                                "simple": "notes"
+                              },
+                              {
+                                "simple": "denied"
+                              }
+                            ]
+                          }
+                        },
+                        "id": {
+                          "stringValue": "denied"
+                        }
+                      }
+                    }
+                  },
+                  "method": {
+                    "stringValue": "update"
+                  }
+                }
+              }
+            },
+            "resource": {
+              "undefined": {}
+            }
+          }
+        },
+        {
+          "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+          "time": "<timestamp>",
+          "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+          "requestId": "request-5",
+          "outcome": "error",
+          "granularAllowOutcomes": [
+            {
+              "line": 5,
+              "outcome": false
+            },
+            {
+              "line": 5,
+              "outcome": true
+            }
+          ],
+          "rulesContext": {
+            "method": "get",
+            "path": "/databases/(default)/documents/notes/visible",
+            "time": "<timestamp>",
+            "request": {
+              "mapValue": {
+                "fields": {
+                  "time": {
+                    "timestampValue": "<timestamp>"
+                  },
+                  "auth": {
+                    "nullValue": null
+                  },
+                  "inTransaction": {
+                    "boolValue": false
+                  },
+                  "path": {
+                    "pathValue": {
+                      "segments": [
+                        {
+                          "simple": "databases"
+                        },
+                        {
+                          "simple": "(default)"
+                        },
+                        {
+                          "simple": "documents"
+                        },
+                        {
+                          "simple": "notes"
+                        },
+                        {
+                          "simple": "visible"
+                        }
+                      ]
+                    }
+                  },
+                  "fields": {
+                    "nullValue": null
+                  },
+                  "method": {
+                    "stringValue": "get"
+                  }
+                }
+              }
+            },
+            "resource": {
+              "undefined": {}
+            }
+          }
+        },
+        {
+          "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+          "time": "<timestamp>",
+          "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+          "requestId": "request-6",
+          "outcome": "allow",
+          "granularAllowOutcomes": [
+            {
+              "line": 5,
+              "outcome": false
+            },
+            {
+              "line": 5,
+              "outcome": true
+            }
+          ],
+          "rulesContext": {
+            "method": "get",
+            "path": "/databases/(default)/documents/notes/visible",
+            "time": "<timestamp>",
+            "request": {
+              "mapValue": {
+                "fields": {
+                  "time": {
+                    "timestampValue": "<timestamp>"
+                  },
+                  "auth": {
+                    "nullValue": null
+                  },
+                  "inTransaction": {
+                    "boolValue": false
+                  },
+                  "path": {
+                    "pathValue": {
+                      "segments": [
+                        {
+                          "simple": "databases"
+                        },
+                        {
+                          "simple": "(default)"
+                        },
+                        {
+                          "simple": "documents"
+                        },
+                        {
+                          "simple": "notes"
+                        },
+                        {
+                          "simple": "visible"
+                        }
+                      ]
+                    }
+                  },
+                  "fields": {
+                    "nullValue": null
+                  },
+                  "method": {
+                    "stringValue": "get"
+                  }
+                }
+              }
+            },
+            "resource": {
+              "mapValue": {
+                "fields": {
+                  "data": {
+                    "mapValue": {
+                      "fields": {
+                        "visible": {
+                          "boolValue": true
+                        },
+                        "title": {
+                          "stringValue": "Synthetic 中文 🚀"
+                        }
+                      }
+                    }
+                  },
+                  "__name__": {
+                    "pathValue": {
+                      "segments": [
+                        {
+                          "simple": "databases"
+                        },
+                        {
+                          "simple": "(default)"
+                        },
+                        {
+                          "simple": "documents"
+                        },
+                        {
+                          "simple": "notes"
+                        },
+                        {
+                          "simple": "visible"
+                        }
+                      ]
+                    }
+                  },
+                  "id": {
+                    "stringValue": "visible"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+          "time": "<timestamp>",
+          "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+          "requestId": "request-7",
+          "outcome": "error",
+          "granularAllowOutcomes": [
+            {
+              "line": 5,
+              "outcome": false
+            },
+            {
+              "line": 5,
+              "outcome": false
+            }
+          ],
+          "rulesContext": {
+            "method": "get",
+            "path": "/databases/(default)/documents/notes/hidden",
+            "time": "<timestamp>",
+            "request": {
+              "mapValue": {
+                "fields": {
+                  "time": {
+                    "timestampValue": "<timestamp>"
+                  },
+                  "auth": {
+                    "nullValue": null
+                  },
+                  "inTransaction": {
+                    "boolValue": false
+                  },
+                  "path": {
+                    "pathValue": {
+                      "segments": [
+                        {
+                          "simple": "databases"
+                        },
+                        {
+                          "simple": "(default)"
+                        },
+                        {
+                          "simple": "documents"
+                        },
+                        {
+                          "simple": "notes"
+                        },
+                        {
+                          "simple": "hidden"
+                        }
+                      ]
+                    }
+                  },
+                  "fields": {
+                    "nullValue": null
+                  },
+                  "method": {
+                    "stringValue": "get"
+                  }
+                }
+              }
+            },
+            "resource": {
+              "undefined": {}
+            }
+          }
+        },
+        {
+          "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+          "time": "<timestamp>",
+          "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+          "requestId": "request-8",
+          "outcome": "deny",
+          "granularAllowOutcomes": [
+            {
+              "line": 5,
+              "outcome": false
+            },
+            {
+              "line": 5,
+              "outcome": false
+            }
+          ],
+          "rulesContext": {
+            "method": "get",
+            "path": "/databases/(default)/documents/notes/hidden",
+            "time": "<timestamp>",
+            "request": {
+              "mapValue": {
+                "fields": {
+                  "time": {
+                    "timestampValue": "<timestamp>"
+                  },
+                  "auth": {
+                    "nullValue": null
+                  },
+                  "inTransaction": {
+                    "boolValue": false
+                  },
+                  "path": {
+                    "pathValue": {
+                      "segments": [
+                        {
+                          "simple": "databases"
+                        },
+                        {
+                          "simple": "(default)"
+                        },
+                        {
+                          "simple": "documents"
+                        },
+                        {
+                          "simple": "notes"
+                        },
+                        {
+                          "simple": "hidden"
+                        }
+                      ]
+                    }
+                  },
+                  "fields": {
+                    "nullValue": null
+                  },
+                  "method": {
+                    "stringValue": "get"
+                  }
+                }
+              }
+            },
+            "resource": {
+              "mapValue": {
+                "fields": {
+                  "data": {
+                    "mapValue": {
+                      "fields": {
+                        "visible": {
+                          "boolValue": false
+                        },
+                        "title": {
+                          "stringValue": "Synthetic 中文 🚀"
+                        }
+                      }
+                    }
+                  },
+                  "__name__": {
+                    "pathValue": {
+                      "segments": [
+                        {
+                          "simple": "databases"
+                        },
+                        {
+                          "simple": "(default)"
+                        },
+                        {
+                          "simple": "documents"
+                        },
+                        {
+                          "simple": "notes"
+                        },
+                        {
+                          "simple": "hidden"
+                        }
+                      ]
+                    }
+                  },
+                  "id": {
+                    "stringValue": "hidden"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+          "time": "<timestamp>",
+          "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+          "requestId": "request-9",
+          "outcome": "error",
+          "granularAllowOutcomes": [
+            {
+              "line": 5,
+              "outcome": false
+            },
+            {
+              "line": 5,
+              "outcome": false
+            }
+          ],
+          "rulesContext": {
+            "method": "get",
+            "path": "/databases/(default)/documents/notes/missing",
+            "time": "<timestamp>",
+            "request": {
+              "mapValue": {
+                "fields": {
+                  "time": {
+                    "timestampValue": "<timestamp>"
+                  },
+                  "auth": {
+                    "nullValue": null
+                  },
+                  "inTransaction": {
+                    "boolValue": false
+                  },
+                  "path": {
+                    "pathValue": {
+                      "segments": [
+                        {
+                          "simple": "databases"
+                        },
+                        {
+                          "simple": "(default)"
+                        },
+                        {
+                          "simple": "documents"
+                        },
+                        {
+                          "simple": "notes"
+                        },
+                        {
+                          "simple": "missing"
+                        }
+                      ]
+                    }
+                  },
+                  "fields": {
+                    "nullValue": null
+                  },
+                  "method": {
+                    "stringValue": "get"
+                  }
+                }
+              }
+            },
+            "resource": {
+              "undefined": {}
+            }
+          }
+        },
+        {
+          "rules": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n",
+          "time": "<timestamp>",
+          "rulesReleaseKey": "projects/demo-fireside-developer-tools/releases/cloud.firestore-1091012450",
+          "requestId": "request-10",
+          "outcome": "error",
+          "granularAllowOutcomes": [
+            {
+              "line": 5,
+              "outcome": false
+            },
+            {
+              "line": 5,
+              "outcome": false
+            }
+          ],
+          "rulesContext": {
+            "method": "get",
+            "path": "/databases/(default)/documents/notes/missing",
+            "time": "<timestamp>",
+            "request": {
+              "mapValue": {
+                "fields": {
+                  "time": {
+                    "timestampValue": "<timestamp>"
+                  },
+                  "auth": {
+                    "nullValue": null
+                  },
+                  "inTransaction": {
+                    "boolValue": false
+                  },
+                  "path": {
+                    "pathValue": {
+                      "segments": [
+                        {
+                          "simple": "databases"
+                        },
+                        {
+                          "simple": "(default)"
+                        },
+                        {
+                          "simple": "documents"
+                        },
+                        {
+                          "simple": "notes"
+                        },
+                        {
+                          "simple": "missing"
+                        }
+                      ]
+                    }
+                  },
+                  "fields": {
+                    "nullValue": null
+                  },
+                  "method": {
+                    "stringValue": "get"
+                  }
+                }
+              }
+            },
+            "resource": {
+              "nullValue": null
+            }
+          }
+        }
+      ]
+    ]
+  },
+  "browser": {
+    "browserVersion": "152.0.7977.83",
+    "checks": [
+      "service-overview-rendered",
+      "denied-request-rule-and-context-rendered",
+      "request-details-survive-reload-history-replay",
+      "coverage-html-renders-expressions",
+      "document-browse-edit-persisted",
+      "document-clear-control-persisted",
+      "auth-create-and-list",
+      "auth-list-refresh",
+      "auth-clear-control",
+      "storage-upload-and-list",
+      "storage-upload-bytes-preserved",
+      "storage-metadata-panel",
+      "storage-clear-control",
+      "logs-history-rendered"
+    ],
+    "coverage": {
+      "title": "Firestore Rule Coverage Report",
+      "expressionCount": 9,
+      "rulesVisible": true
+    },
+    "errors": [],
+    "exchanges": [
+      {
+        "service": "firestore",
+        "method": "GET",
+        "path": "/emulator/v1/projects/demo-fireside-developer-tools:ruleCoverage.html",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": null
+      },
+      {
+        "service": "firestore",
+        "method": "DELETE",
+        "path": "/emulator/v1/projects/demo-fireside-developer-tools/databases/(default)/documents",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {}
+      },
+      {
+        "service": "auth",
+        "method": "POST",
+        "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-developer-tools/accounts:query",
+        "queryKeys": [],
+        "status": 200,
+        "request": {},
+        "response": {
+          "recordsCount": "0",
+          "userInfo": []
+        }
+      },
+      {
+        "service": "auth",
+        "method": "GET",
+        "path": "/identitytoolkit.googleapis.com/v2/projects/demo-fireside-developer-tools/tenants",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {
+          "tenants": []
+        }
+      },
+      {
+        "service": "auth",
+        "method": "GET",
+        "path": "/emulator/v1/projects/demo-fireside-developer-tools/config",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {
+          "signIn": {
+            "allowDuplicateEmails": false
+          },
+          "emailPrivacyConfig": {
+            "enableImprovedEmailPrivacy": false
+          }
+        }
+      },
+      {
+        "service": "auth",
+        "method": "POST",
+        "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-developer-tools/accounts",
+        "queryKeys": [],
+        "status": 200,
+        "request": {
+          "customAttributes": "",
+          "displayName": "Synthetic Operator",
+          "photoUrl": "",
+          "email": "operator@example.test",
+          "phoneNumber": "",
+          "emailVerified": false,
+          "mfaInfo": []
+        },
+        "response": {
+          "kind": "identitytoolkit#SignupNewUserResponse",
+          "localId": "CRSGYV05K3azjzybCKXyqceIA6S1",
+          "displayName": "Synthetic Operator",
+          "email": "operator@example.test"
+        }
+      },
+      {
+        "service": "auth",
+        "method": "POST",
+        "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-developer-tools/accounts:lookup",
+        "queryKeys": [],
+        "status": 200,
+        "request": {
+          "localId": [
+            "CRSGYV05K3azjzybCKXyqceIA6S1"
+          ]
+        },
+        "response": {
+          "kind": "identitytoolkit#GetAccountInfoResponse",
+          "users": [
+            {
+              "localId": "CRSGYV05K3azjzybCKXyqceIA6S1",
+              "lastLoginAt": "1789055595216",
+              "displayName": "Synthetic Operator",
+              "photoUrl": "",
+              "emailVerified": false,
+              "email": "operator@example.test",
+              "validSince": "1789055595",
+              "mfaInfo": [],
+              "createdAt": "1789055595216",
+              "providerUserInfo": [
+                {
+                  "providerId": "password",
+                  "email": "operator@example.test",
+                  "federatedId": "operator@example.test",
+                  "rawId": "operator@example.test",
+                  "displayName": "Synthetic Operator",
+                  "photoUrl": ""
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "service": "auth",
+        "method": "POST",
+        "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-developer-tools/accounts:query",
+        "queryKeys": [],
+        "status": 200,
+        "request": {},
+        "response": {
+          "recordsCount": "1",
+          "userInfo": [
+            {
+              "localId": "CRSGYV05K3azjzybCKXyqceIA6S1",
+              "lastLoginAt": "1789055595216",
+              "displayName": "Synthetic Operator",
+              "photoUrl": "",
+              "emailVerified": false,
+              "email": "operator@example.test",
+              "validSince": "1789055595",
+              "mfaInfo": [],
+              "createdAt": "1789055595216",
+              "providerUserInfo": [
+                {
+                  "providerId": "password",
+                  "email": "operator@example.test",
+                  "federatedId": "operator@example.test",
+                  "rawId": "operator@example.test",
+                  "displayName": "Synthetic Operator",
+                  "photoUrl": ""
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "service": "auth",
+        "method": "DELETE",
+        "path": "/emulator/v1/projects/demo-fireside-developer-tools/accounts",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {}
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o",
+        "queryKeys": [
+          "delimiter",
+          "prefix"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "prefixes": [],
+          "items": []
+        }
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o",
+        "queryKeys": [
+          "delimiter",
+          "prefix"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "prefixes": [],
+          "items": []
+        }
+      },
+      {
+        "service": "storage",
+        "method": "POST",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o",
+        "queryKeys": [
+          "name"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "name": "synthetic.txt",
+          "bucket": "demo-fireside-developer-tools.appspot.com",
+          "generation": "1789055595541",
+          "metageneration": "1",
+          "contentType": "text/plain",
+          "timeCreated": "<timestamp>",
+          "updated": "<timestamp>",
+          "storageClass": "STANDARD",
+          "size": "47",
+          "md5Hash": "sPPqlZ7uzJlPy/GTuQW/bw==",
+          "crc32c": "2200559296",
+          "etag": "yYemEuPtaefFKcqZRqKBEWqIQkQ",
+          "contentEncoding": "identity",
+          "contentDisposition": "inline",
+          "metadata": {}
+        }
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o",
+        "queryKeys": [
+          "delimiter",
+          "prefix"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "prefixes": [],
+          "items": [
+            {
+              "name": "synthetic.txt",
+              "bucket": "demo-fireside-developer-tools.appspot.com"
+            }
+          ]
+        }
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o/synthetic.txt",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {
+          "name": "synthetic.txt",
+          "bucket": "demo-fireside-developer-tools.appspot.com",
+          "generation": "1789055595541",
+          "metageneration": "1",
+          "contentType": "text/plain",
+          "timeCreated": "<timestamp>",
+          "updated": "<timestamp>",
+          "storageClass": "STANDARD",
+          "size": "47",
+          "md5Hash": "sPPqlZ7uzJlPy/GTuQW/bw==",
+          "crc32c": "2200559296",
+          "etag": "yYemEuPtaefFKcqZRqKBEWqIQkQ",
+          "contentEncoding": "identity",
+          "contentDisposition": "inline",
+          "metadata": {}
+        }
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o",
+        "queryKeys": [
+          "delimiter",
+          "prefix"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "prefixes": [],
+          "items": [
+            {
+              "name": "synthetic.txt",
+              "bucket": "demo-fireside-developer-tools.appspot.com"
+            }
+          ]
+        }
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o/synthetic.txt",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {
+          "name": "synthetic.txt",
+          "bucket": "demo-fireside-developer-tools.appspot.com",
+          "generation": "1789055595541",
+          "metageneration": "1",
+          "contentType": "text/plain",
+          "timeCreated": "<timestamp>",
+          "updated": "<timestamp>",
+          "storageClass": "STANDARD",
+          "size": "47",
+          "md5Hash": "sPPqlZ7uzJlPy/GTuQW/bw==",
+          "crc32c": "2200559296",
+          "etag": "yYemEuPtaefFKcqZRqKBEWqIQkQ",
+          "contentEncoding": "identity",
+          "contentDisposition": "inline",
+          "metadata": {}
+        }
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o",
+        "queryKeys": [
+          "delimiter",
+          "prefix"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "prefixes": [],
+          "items": [
+            {
+              "name": "synthetic.txt",
+              "bucket": "demo-fireside-developer-tools.appspot.com"
+            }
+          ]
+        }
+      },
+      {
+        "service": "storage",
+        "method": "DELETE",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o/%252f",
+        "queryKeys": [],
+        "status": 404,
+        "request": null,
+        "response": null
+      },
+      {
+        "service": "storage",
+        "method": "DELETE",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o/synthetic.txt",
+        "queryKeys": [],
+        "status": 204,
+        "request": null,
+        "response": null
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o",
+        "queryKeys": [
+          "delimiter",
+          "prefix"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "prefixes": [],
+          "items": []
+        }
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o",
+        "queryKeys": [
+          "delimiter",
+          "prefix"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "prefixes": [],
+          "items": []
+        }
+      }
+    ]
+  },
+  "config": {
+    "projectId": "demo-fireside-developer-tools",
+    "experiments": [
+      "functionsv2deployoptimizations",
+      "pintags",
+      "apphosting",
+      "abiu",
+      "genkit",
+      "mcp",
+      "fdcift",
+      "fdcwebhooks",
+      "fdcrealtime"
+    ],
+    "hub": {
+      "listen": [
+        {
+          "address": "127.0.0.1",
+          "family": "IPv4",
+          "port": "hub"
+        }
+      ],
+      "name": "hub",
+      "host": "127.0.0.1",
+      "port": "hub"
+    },
+    "ui": {
+      "listen": [
+        {
+          "address": "127.0.0.1",
+          "family": "IPv4",
+          "port": "ui"
+        }
+      ],
+      "name": "ui",
+      "host": "127.0.0.1",
+      "port": "ui"
+    },
+    "logging": {
+      "listen": [
+        {
+          "address": "127.0.0.1",
+          "family": "IPv4",
+          "port": "logging"
+        }
+      ],
+      "name": "logging",
+      "host": "127.0.0.1",
+      "port": "logging"
+    },
+    "auth": {
+      "listen": [
+        {
+          "address": "127.0.0.1",
+          "family": "IPv4",
+          "port": "auth"
+        }
+      ],
+      "name": "auth",
+      "host": "127.0.0.1",
+      "port": "auth"
+    },
+    "firestore": {
+      "listen": [
+        {
+          "address": "127.0.0.1",
+          "family": "IPv4",
+          "port": "firestore"
+        }
+      ],
+      "name": "firestore",
+      "host": "127.0.0.1",
+      "port": "firestore",
+      "pid": "<oracle-pid>",
+      "reservedPorts": [
+        "websocket"
+      ],
+      "webSocketHost": "127.0.0.1",
+      "webSocketPort": "websocket"
+    },
+    "storage": {
+      "listen": [
+        {
+          "address": "127.0.0.1",
+          "family": "IPv4",
+          "port": "storage"
+        }
+      ],
+      "name": "storage",
+      "host": "127.0.0.1",
+      "port": "storage"
+    }
+  },
+  "normalization": {
+    "generatedRequestIds": "stable encounter-order IDs shared by live and replay frames",
+    "timestamps": "<timestamp>, except capture provenance",
+    "paths": "isolated oracle workdir only",
+    "ports": "service names",
+    "html": "status/headers, raw body SHA-256/byte count, title and embedded coverage data; no vendored renderer source",
+    "credentials": "Auth password/token fields omitted from browser API transcripts; synthetic identities only",
+    "lengths": "HTTP content-length describes the original response, before normalization"
+  }
+}
