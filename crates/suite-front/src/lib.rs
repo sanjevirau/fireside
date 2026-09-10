@@ -7,6 +7,8 @@
 #![forbid(unsafe_code)]
 
 mod requests;
+#[cfg(test)]
+mod logging_tests;
 pub use requests::requests_router;
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
