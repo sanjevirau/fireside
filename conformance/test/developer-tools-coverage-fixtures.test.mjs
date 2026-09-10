@@ -15,7 +15,7 @@ test('coverage capture has pinned identity, inputs, outcomes and checksums', asy
   assert.equal(fixture.oracle.node, '24.20.0');
   assert.equal(fixture.oracle.jarSha256, '9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c');
   assert.equal(fixture.syntheticOnly, true);
-  assert.equal(fixture.profiles.length, 13);
+  assert.equal(fixture.profiles.length, 19);
   assert.equal(fixture.seed.status, 200);
   assert.equal(fixture.seed.owner, true);
   assert.ok(!/Bearer |\/Users\/|\/var\/folders\//.test(bytes.toString()));

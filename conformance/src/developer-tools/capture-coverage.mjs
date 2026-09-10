@@ -41,6 +41,12 @@ const profiles = [
   { id: 'empty-containers', source: source('[].size() == 0 && {}.size() == 0'), status: 200 },
   { id: 'simple-function', source: source('accept(resource.data.visible)', '  function accept(value) { return value; }'), status: 200 },
   { id: 'path-interpolation', source: source('exists(/databases/$(database)/documents/items/one)'), status: 200 },
+  { id: 'slice', source: source('[1, 2, 3][1:2] == [2]'), status: 200 },
+  { id: 'type-check', source: source('resource.data.visible is bool'), status: 200 },
+  { id: 'method-arguments', source: source("'hello'.matches('h.*')"), status: 200 },
+  { id: 'nested-grouping', source: source('((resource.data.visible))'), status: 200 },
+  { id: 'grouped-literal', source: source("('hello').size() == 5"), status: 200 },
+  { id: 'constant-function', source: source('accept()', '  function accept() { return true; }'), status: 200 },
 ];
 await writeFile(join(work, 'firestore.rules'), profiles[0].source);
 const child = spawn('java', ['-jar', jar, '--host', '127.0.0.1', '--port', String(port),
