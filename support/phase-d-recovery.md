@@ -30,3 +30,32 @@ missing orderly drain and the corrected native reopen/recovery export. The
 corrected run used runtime `365ad2a`; all 30 suite-runtime unit tests and strict
 Clippy also passed locally. Exact seven-job CI and platform checks remain required
 before merging this correction.
+
+## Native upgrade and portable rollback
+
+The [short upgrade contract](../benchmarks/phase-d-native-upgrade.json) is recorded
+before its measurement. The existing live native-resume driver optionally accepts
+the installed `next.3` binary, verifies its release receipt, creates working state
+with that engine and reopens the **same directory** with the candidate. Both
+browser transports and two simultaneous targets remain in the test. Auth and
+Storage working mutations must survive too. Portable rollback uses the completed
+candidate export in a separate previous-engine directory, not an unsafe native
+downgrade or an overwrite of the upgraded state.
+
+The [local upgrade receipt](../benchmarks/results/phase-d/native-upgrade-r1.json)
+passed all four launches: candidate seed builder, published previous-engine
+import/writes, same-directory candidate reopen and separate-directory previous-
+engine portable rollback. The native format-2 receipt remained byte-identical.
+Both transports observed both targets, with zero listener/page errors; Auth and
+Storage mutations survived. The actual previous and candidate binary hashes are
+recorded, and the latter includes runtime `365ad2a`. Linux CI repeats the test
+using the exact installed `next.3` platform package with scripts disabled. This
+does not qualify arbitrary native downgrades or other historical versions.
+
+The first Linux CI attempt [34532489876](https://github.com/sanjevirau/fireside/actions/runs/34532489876)
+failed before its browser checks: the version-pinned Playwright Chromium binary
+was not installed on the fresh runner. This is a harness prerequisite failure,
+not native-state corruption or a passing upgrade. Its uploaded failure receipt
+is retained. The corrected workflow explicitly installs Chromium with that
+installed Playwright version before running the unchanged upgrade test; it does
+not skip browser assertions or change any lifecycle deadline.
