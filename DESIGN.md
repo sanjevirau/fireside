@@ -421,6 +421,15 @@ registry. Read-set conflicts and read-only write rejection are retained, not
 silently ignored. Batch newTransaction emits its opaque token in a separate
 first array item, matching the captured REST representation.
 
+Native protobuf serialization alone is not the REST wire contract. The existing
+map oracle and SDK CI caught a regression in the first read-adapter candidate:
+enum-style nulls and `+00:00` timestamps differed from the established REST/SDK
+representation, and non-finite doubles required explicit spelling. REST now
+encodes typed document values, retaining JSON null, `NaN`/`Infinity` strings and
+UTC `Z` timestamps, including nested values and transaction responses. It never
+normalizes arbitrary user field names or string contents. The failed candidate
+remains recorded in CI run 34529854577; it was not merged.
+
 The pinned Java REST GET adapter timed out on transaction query parameters and
 returned 400 for a valid readTime, while its gRPC transaction reads and REST JSON
 batch historical reads succeeded. Fireside deliberately provides finite native
