@@ -1,0 +1,390 @@
+{
+  "schemaVersion": 1,
+  "syntheticOnly": true,
+  "project": "demo-fireside-rule-bindings",
+  "capturedAt": "2026-09-10T21:02:33.134Z",
+  "captureSha256": "478fe13b5a30cdcc58b4584953d1efee646f1dc04bb2ce0e085d8197e11188ab",
+  "oracle": {
+    "firestore": "1.22.0",
+    "jarSha256": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c",
+    "node": "v24.20.0",
+    "java": "java version \"25.0.1\" 2025-10-21 LTS\nJava(TM) SE Runtime Environment (build 25.0.1+8-LTS-27)\nJava HotSpot(TM) 64-Bit Server VM (build 25.0.1+8-LTS-27, mixed mode, sharing)"
+  },
+  "profiles": [
+    {
+      "name": "duration",
+      "kind": "parameter",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function accept(duration) { return duration; }\n match /items/{item} { allow get: if accept(true); }\n }\n}\n",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Error compiling rules:\nL4:18 duration is a package and cannot be used as variable name.\nL4:37 duration is a package and cannot be used as variable name.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "name": "duration",
+      "kind": "binding",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function accept() { let duration = true; return duration; }\n match /items/{item} { allow get: if accept(); }\n }\n}\n",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Error compiling rules:\nL4:26 duration is a package and cannot be used as variable name.\nL4:50 duration is a package and cannot be used as variable name.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "name": "duration",
+      "kind": "function",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function duration() { return true; }\n match /items/{item} { allow get: if duration(); }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "duration",
+      "kind": "wildcard",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n match /items/{duration} { allow get: if duration == 'one'; }\n }\n}\n",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Error compiling rules:\nL4:16 duration is a package and cannot be used as variable name.\nL4:42 duration is a package and cannot be used as variable name.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "name": "duration",
+      "kind": "field",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n match /items/{item} { allow get: if {'duration': true}.duration; }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "hashing",
+      "kind": "parameter",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function accept(hashing) { return hashing; }\n match /items/{item} { allow get: if accept(true); }\n }\n}\n",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Error compiling rules:\nL4:18 hashing is a package and cannot be used as variable name.\nL4:36 hashing is a package and cannot be used as variable name.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "name": "hashing",
+      "kind": "binding",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function accept() { let hashing = true; return hashing; }\n match /items/{item} { allow get: if accept(); }\n }\n}\n",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Error compiling rules:\nL4:26 hashing is a package and cannot be used as variable name.\nL4:49 hashing is a package and cannot be used as variable name.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "name": "hashing",
+      "kind": "function",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function hashing() { return true; }\n match /items/{item} { allow get: if hashing(); }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "hashing",
+      "kind": "wildcard",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n match /items/{hashing} { allow get: if hashing == 'one'; }\n }\n}\n",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Error compiling rules:\nL4:16 hashing is a package and cannot be used as variable name.\nL4:41 hashing is a package and cannot be used as variable name.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "name": "hashing",
+      "kind": "field",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n match /items/{item} { allow get: if {'hashing': true}.hashing; }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "latlng",
+      "kind": "parameter",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function accept(latlng) { return latlng; }\n match /items/{item} { allow get: if accept(true); }\n }\n}\n",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Error compiling rules:\nL4:18 latlng is a package and cannot be used as variable name.\nL4:35 latlng is a package and cannot be used as variable name.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "name": "latlng",
+      "kind": "binding",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function accept() { let latlng = true; return latlng; }\n match /items/{item} { allow get: if accept(); }\n }\n}\n",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Error compiling rules:\nL4:26 latlng is a package and cannot be used as variable name.\nL4:48 latlng is a package and cannot be used as variable name.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "name": "latlng",
+      "kind": "function",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function latlng() { return true; }\n match /items/{item} { allow get: if latlng(); }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "latlng",
+      "kind": "wildcard",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n match /items/{latlng} { allow get: if latlng == 'one'; }\n }\n}\n",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Error compiling rules:\nL4:16 latlng is a package and cannot be used as variable name.\nL4:40 latlng is a package and cannot be used as variable name.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "name": "latlng",
+      "kind": "field",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n match /items/{item} { allow get: if {'latlng': true}.latlng; }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "math",
+      "kind": "parameter",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function accept(math) { return math; }\n match /items/{item} { allow get: if accept(true); }\n }\n}\n",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Error compiling rules:\nL4:18 math is a package and cannot be used as variable name.\nL4:33 math is a package and cannot be used as variable name.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "name": "math",
+      "kind": "binding",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function accept() { let math = true; return math; }\n match /items/{item} { allow get: if accept(); }\n }\n}\n",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Error compiling rules:\nL4:26 math is a package and cannot be used as variable name.\nL4:46 math is a package and cannot be used as variable name.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "name": "math",
+      "kind": "function",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function math() { return true; }\n match /items/{item} { allow get: if math(); }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "math",
+      "kind": "wildcard",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n match /items/{math} { allow get: if math == 'one'; }\n }\n}\n",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Error compiling rules:\nL4:16 math is a package and cannot be used as variable name.\nL4:38 math is a package and cannot be used as variable name.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "name": "math",
+      "kind": "field",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n match /items/{item} { allow get: if {'math': true}.math; }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "timestamp",
+      "kind": "parameter",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function accept(timestamp) { return timestamp; }\n match /items/{item} { allow get: if accept(true); }\n }\n}\n",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Error compiling rules:\nL4:18 timestamp is a package and cannot be used as variable name.\nL4:38 timestamp is a package and cannot be used as variable name.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "name": "timestamp",
+      "kind": "binding",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function accept() { let timestamp = true; return timestamp; }\n match /items/{item} { allow get: if accept(); }\n }\n}\n",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Error compiling rules:\nL4:26 timestamp is a package and cannot be used as variable name.\nL4:51 timestamp is a package and cannot be used as variable name.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "name": "timestamp",
+      "kind": "function",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function timestamp() { return true; }\n match /items/{item} { allow get: if timestamp(); }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "timestamp",
+      "kind": "wildcard",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n match /items/{timestamp} { allow get: if timestamp == 'one'; }\n }\n}\n",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": 400,
+          "message": "Error compiling rules:\nL4:16 timestamp is a package and cannot be used as variable name.\nL4:43 timestamp is a package and cannot be used as variable name.",
+          "status": "INVALID_ARGUMENT"
+        }
+      }
+    },
+    {
+      "name": "timestamp",
+      "kind": "field",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n match /items/{item} { allow get: if {'timestamp': true}.timestamp; }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "request",
+      "kind": "parameter",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function accept(request) { return request; }\n match /items/{item} { allow get: if accept(true); }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "request",
+      "kind": "binding",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function accept() { let request = true; return request; }\n match /items/{item} { allow get: if accept(); }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "request",
+      "kind": "function",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function request() { return true; }\n match /items/{item} { allow get: if request(); }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "request",
+      "kind": "wildcard",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n match /items/{request} { allow get: if request == 'one'; }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "request",
+      "kind": "field",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n match /items/{item} { allow get: if {'request': true}.request; }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "resource",
+      "kind": "parameter",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function accept(resource) { return resource; }\n match /items/{item} { allow get: if accept(true); }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "resource",
+      "kind": "binding",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function accept() { let resource = true; return resource; }\n match /items/{item} { allow get: if accept(); }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "resource",
+      "kind": "function",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function resource() { return true; }\n match /items/{item} { allow get: if resource(); }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "resource",
+      "kind": "wildcard",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n match /items/{resource} { allow get: if resource == 'one'; }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "resource",
+      "kind": "field",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n match /items/{item} { allow get: if {'resource': true}.resource; }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "value",
+      "kind": "parameter",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function accept(value) { return value; }\n match /items/{item} { allow get: if accept(true); }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "value",
+      "kind": "binding",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function accept() { let value = true; return value; }\n match /items/{item} { allow get: if accept(); }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "value",
+      "kind": "function",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n function value() { return true; }\n match /items/{item} { allow get: if value(); }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "value",
+      "kind": "wildcard",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n match /items/{value} { allow get: if value == 'one'; }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    },
+    {
+      "name": "value",
+      "kind": "field",
+      "source": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n match /items/{item} { allow get: if {'value': true}.value; }\n }\n}\n",
+      "status": 200,
+      "response": {}
+    }
+  ],
+  "passed": true,
+  "exit": [
+    130,
+    null
+  ]
+}
