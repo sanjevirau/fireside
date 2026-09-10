@@ -38,9 +38,9 @@ count/byte eviction, expiry, slow readers, completed versus in-flight sends,
 slot reclamation, oversized/invalid events and contended nonblocking admission.
 Its constants are checked directly against the frozen Phase A manifest.
 
-The buffer is not yet connected to a producer or WebSocket transport. Its idle
+The buffer was introduced without a producer or WebSocket transport. Its idle
 maintenance hook, omission reporting, disabled-state handling and per-send deadline
-must be wired and tested together with the real evaluator before UI qualification.
+must be tested together with the real evaluator before UI qualification.
 Eleven additional buffer tests are local unit-model evidence, not live endpoint
 or browser evidence; all prior Phase A recordings remain unchanged.
 
@@ -48,7 +48,27 @@ Pre-merge review added a twelfth buffer regression: producer timestamps can be
 admitted out of order after thread preemption. The regression first reproduced
 an expired entry retained behind a newer entry. Expiry now examines all of the
 at-most-256 entries while preserving replay order and exact byte accounting.
-The correction requires fresh CI; the earlier candidate's checks do not cover it.
+The corrected candidate `382d739db83e06e9b8138f63fca9e0b62cba5af4` passed
+[all seven CI jobs](https://github.com/sanjevirau/fireside/actions/runs/34503417386)
+and was merged in [PR #4](https://github.com/sanjevirau/fireside/pull/4).
+
+## Third increment: Requests WebSocket transport component
+
+Real loopback WebSocket tests replay the already-committed Phase A event values,
+deliver live events, reconnect, enforce four-client admission, and release slots
+after graceful/abrupt disconnects, oversized client input and shutdown. Missing
+producers refuse the upgrade rather than showing a misleading healthy empty feed.
+New omitted events invalidate active feeds, including idle clients; fixed close
+reasons and payload-free cumulative warnings make diagnostic loss explicit.
+
+The component drives one-second idle maintenance and preserves queued-byte charges
+through each bounded send. Virtual-clock blocked-sink tests enforce the frozen
+30-second deadline and immediate shutdown cancellation, including owner loss.
+The nine transport tests and new omission regression supplement—not replace—the
+buffer tests. Neither the actual serving evaluator nor the preview's existing
+Requests endpoint uses the new component yet. Browser controls, kernel slow-reader
+qualification and paired-overhead measurements remain pending. Full exact-head
+seven-job CI is required before this increment can merge.
 
 ## Remaining before Phase B completion
 

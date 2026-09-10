@@ -6,6 +6,9 @@
 
 #![forbid(unsafe_code)]
 
+mod requests;
+pub use requests::requests_router;
+
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::{self, Display, Formatter, Write as _};
 use std::path::{Path as FilePath, PathBuf};
