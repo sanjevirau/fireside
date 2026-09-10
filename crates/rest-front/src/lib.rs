@@ -56,6 +56,8 @@ const JSON_CONTENT_TYPE: HeaderValue = HeaderValue::from_static("application/jso
 
 mod coverage;
 mod listing;
+#[cfg(test)]
+mod read_options_tests;
 
 /// Creates the HTTP/1 router that shares the Firestore store with gRPC.
 pub fn router(store: Store) -> Router {
