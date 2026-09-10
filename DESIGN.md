@@ -396,6 +396,18 @@ documents through the official emulator.
 
 ## Distribution and trust boundaries
 
+### Failed export still drains the owned suite
+
+Export-on-exit errors remain nonzero failures, but are collected rather than
+returned before teardown. The scheduler and admitted deliveries stop before the
+Functions host, listeners and Java Storage rules runtime. A Functions-stop or
+locator-removal error likewise does not skip remaining teardown. The final error
+retains all observed failures, the working-directory recovery path and an explicit
+warning when Firestore was volatile. Failed export does not imply a portable
+backup exists; retained native disk state can be reopened independently. This
+follows the official CLI's continued shutdown after an export failure while
+deliberately retaining Fireside's nonzero failure status.
+
 ### Rules package identifiers in variable declarations
 
 The compiler-only `rule-bindings-v1` official-jar capture distinguishes package
