@@ -44,6 +44,29 @@ identity, rather than a later branch head, is recorded below.
 Exact-candidate seven-job CI and the rest of Phase B remain required before a
 phase-completion claim. Later candidates need their own applicable qualification.
 
+## Post-correction repeat, r2
+
+The [second exact receipt](diagnostics-overhead-20260911-r2.json.gz) repeats the
+unchanged nine-run, 45,000-operation workload using runtime `365ad2a`, including
+the subsequent Logging, REST, rules, Functions and shutdown corrections. The
+driver and both frozen manifests are unchanged. All six paired comparisons pass,
+all final states match and every operation/sample remains in the receipt.
+
+| Largest observed increase | r2 | Interpretation |
+| --- | ---: | --- |
+| p99 latency | 2.383 ms | Within its paired baseline's unchanged 20%-or-2-ms bound |
+| Throughput reduction | 5.550% | Within the unchanged 10% limit |
+| Settled and peak active native RSS | 3.531 MiB | Within the unchanged 64/128 MiB limits |
+
+Same hardware/measurement scope and non-quiescent-host limitations apply. This
+is qualification of diagnostic overhead, not a claim of speedup over the first
+receipt, official emulator or application stack. No adopted optimization is
+inferred from noise between runs. The permanent verifier checks every sample
+and recomputes both receipts independently.
+
+- Binary SHA-256: `5a54dd47c72b3865506d8fe18a88abc1a0734c4b35b34967111eea60f15ad91e`
+- Compressed receipt SHA-256: `967d5cdca4b119739c8eb22e9f981e29ec762ab5a86eb32b6bd720fc780f7305`
+
 ## Native full synthetic UI, attempt r9
 
 The [unmodified r9 receipt](native-suite-ui-20260911-r9.json) follows the Logging

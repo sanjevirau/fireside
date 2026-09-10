@@ -23,11 +23,14 @@ test('native suite receipt includes all browser controls, a real Function and cl
   assert.equal(receipt.binarySha256,'f50fe064513e4cf8712d5337cdcb9a50d434a3f57a44ef9e979cf49c761c0210');
 });
 
-test('Phase B diagnostic receipt retains all samples and meets the unchanged limits',async()=>{
+for(const recorded of [
+  {name:'diagnostics-overhead-20260911.json.gz',sha:'64f69dc6c5d90141553fe6f1c29219d7d1c191d8870a5635cf606dfd5d3f7171',binary:'50bf6063bbfc2c4c147691537bce6de03ab1b2074bafc4a9fad8d76ab51caa79'},
+  {name:'diagnostics-overhead-20260911-r2.json.gz',sha:'967d5cdca4b119739c8eb22e9f981e29ec762ab5a86eb32b6bd720fc780f7305',binary:'5a54dd47c72b3865506d8fe18a88abc1a0734c4b35b34967111eea60f15ad91e'},
+])test('Phase B diagnostic receipt retains all samples and unchanged limits: '+recorded.name,async()=>{
   const root=new URL('../../',import.meta.url);
   const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
-  const compressed=await readFile(new URL('benchmarks/results/phase-b/diagnostics-overhead-20260911.json.gz',root));
-  assert.equal(hash(compressed),'64f69dc6c5d90141553fe6f1c29219d7d1c191d8870a5635cf606dfd5d3f7171');
+  const compressed=await readFile(new URL('benchmarks/results/phase-b/'+recorded.name,root));
+  assert.equal(hash(compressed),recorded.sha);
   const receipt=JSON.parse(gunzipSync(compressed));
   assert.equal(receipt.passed,true);assert.equal(receipt.acceptance,false);
   assert.equal(receipt.hostQuiescent,false);assert.equal(receipt.runs.length,9);
@@ -35,7 +38,7 @@ test('Phase B diagnostic receipt retains all samples and meets the unchanged lim
   const manifestBytes=await readFile(new URL('benchmarks/phase-b-diagnostics-overhead.json',root));
   const limits=JSON.parse(criteriaBytes).phaseBChecksBeforeImplementation;
   assert.equal(hash(criteriaBytes),receipt.criteriaSha256);assert.equal(hash(manifestBytes),receipt.manifestSha256);
-  assert.equal(receipt.binarySha256,'50bf6063bbfc2c4c147691537bce6de03ab1b2074bafc4a9fad8d76ab51caa79');
+  assert.equal(receipt.binarySha256,recorded.binary);
   // This immutable receipt records the captured driver, not later driver edits.
   assert.equal(receipt.driverSha256,'ff6583c67d2a5a9cc32cc36db22cc36044cc7c4d8ccb5df0efb4c4f5a6f48202');
   assert.equal(new Set(receipt.runs.map(run=>run.finalStateSha256)).size,1);
