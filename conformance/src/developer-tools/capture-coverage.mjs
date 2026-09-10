@@ -35,6 +35,12 @@ const profiles = [
   { id: 'function', source: source('accept(resource.data.visible)', '  function accept(value) { let checked = value == true; return checked; }'), status: 200 },
   { id: 'list-and-map', source: source("[1, 2].size() == 2 && {'ok': true}.ok"), status: 200 },
   { id: 'unicode-crlf', source: source("'中文🚀' == '中文🚀' && resource.data.visible", '', '/* 中文🚀 */ ', '\r\n'), status: 200 },
+  { id: 'parentheses', source: source('(resource.data.visible == true) || false'), status: 200 },
+  { id: 'unary', source: source('!resource.data.visible'), status: 403 },
+  { id: 'index', source: source("resource.data['visible']"), status: 200 },
+  { id: 'empty-containers', source: source('[].size() == 0 && {}.size() == 0'), status: 200 },
+  { id: 'simple-function', source: source('accept(resource.data.visible)', '  function accept(value) { return value; }'), status: 200 },
+  { id: 'path-interpolation', source: source('exists(/databases/$(database)/documents/items/one)'), status: 200 },
 ];
 await writeFile(join(work, 'firestore.rules'), profiles[0].source);
 const child = spawn('java', ['-jar', jar, '--host', '127.0.0.1', '--port', String(port),

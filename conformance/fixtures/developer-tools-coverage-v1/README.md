@@ -1,7 +1,7 @@
 # Expression coverage oracle
 
 Captured from the checksum-pinned official Firestore 1.22.0 jar with Node
-24.20.0, one synthetic document and seven tiny rulesets. Run
+24.20.0, one synthetic document and thirteen tiny rulesets. Run
 `conformance/src/developer-tools/capture-coverage.mjs OUTPUT` in a fresh directory.
 Only the owned loopback jar is started/stopped; no cloud or consumer inputs.
 The capture records the actual Java version. Raw HTTP exchanges and process logs
@@ -14,6 +14,8 @@ are zero-based Unicode-scalar indices and the end offset is inclusive; line and
 column are one-based. The CJK/emoji/CRLF profile distinguishes these from UTF-8
 byte offsets and UTF-16 code-unit indices. Calls and composite literals have
 oracle-specific ranges that do not necessarily include closing punctuation.
+The extended cases retain parentheses, unary/index operations, empty containers,
+functions without bindings and interpolated document paths.
 
 Coverage counts are observed evaluator visits, not HTTP request counts. The jar
 can record an undefined preliminary evaluation before loading a resource. A
