@@ -40,5 +40,14 @@ with that engine and reopens the **same directory** with the candidate. Both
 browser transports and two simultaneous targets remain in the test. Auth and
 Storage working mutations must survive too. Portable rollback uses the completed
 candidate export in a separate previous-engine directory, not an unsafe native
-downgrade or an overwrite of the upgraded state. No passing result is claimed
-until this expanded check runs successfully.
+downgrade or an overwrite of the upgraded state.
+
+The [local upgrade receipt](../benchmarks/results/phase-d/native-upgrade-r1.json)
+passed all four launches: candidate seed builder, published previous-engine
+import/writes, same-directory candidate reopen and separate-directory previous-
+engine portable rollback. The native format-2 receipt remained byte-identical.
+Both transports observed both targets, with zero listener/page errors; Auth and
+Storage mutations survived. The actual previous and candidate binary hashes are
+recorded, and the latter includes runtime `365ad2a`. Linux CI repeats the test
+using the exact installed `next.3` platform package with scripts disabled. This
+does not qualify arbitrary native downgrades or other historical versions.

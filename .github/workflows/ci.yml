@@ -62,6 +62,7 @@ jobs:
           node --test conformance/test/rest-read-options-fixture.test.mjs
           node --test conformance/test/rule-bindings-fixture.test.mjs
           node --test conformance/test/functions-topic-reload-fixture.test.mjs
+          node --test conformance/test/lifecycle-receipts.test.mjs
       - name: Verify package and publication safety contracts
         run: node --test packaging/*.test.mjs
 
@@ -120,6 +121,15 @@ jobs:
           "$RUNNER_TEMP/fireside-devtools/node_modules/firebase-functions"
           "$HOME/.cache/firebase/emulators"
           "$RUNNER_TEMP/fireside-export-failure-evidence"
+      - name: Install exact previous native engine without package scripts
+        run: npm install --prefix "$RUNNER_TEMP/fireside-previous-engine" --ignore-scripts --no-audit --no-fund @fireside-dev/linux-x64@0.1.0-next.3
+      - name: Verify previous native upgrade and portable rollback
+        run: |
+          ln -s "$GITHUB_WORKSPACE/conformance/node_modules/firebase" "$RUNNER_TEMP/fireside-devtools/node_modules/firebase"
+          node conformance/src/suite/verify-native-resume.mjs \
+            target/debug/fireside "$RUNNER_TEMP/fireside-devtools" \
+            "$HOME/.cache/firebase/emulators" "$RUNNER_TEMP/fireside-native-upgrade-evidence" \
+            "$RUNNER_TEMP/fireside-previous-engine/node_modules/@fireside-dev/linux-x64/bin/fireside"
       - name: Verify owned admission against real pinned Functions discovery
         run: >-
           node conformance/src/suite/capture-functions-readiness.mjs
@@ -136,6 +146,8 @@ jobs:
           path: |
             ${{ runner.temp }}/fireside-developer-ui-evidence/result.json
             ${{ runner.temp }}/fireside-export-failure-evidence/result.json
+            ${{ runner.temp }}/fireside-native-upgrade-evidence/result.json
+            ${{ runner.temp }}/fireside-native-upgrade-evidence/failure.json
             ${{ runner.temp }}/fireside-developer-ui-evidence/failure.json
             ${{ runner.temp }}/fireside-developer-ui-evidence/browser-failure.json
             ${{ runner.temp }}/fireside-developer-ui-evidence/*.png
