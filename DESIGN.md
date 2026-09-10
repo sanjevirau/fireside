@@ -284,6 +284,30 @@ are argument-only. Changed keys must occur only once in `affectedKeys()`.
 The engine now follows those captured directions and unique-set cardinality;
 the correction is shared by ordinary and observed evaluation.
 
+### Native coverage reports (Phase B interface)
+
+Standalone `firestore --diagnostics` enables bounded recording explicitly;
+ordinary standalone startup remains disabled. GET `:ruleCoverage` emits complete
+JSON and GET `:ruleCoverage.html` serves an independent same-origin renderer.
+It displays the captured source/range/value contract without vendoring the jar's
+renderer. Values and source enter the DOM only through text content. No-store,
+nosniff and a self-only script/connect CSP protect this local diagnostic surface.
+The report warns that decoded auth claims and document data are sensitive.
+
+One permit per shared REST router covers queued/running serialization and the
+entire response's byte ownership, including cloned or sliced frames retained by
+slow readers. Excess requests receive 429 rather than queueing more full reports.
+Serialization executes on a blocking worker with its permit, never inline on
+the async transport worker. Disabled, missing-source, contended and capacity-
+limited diagnostics return explicit errors. The HTML page fetches JSON with a
+30-second abort budget and requires manual refresh, not background polling.
+Missing retained values are labeled unvisited or omitted, never successful.
+
+Real Chromium tests exercise source, actual counts, manual refresh/reload,
+invalid-reload preservation and script-like/CJK/emoji text with no page/console
+errors. This qualifies this interface only; suite-default attachment, full UI
+controls and paired diagnostic overhead remain required before Phase B completion.
+
 ## Auth, Storage and exports
 
 Auth browser helpers implement the fixture-tested local Google popup/redirect

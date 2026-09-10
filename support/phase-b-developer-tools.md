@@ -151,7 +151,9 @@ Those remain required work, including the explicitly documented lazy-planner
 count differences. The targeted engine/runtime/gRPC/suite tests pass locally
 (126 test functions, including the existing 1,024-case expression corpus), along
 with thirteen developer-tool fixture checks and strict targeted Clippy.
-Exact-head CI is required before merging this increment.
+Candidate `71b136a0ed6751756714fbf5f1ade47996559f12` passed
+[all seven CI jobs](https://github.com/sanjevirau/fireside/actions/runs/34519562454)
+and merged in [PR #8](https://github.com/sanjevirau/fireside/pull/8).
 
 ## Seventh increment: live bounded coverage and map-difference correction
 
@@ -176,6 +178,32 @@ targeted Clippy. These are component checks, not a release or browser receipt.
 This is an internal runtime component: shipping HTTP/HTML report attachment,
 real browser qualification and paired overhead still remain. Exact-head CI and
 review are required before merging. No Phase B completion claim is made.
+
+## Eighth increment: native JSON and HTML coverage reports
+
+The native Firestore command has an explicit `--diagnostics` opt-in, and serves
+the captured `:ruleCoverage` and `:ruleCoverage.html` paths. The independent HTML
+renderer shows source, expression ranges, retained values/counts, manual refresh
+and explicit incompleteness. Source and values use text nodes, not HTML injection;
+same-origin CSP, no-store and nosniff headers apply. It does not vendor the
+official renderer or claim pixel equivalence. The suite's default attachment
+and Requests producer connection remain separate unfinished Phase B work.
+
+One HTTP permit owns serialization and response byte frames, including clones
+held by slow callers; excess requests receive 429. Complete JSON serialization
+runs off the async transport worker. Disabled/missing/busy/oversized reports
+return explicit non-200 responses, not healthy empty coverage. Reload and actual
+HTTP read evaluation are exercised through the real REST handlers.
+
+A Chromium check against the native command verifies actual counts, source,
+manual refresh, reload, rejected-source preservation and non-ASCII/script-like
+text without page or console errors. The permanent check is part of the full
+differential CI job. This remains a short synthetic component check, not complete
+UI/service/overhead or Phase B qualification. Exact-head CI is still required.
+Local checks pass 46 CLI/REST test functions and strict targeted Clippy. A first
+refresh regression exposed a test predicate reading a temporarily absent DOM
+node; the corrected wait polls until the required new count exists, with no
+relaxation of the count assertion. The subsequent real-browser check passed.
 
 ## Remaining before Phase B completion
 

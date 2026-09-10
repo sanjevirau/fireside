@@ -89,6 +89,8 @@ jobs:
         run: npm test --prefix conformance
       - name: Verify real Auth popup and redirect against the official fixture
         run: node --test conformance/test/auth-popup.test.mjs
+      - name: Verify native coverage reports in a real browser
+        run: node --test conformance/test/developer-coverage-browser.test.mjs
       - name: Verify query rules oracle fixtures
         run: npm run test:rules:query-fixtures --prefix conformance
       - name: Verify document-map serialization oracle fixtures

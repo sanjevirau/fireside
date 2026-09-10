@@ -56,6 +56,14 @@ npm run test:fireside:disk --prefix conformance
 node --test packaging/*.test.mjs
 ```
 
+For source-development builds, bounded Firestore coverage can be enabled with
+`cargo run -p fireside -- firestore --diagnostics --rules firestore.rules`.
+Open `/emulator/v1/projects/demo-my-app:ruleCoverage.html` on that Firestore port
+for the report, or omit `.html` for JSON. Recording is opt-in for the standalone
+command; reports can contain document data and decoded auth claims, so keep them
+local. This source feature does not imply it is in an already published npm
+version or that the full suite's developer tools are qualified.
+
 [DESIGN.md](DESIGN.md) describes the component boundaries;
 [COMPATIBILITY.md](COMPATIBILITY.md) records limits and
 [ROADMAP.md](ROADMAP.md) records first-release priorities, including functional

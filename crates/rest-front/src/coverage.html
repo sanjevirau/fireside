@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Firestore Rule Coverage Report</title>
+  <script src="/emulator/v1/coverage.js" defer></script>
+</head>
+<body>
+  <h1>Firestore Rule Coverage Report</h1>
+  <p>Local diagnostic values may contain application data and decoded auth claims. Do not share this report publicly.</p>
+  <p>Counts reflect actual Fireside expression visits, not the official emulator's preliminary planner evaluations. Missing values mean unvisited or omitted; check report completeness. They never imply success.</p>
+  <button id="refresh" type="button">Refresh coverage</button>
+  <p id="status" role="status">Loading coverage…</p>
+  <h2>Rules source</h2>
+  <pre id="source"></pre>
+  <h2>Expression results</h2>
+  <section id="expressions" aria-label="Expression coverage"></section>
+  <noscript>JavaScript is required to display coverage. Use the corresponding :ruleCoverage JSON endpoint without .html.</noscript>
+</body>
+</html>
