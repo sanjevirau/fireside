@@ -396,6 +396,18 @@ documents through the official emulator.
 
 ## Distribution and trust boundaries
 
+### Rules package identifiers in variable declarations
+
+The compiler-only `rule-bindings-v1` official-jar capture distinguishes package
+names from function and property names in forty rules-install observations.
+`duration`, `hashing`, `latlng`, `math` and `timestamp` are rejected as parameters,
+let bindings and match wildcards. They remain legal as function names and map
+fields. `request` and `resource` are not package names and remain accepted in
+the captured shadowing positions. Validation is applied at binding sites, not
+to every identifier token, with source-positioned diagnostics. This resolves
+the earlier duration-parameter gap without changing evaluation semantics or
+claiming exhaustive language parity.
+
 ### REST document reads and transaction boundary
 
 `rest-read-options-v1` records independent official-jar HTTP observations before

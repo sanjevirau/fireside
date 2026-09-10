@@ -122,6 +122,7 @@ impl Parser {
         if !self.check(&TokenKind::RightParen) {
             loop {
                 let parameter = self.take_identifier("function parameter")?;
+                validate_binding(&parameter, self.previous_offset())?;
                 if parameters.contains(&parameter) {
                     return Err(self.error_at_previous(format!(
                         "function parameter {parameter:?} is duplicated"
@@ -141,6 +142,7 @@ impl Parser {
         while self.check_identifier("let") {
             self.advance();
             let binding = self.take_identifier("let binding")?;
+            validate_binding(&binding, self.previous_offset())?;
             if !names.insert(binding.clone()) {
                 return Err(
                     self.error_at_previous(format!("let binding {binding:?} is already bound"))
@@ -532,6 +534,19 @@ impl Parser {
     }
 }
 
+fn validate_binding(name: &str, offset: usize) -> Result<(), ParseError> {
+    if matches!(
+        name,
+        "duration" | "hashing" | "latlng" | "math" | "timestamp"
+    ) {
+        return Err(ParseError {
+            message: format!("{name} is a package and cannot be used as variable name."),
+            offset,
+        });
+    }
+    Ok(())
+}
+
 fn parse_pattern(raw: &str, offset: usize) -> Result<Vec<PatternSegment>, ParseError> {
     if !raw.starts_with('/') {
         return Err(ParseError {
@@ -541,6 +556,7 @@ fn parse_pattern(raw: &str, offset: usize) -> Result<Vec<PatternSegment>, ParseE
     }
     let mut recursive_wildcards = 0_usize;
     let mut pattern = Vec::new();
+    let mut segment_offset = offset + 1;
     for segment in raw[1..].split('/') {
         if segment.is_empty() {
             return Err(ParseError {
@@ -552,6 +568,10 @@ fn parse_pattern(raw: &str, offset: usize) -> Result<Vec<PatternSegment>, ParseE
             .strip_prefix('{')
             .and_then(|segment| segment.strip_suffix('}'))
         {
+            validate_binding(
+                wildcard.strip_suffix("=**").unwrap_or(wildcard),
+                segment_offset + 1,
+            )?;
             if let Some(name) = wildcard.strip_suffix("=**") {
                 recursive_wildcards += 1;
                 PatternSegment::RecursiveWildcard(name.to_owned())
@@ -573,6 +593,7 @@ fn parse_pattern(raw: &str, offset: usize) -> Result<Vec<PatternSegment>, ParseE
             _ => {}
         }
         pattern.push(parsed);
+        segment_offset += segment.len() + 1;
     }
     if recursive_wildcards > 1 {
         return Err(ParseError {

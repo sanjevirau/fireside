@@ -60,6 +60,7 @@ jobs:
           node --test conformance/test/functions-readiness-fixture.test.mjs
           node --test conformance/test/functions-readiness-receipts.test.mjs
           node --test conformance/test/rest-read-options-fixture.test.mjs
+          node --test conformance/test/rule-bindings-fixture.test.mjs
       - name: Verify package and publication safety contracts
         run: node --test packaging/*.test.mjs
 
