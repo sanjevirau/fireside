@@ -30,3 +30,15 @@ missing orderly drain and the corrected native reopen/recovery export. The
 corrected run used runtime `365ad2a`; all 30 suite-runtime unit tests and strict
 Clippy also passed locally. Exact seven-job CI and platform checks remain required
 before merging this correction.
+
+## Native upgrade and portable rollback
+
+The [short upgrade contract](../benchmarks/phase-d-native-upgrade.json) is recorded
+before its measurement. The existing live native-resume driver optionally accepts
+the installed `next.3` binary, verifies its release receipt, creates working state
+with that engine and reopens the **same directory** with the candidate. Both
+browser transports and two simultaneous targets remain in the test. Auth and
+Storage working mutations must survive too. Portable rollback uses the completed
+candidate export in a separate previous-engine directory, not an unsafe native
+downgrade or an overwrite of the upgraded state. No passing result is claimed
+until this expanded check runs successfully.

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "scope": "Short synthetic native-state upgrade and portable rollback; not full-data release acceptance",
+  "recordedBeforeMeasurement": true,
+  "previousVersion": "0.1.0-next.3",
+  "previousEngineRevision": "5cb2437112039a91f1389c70545f97fb030e79c8",
+  "previousIdentity": "Verify the installed platform receipt and actual executable SHA-256 before launching; retain both binary identities",
+  "nativeFormat": 2,
+  "documents": 2,
+  "collections": ["items", "other"],
+  "authUsers": 1,
+  "storageObjects": 1,
+  "text": "Synthetic Unicode only; no consumer records",
+  "browserModes": ["long-poll", "stream"],
+  "sequence": [
+    "Build a separate portable synthetic seed",
+    "Import seed into native disk/WAL state with the previous released engine",
+    "Acknowledge document, Auth and Storage writes; observe both browser targets in both modes",
+    "Cleanly stop previous engine and reopen the same native directory with the candidate, without import",
+    "Verify all three service states and browser reconnect/update delivery",
+    "Complete candidate portable export and stop",
+    "Import that completed export into a different native directory with the previous released engine and verify all three services"
+  ],
+  "readinessDeadlineMilliseconds": 90000,
+  "shutdownDeadlineMilliseconds": 30000,
+  "browserObservationDeadlineMilliseconds": 45000,
+  "criteria": "Every assertion must pass; zero browser errors or listener errors; original seed, upgraded working state and rollback state remain separate",
+  "limits": "Does not promise native downgrade across changed formats, compatibility with unpublished historical binaries, crash or low-disk safety. Those require independent existing or new fault evidence. Portable rollback imports into a new directory and never overwrites the upgraded working state."
+}
