@@ -250,6 +250,17 @@ async function startFunctionsOnce(emulator, registry, configuredBackends, custom
   return total;
 }
 
+function watchFunctionInventory(emulator, onReload) {
+  const load = emulator.loadTriggers;
+  emulator.loadTriggers = async function (...args) {
+    const result = await load.apply(this, args);
+    // Source watching and registration remain owned by firebase-tools. Notify
+    // only after that registration completes; never rediscover user code here.
+    onReload(this.getTriggerDefinitions());
+    return result;
+  };
+}
+
 function inventoryFingerprint(definitions) {
   const rows = definitions.map((definition) => {
     const region = definition.region || definition.regions?.[0];
@@ -307,6 +318,14 @@ async function main() {
     },
   });
   const customFunctionCount = await startFunctionsOnce(functionsEmulator, EmulatorRegistry, emulatableBackends, custom);
+  watchFunctionInventory(functionsEmulator, definitions => {
+    const inventory = inventoryFingerprint(definitions);
+    process.stdout.write(`FIRESIDE_FUNCTIONS_HOST_UPDATED ${JSON.stringify({
+      firebaseToolsVersion: packageJson.version,
+      inventoryCount: inventory.count,
+      inventorySha256: inventory.sha256,
+    })}\n`);
+  });
   const inventory = inventoryFingerprint(functionsEmulator.getTriggerDefinitions());
   process.stdout.write(
     `FIRESIDE_FUNCTIONS_HOST_READY ${JSON.stringify({

@@ -10,6 +10,24 @@ assert(declaration,'actual workload-host discovery adapter');
 const start=runInNewContext('('+declaration+')');
 const fixture=JSON.parse(await readFile(new URL('../conformance/fixtures/functions-readiness-v1/fixture.json',import.meta.url)));
 
+test('reload notifications follow completed registration without rediscovery',async()=>{
+  const declaration=source.match(/^function watchFunctionInventory\([^]*?^\}/m)?.[0];
+  assert(declaration);
+  const install=runInNewContext('('+declaration+')');
+  const calls=[],definitions=[{id:'synthetic'}];
+  let complete;const registered=new Promise(resolve=>complete=resolve);
+  const emulator={
+    async loadTriggers(...args){assert.equal(this,emulator);calls.push(args);await registered;return 'registered';},
+    getTriggerDefinitions:()=>definitions,
+  };
+  const updates=[];install(emulator,value=>updates.push(value));
+  const loading=emulator.loadTriggers('backend',true);
+  assert.equal(updates.length,0);complete();assert.equal(await loading,'registered');
+  assert.deepEqual(calls,[['backend',true]]);assert.deepEqual(updates,[definitions]);
+  const failed={loadTriggers:async()=>{throw new Error('failed');},getTriggerDefinitions:()=>assert.fail('no receipt after rejected load')};
+  install(failed,()=>assert.fail('no update'));await assert.rejects(failed.loadTriggers(),/failed/);
+});
+
 // A unit replay of captured discovery/registration states, not a live SDK run.
 function replay(mode,omitId){
   const observation=fixture.observations.find(row=>row.mode===mode);

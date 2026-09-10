@@ -462,6 +462,26 @@ message, instead of the previous catch-all HTTP 200 empty object. This is a
 deliberate capability boundary, not claimed parity for general Eventarc/Tasks.
 The corresponding official startup bytes are in `functions-readiness-v1`.
 
+The independent `functions-topic-reload-v1` capture verifies actual official
+source watching and delivery after adding a Pub/Sub handler and updating an
+existing handler body. The native baseline admitted the new handler in
+`/backends` but retained its startup-only topic table, returning 404 on publish.
+The owned wrapper now emits a compact inventory notification after upstream
+`loadTriggers` completes. It does not rescan source, execute discovery twice or
+poll on a timer. A latest-value watch channel coalesces notifications; the native
+coordinator fetches and verifies inventory once per notification with the same
+five-second bound. A superseded receipt is retried only when a newer notification
+is already pending. Failed verification is an explicit suite health failure.
+
+Routing replacement preserves topic/subscription records, message ID sequence
+and acknowledged queued work while replacing only function targets. Repeated
+notifications do not duplicate targets. New schedule definitions are all validated
+before stopping previous timers; previous timers stop before replacement starts.
+The existing supported schedule semantics are unchanged. This is function-oriented
+reload support, not general Pub/Sub subscribers or a promise to repair every
+upstream removal/disabled-handler behavior. The full synthetic native UI check
+adds a separate topic-reload scenario; private consumer runners are unchanged.
+
 The pinned Functions workload host drains/stops its upstream emulator before
 exiting. A served request leaves an upstream socket-discovery timer referenced
 for thirty seconds even after worker/server shutdown. Like the captured official
