@@ -1,7 +1,18 @@
 # Combined-candidate qualification preparation
 
-Phase F acceptance has not started. These instructions close an identity gap;
-they are not a release receipt or permission to publish.
+Full consumer acceptance has not started. Exact-source package qualification
+has passed; this is not a release receipt or permission to publish.
+
+Candidate `fc54e341a6da4fc6ca26849287f92f335a6184ce` passed all seven jobs in
+[CI 34538321458](https://github.com/sanjevirau/fireside/actions/runs/34538321458)
+and all five native build/install jobs plus the combined verifier in
+[packages 34538321468](https://github.com/sanjevirau/fireside/actions/runs/34538321468).
+All five downloaded sets passed `check-local-platforms.mjs` locally too.
+The [receipt](../benchmarks/results/phase-e/source-qualification.json) preserves
+exact versions, archive hashes and npm/Bun/full-suite checks. The prior attempt
+failed on a Windows LF-only test assertion before its native build; the corrected
+test checks both LF and CRLF and still rejects an incorrect release guard.
+That failed attempt is not relabelled as a pass.
 
 The previous Installable packages workflow intentionally built the engine in
 `packages/cli/release.json`. A PR's green package run therefore does not prove its

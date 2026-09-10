@@ -9,8 +9,8 @@ universal-compatibility, publication or performance-win claim is made here.
 | B | Named short source qualification complete: UI controls, Requests, coverage, bounded diagnostics and overhead | Repeat applicable interfaces/resource checks on the Phase F candidate |
 | C | Named source contract corrections qualified in combined seven-job CI, including discovery/reload and existing generic service contracts | Retain documented oracle deviations; Phase F consumer integration |
 | D | Upgrade, real ENOSPC, interrupted export and normal recovery qualified in combined seven-job CI | Repeat applicable lifecycle checks on the final combined candidate |
-| E | REST optimization #21 merged; component, overhead, Storage/lifecycle and equivalent-query observations preserved | Remaining evidence PR review/CI and combined qualification; no blanket efficiency claim |
-| F | Not started | Qualified combined packages, cheap consumer prerequisites, full acceptance and honest final report |
+| E | Short source/performance qualification complete; reviewed optimization and paired component, overhead, Storage/lifecycle and equivalent-query receipts | Full-data behavior and memory remain Phase F; no blanket efficiency claim |
+| F | Exact-engine seven-job CI and five-platform packages qualified in #24; #25 evidence also merged with green CI | Complete consumer cheap prerequisites, full acceptance and honest final report; publication requires approval |
 
 The [B–D audit](phase-bcd-qualification.md) maps each checked requirement to its
 actual executable/browser evidence and states the scope limitations. Checking
@@ -23,9 +23,10 @@ verification. Merges used exact-head guards; later changes need their own CI.
 Those package jobs build the engine pinned by `packages/cli/release.json`
 (`5cb2437112039a91f1389c70545f97fb030e79c8`), not automatically the PR's new
 Rust source. Their green result qualifies that packaging configuration and
-pinned engine. Phase F still needs five-platform builds/install checks of the
-actual combined new engine; current-source Rust/SDK CI and local arm64 packages
-must not be presented as that missing cross-platform receipt.
+pinned engine. That identity gap is now closed by the separate exact-engine
+[PR #24 qualification](phase-f-qualification.md), not by relabelling those older
+jobs. The [new receipt](../benchmarks/results/phase-e/source-qualification.json)
+records all five platform sets, exact identities and local archive re-verification.
 
 The [#18 shutdown receipt](../benchmarks/results/phase-d/merged-shutdown-ci.json)
 records the same exact-head/all-checks review boundary for that recovery fix.
@@ -37,8 +38,8 @@ corrected and their original outcomes retained. The latter's replacement CI is
 green on its corrected exact head, as recorded in the
 [#19–20 lifecycle merge receipt](../benchmarks/results/phase-d/merged-lifecycle-ci.json).
 
-Short generic profiling continues while the final private acceptance venue is
-unavailable. An unrelated workload is currently active on the designated host;
+Short generic profiling is complete; final private acceptance remains pending
+a suitable venue and reviewed inputs. An unrelated workload is active on the designated host;
 it is not stopped or modified to obtain measurements. The local machine does
 not meet the full-data disk-headroom requirement. These do not prevent local
 targeted corrections, CI or report preparation, but full acceptance must wait

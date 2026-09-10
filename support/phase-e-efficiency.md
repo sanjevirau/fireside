@@ -1,9 +1,14 @@
 # Phase E efficiency work log
 
-This is short component, collection, Storage and lifecycle evidence, not combined
-release acceptance. Remaining evidence PRs need review/CI; representative private
-consumer qualification remains part of Phase F. No consumer data or private
-performance evidence is published here.
+This is completed short component, collection, Storage and lifecycle qualification,
+not combined release acceptance. The evidence PRs were reviewed and merged after
+their exact seven-job CI checks. The new engine also passed all five native
+platform package/install checks and the combined verifier; the downloaded sets
+were reverified locally. Exact heads, jobs, merges, artifact hashes and the prior
+Windows test failure are retained in the
+[source qualification receipt](../benchmarks/results/phase-e/source-qualification.json).
+Representative private consumer qualification remains Phase F. No consumer data
+or private performance evidence is published here.
 
 ## Nested REST normalization
 
