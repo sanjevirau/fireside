@@ -9,10 +9,13 @@ import {createRequire} from 'node:module';
 import {createServer} from 'node:net';
 import {dirname,join,resolve} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
+import {runInNewContext} from 'node:vm';
 
-assert.equal(process.argv.length,6,'binary toolsRoot sdkRoot fresh-output');
+assert([6,7].includes(process.argv.length),'binary toolsRoot sdkRoot fresh-output [--verify-owned-adapter]');
+const verifyAdapter=process.argv[6]==='--verify-owned-adapter';
+assert(process.argv.length===6||verifyAdapter);
 assert.equal(process.version,'v24.20.0');
-const [binary,tools,sdk,output]=process.argv.slice(2).map(value=>resolve(value));
+const [binary,tools,sdk,output]=process.argv.slice(2,6).map(value=>resolve(value));
 const require=createRequire(join(tools,'package.json'));
 assert.equal(require(join(tools,'package.json')).version,'15.22.0');
 assert.equal(require(join(sdk,'package.json')).version,'7.2.5');
@@ -42,6 +45,13 @@ const sources={
 const record={schemaVersion:1,syntheticOnly:true,target:'official-firebase-tools',targetVersion:'15.22.0',sdkVersion:'7.2.5',node:process.version,
   capturedAt:new Date().toISOString(),projectId,sources,captureSha256:hash(await readFile(new URL(import.meta.url))),
   sourceSha256:hash(await readFile(join(tools,'lib/emulator/functionsEmulator.js'))),observations:[],auxiliary:[],passed:false};
+let ownedStart;
+if(verifyAdapter){
+  const source=await readFile(new URL('../../../support/functions-host.cjs',import.meta.url),'utf8');
+  const declaration=source.match(/^async function startFunctionsOnce\([^]*?^\}/m)?.[0];assert(declaration);
+  ownedStart=runInNewContext('('+declaration+')');
+  record.target='fireside-owned-admission-with-official-peers';record.ownedAdapterSha256=hash(source);
+}
 const normalize=value=>JSON.parse(JSON.stringify(value).replaceAll(output,'<workspace>'));
 async function backend(name){
   const functionsDir=join(output,name);await mkdir(join(functionsDir,'node_modules'),{recursive:true});
@@ -73,7 +83,7 @@ try{
   // normalizer without downloading an extension or contacting its registry.
   const predefined={...http,codebase:'extension',extensionInstanceId:'synthetic-extension',
     predefinedTriggers:[{name:'alpha',entryPoint:'alpha',platform:'gcfv1',regions:['us-central1'],httpsTrigger:{}}]};
-  for(const [mode,backends] of [['healthy',[http,auxiliary]],['failed-codebase',[http,broken]],['missing-auxiliary',[http,auxiliary]],['predefined-backend',[predefined]]]){
+  for(const [mode,backends] of [['healthy',[http,auxiliary]],['failed-codebase',[http,broken]],['missing-auxiliary',[http,auxiliary]],['predefined-backend',[predefined]],['colliding-backends',[http,{...http,codebase:'collision'}]]]){
     if(mode==='missing-auxiliary'){
       EmulatorRegistry.clear(Emulators.EVENTARC);EmulatorRegistry.clear(Emulators.TASKS);
     }
@@ -86,15 +96,24 @@ try{
       catch(error){call.error=String(error);throw error;}
     };
     try{
-      await EmulatorRegistry.start(emulator);let connectError;
-      try{await emulator.connect();}catch(error){connectError=String(error);}
+      let connectError;
+      try{
+        if(ownedStart)await ownedStart(emulator,EmulatorRegistry,backends);
+        else{await EmulatorRegistry.start(emulator);await emulator.connect();}
+      }catch(error){connectError=String(error);}
       const response=await fetch(`http://127.0.0.1:${ports[0]}/backends`,{signal:AbortSignal.timeout(5000)});
       const inventory=await response.json();assert.equal(response.status,200);
-      const triggerRecords=Object.values(emulator.triggers).map(({def,ignored,enabled})=>({id:def.id,codebase:def.codebase,ignored,enabled}));
+      const triggerRecords=Object.values(emulator.triggers).map(({def,ignored,enabled,backend})=>({id:def.id,codebase:def.codebase,recordBackend:backend.codebase,ignored,enabled}));
       record.observations.push(normalize({mode,calls,connectError:connectError??null,status:response.status,inventory,triggerRecords}));
+      if(verifyAdapter){
+        if(mode==='failed-codebase')assert.match(connectError,/discovery did not complete/);
+        else if(mode==='missing-auxiliary')assert.match(connectError,/not admitted/);
+        else if(mode==='colliding-backends')assert.match(connectError,/another backend|not registered/);
+        else assert.equal(connectError,undefined);
+      }
       if(mode==='failed-codebase')assert(calls.some(call=>call.codebase==='broken'&&call.error),'preserve swallowed discovery failure');
       else {
-        assert.equal(emulator.getTriggerDefinitions().length,mode==='predefined-backend'?1:4);
+        assert.equal(emulator.getTriggerDefinitions().length,mode==='predefined-backend'?1:mode==='colliding-backends'?2:4);
         assert.equal(triggerRecords.filter(row=>row.ignored).length,mode==='missing-auxiliary'?2:0);
       }
     }finally{await emulator.stop();EmulatorRegistry.clear(Emulators.FUNCTIONS);}
@@ -114,4 +133,4 @@ finally{
   for(const {name,peer} of peers.reverse()){await peer.stop();EmulatorRegistry.clear(name);}
   await writeFile(join(output,'fixture.json'),JSON.stringify(record,null,2)+'\n');
 }
-console.log(JSON.stringify({passed:record.passed,output,modes:record.observations.map(row=>({mode:row.mode,calls:row.calls}))}));
+console.log(JSON.stringify({passed:record.passed,output,target:record.target,modes:record.observations.map(row=>({mode:row.mode,connectError:row.connectError}))}));

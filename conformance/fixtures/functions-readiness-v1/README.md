@@ -32,6 +32,18 @@ download is involved. The published backend inventory keeps `regions` and omits
 `id`/`region`, while discovery/registration expands a regional definition with
 both fields. This pins normalization, not installation of a real extension.
 
+A fifth startup deliberately gives two codebases the same function identities.
+Upstream discovers both successfully, but the second backend owns the registered
+records and the first backend's HTTP inventory is empty. Record ownership must
+therefore match the discovered backend, not just a function ID or global hash.
+This collision is rejected by the owned adapter instead of silently shadowing
+one configured backend.
+
+`--verify-owned-adapter` runs the actual native host's admission function against
+the same real pinned Functions class and auxiliary peers. Those receipts use a
+different target label and are verification results, not replacement oracle
+captures. The default mode remains the unmodified official behavior.
+
 Only the fresh synthetic workspace directory in inventory fields is replaced by
 `<workspace>`. Loopback ports, source text, upstream errors and proxy-recorded
 bytes are unchanged. Capture and upstream source hashes are recorded. Reproduce

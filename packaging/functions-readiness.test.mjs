@@ -15,7 +15,9 @@ function replay(mode,omitId){
   const observation=fixture.observations.find(row=>row.mode===mode);
   const backends=observation.calls.map(call=>({codebase:call.codebase,functionsDir:'synthetic/'+call.codebase}));
   const definitions=observation.calls.flatMap(row=>row.definitions??[]);
-  const records=observation.triggerRecords.filter(row=>row.id!==omitId).map(row=>({...row,def:definitions.find(def=>def.id===row.id)}));
+  const records=observation.triggerRecords.filter(row=>row.id!==omitId).map(row=>({...row,
+    backend:backends.find(backend=>backend.codebase===row.recordBackend),
+    def:observation.calls.find(call=>call.codebase===row.recordBackend).definitions.find(def=>def.id===row.id)}));
   const calls=[];
   const emulator={
     async discoverTriggers(backend){
@@ -45,6 +47,9 @@ test('a broken configured codebase cannot borrow healthy functions from another 
 });
 test('predefined backends use the admitted regional definition',async()=>{
   assert.equal(await replay('predefined-backend').run(),1);
+});
+test('colliding codebases cannot borrow another backends registered function identity',async()=>{
+  await assert.rejects(replay('colliding-backends').run(),/another backend|not registered/);
 });
 test('main validates every configured backend, including predefined extensions',()=>{
   assert.match(source,/startFunctionsOnce\(functionsEmulator, EmulatorRegistry, emulatableBackends, custom\)/);

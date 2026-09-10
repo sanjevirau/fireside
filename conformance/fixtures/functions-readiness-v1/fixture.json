@@ -5,14 +5,14 @@
   "targetVersion": "15.22.0",
   "sdkVersion": "7.2.5",
   "node": "v24.20.0",
-  "capturedAt": "2026-09-10T20:42:49.251Z",
+  "capturedAt": "2026-09-10T20:48:49.291Z",
   "projectId": "demo-fireside-readiness-oracle",
   "sources": {
     "http": "const {onRequest,onCall}=require('firebase-functions/v2/https');exports.alpha=onRequest((req,res)=>res.json({synthetic:true}));exports.echo=onCall(req=>({echo:req.data}));\n",
     "auxiliary": "const {onTaskDispatched}=require('firebase-functions/v2/tasks');const {onCustomEventPublished}=require('firebase-functions/v2/eventarc');exports.task=onTaskDispatched(()=>{});exports.event=onCustomEventPublished('dev.fireside.synthetic',()=>{});\n",
     "broken": "throw new Error('synthetic discovery failure');\n"
   },
-  "captureSha256": "ddeb4e0682dcc31c70b727615800cc9802b1bd2bb5adf0e751e9284468dd4b09",
+  "captureSha256": "8a81076aae43b4356d4058ba6080d0bae1c8b71ecedae2945a951c9596d60b52",
   "sourceSha256": "0c16fe813bc5a034e43a9218c0099ae2c75628e14078d40b86708630cf402406",
   "observations": [
     {
@@ -215,24 +215,28 @@
         {
           "id": "us-central1-alpha",
           "codebase": "http",
+          "recordBackend": "http",
           "ignored": false,
           "enabled": true
         },
         {
           "id": "us-central1-echo",
           "codebase": "http",
+          "recordBackend": "http",
           "ignored": false,
           "enabled": true
         },
         {
           "id": "us-central1-task",
           "codebase": "auxiliary",
+          "recordBackend": "auxiliary",
           "ignored": false,
           "enabled": true
         },
         {
           "id": "us-central1-event",
           "codebase": "auxiliary",
+          "recordBackend": "auxiliary",
           "ignored": false,
           "enabled": true
         }
@@ -338,12 +342,14 @@
         {
           "id": "us-central1-alpha",
           "codebase": "http",
+          "recordBackend": "http",
           "ignored": false,
           "enabled": true
         },
         {
           "id": "us-central1-echo",
           "codebase": "http",
+          "recordBackend": "http",
           "ignored": false,
           "enabled": true
         }
@@ -549,24 +555,28 @@
         {
           "id": "us-central1-alpha",
           "codebase": "http",
+          "recordBackend": "http",
           "ignored": false,
           "enabled": true
         },
         {
           "id": "us-central1-echo",
           "codebase": "http",
+          "recordBackend": "http",
           "ignored": false,
           "enabled": true
         },
         {
           "id": "us-central1-task",
           "codebase": "auxiliary",
+          "recordBackend": "auxiliary",
           "ignored": true,
           "enabled": true
         },
         {
           "id": "us-central1-event",
           "codebase": "auxiliary",
+          "recordBackend": "auxiliary",
           "ignored": true,
           "enabled": true
         }
@@ -621,6 +631,156 @@
       "triggerRecords": [
         {
           "id": "us-central1-alpha",
+          "recordBackend": "extension",
+          "ignored": false,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "mode": "colliding-backends",
+      "calls": [
+        {
+          "codebase": "http",
+          "ids": [
+            "us-central1-alpha",
+            "us-central1-echo"
+          ],
+          "definitions": [
+            {
+              "entryPoint": "alpha",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "alpha",
+              "id": "us-central1-alpha",
+              "codebase": "http",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/alpha"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "httpsTrigger": {}
+            },
+            {
+              "entryPoint": "echo",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "echo",
+              "id": "us-central1-echo",
+              "codebase": "http",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/echo",
+                "deployment-callable": "true"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "httpsTrigger": {}
+            }
+          ]
+        },
+        {
+          "codebase": "collision",
+          "ids": [
+            "us-central1-alpha",
+            "us-central1-echo"
+          ],
+          "definitions": [
+            {
+              "entryPoint": "alpha",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "alpha",
+              "id": "us-central1-alpha",
+              "codebase": "collision",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/alpha"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "httpsTrigger": {}
+            },
+            {
+              "entryPoint": "echo",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "echo",
+              "id": "us-central1-echo",
+              "codebase": "collision",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/echo",
+                "deployment-callable": "true"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "httpsTrigger": {}
+            }
+          ]
+        }
+      ],
+      "connectError": null,
+      "status": 200,
+      "inventory": {
+        "backends": [
+          {
+            "directory": "<workspace>/http",
+            "env": {},
+            "functionTriggers": []
+          },
+          {
+            "directory": "<workspace>/http",
+            "env": {},
+            "functionTriggers": [
+              {
+                "entryPoint": "alpha",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "alpha",
+                "id": "us-central1-alpha",
+                "codebase": "collision",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/alpha"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {}
+              },
+              {
+                "entryPoint": "echo",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "echo",
+                "id": "us-central1-echo",
+                "codebase": "collision",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/echo",
+                  "deployment-callable": "true"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {}
+              }
+            ]
+          }
+        ]
+      },
+      "triggerRecords": [
+        {
+          "id": "us-central1-alpha",
+          "codebase": "collision",
+          "recordBackend": "collision",
+          "ignored": false,
+          "enabled": true
+        },
+        {
+          "id": "us-central1-echo",
+          "codebase": "collision",
+          "recordBackend": "collision",
           "ignored": false,
           "enabled": true
         }
@@ -637,7 +797,7 @@
           "target": "official",
           "targetVersion": "15.22.0",
           "sdk": "firebase-functions/7.2.5",
-          "recordedAt": "2026-09-10T20:42:49.251Z",
+          "recordedAt": "2026-09-10T20:48:49.291Z",
           "transport": "http1"
         },
         "exchanges": [
@@ -695,7 +855,7 @@
                 },
                 {
                   "name": "date",
-                  "value": "Thu, 10 Sep 2026 20:42:58 GMT"
+                  "value": "Thu, 10 Sep 2026 20:48:58 GMT"
                 },
                 {
                   "name": "connection",
@@ -724,7 +884,7 @@
           "target": "official",
           "targetVersion": "15.22.0",
           "sdk": "firebase-functions/7.2.5",
-          "recordedAt": "2026-09-10T20:42:49.251Z",
+          "recordedAt": "2026-09-10T20:48:49.291Z",
           "transport": "http1"
         },
         "exchanges": [
@@ -759,7 +919,7 @@
                   "value": "gzip,deflate"
                 }
               ],
-              "bodyBase64": "eyJyZXRyeUNvbmZpZyI6eyJtYXhBdHRlbXB0cyI6bnVsbCwibWF4UmV0cnlTZWNvbmRzIjpudWxsLCJtYXhCYWNrb2ZmU2Vjb25kcyI6bnVsbCwibWF4RG91YmxpbmdzIjpudWxsLCJtaW5CYWNrb2ZmU2Vjb25kcyI6bnVsbH0sInJhdGVMaW1pdHMiOnsibWF4Q29uY3VycmVudERpc3BhdGNoZXMiOm51bGwsIm1heERpc3BhdGNoZXNQZXJTZWNvbmQiOm51bGx9LCJkZWZhdWx0VXJpIjoiaHR0cDovLzEyNy4wLjAuMTo1OTM5Ni9kZW1vLWZpcmVzaWRlLXJlYWRpbmVzcy1vcmFjbGUvdXMtY2VudHJhbDEvdGFzayJ9"
+              "bodyBase64": "eyJyZXRyeUNvbmZpZyI6eyJtYXhBdHRlbXB0cyI6bnVsbCwibWF4UmV0cnlTZWNvbmRzIjpudWxsLCJtYXhCYWNrb2ZmU2Vjb25kcyI6bnVsbCwibWF4RG91YmxpbmdzIjpudWxsLCJtaW5CYWNrb2ZmU2Vjb25kcyI6bnVsbH0sInJhdGVMaW1pdHMiOnsibWF4Q29uY3VycmVudERpc3BhdGNoZXMiOm51bGwsIm1heERpc3BhdGNoZXNQZXJTZWNvbmQiOm51bGx9LCJkZWZhdWx0VXJpIjoiaHR0cDovLzEyNy4wLjAuMTo1NDQ1OS9kZW1vLWZpcmVzaWRlLXJlYWRpbmVzcy1vcmFjbGUvdXMtY2VudHJhbDEvdGFzayJ9"
             },
             "response": {
               "status": 200,
@@ -778,11 +938,11 @@
                 },
                 {
                   "name": "etag",
-                  "value": "W/\"152-LcNo3IypPUlgKawuSRa8ec3N3g8\""
+                  "value": "W/\"152-VhqpeMajSAy3h6fe3Pay6yDL7eg\""
                 },
                 {
                   "name": "date",
-                  "value": "Thu, 10 Sep 2026 20:42:58 GMT"
+                  "value": "Thu, 10 Sep 2026 20:48:58 GMT"
                 },
                 {
                   "name": "connection",
@@ -793,9 +953,9 @@
                   "value": "timeout=5"
                 }
               ],
-              "bodyBase64": "eyJ0YXNrUXVldWVDb25maWciOnsicmV0cnlDb25maWciOnsibWF4QXR0ZW1wdHMiOjMsIm1heFJldHJ5U2Vjb25kcyI6bnVsbCwibWF4QmFja29mZlNlY29uZHMiOjM2MDAsIm1heERvdWJsaW5ncyI6MTYsIm1pbkJhY2tvZmZTZWNvbmRzIjowLjF9LCJyYXRlTGltaXRzIjp7Im1heENvbmN1cnJlbnREaXNwYXRjaGVzIjoxMDAwLCJtYXhEaXNwYXRjaGVzUGVyU2Vjb25kIjo1MDB9LCJ0aW1lb3V0U2Vjb25kcyI6MTAsInJldHJ5IjpmYWxzZSwiZGVmYXVsdFVyaSI6Imh0dHA6Ly8xMjcuMC4wLjE6NTkzOTYvZGVtby1maXJlc2lkZS1yZWFkaW5lc3Mtb3JhY2xlL3VzLWNlbnRyYWwxL3Rhc2sifX0=",
+              "bodyBase64": "eyJ0YXNrUXVldWVDb25maWciOnsicmV0cnlDb25maWciOnsibWF4QXR0ZW1wdHMiOjMsIm1heFJldHJ5U2Vjb25kcyI6bnVsbCwibWF4QmFja29mZlNlY29uZHMiOjM2MDAsIm1heERvdWJsaW5ncyI6MTYsIm1pbkJhY2tvZmZTZWNvbmRzIjowLjF9LCJyYXRlTGltaXRzIjp7Im1heENvbmN1cnJlbnREaXNwYXRjaGVzIjoxMDAwLCJtYXhEaXNwYXRjaGVzUGVyU2Vjb25kIjo1MDB9LCJ0aW1lb3V0U2Vjb25kcyI6MTAsInJldHJ5IjpmYWxzZSwiZGVmYXVsdFVyaSI6Imh0dHA6Ly8xMjcuMC4wLjE6NTQ0NTkvZGVtby1maXJlc2lkZS1yZWFkaW5lc3Mtb3JhY2xlL3VzLWNlbnRyYWwxL3Rhc2sifX0=",
               "bodyChunksBase64": [
-                "eyJ0YXNrUXVldWVDb25maWciOnsicmV0cnlDb25maWciOnsibWF4QXR0ZW1wdHMiOjMsIm1heFJldHJ5U2Vjb25kcyI6bnVsbCwibWF4QmFja29mZlNlY29uZHMiOjM2MDAsIm1heERvdWJsaW5ncyI6MTYsIm1pbkJhY2tvZmZTZWNvbmRzIjowLjF9LCJyYXRlTGltaXRzIjp7Im1heENvbmN1cnJlbnREaXNwYXRjaGVzIjoxMDAwLCJtYXhEaXNwYXRjaGVzUGVyU2Vjb25kIjo1MDB9LCJ0aW1lb3V0U2Vjb25kcyI6MTAsInJldHJ5IjpmYWxzZSwiZGVmYXVsdFVyaSI6Imh0dHA6Ly8xMjcuMC4wLjE6NTkzOTYvZGVtby1maXJlc2lkZS1yZWFkaW5lc3Mtb3JhY2xlL3VzLWNlbnRyYWwxL3Rhc2sifX0="
+                "eyJ0YXNrUXVldWVDb25maWciOnsicmV0cnlDb25maWciOnsibWF4QXR0ZW1wdHMiOjMsIm1heFJldHJ5U2Vjb25kcyI6bnVsbCwibWF4QmFja29mZlNlY29uZHMiOjM2MDAsIm1heERvdWJsaW5ncyI6MTYsIm1pbkJhY2tvZmZTZWNvbmRzIjowLjF9LCJyYXRlTGltaXRzIjp7Im1heENvbmN1cnJlbnREaXNwYXRjaGVzIjoxMDAwLCJtYXhEaXNwYXRjaGVzUGVyU2Vjb25kIjo1MDB9LCJ0aW1lb3V0U2Vjb25kcyI6MTAsInJldHJ5IjpmYWxzZSwiZGVmYXVsdFVyaSI6Imh0dHA6Ly8xMjcuMC4wLjE6NTQ0NTkvZGVtby1maXJlc2lkZS1yZWFkaW5lc3Mtb3JhY2xlL3VzLWNlbnRyYWwxL3Rhc2sifX0="
               ]
             }
           }

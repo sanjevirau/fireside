@@ -28,6 +28,11 @@ test('Functions readiness capture preserves partial discovery and real auxiliary
   assert.equal(predefined.inventory.backends[0].functionTriggers[0].id,undefined);
   assert.deepEqual(predefined.inventory.backends[0].functionTriggers[0].regions,['us-central1']);
   assert.equal(predefined.calls[0].definitions[0].region,'us-central1');
+  const collision=fixture.observations.find(row=>row.mode==='colliding-backends');
+  assert.equal(collision.connectError,null);assert.equal(collision.status,200);
+  assert.deepEqual(collision.calls.map(row=>row.ids),[collision.calls[0].ids,collision.calls[0].ids]);
+  assert.deepEqual(collision.inventory.backends.map(row=>row.functionTriggers.length),[0,2]);
+  assert(collision.triggerRecords.every(row=>row.recordBackend==='collision'));
   for(const auxiliary of fixture.auxiliary){
     assert.equal(auxiliary.fixture.exchanges.length,1);
     const exchange=auxiliary.fixture.exchanges[0];
