@@ -43,3 +43,22 @@ identity, rather than a later branch head, is recorded below.
 
 Exact-candidate seven-job CI and the rest of Phase B remain required before a
 phase-completion claim. Later candidates need their own applicable qualification.
+
+## Native full synthetic UI, attempt r9
+
+The [unmodified r9 receipt](native-suite-ui-20260911-r9.json) follows the Logging
+fix. Fourteen browser checkpoints pass: service overview, denied request details,
+Requests replay after reload, coverage rendering, document edit/clear,
+Auth create/refresh/clear, Storage acknowledged upload/exact bytes/metadata/clear,
+and retained startup logs. A real synthetic Functions HTTP request passes and
+the owning suite exits zero after shutdown. No browser errors were observed.
+Readiness was 7.616 seconds on this local short fixture, not a full-data startup
+claim. Raw exchanges use only independent synthetic inputs and loopback origins.
+
+The runtime corresponds to `2b187ce`; its debug binary SHA-256 is
+`f50fe064513e4cf8712d5337cdcb9a50d434a3f57a44ef9e979cf49c761c0210`.
+The receipt SHA-256 is
+`5e5786b5a8040ae9077e9a7459081795c63949bdf405a6650b1726601fd79456`.
+Pinned asset, driver and oracle hashes are inside the receipt. This is local
+browser/component evidence; exact-candidate Linux CI remains required. Earlier
+r7 shutdown failure is retained separately and is not relabeled as a pass.

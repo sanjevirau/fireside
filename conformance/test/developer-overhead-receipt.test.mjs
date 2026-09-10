@@ -4,6 +4,25 @@ import {readFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import {gunzipSync} from 'node:zlib';
 
+test('native suite receipt includes all browser controls, a real Function and clean shutdown',async()=>{
+  const bytes=await readFile(new URL('../../benchmarks/results/phase-b/native-suite-ui-20260911-r9.json',import.meta.url));
+  assert.equal(createHash('sha256').update(bytes).digest('hex'),'5e5786b5a8040ae9077e9a7459081795c63949bdf405a6650b1726601fd79456');
+  const receipt=JSON.parse(bytes);
+  assert.equal(receipt.passed,true);assert.equal(receipt.acceptance,false);assert.equal(receipt.syntheticOnly,true);
+  assert.equal(receipt.functionsPing,true);assert.deepEqual(receipt.shutdown,[0,null]);
+  assert.deepEqual(receipt.browser.errors,[]);
+  assert.deepEqual(receipt.browser.checks,[
+    'service-overview-rendered','denied-request-rule-and-context-rendered',
+    'request-details-survive-reload-history-replay','coverage-html-renders-expressions',
+    'document-browse-edit-persisted','document-clear-control-persisted',
+    'auth-create-and-list','auth-list-refresh','auth-clear-control',
+    'storage-upload-and-list','storage-upload-bytes-preserved','storage-metadata-panel',
+    'storage-clear-control','logs-history-rendered',
+  ]);
+  assert.equal(receipt.firebaseTools,'15.22.0');assert.equal(receipt.firebaseFunctions,'7.2.5');
+  assert.equal(receipt.binarySha256,'f50fe064513e4cf8712d5337cdcb9a50d434a3f57a44ef9e979cf49c761c0210');
+});
+
 test('Phase B diagnostic receipt retains all samples and meets the unchanged limits',async()=>{
   const root=new URL('../../',import.meta.url);
   const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
