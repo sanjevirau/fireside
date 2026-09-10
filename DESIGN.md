@@ -396,6 +396,37 @@ documents through the official emulator.
 
 ## Distribution and trust boundaries
 
+The pinned Functions host's successful discovery and `/backends` response do
+not prove registration. The independent `functions-readiness-v1` capture shows
+that missing auxiliary peers leave discovered handlers in the inventory with
+`ignored: true`, and failed codebase discovery can be swallowed by `connect()`.
+Initial configured-backend readiness now checks each discovered definition against
+the upstream registered record, requiring enabled and not ignored. It observes
+the single discovery owned by `connect()`, not a second execution of user code.
+Missing registration fails with the handler identifier before READY. This
+also verifies record ownership: a later codebase cannot silently shadow an
+earlier codebase with the same function identity. Startup rejection awaits the
+owned host's drain/stop and exits nonzero.
+This
+includes predefined Extension backends; the local fixture qualifies their
+regional identity normalization, not downloading/installing every extension.
+The host emits a compact count and SHA-256 of admitted `[id,name,region,platform]`
+tuples (each JSON encoded, sorted by UTF-8 bytes, then encoded as a JSON array).
+The Rust coordinator independently checks the fetched `/backends` identities
+against that receipt and the configured minimum. Missing, extra or changed
+handlers cannot pass by borrowing a healthy backend's count. No environment
+values cross this receipt. Discovery fetches have a five-second response/body
+deadline inside the unchanged 120-second overall startup allowance.
+
+Eventarc/Tasks auxiliary listeners now accept only their pinned startup POST
+routes, scoped to the configured project. Eventarc returns the captured
+`{"res":"OK"}`; Tasks returns the captured nullish-default queue configuration.
+These adapters retain no delivery queue and never fetch a submitted callback
+URI. Other routes return HTTP 501 `UNIMPLEMENTED` with an explicit startup-only
+message, instead of the previous catch-all HTTP 200 empty object. This is a
+deliberate capability boundary, not claimed parity for general Eventarc/Tasks.
+The corresponding official startup bytes are in `functions-readiness-v1`.
+
 The pinned Functions workload host drains/stops its upstream emulator before
 exiting. A served request leaves an upstream socket-discovery timer referenced
 for thirty seconds even after worker/server shutdown. Like the captured official

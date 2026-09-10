@@ -15,8 +15,7 @@ use std::time::Duration;
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt as _;
 
-use axum::extract::Request;
-use axum::{Json, Router};
+use axum::Router;
 use fireside_auth_front::AuthRuntime;
 use fireside_core_store::{
     DatabaseName, DiskOptions, DocumentKey, Precondition, Store, StoreOptions, Write,
@@ -55,12 +54,16 @@ const IMPORT_BATCH_SIZE: usize = 500;
 const IMPORT_BATCH_LOGICAL_BYTES: u64 = 8 * 1024 * 1024;
 const READY_TIMEOUT: Duration = Duration::from_secs(120);
 
+mod auxiliary;
 mod control;
+mod functions_readiness;
 mod log_input;
 mod native_state;
 mod shutdown_io;
 pub use control::wait_for_shutdown;
 
+#[cfg(test)]
+mod auxiliary_tests;
 #[cfg(test)]
 mod diagnostics_tests;
 #[cfg(test)]
@@ -258,6 +261,7 @@ pub async fn run(config: SuiteConfig) -> Result<SuiteOutcome, SuiteRuntimeError>
     let mut servers = spawn_static_servers(
         &mut listeners,
         StaticApplications {
+            project_id: config.project_id.clone(),
             firestore,
             request_history,
             auth: auth.application(),
@@ -299,12 +303,7 @@ pub async fn run(config: SuiteConfig) -> Result<SuiteOutcome, SuiteRuntimeError>
         server_failure,
     ));
 
-    logging.record(
-        "INFO",
-        Some("hub"),
-        format!("All emulators ready; {function_count} functions discovered"),
-    );
-    println!("All emulators ready");
+    announce_ready(&logging, function_count);
 
     // Child::wait closes child.stdin immediately, even when its future is
     // later cancelled by select. Keep our Windows control pipe alive outside
@@ -341,6 +340,15 @@ pub async fn run(config: SuiteConfig) -> Result<SuiteOutcome, SuiteRuntimeError>
         failure_reason,
     )
     .await
+}
+
+fn announce_ready(logging: &LoggingRuntime, function_count: usize) {
+    logging.record(
+        "INFO",
+        Some("hub"),
+        format!("All emulators ready; {function_count} functions discovered"),
+    );
+    println!("All emulators ready");
 }
 
 async fn prepare_native_suite(
@@ -743,6 +751,7 @@ fn extract_zip(archive: &Path, destination: &Path) -> Result<(), SuiteRuntimeErr
 struct ListenerSet(std::collections::BTreeMap<&'static str, TcpListener>);
 
 struct StaticApplications {
+    project_id: String,
     firestore: tonic::service::Routes,
     request_history: Option<RequestHistory>,
     auth: Router,
@@ -838,7 +847,7 @@ fn spawn_static_servers(
         servers.push(spawn_axum(
             name,
             listeners.take(name)?,
-            dependency_router(),
+            auxiliary::router(name, &applications.project_id),
             shutdown.subscribe(),
             failed.clone(),
         ));
@@ -903,14 +912,10 @@ fn spawn_firestore(
     })
 }
 
-fn dependency_router() -> Router {
-    Router::new().fallback(|_request: Request| async { Json(json!({})) })
-}
-
 async fn spawn_functions_host(
     config: &SuiteConfig,
     logging: &LoggingRuntime,
-) -> Result<(Child, watch::Receiver<bool>), SuiteRuntimeError> {
+) -> Result<(Child, watch::Receiver<functions_readiness::Signal>), SuiteRuntimeError> {
     let script = config.state_dir.join("functions-host.cjs");
     tokio::fs::write(&script, FUNCTIONS_HOST_SOURCE)
         .await
@@ -960,14 +965,14 @@ async fn spawn_functions_host(
     let mut child = command
         .spawn()
         .map_err(|error| failure(format!("failed to start Functions host: {error}")))?;
-    let (ready_sender, ready) = watch::channel(false);
+    let (ready_sender, ready) = watch::channel(None);
     if let Some(stdout) = child.stdout.take() {
         let logging = logging.clone();
         tokio::spawn(async move {
             let mut lines = BufReader::new(stdout);
             while let Ok(Some(line)) = log_input::next(&mut lines).await {
-                if line.starts_with("FIRESIDE_FUNCTIONS_HOST_READY ") {
-                    let _ = ready_sender.send(true);
+                if let Some(receipt) = line.strip_prefix("FIRESIDE_FUNCTIONS_HOST_READY ") {
+                    let _ = ready_sender.send(Some(functions_readiness::Receipt::parse(receipt)));
                 }
                 println!("{line}");
                 logging.record("INFO", Some("functions"), line);
@@ -989,7 +994,7 @@ async fn spawn_functions_host(
 
 async fn wait_for_functions(
     child: &mut Child,
-    ready: watch::Receiver<bool>,
+    ready: watch::Receiver<functions_readiness::Signal>,
     endpoint: &str,
     minimum: usize,
 ) -> Result<FunctionsInventory, SuiteRuntimeError> {
@@ -1003,11 +1008,16 @@ async fn wait_for_functions(
                 "Functions host exited before readiness: {status}"
             )));
         }
-        if *ready.borrow()
-            && let Ok(inventory) = FunctionsInventory::discover(endpoint).await
-            && inventory.functions().count() >= minimum
-        {
-            return Ok(inventory);
+        let receipt = ready.borrow().clone();
+        if let Some(receipt) = receipt {
+            let receipt = receipt.map_err(failure)?;
+            return tokio::time::timeout_at(
+                deadline,
+                functions_readiness::discover(endpoint, &receipt, minimum),
+            )
+            .await
+            .map_err(|_| failure("Functions readiness deadline expired while checking inventory"))?
+            .map_err(failure);
         }
         if tokio::time::Instant::now() >= deadline {
             return Err(failure(format!(

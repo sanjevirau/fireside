@@ -1,0 +1,1127 @@
+{
+  "passed": true,
+  "acceptance": false,
+  "syntheticOnly": true,
+  "node": "v24.20.0",
+  "assets": {
+    "ui-v1.15.0.zip": "97d8c4c574e3f20c4d690a2ce8373eef76ab024da73279a062dba8517f88cf9a",
+    "cloud-storage-rules-runtime-v1.1.3.jar": "0cd52db6f6271d62078f805220706377c849220b73bd68aa27078d977df9c900"
+  },
+  "binarySha256": "0ee545e596aebbe9380c4852a7a9d24a17050362ff64e6a4cca81655ca0875fc",
+  "driverSha256": "3107deef38c6d204c1744b871b07cb8c6845e7dc6455169477aab2c9673595bf",
+  "oracleFixtureSha256": "ab860ad063c05e4dfa408d07f6ba0e0e9fe427b0e0f4cad116ae2fe1bd04447d",
+  "firebaseTools": "15.22.0",
+  "firebaseFunctions": "7.2.5",
+  "readyMilliseconds": 6900.629916,
+  "config": {
+    "auth": {
+      "host": "127.0.0.1",
+      "listen": [
+        {
+          "address": "127.0.0.1",
+          "family": "IPv4",
+          "port": 50427
+        }
+      ],
+      "name": "auth",
+      "port": 50427
+    },
+    "eventarc": {
+      "host": "127.0.0.1",
+      "name": "eventarc",
+      "port": 50435
+    },
+    "experiments": [
+      "functionsv2deployoptimizations",
+      "pintags",
+      "apphosting",
+      "abiu",
+      "genkit",
+      "mcp",
+      "fdcift",
+      "fdcwebhooks",
+      "fdcrealtime"
+    ],
+    "firestore": {
+      "host": "127.0.0.1",
+      "listen": [
+        {
+          "address": "127.0.0.1",
+          "family": "IPv4",
+          "port": 50426
+        }
+      ],
+      "name": "firestore",
+      "port": 50426,
+      "reservedPorts": [
+        50433
+      ],
+      "webSocketHost": "127.0.0.1",
+      "webSocketPort": 50433
+    },
+    "firestore.websocket": {
+      "host": "127.0.0.1",
+      "listen": [
+        {
+          "address": "127.0.0.1",
+          "family": "IPv4",
+          "port": 50433
+        }
+      ],
+      "name": "firestore.websocket",
+      "port": 50433
+    },
+    "functions": {
+      "host": "127.0.0.1",
+      "name": "functions",
+      "port": 50429
+    },
+    "hub": {
+      "host": "127.0.0.1",
+      "listen": [
+        {
+          "address": "127.0.0.1",
+          "family": "IPv4",
+          "port": 50431
+        }
+      ],
+      "name": "hub",
+      "port": 50431
+    },
+    "logging": {
+      "host": "127.0.0.1",
+      "listen": [
+        {
+          "address": "127.0.0.1",
+          "family": "IPv4",
+          "port": 50434
+        }
+      ],
+      "name": "logging",
+      "port": 50434
+    },
+    "projectId": "demo-fireside-developer-tools",
+    "pubsub": {
+      "host": "127.0.0.1",
+      "listen": [
+        {
+          "address": "127.0.0.1",
+          "family": "IPv4",
+          "port": 50430
+        }
+      ],
+      "name": "pubsub",
+      "pid": 41398,
+      "port": 50430
+    },
+    "storage": {
+      "host": "127.0.0.1",
+      "listen": [
+        {
+          "address": "127.0.0.1",
+          "family": "IPv4",
+          "port": 50428
+        }
+      ],
+      "name": "storage",
+      "port": 50428
+    },
+    "tasks": {
+      "host": "127.0.0.1",
+      "name": "tasks",
+      "port": 50436
+    },
+    "ui": {
+      "host": "127.0.0.1",
+      "listen": [
+        {
+          "address": "127.0.0.1",
+          "family": "IPv4",
+          "port": 50432
+        }
+      ],
+      "name": "ui",
+      "port": 50432
+    }
+  },
+  "browser": {
+    "browserVersion": "152.0.7977.83",
+    "checks": [
+      "service-overview-rendered",
+      "denied-request-rule-and-context-rendered",
+      "request-details-survive-reload-history-replay",
+      "coverage-html-renders-expressions",
+      "document-browse-edit-persisted",
+      "document-clear-control-persisted",
+      "auth-create-and-list",
+      "auth-list-refresh",
+      "auth-clear-control",
+      "storage-upload-and-list",
+      "storage-upload-bytes-preserved",
+      "storage-metadata-panel",
+      "storage-clear-control",
+      "logs-history-rendered"
+    ],
+    "coverage": {
+      "title": "Firestore Rule Coverage Report",
+      "expressionCount": 9,
+      "rulesVisible": true
+    },
+    "errors": [],
+    "exchanges": [
+      {
+        "service": "firestore",
+        "method": "GET",
+        "path": "/emulator/v1/projects/demo-fireside-developer-tools:ruleCoverage.html",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>Firestore Rule Coverage Report</title>\n  <script src=\"/emulator/v1/coverage.js\" defer></script>\n</head>\n<body>\n  <h1>Firestore Rule Coverage Report</h1>\n  <p>Local diagnostic values may contain application data and decoded auth claims. Do not share this report publicly.</p>\n  <p>Counts reflect actual Fireside expression visits, not the official emulator's preliminary planner evaluations. Missing values mean unvisited or omitted; check report completeness. They never imply success.</p>\n  <button id=\"refresh\" type=\"button\">Refresh coverage</button>\n  <p id=\"status\" role=\"status\">Loading coverage…</p>\n  <h2>Rules source</h2>\n  <pre id=\"source\"></pre>\n  <h2>Expression results</h2>\n  <section id=\"expressions\" aria-label=\"Expression coverage\"></section>\n  <noscript>JavaScript is required to display coverage. Use the corresponding :ruleCoverage JSON endpoint without .html.</noscript>\n</body>\n</html>\n"
+      },
+      {
+        "service": "firestore",
+        "method": "GET",
+        "path": "/emulator/v1/coverage.js",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": "/* Independent renderer of the captured coverage contract; no inline/data HTML. */\n'use strict';\nconst status = document.getElementById('status');\nconst source = document.getElementById('source');\nconst expressions = document.getElementById('expressions');\nconst refresh = document.getElementById('refresh');\n\nasync function renderCoverage() {\n  refresh.disabled = true;\n  status.textContent = 'Loading coverage…';\n  source.textContent = '';\n  expressions.replaceChildren();\n  try {\n    const endpoint = new URL(location.href);\n    endpoint.pathname = endpoint.pathname.replace(/:ruleCoverage\\.html$/, ':ruleCoverage');\n    const response = await fetch(endpoint, {cache: 'no-store', signal: AbortSignal.timeout(30000)});\n    const report = await response.json();\n    if (!response.ok) throw new Error(report.error?.message || `HTTP ${response.status}`);\n    const text = report.rules.files.map(file => file.content).join('\\n');\n    source.textContent = text;\n    const scalars = Array.from(text);\n    const pending = [...(report.report || [])].reverse();\n    let count = 0;\n    while (pending.length) {\n      const node = pending.pop();\n      const position = node.sourcePosition;\n      const section = document.createElement('details');\n      section.className = 'coverage-expr';\n      const summary = document.createElement('summary');\n      const visits = (node.values || []).reduce((sum, value) => sum + value.count, 0);\n      summary.textContent = `Line ${position.line}:${position.column} — ${visits} retained visits`;\n      const code = document.createElement('pre');\n      code.textContent = scalars.slice(position.currentOffset, position.endOffset + 1).join('');\n      const values = document.createElement('pre');\n      values.textContent = node.values?.length ? JSON.stringify(node.values, null, 2) : 'No retained values: not evaluated or omitted. Check report completeness above.';\n      section.append(summary, code, values);\n      expressions.append(section);\n      count++;\n      pending.push(...[...(node.children || [])].reverse());\n    }\n    const info = report.firesideCoverage;\n    status.textContent = info?.truncated\n      ? `Incomplete coverage: ${info.omittedValues} omitted values, ${info.omittedOperations} omitted operations, ${info.evictedProjects} evicted project histories. ${count} expressions shown.`\n      : `${count} expressions. Actual evaluator visits; refresh manually for current results.`;\n  } catch (error) {\n    status.textContent = `Coverage unavailable: ${error.message}`;\n  } finally {\n    refresh.disabled = false;\n  }\n}\nrefresh.addEventListener('click', renderCoverage);\nrenderCoverage();\n"
+      },
+      {
+        "service": "firestore",
+        "method": "GET",
+        "path": "/emulator/v1/projects/demo-fireside-developer-tools:ruleCoverage",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {
+          "rules": {
+            "files": [
+              {
+                "name": "firestore.rules",
+                "content": "rules_version = '2';\nservice cloud.firestore {\n match /databases/{database}/documents {\n  match /notes/{note} {\n   allow read: if resource.data.visible == true;\n   allow write: if request.resource.data.visible == true;\n  }\n }\n}\n"
+              }
+            ]
+          },
+          "report": [
+            {
+              "sourcePosition": {
+                "line": 5,
+                "column": 19,
+                "currentOffset": 130,
+                "endOffset": 158
+              },
+              "children": [
+                {
+                  "sourcePosition": {
+                    "line": 5,
+                    "column": 19,
+                    "currentOffset": 130,
+                    "endOffset": 150
+                  },
+                  "children": [
+                    {
+                      "sourcePosition": {
+                        "line": 5,
+                        "column": 19,
+                        "currentOffset": 130,
+                        "endOffset": 142
+                      },
+                      "children": [
+                        {
+                          "sourcePosition": {
+                            "line": 5,
+                            "column": 19,
+                            "currentOffset": 130,
+                            "endOffset": 137
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "sourcePosition": {
+                "line": 6,
+                "column": 20,
+                "currentOffset": 180,
+                "endOffset": 216
+              },
+              "children": [
+                {
+                  "sourcePosition": {
+                    "line": 6,
+                    "column": 20,
+                    "currentOffset": 180,
+                    "endOffset": 208
+                  },
+                  "children": [
+                    {
+                      "sourcePosition": {
+                        "line": 6,
+                        "column": 20,
+                        "currentOffset": 180,
+                        "endOffset": 200
+                      },
+                      "children": [
+                        {
+                          "sourcePosition": {
+                            "line": 6,
+                            "column": 20,
+                            "currentOffset": 180,
+                            "endOffset": 195
+                          },
+                          "children": [
+                            {
+                              "sourcePosition": {
+                                "line": 6,
+                                "column": 20,
+                                "currentOffset": 180,
+                                "endOffset": 186
+                              },
+                              "values": [
+                                {
+                                  "value": {
+                                    "mapValue": {
+                                      "fields": {
+                                        "time": {
+                                          "timestampValue": "2026-09-10T20:47:49.821877Z"
+                                        },
+                                        "auth": {
+                                          "nullValue": null
+                                        },
+                                        "inTransaction": {
+                                          "boolValue": true
+                                        },
+                                        "path": {
+                                          "pathValue": {
+                                            "segments": [
+                                              {
+                                                "simple": "databases"
+                                              },
+                                              {
+                                                "simple": "(default)"
+                                              },
+                                              {
+                                                "simple": "documents"
+                                              },
+                                              {
+                                                "simple": "notes"
+                                              },
+                                              {
+                                                "simple": "visible"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "method": {
+                                          "stringValue": "create"
+                                        },
+                                        "transforms": {
+                                          "nullValue": null
+                                        },
+                                        "writeFields": {
+                                          "nullValue": null
+                                        },
+                                        "readFields": {
+                                          "nullValue": null
+                                        },
+                                        "resource": {
+                                          "mapValue": {
+                                            "fields": {
+                                              "data": {
+                                                "mapValue": {
+                                                  "fields": {
+                                                    "title": {
+                                                      "stringValue": "Synthetic 中文 🚀"
+                                                    },
+                                                    "visible": {
+                                                      "boolValue": true
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "__name__": {
+                                                "pathValue": {
+                                                  "segments": [
+                                                    {
+                                                      "simple": "databases"
+                                                    },
+                                                    {
+                                                      "simple": "(default)"
+                                                    },
+                                                    {
+                                                      "simple": "documents"
+                                                    },
+                                                    {
+                                                      "simple": "notes"
+                                                    },
+                                                    {
+                                                      "simple": "visible"
+                                                    }
+                                                  ]
+                                                }
+                                              },
+                                              "id": {
+                                                "stringValue": "visible"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "count": 1
+                                },
+                                {
+                                  "value": {
+                                    "mapValue": {
+                                      "fields": {
+                                        "time": {
+                                          "timestampValue": "2026-09-10T20:47:49.846401Z"
+                                        },
+                                        "auth": {
+                                          "nullValue": null
+                                        },
+                                        "inTransaction": {
+                                          "boolValue": true
+                                        },
+                                        "path": {
+                                          "pathValue": {
+                                            "segments": [
+                                              {
+                                                "simple": "databases"
+                                              },
+                                              {
+                                                "simple": "(default)"
+                                              },
+                                              {
+                                                "simple": "documents"
+                                              },
+                                              {
+                                                "simple": "notes"
+                                              },
+                                              {
+                                                "simple": "denied"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "method": {
+                                          "stringValue": "create"
+                                        },
+                                        "transforms": {
+                                          "nullValue": null
+                                        },
+                                        "writeFields": {
+                                          "nullValue": null
+                                        },
+                                        "readFields": {
+                                          "nullValue": null
+                                        },
+                                        "resource": {
+                                          "mapValue": {
+                                            "fields": {
+                                              "data": {
+                                                "mapValue": {
+                                                  "fields": {
+                                                    "title": {
+                                                      "stringValue": "Synthetic 中文 🚀"
+                                                    },
+                                                    "visible": {
+                                                      "boolValue": false
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "__name__": {
+                                                "pathValue": {
+                                                  "segments": [
+                                                    {
+                                                      "simple": "databases"
+                                                    },
+                                                    {
+                                                      "simple": "(default)"
+                                                    },
+                                                    {
+                                                      "simple": "documents"
+                                                    },
+                                                    {
+                                                      "simple": "notes"
+                                                    },
+                                                    {
+                                                      "simple": "denied"
+                                                    }
+                                                  ]
+                                                }
+                                              },
+                                              "id": {
+                                                "stringValue": "denied"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "count": 1
+                                }
+                              ]
+                            }
+                          ],
+                          "values": [
+                            {
+                              "value": {
+                                "mapValue": {
+                                  "fields": {
+                                    "data": {
+                                      "mapValue": {
+                                        "fields": {
+                                          "title": {
+                                            "stringValue": "Synthetic 中文 🚀"
+                                          },
+                                          "visible": {
+                                            "boolValue": true
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "__name__": {
+                                      "pathValue": {
+                                        "segments": [
+                                          {
+                                            "simple": "databases"
+                                          },
+                                          {
+                                            "simple": "(default)"
+                                          },
+                                          {
+                                            "simple": "documents"
+                                          },
+                                          {
+                                            "simple": "notes"
+                                          },
+                                          {
+                                            "simple": "visible"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "id": {
+                                      "stringValue": "visible"
+                                    }
+                                  }
+                                }
+                              },
+                              "count": 1
+                            },
+                            {
+                              "value": {
+                                "mapValue": {
+                                  "fields": {
+                                    "data": {
+                                      "mapValue": {
+                                        "fields": {
+                                          "title": {
+                                            "stringValue": "Synthetic 中文 🚀"
+                                          },
+                                          "visible": {
+                                            "boolValue": false
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "__name__": {
+                                      "pathValue": {
+                                        "segments": [
+                                          {
+                                            "simple": "databases"
+                                          },
+                                          {
+                                            "simple": "(default)"
+                                          },
+                                          {
+                                            "simple": "documents"
+                                          },
+                                          {
+                                            "simple": "notes"
+                                          },
+                                          {
+                                            "simple": "denied"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "id": {
+                                      "stringValue": "denied"
+                                    }
+                                  }
+                                }
+                              },
+                              "count": 1
+                            }
+                          ]
+                        }
+                      ],
+                      "values": [
+                        {
+                          "value": {
+                            "mapValue": {
+                              "fields": {
+                                "title": {
+                                  "stringValue": "Synthetic 中文 🚀"
+                                },
+                                "visible": {
+                                  "boolValue": true
+                                }
+                              }
+                            }
+                          },
+                          "count": 1
+                        },
+                        {
+                          "value": {
+                            "mapValue": {
+                              "fields": {
+                                "title": {
+                                  "stringValue": "Synthetic 中文 🚀"
+                                },
+                                "visible": {
+                                  "boolValue": false
+                                }
+                              }
+                            }
+                          },
+                          "count": 1
+                        }
+                      ]
+                    }
+                  ],
+                  "values": [
+                    {
+                      "value": {
+                        "boolValue": true
+                      },
+                      "count": 1
+                    },
+                    {
+                      "value": {
+                        "boolValue": false
+                      },
+                      "count": 1
+                    }
+                  ]
+                }
+              ],
+              "values": [
+                {
+                  "value": {
+                    "boolValue": true
+                  },
+                  "count": 1
+                },
+                {
+                  "value": {
+                    "boolValue": false
+                  },
+                  "count": 1
+                }
+              ]
+            }
+          ],
+          "firesideCoverage": {
+            "countModel": "actual-evaluator-visits",
+            "truncated": false,
+            "omittedValues": 0,
+            "omittedOperations": 0,
+            "evictedProjects": 0,
+            "retainedBytes": 9789
+          }
+        }
+      },
+      {
+        "service": "firestore",
+        "method": "POST",
+        "path": "/v1/projects/demo-fireside-developer-tools/databases/(default)/documents:listCollectionIds",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {
+          "collectionIds": [
+            "notes"
+          ]
+        }
+      },
+      {
+        "service": "firestore",
+        "method": "GET",
+        "path": "/v1/projects/demo-fireside-developer-tools/databases/(default)/documents/notes",
+        "queryKeys": [
+          "mask.fieldPaths",
+          "pageSize",
+          "showMissing"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "documents": [
+            {
+              "createTime": "2026-09-10T20:47:49.849955+00:00",
+              "name": "projects/demo-fireside-developer-tools/databases/(default)/documents/notes/hidden",
+              "updateTime": "2026-09-10T20:47:49.849955+00:00"
+            },
+            {
+              "createTime": "2026-09-10T20:47:49.823257+00:00",
+              "name": "projects/demo-fireside-developer-tools/databases/(default)/documents/notes/visible",
+              "updateTime": "2026-09-10T20:47:49.823257+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "service": "firestore",
+        "method": "POST",
+        "path": "/v1/projects/demo-fireside-developer-tools/databases/(default)/documents/notes/visible:listCollectionIds",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {}
+      },
+      {
+        "service": "firestore",
+        "method": "DELETE",
+        "path": "/emulator/v1/projects/demo-fireside-developer-tools/databases/(default)/documents",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {}
+      },
+      {
+        "service": "firestore",
+        "method": "GET",
+        "path": "/v1/projects/demo-fireside-developer-tools/databases/(default)/documents/default",
+        "queryKeys": [
+          "mask.fieldPaths",
+          "pageSize",
+          "showMissing"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {}
+      },
+      {
+        "service": "auth",
+        "method": "GET",
+        "path": "/emulator/v1/projects/demo-fireside-developer-tools/config",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {
+          "emailPrivacyConfig": {
+            "enableImprovedEmailPrivacy": false
+          },
+          "signIn": {
+            "allowDuplicateEmails": false
+          }
+        }
+      },
+      {
+        "service": "auth",
+        "method": "POST",
+        "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-developer-tools/accounts:query",
+        "queryKeys": [],
+        "status": 200,
+        "request": {},
+        "response": {
+          "recordsCount": "0",
+          "userInfo": []
+        }
+      },
+      {
+        "service": "auth",
+        "method": "GET",
+        "path": "/identitytoolkit.googleapis.com/v2/projects/demo-fireside-developer-tools/tenants",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {
+          "tenants": []
+        }
+      },
+      {
+        "service": "auth",
+        "method": "POST",
+        "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-developer-tools/accounts",
+        "queryKeys": [],
+        "status": 200,
+        "request": {
+          "customAttributes": "",
+          "displayName": "Synthetic Operator",
+          "photoUrl": "",
+          "email": "operator@example.test",
+          "phoneNumber": "",
+          "emailVerified": false,
+          "mfaInfo": []
+        },
+        "response": {
+          "displayName": "Synthetic Operator",
+          "email": "operator@example.test",
+          "kind": "identitytoolkit#SignupNewUserResponse",
+          "localId": "ngQvwjA-TYam7jO3EuZhcDanFOXuVPNxg5RrOqkkWqQ",
+          "photoUrl": ""
+        }
+      },
+      {
+        "service": "auth",
+        "method": "POST",
+        "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-developer-tools/accounts:lookup",
+        "queryKeys": [],
+        "status": 200,
+        "request": {
+          "localId": [
+            "ngQvwjA-TYam7jO3EuZhcDanFOXuVPNxg5RrOqkkWqQ"
+          ]
+        },
+        "response": {
+          "kind": "identitytoolkit#GetAccountInfoResponse",
+          "users": [
+            {
+              "createdAt": "1789073272284",
+              "customAttributes": "",
+              "disabled": false,
+              "displayName": "Synthetic Operator",
+              "email": "operator@example.test",
+              "emailVerified": false,
+              "lastLoginAt": "1789073272284",
+              "lastRefreshAt": "2026-09-10T20:47:52.284Z",
+              "localId": "ngQvwjA-TYam7jO3EuZhcDanFOXuVPNxg5RrOqkkWqQ",
+              "mfaInfo": [],
+              "phoneNumber": "",
+              "photoUrl": "",
+              "validSince": "1789073272"
+            }
+          ]
+        }
+      },
+      {
+        "service": "auth",
+        "method": "POST",
+        "path": "/identitytoolkit.googleapis.com/v1/projects/demo-fireside-developer-tools/accounts:query",
+        "queryKeys": [],
+        "status": 200,
+        "request": {},
+        "response": {
+          "recordsCount": "1",
+          "userInfo": [
+            {
+              "createdAt": "1789073272284",
+              "customAttributes": "",
+              "disabled": false,
+              "displayName": "Synthetic Operator",
+              "email": "operator@example.test",
+              "emailVerified": false,
+              "lastLoginAt": "1789073272284",
+              "lastRefreshAt": "2026-09-10T20:47:52.284Z",
+              "localId": "ngQvwjA-TYam7jO3EuZhcDanFOXuVPNxg5RrOqkkWqQ",
+              "mfaInfo": [],
+              "phoneNumber": "",
+              "photoUrl": "",
+              "validSince": "1789073272"
+            }
+          ]
+        }
+      },
+      {
+        "service": "auth",
+        "method": "DELETE",
+        "path": "/emulator/v1/projects/demo-fireside-developer-tools/accounts",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {}
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/b",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {
+          "items": [
+            {
+              "etag": "====",
+              "id": "demo-fireside-developer-tools.appspot.com",
+              "kind": "storage#bucket",
+              "location": "US",
+              "locationType": "multi-region",
+              "metageneration": "1",
+              "name": "demo-fireside-developer-tools.appspot.com",
+              "projectNumber": "000000000000",
+              "selfLink": "http://127.0.0.1:50428/v1/b/demo-fireside-developer-tools.appspot.com",
+              "storageClass": "STANDARD",
+              "timeCreated": "2026-09-10T20:47:44.688308Z",
+              "updated": "2026-09-10T20:47:44.688308Z"
+            }
+          ],
+          "kind": "storage#buckets"
+        }
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o",
+        "queryKeys": [
+          "delimiter",
+          "prefix"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "items": [],
+          "prefixes": []
+        }
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o",
+        "queryKeys": [
+          "delimiter",
+          "prefix"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "items": [],
+          "prefixes": []
+        }
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/b",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {
+          "items": [
+            {
+              "etag": "====",
+              "id": "demo-fireside-developer-tools.appspot.com",
+              "kind": "storage#bucket",
+              "location": "US",
+              "locationType": "multi-region",
+              "metageneration": "1",
+              "name": "demo-fireside-developer-tools.appspot.com",
+              "projectNumber": "000000000000",
+              "selfLink": "http://127.0.0.1:50428/v1/b/demo-fireside-developer-tools.appspot.com",
+              "storageClass": "STANDARD",
+              "timeCreated": "2026-09-10T20:47:44.688308Z",
+              "updated": "2026-09-10T20:47:44.688308Z"
+            }
+          ],
+          "kind": "storage#buckets"
+        }
+      },
+      {
+        "service": "storage",
+        "method": "POST",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o",
+        "queryKeys": [
+          "name"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "bucket": "demo-fireside-developer-tools.appspot.com",
+          "contentDisposition": "inline",
+          "contentEncoding": "identity",
+          "contentType": "text/plain",
+          "crc32c": "2200559296",
+          "etag": "MTc4OTA3MzI3MjU3NTAwMjox",
+          "generation": "1789073272575002",
+          "md5Hash": "sPPqlZ7uzJlPy/GTuQW/bw==",
+          "metadata": {},
+          "metageneration": "1",
+          "name": "synthetic.txt",
+          "size": "47",
+          "storageClass": "STANDARD",
+          "timeCreated": "2026-09-10T20:47:52.575021Z",
+          "updated": "2026-09-10T20:47:52.575021Z"
+        }
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o",
+        "queryKeys": [
+          "delimiter",
+          "prefix"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "items": [
+            {
+              "bucket": "demo-fireside-developer-tools.appspot.com",
+              "name": "synthetic.txt"
+            }
+          ],
+          "prefixes": []
+        }
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o/synthetic.txt",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {
+          "bucket": "demo-fireside-developer-tools.appspot.com",
+          "contentDisposition": "inline",
+          "contentEncoding": "identity",
+          "contentType": "text/plain",
+          "crc32c": "2200559296",
+          "etag": "MTc4OTA3MzI3MjU3NTAwMjox",
+          "generation": "1789073272575002",
+          "md5Hash": "sPPqlZ7uzJlPy/GTuQW/bw==",
+          "metadata": {},
+          "metageneration": "1",
+          "name": "synthetic.txt",
+          "size": "47",
+          "storageClass": "STANDARD",
+          "timeCreated": "2026-09-10T20:47:52.575021Z",
+          "updated": "2026-09-10T20:47:52.575021Z"
+        }
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o",
+        "queryKeys": [
+          "delimiter",
+          "prefix"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "items": [
+            {
+              "bucket": "demo-fireside-developer-tools.appspot.com",
+              "name": "synthetic.txt"
+            }
+          ],
+          "prefixes": []
+        }
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o/synthetic.txt",
+        "queryKeys": [],
+        "status": 200,
+        "request": null,
+        "response": {
+          "bucket": "demo-fireside-developer-tools.appspot.com",
+          "contentDisposition": "inline",
+          "contentEncoding": "identity",
+          "contentType": "text/plain",
+          "crc32c": "2200559296",
+          "etag": "MTc4OTA3MzI3MjU3NTAwMjox",
+          "generation": "1789073272575002",
+          "md5Hash": "sPPqlZ7uzJlPy/GTuQW/bw==",
+          "metadata": {},
+          "metageneration": "1",
+          "name": "synthetic.txt",
+          "size": "47",
+          "storageClass": "STANDARD",
+          "timeCreated": "2026-09-10T20:47:52.575021Z",
+          "updated": "2026-09-10T20:47:52.575021Z"
+        }
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o",
+        "queryKeys": [
+          "delimiter",
+          "prefix"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "items": [
+            {
+              "bucket": "demo-fireside-developer-tools.appspot.com",
+              "name": "synthetic.txt"
+            }
+          ],
+          "prefixes": []
+        }
+      },
+      {
+        "service": "storage",
+        "method": "DELETE",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o/%252f",
+        "queryKeys": [],
+        "status": 404,
+        "request": null,
+        "response": {
+          "error": {
+            "code": 404,
+            "message": "Object not found"
+          }
+        }
+      },
+      {
+        "service": "storage",
+        "method": "DELETE",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o/synthetic.txt",
+        "queryKeys": [],
+        "status": 204,
+        "request": null,
+        "response": ""
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o",
+        "queryKeys": [
+          "delimiter",
+          "prefix"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "items": [],
+          "prefixes": []
+        }
+      },
+      {
+        "service": "storage",
+        "method": "GET",
+        "path": "/v0/b/demo-fireside-developer-tools.appspot.com/o",
+        "queryKeys": [
+          "delimiter",
+          "prefix"
+        ],
+        "status": 200,
+        "request": null,
+        "response": {
+          "items": [],
+          "prefixes": []
+        }
+      }
+    ]
+  },
+  "functionsPing": true,
+  "browserAndFunctionPassed": true,
+  "shutdown": [
+    0,
+    null
+  ]
+}

@@ -8,6 +8,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const { createHash } = require("node:crypto");
 
 function fail(message) {
   process.stderr.write(`fireside functions host: ${message}\n`);
@@ -159,7 +160,7 @@ let functionsEmulator;
 let extensionEmulator;
 let stopping = false;
 
-async function stop(signal) {
+async function stop(signal, exitCode = 0) {
   if (stopping) return;
   stopping = true;
   process.stderr.write(`fireside functions host: stopping after ${signal}\n`);
@@ -170,7 +171,7 @@ async function stop(signal) {
     // The upstream runtime leaves its 30-second socket-discovery timer alive
     // even after a successful invocation. Like the official CLI, terminate this
     // owned host only after its work queue, workers and HTTP server have stopped.
-    process.exit(0);
+    process.exit(exitCode);
   } catch (error) {
     process.stderr.write(`fireside functions host shutdown failed: ${String(error)}\n`);
     process.exit(1);
@@ -198,14 +199,14 @@ if (process.platform === "win32") {
   process.stdin.once("end", () => void stop("launcher disconnected"));
 }
 
-async function startFunctionsOnce(emulator, registry, customBackends) {
-  const counts = new Map(customBackends.map((backend) => [backend, undefined]));
+async function startFunctionsOnce(emulator, registry, configuredBackends, customBackends = configuredBackends) {
+  const discovered = new Map(configuredBackends.map((backend) => [backend, undefined]));
   const discover = emulator.discoverTriggers;
   // connect() owns discovery and source watching. Observe its initial results
   // instead of executing the backend a second time before it starts.
   emulator.discoverTriggers = async function (...args) {
     const definitions = await discover.apply(this, args);
-    if (counts.has(args[0])) counts.set(args[0], definitions.length);
+    if (discovered.has(args[0])) discovered.set(args[0], definitions);
     return definitions;
   };
   try {
@@ -215,18 +216,51 @@ async function startFunctionsOnce(emulator, registry, customBackends) {
     emulator.discoverTriggers = discover;
   }
   let total = 0;
-  for (const [backend, count] of counts) {
+  for (const [backend, definitions] of discovered) {
     // firebase-tools can log discovery failures without rejecting connect().
     // Missing results must not produce a false READY signal.
-    if (count === undefined) {
+    if (definitions === undefined) {
       throw new Error(`Functions source ${backend.functionsDir} discovery did not complete`);
     }
-    if (count === 0) {
+    if (definitions.length === 0) {
       throw new Error(`Functions source ${backend.functionsDir} exported no functions`);
     }
-    total += count;
+    for (const definition of definitions) {
+      // Discovery is not admission: upstream retains ignored definitions when
+      // their required emulator could not register the trigger. Its public
+      // inventory and getTriggerDefinitions() include those records as well.
+      let record;
+      try {
+        record = emulator.getTriggerRecordByKey(emulator.getTriggerKey(definition));
+      } catch {
+        throw new Error(`Function ${definition.id} was discovered but not registered`);
+      }
+      if (!record || record.def.id !== definition.id) {
+        throw new Error(`Function ${definition.id} was discovered but not registered`);
+      }
+      if (record.backend !== backend) {
+        throw new Error(`Function ${definition.id} was registered by another backend`);
+      }
+      if (!record.enabled || record.ignored) {
+        throw new Error(`Function ${definition.id} was discovered but not admitted (disabled or ignored)`);
+      }
+    }
+    if (customBackends.includes(backend)) total += definitions.length;
   }
   return total;
+}
+
+function inventoryFingerprint(definitions) {
+  const rows = definitions.map((definition) => {
+    const region = definition.region || definition.regions?.[0];
+    const id = definition.id || `${region}-${definition.name}`;
+    const identity = [id, definition.name, region, definition.platform];
+    if (identity.some((value) => typeof value !== "string" || !value)) {
+      throw new Error("Functions inventory contains an incomplete identity");
+    }
+    return JSON.stringify(identity);
+  }).sort((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right)));
+  return { count: rows.length, sha256: createHash("sha256").update(JSON.stringify(rows)).digest("hex") };
 }
 
 async function main() {
@@ -272,15 +306,21 @@ async function main() {
       storageBucket: required(args, "default-bucket"),
     },
   });
-  const customFunctionCount = await startFunctionsOnce(functionsEmulator, EmulatorRegistry, custom);
+  const customFunctionCount = await startFunctionsOnce(functionsEmulator, EmulatorRegistry, emulatableBackends, custom);
+  const inventory = inventoryFingerprint(functionsEmulator.getTriggerDefinitions());
   process.stdout.write(
     `FIRESIDE_FUNCTIONS_HOST_READY ${JSON.stringify({
       firebaseToolsVersion: packageJson.version,
       backendCount: emulatableBackends.length,
       customFunctionCount,
+      inventoryCount: inventory.count,
+      inventorySha256: inventory.sha256,
       functionsPort,
     })}\n`,
   );
 }
 
-main().catch((error) => fail(String(error?.stack ?? error)));
+main().catch(async (error) => {
+  process.stderr.write(`fireside functions host startup failed: ${String(error?.stack ?? error)}\n`);
+  await stop("startup failure", 1);
+});

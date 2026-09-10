@@ -1,0 +1,968 @@
+{
+  "schemaVersion": 1,
+  "syntheticOnly": true,
+  "target": "fireside-owned-admission-with-official-peers",
+  "targetVersion": "15.22.0",
+  "sdkVersion": "7.2.5",
+  "node": "v24.20.0",
+  "capturedAt": "2026-09-10T20:50:15.062Z",
+  "projectId": "demo-fireside-readiness-oracle",
+  "sources": {
+    "http": "const {onRequest,onCall}=require('firebase-functions/v2/https');exports.alpha=onRequest((req,res)=>res.json({synthetic:true}));exports.echo=onCall(req=>({echo:req.data}));\n",
+    "auxiliary": "const {onTaskDispatched}=require('firebase-functions/v2/tasks');const {onCustomEventPublished}=require('firebase-functions/v2/eventarc');exports.task=onTaskDispatched(()=>{});exports.event=onCustomEventPublished('dev.fireside.synthetic',()=>{});\n",
+    "broken": "throw new Error('synthetic discovery failure');\n"
+  },
+  "captureSha256": "8a81076aae43b4356d4058ba6080d0bae1c8b71ecedae2945a951c9596d60b52",
+  "sourceSha256": "0c16fe813bc5a034e43a9218c0099ae2c75628e14078d40b86708630cf402406",
+  "observations": [
+    {
+      "mode": "healthy",
+      "calls": [
+        {
+          "codebase": "http",
+          "ids": [
+            "us-central1-alpha",
+            "us-central1-echo"
+          ],
+          "definitions": [
+            {
+              "entryPoint": "alpha",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "alpha",
+              "id": "us-central1-alpha",
+              "codebase": "http",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/alpha"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "httpsTrigger": {}
+            },
+            {
+              "entryPoint": "echo",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "echo",
+              "id": "us-central1-echo",
+              "codebase": "http",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/echo",
+                "deployment-callable": "true"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "httpsTrigger": {}
+            }
+          ]
+        },
+        {
+          "codebase": "auxiliary",
+          "ids": [
+            "us-central1-task",
+            "us-central1-event"
+          ],
+          "definitions": [
+            {
+              "entryPoint": "task",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "task",
+              "id": "us-central1-task",
+              "codebase": "auxiliary",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/task"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "httpsTrigger": {},
+              "taskQueueTrigger": {
+                "retryConfig": {
+                  "maxAttempts": null,
+                  "maxRetrySeconds": null,
+                  "maxBackoffSeconds": null,
+                  "maxDoublings": null,
+                  "minBackoffSeconds": null
+                },
+                "rateLimits": {
+                  "maxConcurrentDispatches": null,
+                  "maxDispatchesPerSecond": null
+                }
+              }
+            },
+            {
+              "entryPoint": "event",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "event",
+              "id": "us-central1-event",
+              "codebase": "auxiliary",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/event"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "eventTrigger": {
+                "eventType": "dev.fireside.synthetic",
+                "channel": "projects/demo-fireside-readiness-oracle/locations/us-central1/channels/firebase",
+                "eventFilters": {}
+              }
+            }
+          ]
+        }
+      ],
+      "connectError": null,
+      "status": 200,
+      "inventory": {
+        "backends": [
+          {
+            "directory": "<workspace>/http",
+            "env": {},
+            "functionTriggers": [
+              {
+                "entryPoint": "alpha",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "alpha",
+                "id": "us-central1-alpha",
+                "codebase": "http",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/alpha"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {}
+              },
+              {
+                "entryPoint": "echo",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "echo",
+                "id": "us-central1-echo",
+                "codebase": "http",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/echo",
+                  "deployment-callable": "true"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {}
+              }
+            ]
+          },
+          {
+            "directory": "<workspace>/auxiliary",
+            "env": {},
+            "functionTriggers": [
+              {
+                "entryPoint": "task",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "task",
+                "id": "us-central1-task",
+                "codebase": "auxiliary",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/task"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {},
+                "taskQueueTrigger": {
+                  "retryConfig": {
+                    "maxAttempts": null,
+                    "maxRetrySeconds": null,
+                    "maxBackoffSeconds": null,
+                    "maxDoublings": null,
+                    "minBackoffSeconds": null
+                  },
+                  "rateLimits": {
+                    "maxConcurrentDispatches": null,
+                    "maxDispatchesPerSecond": null
+                  }
+                }
+              },
+              {
+                "entryPoint": "event",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "event",
+                "id": "us-central1-event",
+                "codebase": "auxiliary",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/event"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "eventTrigger": {
+                  "eventType": "dev.fireside.synthetic",
+                  "channel": "projects/demo-fireside-readiness-oracle/locations/us-central1/channels/firebase",
+                  "eventFilters": {}
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "triggerRecords": [
+        {
+          "id": "us-central1-alpha",
+          "codebase": "http",
+          "recordBackend": "http",
+          "ignored": false,
+          "enabled": true
+        },
+        {
+          "id": "us-central1-echo",
+          "codebase": "http",
+          "recordBackend": "http",
+          "ignored": false,
+          "enabled": true
+        },
+        {
+          "id": "us-central1-task",
+          "codebase": "auxiliary",
+          "recordBackend": "auxiliary",
+          "ignored": false,
+          "enabled": true
+        },
+        {
+          "id": "us-central1-event",
+          "codebase": "auxiliary",
+          "recordBackend": "auxiliary",
+          "ignored": false,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "mode": "failed-codebase",
+      "calls": [
+        {
+          "codebase": "http",
+          "ids": [
+            "us-central1-alpha",
+            "us-central1-echo"
+          ],
+          "definitions": [
+            {
+              "entryPoint": "alpha",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "alpha",
+              "id": "us-central1-alpha",
+              "codebase": "http",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/alpha"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "httpsTrigger": {}
+            },
+            {
+              "entryPoint": "echo",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "echo",
+              "id": "us-central1-echo",
+              "codebase": "http",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/echo",
+                "deployment-callable": "true"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "httpsTrigger": {}
+            }
+          ]
+        },
+        {
+          "codebase": "broken",
+          "error": "FirebaseError: Functions codebase could not be analyzed successfully. It may have a syntax or runtime error"
+        }
+      ],
+      "connectError": "Error: Functions source <workspace>/broken discovery did not complete",
+      "status": 200,
+      "inventory": {
+        "backends": [
+          {
+            "directory": "<workspace>/http",
+            "env": {},
+            "functionTriggers": [
+              {
+                "entryPoint": "alpha",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "alpha",
+                "id": "us-central1-alpha",
+                "codebase": "http",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/alpha"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {}
+              },
+              {
+                "entryPoint": "echo",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "echo",
+                "id": "us-central1-echo",
+                "codebase": "http",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/echo",
+                  "deployment-callable": "true"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {}
+              }
+            ]
+          },
+          {
+            "directory": "<workspace>/broken",
+            "env": {},
+            "functionTriggers": []
+          }
+        ]
+      },
+      "triggerRecords": [
+        {
+          "id": "us-central1-alpha",
+          "codebase": "http",
+          "recordBackend": "http",
+          "ignored": false,
+          "enabled": true
+        },
+        {
+          "id": "us-central1-echo",
+          "codebase": "http",
+          "recordBackend": "http",
+          "ignored": false,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "mode": "missing-auxiliary",
+      "calls": [
+        {
+          "codebase": "http",
+          "ids": [
+            "us-central1-alpha",
+            "us-central1-echo"
+          ],
+          "definitions": [
+            {
+              "entryPoint": "alpha",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "alpha",
+              "id": "us-central1-alpha",
+              "codebase": "http",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/alpha"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "httpsTrigger": {}
+            },
+            {
+              "entryPoint": "echo",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "echo",
+              "id": "us-central1-echo",
+              "codebase": "http",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/echo",
+                "deployment-callable": "true"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "httpsTrigger": {}
+            }
+          ]
+        },
+        {
+          "codebase": "auxiliary",
+          "ids": [
+            "us-central1-task",
+            "us-central1-event"
+          ],
+          "definitions": [
+            {
+              "entryPoint": "task",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "task",
+              "id": "us-central1-task",
+              "codebase": "auxiliary",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/task"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "httpsTrigger": {},
+              "taskQueueTrigger": {
+                "retryConfig": {
+                  "maxAttempts": null,
+                  "maxRetrySeconds": null,
+                  "maxBackoffSeconds": null,
+                  "maxDoublings": null,
+                  "minBackoffSeconds": null
+                },
+                "rateLimits": {
+                  "maxConcurrentDispatches": null,
+                  "maxDispatchesPerSecond": null
+                }
+              }
+            },
+            {
+              "entryPoint": "event",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "event",
+              "id": "us-central1-event",
+              "codebase": "auxiliary",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/event"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "eventTrigger": {
+                "eventType": "dev.fireside.synthetic",
+                "channel": "projects/demo-fireside-readiness-oracle/locations/us-central1/channels/firebase",
+                "eventFilters": {}
+              }
+            }
+          ]
+        }
+      ],
+      "connectError": "Error: Function us-central1-task was discovered but not admitted (disabled or ignored)",
+      "status": 200,
+      "inventory": {
+        "backends": [
+          {
+            "directory": "<workspace>/http",
+            "env": {},
+            "functionTriggers": [
+              {
+                "entryPoint": "alpha",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "alpha",
+                "id": "us-central1-alpha",
+                "codebase": "http",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/alpha"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {}
+              },
+              {
+                "entryPoint": "echo",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "echo",
+                "id": "us-central1-echo",
+                "codebase": "http",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/echo",
+                  "deployment-callable": "true"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {}
+              }
+            ]
+          },
+          {
+            "directory": "<workspace>/auxiliary",
+            "env": {},
+            "functionTriggers": [
+              {
+                "entryPoint": "task",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "task",
+                "id": "us-central1-task",
+                "codebase": "auxiliary",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/task"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {},
+                "taskQueueTrigger": {
+                  "retryConfig": {
+                    "maxAttempts": null,
+                    "maxRetrySeconds": null,
+                    "maxBackoffSeconds": null,
+                    "maxDoublings": null,
+                    "minBackoffSeconds": null
+                  },
+                  "rateLimits": {
+                    "maxConcurrentDispatches": null,
+                    "maxDispatchesPerSecond": null
+                  }
+                }
+              },
+              {
+                "entryPoint": "event",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "event",
+                "id": "us-central1-event",
+                "codebase": "auxiliary",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/event"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "eventTrigger": {
+                  "eventType": "dev.fireside.synthetic",
+                  "channel": "projects/demo-fireside-readiness-oracle/locations/us-central1/channels/firebase",
+                  "eventFilters": {}
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "triggerRecords": [
+        {
+          "id": "us-central1-alpha",
+          "codebase": "http",
+          "recordBackend": "http",
+          "ignored": false,
+          "enabled": true
+        },
+        {
+          "id": "us-central1-echo",
+          "codebase": "http",
+          "recordBackend": "http",
+          "ignored": false,
+          "enabled": true
+        },
+        {
+          "id": "us-central1-task",
+          "codebase": "auxiliary",
+          "recordBackend": "auxiliary",
+          "ignored": true,
+          "enabled": true
+        },
+        {
+          "id": "us-central1-event",
+          "codebase": "auxiliary",
+          "recordBackend": "auxiliary",
+          "ignored": true,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "mode": "predefined-backend",
+      "calls": [
+        {
+          "codebase": "extension",
+          "ids": [
+            "us-central1-alpha"
+          ],
+          "definitions": [
+            {
+              "name": "alpha",
+              "entryPoint": "alpha",
+              "platform": "gcfv1",
+              "regions": [
+                "us-central1"
+              ],
+              "httpsTrigger": {},
+              "region": "us-central1",
+              "id": "us-central1-alpha",
+              "secretEnvironmentVariables": []
+            }
+          ]
+        }
+      ],
+      "connectError": null,
+      "status": 200,
+      "inventory": {
+        "backends": [
+          {
+            "directory": "<workspace>/http",
+            "env": {},
+            "extensionInstanceId": "synthetic-extension",
+            "functionTriggers": [
+              {
+                "name": "alpha",
+                "entryPoint": "alpha",
+                "platform": "gcfv1",
+                "regions": [
+                  "us-central1"
+                ],
+                "httpsTrigger": {}
+              }
+            ]
+          }
+        ]
+      },
+      "triggerRecords": [
+        {
+          "id": "us-central1-alpha",
+          "recordBackend": "extension",
+          "ignored": false,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "mode": "colliding-backends",
+      "calls": [
+        {
+          "codebase": "http",
+          "ids": [
+            "us-central1-alpha",
+            "us-central1-echo"
+          ],
+          "definitions": [
+            {
+              "entryPoint": "alpha",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "alpha",
+              "id": "us-central1-alpha",
+              "codebase": "http",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/alpha"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "httpsTrigger": {}
+            },
+            {
+              "entryPoint": "echo",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "echo",
+              "id": "us-central1-echo",
+              "codebase": "http",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/echo",
+                "deployment-callable": "true"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "httpsTrigger": {}
+            }
+          ]
+        },
+        {
+          "codebase": "collision",
+          "ids": [
+            "us-central1-alpha",
+            "us-central1-echo"
+          ],
+          "definitions": [
+            {
+              "entryPoint": "alpha",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "alpha",
+              "id": "us-central1-alpha",
+              "codebase": "collision",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/alpha"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "httpsTrigger": {}
+            },
+            {
+              "entryPoint": "echo",
+              "platform": "gcfv2",
+              "region": "us-central1",
+              "name": "echo",
+              "id": "us-central1-echo",
+              "codebase": "collision",
+              "availableMemoryMb": 256,
+              "labels": {
+                "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/echo",
+                "deployment-callable": "true"
+              },
+              "timeoutSeconds": 60,
+              "secretEnvironmentVariables": [],
+              "httpsTrigger": {}
+            }
+          ]
+        }
+      ],
+      "connectError": "Error: Function us-central1-alpha was registered by another backend",
+      "status": 200,
+      "inventory": {
+        "backends": [
+          {
+            "directory": "<workspace>/http",
+            "env": {},
+            "functionTriggers": []
+          },
+          {
+            "directory": "<workspace>/http",
+            "env": {},
+            "functionTriggers": [
+              {
+                "entryPoint": "alpha",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "alpha",
+                "id": "us-central1-alpha",
+                "codebase": "collision",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/alpha"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {}
+              },
+              {
+                "entryPoint": "echo",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "echo",
+                "id": "us-central1-echo",
+                "codebase": "collision",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/echo",
+                  "deployment-callable": "true"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {}
+              }
+            ]
+          }
+        ]
+      },
+      "triggerRecords": [
+        {
+          "id": "us-central1-alpha",
+          "codebase": "collision",
+          "recordBackend": "collision",
+          "ignored": false,
+          "enabled": true
+        },
+        {
+          "id": "us-central1-echo",
+          "codebase": "collision",
+          "recordBackend": "collision",
+          "ignored": false,
+          "enabled": true
+        }
+      ]
+    }
+  ],
+  "auxiliary": [
+    {
+      "name": "eventarc",
+      "fixture": {
+        "schemaVersion": 1,
+        "metadata": {
+          "hypothesis": "functions-auxiliary-startup-eventarc",
+          "target": "official",
+          "targetVersion": "15.22.0",
+          "sdk": "firebase-functions/7.2.5",
+          "recordedAt": "2026-09-10T20:50:15.062Z",
+          "transport": "http1"
+        },
+        "exchanges": [
+          {
+            "sequence": 1,
+            "request": {
+              "method": "POST",
+              "uri": "/emulator/v1/projects/demo-fireside-readiness-oracle/triggers/us-central1-event-0-projects/demo-fireside-readiness-oracle/locations/us-central1/channels/firebase",
+              "headers": [
+                {
+                  "name": "user-agent",
+                  "value": "FirebaseCLI/15.22.0 agent-name/codex_cli"
+                },
+                {
+                  "name": "x-client-version",
+                  "value": "FirebaseCLI/15.22.0 agent-name/codex_cli"
+                },
+                {
+                  "name": "content-type",
+                  "value": "application/json"
+                },
+                {
+                  "name": "accept",
+                  "value": "*/*"
+                },
+                {
+                  "name": "content-length",
+                  "value": "201"
+                },
+                {
+                  "name": "accept-encoding",
+                  "value": "gzip,deflate"
+                }
+              ],
+              "bodyBase64": "eyJldmVudFRyaWdnZXIiOnsiZXZlbnRUeXBlIjoiZGV2LmZpcmVzaWRlLnN5bnRoZXRpYyIsImNoYW5uZWwiOiJwcm9qZWN0cy9kZW1vLWZpcmVzaWRlLXJlYWRpbmVzcy1vcmFjbGUvbG9jYXRpb25zL3VzLWNlbnRyYWwxL2NoYW5uZWxzL2ZpcmViYXNlIiwiZXZlbnRGaWx0ZXJzIjp7fSwic2VydmljZSI6ImV2ZW50YXJjLmdvb2dsZWFwaXMuY29tIn19"
+            },
+            "response": {
+              "status": 200,
+              "headers": [
+                {
+                  "name": "x-powered-by",
+                  "value": "Express"
+                },
+                {
+                  "name": "content-type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "name": "content-length",
+                  "value": "12"
+                },
+                {
+                  "name": "etag",
+                  "value": "W/\"c-sY+N6n5MCMKiyZb48Vtn9gav2Mg\""
+                },
+                {
+                  "name": "date",
+                  "value": "Thu, 10 Sep 2026 20:50:23 GMT"
+                },
+                {
+                  "name": "connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "name": "keep-alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "bodyBase64": "eyJyZXMiOiJPSyJ9",
+              "bodyChunksBase64": [
+                "eyJyZXMiOiJPSyJ9"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "tasks",
+      "fixture": {
+        "schemaVersion": 1,
+        "metadata": {
+          "hypothesis": "functions-auxiliary-startup-tasks",
+          "target": "official",
+          "targetVersion": "15.22.0",
+          "sdk": "firebase-functions/7.2.5",
+          "recordedAt": "2026-09-10T20:50:15.062Z",
+          "transport": "http1"
+        },
+        "exchanges": [
+          {
+            "sequence": 1,
+            "request": {
+              "method": "POST",
+              "uri": "/projects/demo-fireside-readiness-oracle/locations/us-central1/queues/task",
+              "headers": [
+                {
+                  "name": "user-agent",
+                  "value": "FirebaseCLI/15.22.0 agent-name/codex_cli"
+                },
+                {
+                  "name": "x-client-version",
+                  "value": "FirebaseCLI/15.22.0 agent-name/codex_cli"
+                },
+                {
+                  "name": "content-type",
+                  "value": "application/json"
+                },
+                {
+                  "name": "accept",
+                  "value": "*/*"
+                },
+                {
+                  "name": "content-length",
+                  "value": "291"
+                },
+                {
+                  "name": "accept-encoding",
+                  "value": "gzip,deflate"
+                }
+              ],
+              "bodyBase64": "eyJyZXRyeUNvbmZpZyI6eyJtYXhBdHRlbXB0cyI6bnVsbCwibWF4UmV0cnlTZWNvbmRzIjpudWxsLCJtYXhCYWNrb2ZmU2Vjb25kcyI6bnVsbCwibWF4RG91YmxpbmdzIjpudWxsLCJtaW5CYWNrb2ZmU2Vjb25kcyI6bnVsbH0sInJhdGVMaW1pdHMiOnsibWF4Q29uY3VycmVudERpc3BhdGNoZXMiOm51bGwsIm1heERpc3BhdGNoZXNQZXJTZWNvbmQiOm51bGx9LCJkZWZhdWx0VXJpIjoiaHR0cDovLzEyNy4wLjAuMTo2MDQ0Mi9kZW1vLWZpcmVzaWRlLXJlYWRpbmVzcy1vcmFjbGUvdXMtY2VudHJhbDEvdGFzayJ9"
+            },
+            "response": {
+              "status": 200,
+              "headers": [
+                {
+                  "name": "x-powered-by",
+                  "value": "Express"
+                },
+                {
+                  "name": "content-type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "name": "content-length",
+                  "value": "338"
+                },
+                {
+                  "name": "etag",
+                  "value": "W/\"152-FtnTyBKaBimoWdia9OyIRgI3q6Q\""
+                },
+                {
+                  "name": "date",
+                  "value": "Thu, 10 Sep 2026 20:50:23 GMT"
+                },
+                {
+                  "name": "connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "name": "keep-alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "bodyBase64": "eyJ0YXNrUXVldWVDb25maWciOnsicmV0cnlDb25maWciOnsibWF4QXR0ZW1wdHMiOjMsIm1heFJldHJ5U2Vjb25kcyI6bnVsbCwibWF4QmFja29mZlNlY29uZHMiOjM2MDAsIm1heERvdWJsaW5ncyI6MTYsIm1pbkJhY2tvZmZTZWNvbmRzIjowLjF9LCJyYXRlTGltaXRzIjp7Im1heENvbmN1cnJlbnREaXNwYXRjaGVzIjoxMDAwLCJtYXhEaXNwYXRjaGVzUGVyU2Vjb25kIjo1MDB9LCJ0aW1lb3V0U2Vjb25kcyI6MTAsInJldHJ5IjpmYWxzZSwiZGVmYXVsdFVyaSI6Imh0dHA6Ly8xMjcuMC4wLjE6NjA0NDIvZGVtby1maXJlc2lkZS1yZWFkaW5lc3Mtb3JhY2xlL3VzLWNlbnRyYWwxL3Rhc2sifX0=",
+              "bodyChunksBase64": [
+                "eyJ0YXNrUXVldWVDb25maWciOnsicmV0cnlDb25maWciOnsibWF4QXR0ZW1wdHMiOjMsIm1heFJldHJ5U2Vjb25kcyI6bnVsbCwibWF4QmFja29mZlNlY29uZHMiOjM2MDAsIm1heERvdWJsaW5ncyI6MTYsIm1pbkJhY2tvZmZTZWNvbmRzIjowLjF9LCJyYXRlTGltaXRzIjp7Im1heENvbmN1cnJlbnREaXNwYXRjaGVzIjoxMDAwLCJtYXhEaXNwYXRjaGVzUGVyU2Vjb25kIjo1MDB9LCJ0aW1lb3V0U2Vjb25kcyI6MTAsInJldHJ5IjpmYWxzZSwiZGVmYXVsdFVyaSI6Imh0dHA6Ly8xMjcuMC4wLjE6NjA0NDIvZGVtby1maXJlc2lkZS1yZWFkaW5lc3Mtb3JhY2xlL3VzLWNlbnRyYWwxL3Rhc2sifX0="
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "passed": true,
+  "ownedAdapterSha256": "83f92a536185f631a522be68f74999471fcf8a8de26dfe3747f0713f86b47676"
+}
