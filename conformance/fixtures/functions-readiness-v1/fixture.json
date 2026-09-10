@@ -5,14 +5,14 @@
   "targetVersion": "15.22.0",
   "sdkVersion": "7.2.5",
   "node": "v24.20.0",
-  "capturedAt": "2026-09-10T20:30:51.853Z",
+  "capturedAt": "2026-09-10T20:32:36.053Z",
   "projectId": "demo-fireside-readiness-oracle",
   "sources": {
     "http": "const {onRequest,onCall}=require('firebase-functions/v2/https');exports.alpha=onRequest((req,res)=>res.json({synthetic:true}));exports.echo=onCall(req=>({echo:req.data}));\n",
     "auxiliary": "const {onTaskDispatched}=require('firebase-functions/v2/tasks');const {onCustomEventPublished}=require('firebase-functions/v2/eventarc');exports.task=onTaskDispatched(()=>{});exports.event=onCustomEventPublished('dev.fireside.synthetic',()=>{});\n",
     "broken": "throw new Error('synthetic discovery failure');\n"
   },
-  "captureSha256": "00c9352252fe7d396390ad8195923b2529bcf0044495de2dbcc874094f635dac",
+  "captureSha256": "9992a9d1e4dad73a05273196e8252ba27aae41883072502b15b22bbe1ee12339",
   "sourceSha256": "0c16fe813bc5a034e43a9218c0099ae2c75628e14078d40b86708630cf402406",
   "observations": [
     {
@@ -128,7 +128,33 @@
             ]
           }
         ]
-      }
+      },
+      "triggerRecords": [
+        {
+          "id": "us-central1-alpha",
+          "codebase": "http",
+          "ignored": false,
+          "enabled": true
+        },
+        {
+          "id": "us-central1-echo",
+          "codebase": "http",
+          "ignored": false,
+          "enabled": true
+        },
+        {
+          "id": "us-central1-task",
+          "codebase": "auxiliary",
+          "ignored": false,
+          "enabled": true
+        },
+        {
+          "id": "us-central1-event",
+          "codebase": "auxiliary",
+          "ignored": false,
+          "enabled": true
+        }
+      ]
     },
     {
       "mode": "failed-codebase",
@@ -192,7 +218,162 @@
             "functionTriggers": []
           }
         ]
-      }
+      },
+      "triggerRecords": [
+        {
+          "id": "us-central1-alpha",
+          "codebase": "http",
+          "ignored": false,
+          "enabled": true
+        },
+        {
+          "id": "us-central1-echo",
+          "codebase": "http",
+          "ignored": false,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "mode": "missing-auxiliary",
+      "calls": [
+        {
+          "codebase": "http",
+          "ids": [
+            "us-central1-alpha",
+            "us-central1-echo"
+          ]
+        },
+        {
+          "codebase": "auxiliary",
+          "ids": [
+            "us-central1-task",
+            "us-central1-event"
+          ]
+        }
+      ],
+      "connectError": null,
+      "status": 200,
+      "inventory": {
+        "backends": [
+          {
+            "directory": "<workspace>/http",
+            "env": {},
+            "functionTriggers": [
+              {
+                "entryPoint": "alpha",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "alpha",
+                "id": "us-central1-alpha",
+                "codebase": "http",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/alpha"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {}
+              },
+              {
+                "entryPoint": "echo",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "echo",
+                "id": "us-central1-echo",
+                "codebase": "http",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/echo",
+                  "deployment-callable": "true"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {}
+              }
+            ]
+          },
+          {
+            "directory": "<workspace>/auxiliary",
+            "env": {},
+            "functionTriggers": [
+              {
+                "entryPoint": "task",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "task",
+                "id": "us-central1-task",
+                "codebase": "auxiliary",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/task"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "httpsTrigger": {},
+                "taskQueueTrigger": {
+                  "retryConfig": {
+                    "maxAttempts": null,
+                    "maxRetrySeconds": null,
+                    "maxBackoffSeconds": null,
+                    "maxDoublings": null,
+                    "minBackoffSeconds": null
+                  },
+                  "rateLimits": {
+                    "maxConcurrentDispatches": null,
+                    "maxDispatchesPerSecond": null
+                  }
+                }
+              },
+              {
+                "entryPoint": "event",
+                "platform": "gcfv2",
+                "region": "us-central1",
+                "name": "event",
+                "id": "us-central1-event",
+                "codebase": "auxiliary",
+                "availableMemoryMb": 256,
+                "labels": {
+                  "EVENTARC_CLOUD_EVENT_SOURCE": "run-emulated.googleapis.com/projects/demo-fireside-readiness-oracle/locations/us-central1/services/event"
+                },
+                "timeoutSeconds": 60,
+                "secretEnvironmentVariables": [],
+                "eventTrigger": {
+                  "eventType": "dev.fireside.synthetic",
+                  "channel": "projects/demo-fireside-readiness-oracle/locations/us-central1/channels/firebase",
+                  "eventFilters": {}
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "triggerRecords": [
+        {
+          "id": "us-central1-alpha",
+          "codebase": "http",
+          "ignored": false,
+          "enabled": true
+        },
+        {
+          "id": "us-central1-echo",
+          "codebase": "http",
+          "ignored": false,
+          "enabled": true
+        },
+        {
+          "id": "us-central1-task",
+          "codebase": "auxiliary",
+          "ignored": true,
+          "enabled": true
+        },
+        {
+          "id": "us-central1-event",
+          "codebase": "auxiliary",
+          "ignored": true,
+          "enabled": true
+        }
+      ]
     }
   ],
   "auxiliary": [
@@ -205,7 +386,7 @@
           "target": "official",
           "targetVersion": "15.22.0",
           "sdk": "firebase-functions/7.2.5",
-          "recordedAt": "2026-09-10T20:30:51.853Z",
+          "recordedAt": "2026-09-10T20:32:36.053Z",
           "transport": "http1"
         },
         "exchanges": [
@@ -263,7 +444,7 @@
                 },
                 {
                   "name": "date",
-                  "value": "Thu, 10 Sep 2026 20:31:01 GMT"
+                  "value": "Thu, 10 Sep 2026 20:32:44 GMT"
                 },
                 {
                   "name": "connection",
@@ -292,7 +473,7 @@
           "target": "official",
           "targetVersion": "15.22.0",
           "sdk": "firebase-functions/7.2.5",
-          "recordedAt": "2026-09-10T20:30:51.853Z",
+          "recordedAt": "2026-09-10T20:32:36.053Z",
           "transport": "http1"
         },
         "exchanges": [
@@ -327,7 +508,7 @@
                   "value": "gzip,deflate"
                 }
               ],
-              "bodyBase64": "eyJyZXRyeUNvbmZpZyI6eyJtYXhBdHRlbXB0cyI6bnVsbCwibWF4UmV0cnlTZWNvbmRzIjpudWxsLCJtYXhCYWNrb2ZmU2Vjb25kcyI6bnVsbCwibWF4RG91YmxpbmdzIjpudWxsLCJtaW5CYWNrb2ZmU2Vjb25kcyI6bnVsbH0sInJhdGVMaW1pdHMiOnsibWF4Q29uY3VycmVudERpc3BhdGNoZXMiOm51bGwsIm1heERpc3BhdGNoZXNQZXJTZWNvbmQiOm51bGx9LCJkZWZhdWx0VXJpIjoiaHR0cDovLzEyNy4wLjAuMTo2NDkzNC9kZW1vLWZpcmVzaWRlLXJlYWRpbmVzcy1vcmFjbGUvdXMtY2VudHJhbDEvdGFzayJ9"
+              "bodyBase64": "eyJyZXRyeUNvbmZpZyI6eyJtYXhBdHRlbXB0cyI6bnVsbCwibWF4UmV0cnlTZWNvbmRzIjpudWxsLCJtYXhCYWNrb2ZmU2Vjb25kcyI6bnVsbCwibWF4RG91YmxpbmdzIjpudWxsLCJtaW5CYWNrb2ZmU2Vjb25kcyI6bnVsbH0sInJhdGVMaW1pdHMiOnsibWF4Q29uY3VycmVudERpc3BhdGNoZXMiOm51bGwsIm1heERpc3BhdGNoZXNQZXJTZWNvbmQiOm51bGx9LCJkZWZhdWx0VXJpIjoiaHR0cDovLzEyNy4wLjAuMTo1MTk5My9kZW1vLWZpcmVzaWRlLXJlYWRpbmVzcy1vcmFjbGUvdXMtY2VudHJhbDEvdGFzayJ9"
             },
             "response": {
               "status": 200,
@@ -346,11 +527,11 @@
                 },
                 {
                   "name": "etag",
-                  "value": "W/\"152-CB025H14fg9NnZ9d36sq0e/OmNU\""
+                  "value": "W/\"152-FeA0GzDDIhP1Rb2gJA7nZB7l8kY\""
                 },
                 {
                   "name": "date",
-                  "value": "Thu, 10 Sep 2026 20:31:01 GMT"
+                  "value": "Thu, 10 Sep 2026 20:32:44 GMT"
                 },
                 {
                   "name": "connection",
@@ -361,9 +542,9 @@
                   "value": "timeout=5"
                 }
               ],
-              "bodyBase64": "eyJ0YXNrUXVldWVDb25maWciOnsicmV0cnlDb25maWciOnsibWF4QXR0ZW1wdHMiOjMsIm1heFJldHJ5U2Vjb25kcyI6bnVsbCwibWF4QmFja29mZlNlY29uZHMiOjM2MDAsIm1heERvdWJsaW5ncyI6MTYsIm1pbkJhY2tvZmZTZWNvbmRzIjowLjF9LCJyYXRlTGltaXRzIjp7Im1heENvbmN1cnJlbnREaXNwYXRjaGVzIjoxMDAwLCJtYXhEaXNwYXRjaGVzUGVyU2Vjb25kIjo1MDB9LCJ0aW1lb3V0U2Vjb25kcyI6MTAsInJldHJ5IjpmYWxzZSwiZGVmYXVsdFVyaSI6Imh0dHA6Ly8xMjcuMC4wLjE6NjQ5MzQvZGVtby1maXJlc2lkZS1yZWFkaW5lc3Mtb3JhY2xlL3VzLWNlbnRyYWwxL3Rhc2sifX0=",
+              "bodyBase64": "eyJ0YXNrUXVldWVDb25maWciOnsicmV0cnlDb25maWciOnsibWF4QXR0ZW1wdHMiOjMsIm1heFJldHJ5U2Vjb25kcyI6bnVsbCwibWF4QmFja29mZlNlY29uZHMiOjM2MDAsIm1heERvdWJsaW5ncyI6MTYsIm1pbkJhY2tvZmZTZWNvbmRzIjowLjF9LCJyYXRlTGltaXRzIjp7Im1heENvbmN1cnJlbnREaXNwYXRjaGVzIjoxMDAwLCJtYXhEaXNwYXRjaGVzUGVyU2Vjb25kIjo1MDB9LCJ0aW1lb3V0U2Vjb25kcyI6MTAsInJldHJ5IjpmYWxzZSwiZGVmYXVsdFVyaSI6Imh0dHA6Ly8xMjcuMC4wLjE6NTE5OTMvZGVtby1maXJlc2lkZS1yZWFkaW5lc3Mtb3JhY2xlL3VzLWNlbnRyYWwxL3Rhc2sifX0=",
               "bodyChunksBase64": [
-                "eyJ0YXNrUXVldWVDb25maWciOnsicmV0cnlDb25maWciOnsibWF4QXR0ZW1wdHMiOjMsIm1heFJldHJ5U2Vjb25kcyI6bnVsbCwibWF4QmFja29mZlNlY29uZHMiOjM2MDAsIm1heERvdWJsaW5ncyI6MTYsIm1pbkJhY2tvZmZTZWNvbmRzIjowLjF9LCJyYXRlTGltaXRzIjp7Im1heENvbmN1cnJlbnREaXNwYXRjaGVzIjoxMDAwLCJtYXhEaXNwYXRjaGVzUGVyU2Vjb25kIjo1MDB9LCJ0aW1lb3V0U2Vjb25kcyI6MTAsInJldHJ5IjpmYWxzZSwiZGVmYXVsdFVyaSI6Imh0dHA6Ly8xMjcuMC4wLjE6NjQ5MzQvZGVtby1maXJlc2lkZS1yZWFkaW5lc3Mtb3JhY2xlL3VzLWNlbnRyYWwxL3Rhc2sifX0="
+                "eyJ0YXNrUXVldWVDb25maWciOnsicmV0cnlDb25maWciOnsibWF4QXR0ZW1wdHMiOjMsIm1heFJldHJ5U2Vjb25kcyI6bnVsbCwibWF4QmFja29mZlNlY29uZHMiOjM2MDAsIm1heERvdWJsaW5ncyI6MTYsIm1pbkJhY2tvZmZTZWNvbmRzIjowLjF9LCJyYXRlTGltaXRzIjp7Im1heENvbmN1cnJlbnREaXNwYXRjaGVzIjoxMDAwLCJtYXhEaXNwYXRjaGVzUGVyU2Vjb25kIjo1MDB9LCJ0aW1lb3V0U2Vjb25kcyI6MTAsInJldHJ5IjpmYWxzZSwiZGVmYXVsdFVyaSI6Imh0dHA6Ly8xMjcuMC4wLjE6NTE5OTMvZGVtby1maXJlc2lkZS1yZWFkaW5lc3Mtb3JhY2xlL3VzLWNlbnRyYWwxL3Rhc2sifX0="
               ]
             }
           }

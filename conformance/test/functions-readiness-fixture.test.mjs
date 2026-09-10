@@ -17,6 +17,11 @@ test('Functions readiness capture preserves partial discovery and real auxiliary
   assert.equal(failed.status,200);assert.equal(failed.connectError,null);
   assert(failed.calls.find(row=>row.codebase==='broken').error.includes('could not be analyzed'));
   assert.deepEqual(failed.inventory.backends.find(row=>row.directory.endsWith('/broken')).functionTriggers,[]);
+  const missing=fixture.observations.find(row=>row.mode==='missing-auxiliary');
+  assert.equal(missing.connectError,null);assert.equal(missing.status,200);
+  assert.equal(missing.inventory.backends.flatMap(row=>row.functionTriggers).length,4);
+  assert.deepEqual(missing.triggerRecords.filter(row=>row.ignored).map(row=>row.id),['us-central1-task','us-central1-event']);
+  assert(healthy.triggerRecords.every(row=>row.enabled&&!row.ignored));
   for(const auxiliary of fixture.auxiliary){
     assert.equal(auxiliary.fixture.exchanges.length,1);
     const exchange=auxiliary.fixture.exchanges[0];

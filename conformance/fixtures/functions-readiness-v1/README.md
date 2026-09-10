@@ -18,6 +18,14 @@ This is why readiness must check every configured backend, not a global minimum
 or HTTP status. The existing native discovery guard already catches missing
 custom discovery; remaining registration/inventory cases require qualification.
 
+A third fresh Functions startup has both auxiliary peers deliberately absent
+from its registry. Upstream connect still succeeds and `/backends` lists all
+four discovered handlers, but the two auxiliary trigger records are marked
+`ignored: true`. Exact discovered IDs alone therefore cannot prove a function
+was admitted. The pinned upstream record's ignored/enabled status is retained
+alongside the HTTP inventory. This is an intentional missing-peer scenario,
+not successful event/task emulation or a real provider outage.
+
 Only the fresh synthetic workspace directory in inventory fields is replaced by
 `<workspace>`. Loopback ports, source text, upstream errors and proxy-recorded
 bytes are unchanged. Capture and upstream source hashes are recorded. Reproduce

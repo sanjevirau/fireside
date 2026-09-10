@@ -69,7 +69,10 @@ try{
     const peer=new Constructor({host:'127.0.0.1',port:upstream});peers.push({name,peer});await peer.start();await proxy(name,upstream,port);
   }
   const http=await backend('http'),auxiliary=await backend('auxiliary'),broken=await backend('broken');
-  for(const [mode,backends] of [['healthy',[http,auxiliary]],['failed-codebase',[http,broken]]]){
+  for(const [mode,backends] of [['healthy',[http,auxiliary]],['failed-codebase',[http,broken]],['missing-auxiliary',[http,auxiliary]]]){
+    if(mode==='missing-auxiliary'){
+      EmulatorRegistry.clear(Emulators.EVENTARC);EmulatorRegistry.clear(Emulators.TASKS);
+    }
     const emulator=new FunctionsEmulator({projectId,projectDir:output,emulatableBackends:backends,account:undefined,
       host:'127.0.0.1',port:ports[0],adminSdkConfig:{projectId,storageBucket:projectId+'.appspot.com'}});
     const calls=[],original=emulator.discoverTriggers;
@@ -83,9 +86,13 @@ try{
       try{await emulator.connect();}catch(error){connectError=String(error);}
       const response=await fetch(`http://127.0.0.1:${ports[0]}/backends`,{signal:AbortSignal.timeout(5000)});
       const inventory=await response.json();assert.equal(response.status,200);
-      record.observations.push(normalize({mode,calls,connectError:connectError??null,status:response.status,inventory}));
-      if(mode==='healthy')assert.equal(emulator.getTriggerDefinitions().length,4);
-      else assert(calls.some(call=>call.codebase==='broken'&&call.error),'preserve swallowed discovery failure');
+      const triggerRecords=Object.values(emulator.triggers).map(({def,ignored,enabled})=>({id:def.id,codebase:def.codebase,ignored,enabled}));
+      record.observations.push(normalize({mode,calls,connectError:connectError??null,status:response.status,inventory,triggerRecords}));
+      if(mode==='failed-codebase')assert(calls.some(call=>call.codebase==='broken'&&call.error),'preserve swallowed discovery failure');
+      else {
+        assert.equal(emulator.getTriggerDefinitions().length,4);
+        assert.equal(triggerRecords.filter(row=>row.ignored).length,mode==='missing-auxiliary'?2:0);
+      }
     }finally{await emulator.stop();EmulatorRegistry.clear(Emulators.FUNCTIONS);}
   }
   for(const row of proxies){
