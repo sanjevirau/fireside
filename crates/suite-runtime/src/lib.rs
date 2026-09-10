@@ -15,8 +15,7 @@ use std::time::Duration;
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt as _;
 
-use axum::extract::Request;
-use axum::{Json, Router};
+use axum::Router;
 use fireside_auth_front::AuthRuntime;
 use fireside_core_store::{
     DatabaseName, DiskOptions, DocumentKey, Precondition, Store, StoreOptions, Write,
@@ -55,6 +54,7 @@ const IMPORT_BATCH_SIZE: usize = 500;
 const IMPORT_BATCH_LOGICAL_BYTES: u64 = 8 * 1024 * 1024;
 const READY_TIMEOUT: Duration = Duration::from_secs(120);
 
+mod auxiliary;
 mod control;
 mod log_input;
 mod native_state;
@@ -260,6 +260,7 @@ pub async fn run(config: SuiteConfig) -> Result<SuiteOutcome, SuiteRuntimeError>
     let mut servers = spawn_static_servers(
         &mut listeners,
         StaticApplications {
+            project_id: config.project_id.clone(),
             firestore,
             request_history,
             auth: auth.application(),
@@ -301,12 +302,7 @@ pub async fn run(config: SuiteConfig) -> Result<SuiteOutcome, SuiteRuntimeError>
         server_failure,
     ));
 
-    logging.record(
-        "INFO",
-        Some("hub"),
-        format!("All emulators ready; {function_count} functions discovered"),
-    );
-    println!("All emulators ready");
+    announce_ready(&logging, function_count);
 
     // Child::wait closes child.stdin immediately, even when its future is
     // later cancelled by select. Keep our Windows control pipe alive outside
@@ -343,6 +339,15 @@ pub async fn run(config: SuiteConfig) -> Result<SuiteOutcome, SuiteRuntimeError>
         failure_reason,
     )
     .await
+}
+
+fn announce_ready(logging: &LoggingRuntime, function_count: usize) {
+    logging.record(
+        "INFO",
+        Some("hub"),
+        format!("All emulators ready; {function_count} functions discovered"),
+    );
+    println!("All emulators ready");
 }
 
 async fn prepare_native_suite(
@@ -745,6 +750,7 @@ fn extract_zip(archive: &Path, destination: &Path) -> Result<(), SuiteRuntimeErr
 struct ListenerSet(std::collections::BTreeMap<&'static str, TcpListener>);
 
 struct StaticApplications {
+    project_id: String,
     firestore: tonic::service::Routes,
     request_history: Option<RequestHistory>,
     auth: Router,
@@ -840,7 +846,7 @@ fn spawn_static_servers(
         servers.push(spawn_axum(
             name,
             listeners.take(name)?,
-            dependency_router(),
+            auxiliary::router(name, &applications.project_id),
             shutdown.subscribe(),
             failed.clone(),
         ));
@@ -903,10 +909,6 @@ fn spawn_firestore(
             let _ = failed.send(format!("{name} listener failed: {error}"));
         }
     })
-}
-
-fn dependency_router() -> Router {
-    Router::new().fallback(|_request: Request| async { Json(json!({})) })
 }
 
 async fn spawn_functions_host(

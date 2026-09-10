@@ -407,6 +407,15 @@ Missing registration fails with the handler identifier before READY. This
 increment does not yet qualify Extension discovery or full-inventory transfer
 to the Rust coordinator, and does not implement task/event delivery.
 
+Eventarc/Tasks auxiliary listeners now accept only their pinned startup POST
+routes, scoped to the configured project. Eventarc returns the captured
+`{"res":"OK"}`; Tasks returns the captured nullish-default queue configuration.
+These adapters retain no delivery queue and never fetch a submitted callback
+URI. Other routes return HTTP 501 `UNIMPLEMENTED` with an explicit startup-only
+message, instead of the previous catch-all HTTP 200 empty object. This is a
+deliberate capability boundary, not claimed parity for general Eventarc/Tasks.
+The corresponding official startup bytes are in `functions-readiness-v1`.
+
 The pinned Functions workload host drains/stops its upstream emulator before
 exiting. A served request leaves an upstream socket-discovery timer referenced
 for thirty seconds even after worker/server shutdown. Like the captured official

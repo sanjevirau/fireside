@@ -6,8 +6,7 @@ use serde_json::{Value, json};
 use tower::ServiceExt as _;
 
 async fn request(service: &str, path: &str, body: Value) -> (StatusCode, Value) {
-    let _ = service;
-    let response = super::dependency_router()
+    let response = super::auxiliary::router(service, "demo-aux")
         .oneshot(
             Request::post(path)
                 .header("content-type", "application/json")
@@ -58,4 +57,29 @@ async fn unsupported_auxiliary_delivery_never_returns_success() {
                 .contains("startup registration only")
         );
     }
+}
+
+#[tokio::test]
+async fn auxiliary_ports_are_project_scoped_and_do_not_accept_each_others_routes() {
+    let (status, _) = request(
+        "tasks",
+        "/projects/another/locations/us-central1/queues/task",
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    let (status, _) = request(
+        "eventarc",
+        "/projects/demo-aux/locations/us-central1/queues/task",
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_IMPLEMENTED);
+    let (status, _) = request(
+        "tasks",
+        "/emulator/v1/projects/demo-aux/triggers/one",
+        json!({"eventTrigger":{}}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_IMPLEMENTED);
 }

@@ -17,7 +17,8 @@ Firestore Requests/rule-evaluation tracing and rules-coverage tooling remain
 unfinished. Closing these developer-tool gaps is a required
 [first-release priority](ROADMAP.md#phase-b--functional-developer-tools), not
 a capability claimed by the current preview. Auxiliary Eventarc/Tasks ports
-support host integration only and do not establish general delivery semantics.
+support host startup registration only. Unsupported task/event delivery routes
+return HTTP 501 `UNIMPLEMENTED`; registration is not a promise of delivery.
 
 The package supports only its enumerated native targets after their exact
 candidate checks pass. Linux musl, Windows ARM64/32-bit, network-filesystem

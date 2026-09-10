@@ -122,6 +122,7 @@ fn applications(enabled: bool) -> StaticApplications {
         TriggerRegistry::default(),
     );
     StaticApplications {
+        project_id: "demo-diagnostics".to_owned(),
         firestore: tonic::service::Routes::from(rest),
         request_history: history,
         // Unrelated services are inert shells in this listener-assembly test.
