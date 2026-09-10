@@ -125,6 +125,7 @@ jobs:
         run: npm install --prefix "$RUNNER_TEMP/fireside-previous-engine" --ignore-scripts --no-audit --no-fund @fireside-dev/linux-x64@0.1.0-next.3
       - name: Verify previous native upgrade and portable rollback
         run: |
+          node conformance/node_modules/playwright/cli.js install --with-deps chromium
           ln -s "$GITHUB_WORKSPACE/conformance/node_modules/firebase" "$RUNNER_TEMP/fireside-devtools/node_modules/firebase"
           node conformance/src/suite/verify-native-resume.mjs \
             target/debug/fireside "$RUNNER_TEMP/fireside-devtools" \
