@@ -9,8 +9,8 @@ use sha2::Sha256;
 use time::{Date, Month};
 
 use crate::ast::{
-    BinaryOperator, Expr, Function, MatchBlock, Operation, PathPart, PatternSegment, Program,
-    TypeName, UnaryOperator,
+    BinaryOperator, Expr, ExprKind, Function, MatchBlock, Operation, PathPart, PatternSegment,
+    Program, TypeName, UnaryOperator,
 };
 use crate::model::{
     AtomicEvaluationResult, Auth, DocumentAccess, EvaluationRequest, EvaluationResult, LatLng,
@@ -361,18 +361,18 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
                 "maximum of 1000 expressions to evaluate has been reached",
             ));
         }
-        match expression {
-            Expr::Null => Ok(EvalValue::Data(Value::Null)),
-            Expr::Bool(value) => Ok(EvalValue::Data(Value::Bool(*value))),
-            Expr::Integer(value) => Ok(EvalValue::Data(Value::Integer(*value))),
-            Expr::Float(value) => Ok(EvalValue::Data(Value::Float(*value))),
-            Expr::String(value) => Ok(EvalValue::Data(Value::String(value.clone()))),
-            Expr::List(values) => values
+        match &expression.kind {
+            ExprKind::Null => Ok(EvalValue::Data(Value::Null)),
+            ExprKind::Bool(value) => Ok(EvalValue::Data(Value::Bool(*value))),
+            ExprKind::Integer(value) => Ok(EvalValue::Data(Value::Integer(*value))),
+            ExprKind::Float(value) => Ok(EvalValue::Data(Value::Float(*value))),
+            ExprKind::String(value) => Ok(EvalValue::Data(Value::String(value.clone()))),
+            ExprKind::List(values) => values
                 .iter()
                 .map(|value| self.eval_expr(value, environment, functions)?.into_data())
                 .collect::<Result<Vec<_>, _>>()
                 .map(|values| EvalValue::Data(Value::List(values))),
-            Expr::Map(entries) => entries
+            ExprKind::Map(entries) => entries
                 .iter()
                 .map(|(key, value)| {
                     Ok((
@@ -382,13 +382,13 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
                 })
                 .collect::<Result<BTreeMap<_, _>, RuntimeError>>()
                 .map(|map| EvalValue::Data(Value::Map(map))),
-            Expr::Path(parts) => self.eval_path(parts, environment, functions),
-            Expr::Variable(name) => Self::variable(name, environment),
-            Expr::Field { base, name } => {
+            ExprKind::Path(parts) => self.eval_path(parts, environment, functions),
+            ExprKind::Variable(name) => Self::variable(name, environment),
+            ExprKind::Field { base, name } => {
                 let base = self.eval_expr(base, environment, functions)?;
                 self.field(base, name)
             }
-            Expr::Index { base, index } => {
+            ExprKind::Index { base, index } => {
                 let base = self.eval_expr(base, environment, functions)?;
                 let index = self.eval_expr(index, environment, functions)?;
                 if matches!(base, EvalValue::QueryData | EvalValue::Constraint(_)) {
@@ -399,7 +399,7 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
                 }
                 index_value(base, index)
             }
-            Expr::Slice { base, start, end } => {
+            ExprKind::Slice { base, start, end } => {
                 let base = self.eval_expr(base, environment, functions)?;
                 let start = start
                     .as_deref()
@@ -411,19 +411,19 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
                     .transpose()?;
                 slice_value(base, start, end)
             }
-            Expr::Call { callee, arguments } => {
+            ExprKind::Call { callee, arguments } => {
                 self.eval_call(callee, arguments, environment, functions)
             }
-            Expr::Unary { operator, operand } => {
+            ExprKind::Unary { operator, operand } => {
                 let value = self.eval_expr(operand, environment, functions)?;
                 eval_unary(*operator, value)
             }
-            Expr::Binary {
+            ExprKind::Binary {
                 operator,
                 left,
                 right,
             } => self.eval_binary(*operator, left, right, environment, functions),
-            Expr::Is { value, expected } => {
+            ExprKind::Is { value, expected } => {
                 let value = self.eval_expr(value, environment, functions)?;
                 if value.is_symbolic() {
                     return Ok(EvalValue::Unknown);
@@ -567,7 +567,7 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
         environment: &mut BTreeMap<String, EvalValue>,
         functions: &BTreeMap<String, &'program Function>,
     ) -> Result<EvalValue, RuntimeError> {
-        if let Expr::Variable(name) = callee {
+        if let ExprKind::Variable(name) = &callee.kind {
             let values = arguments
                 .iter()
                 .map(|argument| self.eval_expr(argument, environment, functions))
@@ -587,7 +587,7 @@ impl<'a, A: DocumentAccess + ?Sized> Evaluator<'a, A> {
             }
             return self.call_builtin(name, values);
         }
-        if let Expr::Field { base, name } = callee {
+        if let ExprKind::Field { base, name } = &callee.kind {
             let receiver = self.eval_expr(base, environment, functions)?;
             let values = arguments
                 .iter()

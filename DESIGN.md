@@ -217,6 +217,31 @@ transaction handling. Those frontend service-contract gaps require separate
 Phase C endpoint reproduction/correction; this diagnostic change must not imply
 they work, nor silently alter those backend semantics.
 
+### Coverage source layout (Phase B foundation)
+
+`developer-tools-coverage-v1` captures nineteen tiny official-jar policies before
+and after reads, plus valid and invalid reload behavior. The source-only engine
+layout is compared exactly with every captured pre-evaluation report. Positions
+use zero-based Unicode scalar offsets with inclusive ends and one-based lines
+and columns, not UTF-8 byte offsets or WebChannel's UTF-16 lengths. CJK, emoji,
+CRLF, grouping, indexing, empty containers and interpolated paths are included.
+
+Dynamic expressions retain their hierarchy; primitive literal children are
+omitted, and a constant-only policy has no report nodes. Calls and containers
+exclude their closing delimiter. Grouping includes the opening parenthesis but
+not its closing delimiter in the grouped expression's own range. A function
+with `let` bindings has a synthetic body node, unlike a simple return function.
+AST spans are inline metadata, converted only on request; the evaluator and its
+node/access limits are unchanged. Layout generation never evaluates policies or
+loads documents, and existing generic expression corpus ranges are checked.
+
+This is not yet a live coverage endpoint or value/count implementation. The
+oracle's lazy preliminary resource evaluation can visit expressions more often
+than HTTP requests; skipped expressions may appear with empty values. Future
+counter integration must observe real evaluation, never re-evaluate policy or
+perform extra reads to manufacture the jar's planner visit counts. Other syntax
+shapes remain unqualified until captured. HTML/UI and overhead checks remain open.
+
 ## Auth, Storage and exports
 
 Auth browser helpers implement the fixture-tested local Google popup/redirect

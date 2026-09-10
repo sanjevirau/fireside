@@ -2,8 +2,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::mem::discriminant;
 
 use crate::ast::{
-    Allow, BinaryOperator, Expr, Function, MatchBlock, Operation, PathPart, PatternSegment,
-    Program, TypeName, UnaryOperator,
+    Allow, BinaryOperator, Expr, ExprKind, Function, MatchBlock, Operation, PathPart,
+    PatternSegment, Program, TypeName, UnaryOperator,
 };
 use crate::lexer::{Token, TokenKind, lex};
 
@@ -135,6 +135,7 @@ impl Parser {
         }
         self.expect(&TokenKind::RightParen, "')' after function parameters")?;
         self.expect(&TokenKind::LeftBrace, "'{' before function body")?;
+        let body_start = self.current().offset;
         let mut lets = Vec::new();
         let mut names = BTreeSet::new();
         while self.check_identifier("let") {
@@ -160,6 +161,7 @@ impl Parser {
         Ok((
             name,
             Function {
+                body_start,
                 parameters,
                 lets,
                 result,
@@ -216,20 +218,29 @@ impl Parser {
     fn expression(&mut self, minimum_binding_power: u8) -> Result<Expr, ParseError> {
         let mut left = self.prefix()?;
         loop {
+            let start = left.span.start;
             if 30 >= minimum_binding_power && self.consume(&TokenKind::Dot) {
                 let name = self.take_identifier("field or method name after '.'")?;
-                left = Expr::Field {
-                    base: Box::new(left),
-                    name,
-                };
+                left = Expr::new(
+                    ExprKind::Field {
+                        base: Box::new(left),
+                        name,
+                    },
+                    start,
+                    self.previous_end(),
+                );
                 continue;
             }
             if 30 >= minimum_binding_power && self.consume(&TokenKind::LeftParen) {
                 let arguments = self.arguments()?;
-                left = Expr::Call {
-                    callee: Box::new(left),
-                    arguments,
-                };
+                left = Expr::new(
+                    ExprKind::Call {
+                        callee: Box::new(left),
+                        arguments,
+                    },
+                    start,
+                    self.previous_end(),
+                );
                 continue;
             }
             if 30 >= minimum_binding_power && self.consume(&TokenKind::LeftBracket) {
@@ -248,10 +259,14 @@ impl Parser {
                     self.error_at_previous(format!("unsupported rules type {name:?}"))
                 })?;
                 let _ = right_binding_power;
-                left = Expr::Is {
-                    value: Box::new(left),
-                    expected,
-                };
+                left = Expr::new(
+                    ExprKind::Is {
+                        value: Box::new(left),
+                        expected,
+                    },
+                    start,
+                    self.previous_end(),
+                );
                 continue;
             }
 
@@ -264,38 +279,45 @@ impl Parser {
             }
             self.advance();
             let right = self.expression(right_binding_power)?;
-            left = Expr::Binary {
-                operator,
-                left: Box::new(left),
-                right: Box::new(right),
-            };
+            left = Expr::new(
+                ExprKind::Binary {
+                    operator,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                },
+                start,
+                self.previous_end(),
+            );
         }
         Ok(left)
     }
 
     fn prefix(&mut self) -> Result<Expr, ParseError> {
         let token = self.advance().clone();
-        match token.kind {
-            TokenKind::Identifier(value) if value == "true" => Ok(Expr::Bool(true)),
-            TokenKind::Identifier(value) if value == "false" => Ok(Expr::Bool(false)),
-            TokenKind::Identifier(value) if value == "null" => Ok(Expr::Null),
-            TokenKind::Identifier(value) => Ok(Expr::Variable(value)),
-            TokenKind::String(value) => Ok(Expr::String(value)),
-            TokenKind::Integer(value) => Ok(Expr::Integer(value)),
-            TokenKind::Float(value) => Ok(Expr::Float(value)),
+        let kind = match token.kind {
+            TokenKind::Identifier(value) if value == "true" => Ok(ExprKind::Bool(true)),
+            TokenKind::Identifier(value) if value == "false" => Ok(ExprKind::Bool(false)),
+            TokenKind::Identifier(value) if value == "null" => Ok(ExprKind::Null),
+            TokenKind::Identifier(value) => Ok(ExprKind::Variable(value)),
+            TokenKind::String(value) => Ok(ExprKind::String(value)),
+            TokenKind::Integer(value) => Ok(ExprKind::Integer(value)),
+            TokenKind::Float(value) => Ok(ExprKind::Float(value)),
             TokenKind::Path(value) => parse_expression_path(&value, token.offset),
-            TokenKind::Bang => Ok(Expr::Unary {
+            TokenKind::Bang => Ok(ExprKind::Unary {
                 operator: UnaryOperator::Not,
                 operand: Box::new(self.expression(20)?),
             }),
-            TokenKind::Minus => Ok(Expr::Unary {
+            TokenKind::Minus => Ok(ExprKind::Unary {
                 operator: UnaryOperator::Negate,
                 operand: Box::new(self.expression(20)?),
             }),
             TokenKind::LeftParen => {
-                let expression = self.expression(0)?;
+                let mut expression = self.expression(0)?;
                 self.expect(&TokenKind::RightParen, "')' after parenthesized expression")?;
-                Ok(expression)
+                // Coverage includes the opening grouping token, but not its
+                // closing token. Keep the child expressions' own positions.
+                expression.span.start = token.offset;
+                return Ok(expression);
             }
             TokenKind::LeftBracket => self.list(),
             TokenKind::LeftBrace => self.map(),
@@ -303,10 +325,11 @@ impl Parser {
                 message: "expected a rules expression".to_owned(),
                 offset: token.offset,
             }),
-        }
+        }?;
+        Ok(Expr::new(kind, token.offset, self.previous_end()))
     }
 
-    fn list(&mut self) -> Result<Expr, ParseError> {
+    fn list(&mut self) -> Result<ExprKind, ParseError> {
         let mut values = Vec::new();
         if !self.check(&TokenKind::RightBracket) {
             loop {
@@ -320,10 +343,10 @@ impl Parser {
             }
         }
         self.expect(&TokenKind::RightBracket, "']' after list literal")?;
-        Ok(Expr::List(values))
+        Ok(ExprKind::List(values))
     }
 
-    fn map(&mut self) -> Result<Expr, ParseError> {
+    fn map(&mut self) -> Result<ExprKind, ParseError> {
         let mut entries = Vec::new();
         if !self.check(&TokenKind::RightBrace) {
             loop {
@@ -343,7 +366,7 @@ impl Parser {
             }
         }
         self.expect(&TokenKind::RightBrace, "'}' after map literal")?;
-        Ok(Expr::Map(entries))
+        Ok(ExprKind::Map(entries))
     }
 
     fn arguments(&mut self) -> Result<Vec<Expr>, ParseError> {
@@ -361,6 +384,7 @@ impl Parser {
     }
 
     fn index_or_slice(&mut self, base: Expr) -> Result<Expr, ParseError> {
+        let begin = base.span.start;
         let start = if self.check(&TokenKind::Colon) {
             None
         } else {
@@ -373,18 +397,30 @@ impl Parser {
                 Some(Box::new(self.expression(0)?))
             };
             self.expect(&TokenKind::RightBracket, "']' after slice")?;
-            return Ok(Expr::Slice {
-                base: Box::new(base),
-                start,
-                end,
-            });
+            return Ok(Expr::new(
+                ExprKind::Slice {
+                    base: Box::new(base),
+                    start,
+                    end,
+                },
+                begin,
+                self.previous_end(),
+            ));
         }
         let index = start.ok_or_else(|| self.error("index expression is missing"))?;
         self.expect(&TokenKind::RightBracket, "']' after index")?;
-        Ok(Expr::Index {
-            base: Box::new(base),
-            index,
-        })
+        Ok(Expr::new(
+            ExprKind::Index {
+                base: Box::new(base),
+                index,
+            },
+            begin,
+            self.previous_end(),
+        ))
+    }
+
+    fn previous_end(&self) -> usize {
+        self.tokens[self.index.saturating_sub(1)].end_offset
     }
 
     fn binary_operator(&self) -> Option<(BinaryOperator, u8, u8)> {
@@ -547,7 +583,7 @@ fn parse_pattern(raw: &str, offset: usize) -> Result<Vec<PatternSegment>, ParseE
     Ok(pattern)
 }
 
-fn parse_expression_path(raw: &str, offset: usize) -> Result<Expr, ParseError> {
+fn parse_expression_path(raw: &str, offset: usize) -> Result<ExprKind, ParseError> {
     let mut parts = Vec::new();
     let mut cursor = 0_usize;
     while let Some(relative) = raw[cursor..].find("$(") {
@@ -576,10 +612,14 @@ fn parse_expression_path(raw: &str, offset: usize) -> Result<Expr, ParseError> {
             offset,
         })?;
         let source = &raw[expression_start..expression_end];
-        let tokens = lex(source).map_err(|error| ParseError {
+        let mut tokens = lex(source).map_err(|error| ParseError {
             message: error.message,
-            offset: offset + start + error.offset,
+            offset: offset + expression_start + error.offset,
         })?;
+        for token in &mut tokens {
+            token.offset += offset + expression_start;
+            token.end_offset += offset + expression_start;
+        }
         let mut parser = Parser::new(tokens, source);
         let expression = parser.expression(0)?;
         parser.expect(&TokenKind::Eof, "end of path interpolation")?;
@@ -589,7 +629,7 @@ fn parse_expression_path(raw: &str, offset: usize) -> Result<Expr, ParseError> {
     if cursor < raw.len() {
         parts.push(PathPart::Literal(raw[cursor..].to_owned()));
     }
-    Ok(Expr::Path(parts))
+    Ok(ExprKind::Path(parts))
 }
 
 fn parse_type_name(name: &str) -> Option<TypeName> {

@@ -6,11 +6,14 @@
 #![forbid(unsafe_code)]
 
 mod ast;
+mod coverage_layout;
 mod evaluator;
 mod lexer;
 mod model;
 mod parser;
 mod trace;
+
+pub use coverage_layout::{CoverageNode, SourcePosition};
 
 pub use trace::{
     AllowDecision, AllowLocation, AllowOutcome, EvaluationTrace, MAXIMUM_TRACE_OUTCOMES,
@@ -26,7 +29,7 @@ pub use model::{
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use ast::{Expr, MatchBlock, Program};
+use ast::{Expr, ExprKind, MatchBlock, Program};
 
 /// Maximum UTF-8 source size accepted by a deployed ruleset.
 pub const MAXIMUM_SOURCE_BYTES: usize = 262_144;
@@ -82,6 +85,13 @@ pub struct Ruleset {
 }
 
 impl Ruleset {
+    /// Source-positioned dynamic expressions before any evaluation counters.
+    /// This does not evaluate rules or issue document reads.
+    #[must_use]
+    pub fn coverage_layout(&self) -> Vec<CoverageNode> {
+        coverage_layout::layout(&self.program, &self.source)
+    }
+
     /// Exact immutable source associated with this ruleset's trace locations.
     #[must_use]
     pub fn source(&self) -> &str {
@@ -250,9 +260,9 @@ fn function_depth(
 }
 
 fn collect_direct_calls(expression: &Expr, calls: &mut BTreeSet<String>) {
-    match expression {
-        Expr::Call { callee, arguments } => {
-            if let Expr::Variable(name) = callee.as_ref() {
+    match &expression.kind {
+        ExprKind::Call { callee, arguments } => {
+            if let ExprKind::Variable(name) = &callee.kind {
                 calls.insert(name.clone());
             }
             collect_direct_calls(callee, calls);
@@ -260,29 +270,29 @@ fn collect_direct_calls(expression: &Expr, calls: &mut BTreeSet<String>) {
                 collect_direct_calls(argument, calls);
             }
         }
-        Expr::List(values) => {
+        ExprKind::List(values) => {
             for value in values {
                 collect_direct_calls(value, calls);
             }
         }
-        Expr::Map(entries) => {
+        ExprKind::Map(entries) => {
             for (_, value) in entries {
                 collect_direct_calls(value, calls);
             }
         }
-        Expr::Path(parts) => {
+        ExprKind::Path(parts) => {
             for part in parts {
                 if let ast::PathPart::Interpolation(value) = part {
                     collect_direct_calls(value, calls);
                 }
             }
         }
-        Expr::Field { base, .. } => collect_direct_calls(base, calls),
-        Expr::Index { base, index } => {
+        ExprKind::Field { base, .. } => collect_direct_calls(base, calls),
+        ExprKind::Index { base, index } => {
             collect_direct_calls(base, calls);
             collect_direct_calls(index, calls);
         }
-        Expr::Slice { base, start, end } => {
+        ExprKind::Slice { base, start, end } => {
             collect_direct_calls(base, calls);
             if let Some(start) = start {
                 collect_direct_calls(start, calls);
@@ -291,18 +301,18 @@ fn collect_direct_calls(expression: &Expr, calls: &mut BTreeSet<String>) {
                 collect_direct_calls(end, calls);
             }
         }
-        Expr::Unary { operand, .. } => collect_direct_calls(operand, calls),
-        Expr::Binary { left, right, .. } => {
+        ExprKind::Unary { operand, .. } => collect_direct_calls(operand, calls),
+        ExprKind::Binary { left, right, .. } => {
             collect_direct_calls(left, calls);
             collect_direct_calls(right, calls);
         }
-        Expr::Is { value, .. } => collect_direct_calls(value, calls),
-        Expr::Null
-        | Expr::Bool(_)
-        | Expr::Integer(_)
-        | Expr::Float(_)
-        | Expr::String(_)
-        | Expr::Variable(_) => {}
+        ExprKind::Is { value, .. } => collect_direct_calls(value, calls),
+        ExprKind::Null
+        | ExprKind::Bool(_)
+        | ExprKind::Integer(_)
+        | ExprKind::Float(_)
+        | ExprKind::String(_)
+        | ExprKind::Variable(_) => {}
     }
 }
 
