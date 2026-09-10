@@ -238,6 +238,9 @@ async function startFunctionsOnce(emulator, registry, configuredBackends, custom
       if (!record || record.def.id !== definition.id) {
         throw new Error(`Function ${definition.id} was discovered but not registered`);
       }
+      if (record.backend !== backend) {
+        throw new Error(`Function ${definition.id} was registered by another backend`);
+      }
       if (!record.enabled || record.ignored) {
         throw new Error(`Function ${definition.id} was discovered but not admitted (disabled or ignored)`);
       }
