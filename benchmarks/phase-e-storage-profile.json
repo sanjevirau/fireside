@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "recordedBeforeMeasurement": true,
+  "syntheticOnly": true,
+  "acceptance": false,
+  "scope": "Optional short Storage profile inside the existing native import/reopen browser lifecycle test; no changed lifecycle assertion, deadline or full acceptance threshold",
+  "oracle": "conformance/fixtures/firebase-suite-v1/storage-content-encoding/fixture.json",
+  "payloads": "JSON containing synthetic:true and arrays of 16 or 1024 deterministic SHA-256 hex strings derived from profile-item-N; record actual byte lengths and hashes",
+  "warmupCyclesPerPayload": 5,
+  "measuredCyclesPerPayload": 20,
+  "cycle": "Pinned google-cloud Storage SDK resumable file.save with gzip:true and cacheControl; Firebase metadata GET asserts gzip/cache metadata; browser-equivalent decoded media GET checks exact JSON bytes; SDK delete plus metadata 404 checks cleanup",
+  "points": ["after first import before browser launch", "after same-store reopen and browser verification, with browser closed"],
+  "measurement": "Preserve every warmup and measured operation latency. Sample only the owned native process RSS every 100 ms; client compression/SDK/network work is included in elapsed latency but client/Java/Functions/browser RSS is excluded. A sampled maximum is not a continuous high-water guarantee",
+  "requestDeadlineMilliseconds": 10000,
+  "settleMilliseconds": 1000,
+  "pairs": 3,
+  "order": "Published then corrected, corrected then published, published then corrected; never concurrent stacks",
+  "identity": "Keep exact package/binary, Node, pinned SDK/peer, driver, fixture and contract hashes. Preserve failed attempts. No changes to swappiness, memory or worker limits",
+  "decision": "No required performance winner. Investigate demonstrated regressions before adopting a product change. These synthetic sizes and same-host observations do not qualify full-data consumer memory, official comparison or endurance"
+}
