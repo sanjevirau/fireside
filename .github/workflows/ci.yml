@@ -64,6 +64,7 @@ jobs:
           node --test conformance/test/functions-topic-reload-fixture.test.mjs
           node --test conformance/test/lifecycle-receipts.test.mjs
           node --test conformance/test/rest-encoding-profile.test.mjs
+          node --test conformance/test/native-baseline-repeat.test.mjs
       - name: Verify package and publication safety contracts
         run: node --test packaging/*.test.mjs
 

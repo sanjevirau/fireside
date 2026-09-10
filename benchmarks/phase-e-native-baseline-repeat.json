@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "recordedBeforeMeasurement": true,
+  "purpose": "Reuse the frozen Phase A native collection/lifecycle diagnostic to compare the published baseline with the corrected local candidate; no new product optimization inferred in advance",
+  "workloadSource": "benchmarks/phase-a-developer-tools.json#baseline",
+  "workloadChanged": false,
+  "pairs": 3,
+  "order": "Published then corrected, corrected then published, published then corrected; sequential owned processes only",
+  "identity": "Published package must retain the original Phase A version/engine/hash validation. Corrected package must be an explicit full engine revision in a matching private local-version package, with native receipt SHA-256 checked against the executable",
+  "scope": "200 one-KiB documents, ten parallel collection reads, forty sequential gets, empty native start and one same-store reopen per run. Native process RSS only. Not full-data import/export, Storage, consumer performance or endurance qualification",
+  "decision": "Preserve all runs, operation results, native RSS samples and failures. Review any observed regression before adopting another change; do not weaken any acceptance criterion, discard inconvenient samples, or claim a statistically established winner on a non-quiescent host"
+}

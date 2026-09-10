@@ -11,13 +11,19 @@ import { setTimeout as delay } from 'node:timers/promises';
 const manifestBytes=await readFile(new URL('../../../benchmarks/phase-a-developer-tools.json',import.meta.url));
 const manifest=JSON.parse(manifestBytes);
 const config=manifest.baseline;
+const candidateEngine=process.argv[3]==='--candidate-engine'?process.argv[4]:undefined;
+assert(process.argv.length===3||(process.argv.length===5&&candidateEngine),
+  'fresh-output [--candidate-engine FULL_LOCAL_ENGINE_REVISION]');
+if(candidateEngine)assert.match(candidateEngine,/^[a-f0-9]{40}$/);
+const expectedVersion=candidateEngine?`0.1.0-local.g${candidateEngine.slice(0,12)}`:manifest.npmBaseline;
+const expectedEngine=candidateEngine??manifest.engineBaseline;
 const binary=resolve(process.env.FIRESIDE_BASELINE_BINARY??'missing-baseline-binary');
 assert.ok(process.env.FIRESIDE_BASELINE_BINARY,'provide the verified release binary');
 const packageMetadata=JSON.parse(await readFile(join(dirname(binary),'../package.json')));
-assert.equal(packageMetadata.version,manifest.npmBaseline);
+assert.equal(packageMetadata.version,expectedVersion);
 assert.equal(packageMetadata.name,`@fireside-dev/${platform()}-${arch()}`);
 const packageReceipt=JSON.parse(await readFile(join(dirname(binary),'../receipt.json')));
-assert.equal(packageReceipt.engineRevision,manifest.engineBaseline);
+assert.equal(packageReceipt.engineRevision,expectedEngine);
 assert.equal(packageReceipt.sha256,createHash('sha256').update(await readFile(binary)).digest('hex'));
 assert.equal(process.versions.node,manifest.oracle.node);
 assert.ok(['darwin','linux'].includes(platform()),'RSS sampler implemented for macOS/Linux only; no Windows claim');
@@ -27,7 +33,9 @@ const rules=join(root,'firestore.rules');await writeFile(rules,"rules_version = 
 const data=join(root,'state');
 const receipt={schemaVersion:1,manifestSha256:createHash('sha256').update(manifestBytes).digest('hex'),
   capturedAt:new Date().toISOString(),binarySha256:createHash('sha256').update(await readFile(binary)).digest('hex'),
-  packageVersion:manifest.npmBaseline,engineRevision:manifest.engineBaseline,
+  packageVersion:expectedVersion,engineRevision:expectedEngine,
+  driverSha256:createHash('sha256').update(await readFile(new URL(import.meta.url))).digest('hex'),
+  qualificationMode:candidateEngine?'explicit-local-candidate':'original-published-baseline',
   platform:platform(),arch:arch(),osRelease:release(),cpu:cpus()[0].model,node:process.versions.node,
   hostQuiescent:false,scope:config.measurementScope,limitations:config.claims,cycles:[]};
 for (let cycle=0;cycle<=config.nativeReopens;cycle++) {

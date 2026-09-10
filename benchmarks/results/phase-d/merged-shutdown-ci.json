@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "releaseAcceptance": false,
+  "checkedAt": "2026-09-10T22:07:00Z",
+  "pr": 18,
+  "head": "926ac02c509027b25d7bacd94f9128ef7d4b7c78",
+  "mergeCommit": "6e2e3a38352291e4823636922a53f78d8d0dfe3d",
+  "ci": {
+    "id": 34531917456,
+    "jobs": [
+      {
+        "name": "Public fixture and package checks",
+        "conclusion": "success"
+      },
+      {
+        "name": "Differential harness",
+        "conclusion": "success"
+      },
+      {
+        "name": "Firebase JS SDK browser integration (memory, client memory)",
+        "conclusion": "success"
+      },
+      {
+        "name": "Firebase JS SDK browser integration (disk-wal, client memory)",
+        "conclusion": "success"
+      },
+      {
+        "name": "Firebase JS SDK browser integration (disk-wal, client persistence)",
+        "conclusion": "success"
+      },
+      {
+        "name": "Firebase JS SDK browser integration (memory, client persistence)",
+        "conclusion": "success"
+      },
+      {
+        "name": "Rust quality gate",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "packages": {
+    "id": 34531917499,
+    "jobs": [
+      {
+        "name": "Packed install (linux-arm64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "Packed install (linux-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "Packed install (darwin-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "Packed install (win32-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "Packed install (darwin-arm64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "verify",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "review": "Export errors remain failures; teardown continues through Functions, listeners, locator and Storage. Rechecked incremental product diff and merged with exact-head guard after all required checks passed."
+}
