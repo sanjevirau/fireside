@@ -130,13 +130,18 @@ belongs to the final combined acceptance.
 
 ## Phase E — Measured efficiency improvements
 
-- [ ] Profile representative collection reads, Storage operations and lifecycle
+Short qualification is recorded in the [Phase E report](support/phase-e-efficiency.md)
+and [exact source/platform receipt](benchmarks/results/phase-e/source-qualification.json).
+The small synthetic measurements do not establish full-data memory or throughput;
+that representative consumer boundary remains Phase F.
+
+- [x] Profile representative collection reads, Storage operations and lifecycle
   costs before changing the implementation. Distinguish first import, native
   reopen and export/reimport; separate emulator costs from consumer processes.
-- [ ] Optimize demonstrated allocation, retention, serialization and I/O costs
+- [x] Optimize demonstrated allocation, retention, serialization and I/O costs
   while retaining protocol, rules, listener and durability semantics. Compare
   equivalent operations on the same hardware; do not require a win everywhere.
-- [ ] Include developer-tool tracing overhead and compare both idle and active
+- [x] Include developer-tool tracing overhead and compare both idle and active
   diagnostics. Preserve the original binary's measurements and failed attempts;
   do not relabel old results as verification of a changed candidate.
 
