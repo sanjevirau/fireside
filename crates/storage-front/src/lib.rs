@@ -2524,6 +2524,7 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 
 #[cfg(test)]
 mod tests {
+    mod developer_tools;
     use axum::body::to_bytes;
     use axum::http::Request;
     use fireside_functions_bridge::TriggerObserver;
