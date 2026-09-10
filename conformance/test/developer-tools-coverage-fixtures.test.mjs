@@ -18,6 +18,8 @@ test('coverage capture has pinned identity, inputs, outcomes and checksums', asy
   assert.equal(fixture.profiles.length, 25);
   assert.equal(fixture.seed.status, 200);
   assert.equal(fixture.seed.owner, true);
+  assert.equal(fixture.compileRejections[0].status, 400);
+  assert.match(fixture.compileRejections[0].data.error.message, /duration is a package and cannot be used as variable name/);
   assert.ok(!/Bearer |\/Users\/|\/var\/folders\//.test(bytes.toString()));
   for (const value of fixture.profiles) {
     assert.equal(value.before.rules.files[0].content, value.source);

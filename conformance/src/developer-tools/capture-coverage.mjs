@@ -100,6 +100,10 @@ try {
   const retained = await request('coverage-after-invalid', `${control}:ruleCoverage`);
   assert.equal(retained.status, 200);
   record.afterInvalidReload = retained.data;
+  const rejectedSource = source("accept({'x': 1})", "  function accept(duration) { return duration.keys().hasOnly(['x']); }");
+  const rejected = await request('reserved-namespace-parameter', `${control}:securityRules`, 'PUT', { rules: { files: [{ name: 'firestore.rules', content: rejectedSource }] } });
+  assert.equal(rejected.status, 400);
+  record.compileRejections = [{ source: rejectedSource, ...rejected }];
 } catch (error) { failure = error; }
 finally {
   if (child.exitCode === null) child.kill('SIGINT');
