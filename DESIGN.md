@@ -400,12 +400,19 @@ The pinned Functions host's successful discovery and `/backends` response do
 not prove registration. The independent `functions-readiness-v1` capture shows
 that missing auxiliary peers leave discovered handlers in the inventory with
 `ignored: true`, and failed codebase discovery can be swallowed by `connect()`.
-Initial custom-backend readiness now checks each discovered definition against
+Initial configured-backend readiness now checks each discovered definition against
 the upstream registered record, requiring enabled and not ignored. It observes
 the single discovery owned by `connect()`, not a second execution of user code.
 Missing registration fails with the handler identifier before READY. This
-increment does not yet qualify Extension discovery or full-inventory transfer
-to the Rust coordinator, and does not implement task/event delivery.
+includes predefined Extension backends; the local fixture qualifies their
+regional identity normalization, not downloading/installing every extension.
+The host emits a compact count and SHA-256 of admitted `[id,name,region,platform]`
+tuples (each JSON encoded, sorted by UTF-8 bytes, then encoded as a JSON array).
+The Rust coordinator independently checks the fetched `/backends` identities
+against that receipt and the configured minimum. Missing, extra or changed
+handlers cannot pass by borrowing a healthy backend's count. No environment
+values cross this receipt. Discovery fetches have a five-second response/body
+deadline inside the unchanged 120-second overall startup allowance.
 
 Eventarc/Tasks auxiliary listeners now accept only their pinned startup POST
 routes, scoped to the configured project. Eventarc returns the captured

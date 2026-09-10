@@ -8,6 +8,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const { createHash } = require("node:crypto");
 
 function fail(message) {
   process.stderr.write(`fireside functions host: ${message}\n`);
@@ -198,8 +199,8 @@ if (process.platform === "win32") {
   process.stdin.once("end", () => void stop("launcher disconnected"));
 }
 
-async function startFunctionsOnce(emulator, registry, customBackends) {
-  const discovered = new Map(customBackends.map((backend) => [backend, undefined]));
+async function startFunctionsOnce(emulator, registry, configuredBackends, customBackends = configuredBackends) {
+  const discovered = new Map(configuredBackends.map((backend) => [backend, undefined]));
   const discover = emulator.discoverTriggers;
   // connect() owns discovery and source watching. Observe its initial results
   // instead of executing the backend a second time before it starts.
@@ -241,9 +242,22 @@ async function startFunctionsOnce(emulator, registry, customBackends) {
         throw new Error(`Function ${definition.id} was discovered but not admitted (disabled or ignored)`);
       }
     }
-    total += definitions.length;
+    if (customBackends.includes(backend)) total += definitions.length;
   }
   return total;
+}
+
+function inventoryFingerprint(definitions) {
+  const rows = definitions.map((definition) => {
+    const region = definition.region || definition.regions?.[0];
+    const id = definition.id || `${region}-${definition.name}`;
+    const identity = [id, definition.name, region, definition.platform];
+    if (identity.some((value) => typeof value !== "string" || !value)) {
+      throw new Error("Functions inventory contains an incomplete identity");
+    }
+    return JSON.stringify(identity);
+  }).sort((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right)));
+  return { count: rows.length, sha256: createHash("sha256").update(JSON.stringify(rows)).digest("hex") };
 }
 
 async function main() {
@@ -289,12 +303,15 @@ async function main() {
       storageBucket: required(args, "default-bucket"),
     },
   });
-  const customFunctionCount = await startFunctionsOnce(functionsEmulator, EmulatorRegistry, custom);
+  const customFunctionCount = await startFunctionsOnce(functionsEmulator, EmulatorRegistry, emulatableBackends, custom);
+  const inventory = inventoryFingerprint(functionsEmulator.getTriggerDefinitions());
   process.stdout.write(
     `FIRESIDE_FUNCTIONS_HOST_READY ${JSON.stringify({
       firebaseToolsVersion: packageJson.version,
       backendCount: emulatableBackends.length,
       customFunctionCount,
+      inventoryCount: inventory.count,
+      inventorySha256: inventory.sha256,
       functionsPort,
     })}\n`,
   );

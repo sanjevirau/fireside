@@ -56,6 +56,7 @@ const READY_TIMEOUT: Duration = Duration::from_secs(120);
 
 mod auxiliary;
 mod control;
+mod functions_readiness;
 mod log_input;
 mod native_state;
 mod shutdown_io;
@@ -914,7 +915,7 @@ fn spawn_firestore(
 async fn spawn_functions_host(
     config: &SuiteConfig,
     logging: &LoggingRuntime,
-) -> Result<(Child, watch::Receiver<bool>), SuiteRuntimeError> {
+) -> Result<(Child, watch::Receiver<functions_readiness::Signal>), SuiteRuntimeError> {
     let script = config.state_dir.join("functions-host.cjs");
     tokio::fs::write(&script, FUNCTIONS_HOST_SOURCE)
         .await
@@ -964,14 +965,14 @@ async fn spawn_functions_host(
     let mut child = command
         .spawn()
         .map_err(|error| failure(format!("failed to start Functions host: {error}")))?;
-    let (ready_sender, ready) = watch::channel(false);
+    let (ready_sender, ready) = watch::channel(None);
     if let Some(stdout) = child.stdout.take() {
         let logging = logging.clone();
         tokio::spawn(async move {
             let mut lines = BufReader::new(stdout);
             while let Ok(Some(line)) = log_input::next(&mut lines).await {
-                if line.starts_with("FIRESIDE_FUNCTIONS_HOST_READY ") {
-                    let _ = ready_sender.send(true);
+                if let Some(receipt) = line.strip_prefix("FIRESIDE_FUNCTIONS_HOST_READY ") {
+                    let _ = ready_sender.send(Some(functions_readiness::Receipt::parse(receipt)));
                 }
                 println!("{line}");
                 logging.record("INFO", Some("functions"), line);
@@ -993,7 +994,7 @@ async fn spawn_functions_host(
 
 async fn wait_for_functions(
     child: &mut Child,
-    ready: watch::Receiver<bool>,
+    ready: watch::Receiver<functions_readiness::Signal>,
     endpoint: &str,
     minimum: usize,
 ) -> Result<FunctionsInventory, SuiteRuntimeError> {
@@ -1007,11 +1008,16 @@ async fn wait_for_functions(
                 "Functions host exited before readiness: {status}"
             )));
         }
-        if *ready.borrow()
-            && let Ok(inventory) = FunctionsInventory::discover(endpoint).await
-            && inventory.functions().count() >= minimum
-        {
-            return Ok(inventory);
+        let receipt = ready.borrow().clone();
+        if let Some(receipt) = receipt {
+            let receipt = receipt.map_err(failure)?;
+            return tokio::time::timeout_at(
+                deadline,
+                functions_readiness::discover(endpoint, &receipt, minimum),
+            )
+            .await
+            .map_err(|_| failure("Functions readiness deadline expired while checking inventory"))?
+            .map_err(failure);
         }
         if tokio::time::Instant::now() >= deadline {
             return Err(failure(format!(
