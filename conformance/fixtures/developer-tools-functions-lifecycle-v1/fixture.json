@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "firebaseTools": "15.22.0",
+    "firebaseFunctions": "7.2.5",
+    "node": "v24.20.0"
+  },
+  "source": "const {onRequest}=require('firebase-functions/v2/https');exports.ping=onRequest((req,res)=>res.json({synthetic:true}));\n",
+  "sourceSha256": "3980c9bc8e986059cfb76f239b1f0bbb198ad3dde8c1dd9db57fda7f99956472",
+  "passed": true,
+  "readyMilliseconds": 14517.870625000001,
+  "exchange": {
+    "method": "GET",
+    "path": "/demo-fireside-functions-lifecycle/us-central1/ping",
+    "status": 200,
+    "body": {
+      "synthetic": true
+    }
+  },
+  "workloadPassed": true,
+  "exit": [
+    0,
+    null
+  ],
+  "shutdownMilliseconds": 34.21674999999959
+}
