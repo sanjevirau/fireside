@@ -9,6 +9,21 @@ async function receipt(name,sha){
   const bytes=await readFile(new URL('benchmarks/results/phase-d/'+name,root));
   assert.equal(hash(bytes),sha);return JSON.parse(bytes);
 }
+test('observed incomplete export crash retains completed backup and all acknowledged native data',async()=>{
+  const r=await receipt('interrupted-export-r1.json','3d0863d899b9fb1a62b4530ff261573a1f5dc1212f3cdb4b52b7313dce9bf0cb');
+  assert.equal(r.passed,true);assert.equal(r.syntheticOnly,true);assert.equal(r.acceptance,false);
+  assert.equal(r.contractSha256,hash(await readFile(new URL('benchmarks/phase-d-interrupted-export.json',root))));
+  assert.equal(r.incompleteStagingObserved,true);assert(r.interruptedStagingPaths.length>0);
+  assert.deepEqual(r.crashExit,[null,'SIGKILL']);assert.equal(r.functionsDrained,false);
+  assert.deepEqual(r.openPortsAfterCrash,[]);assert.equal(r.locatorRemaining,true);
+  assert.equal(r.previousExportByteIdentical,true);assert(r.previousExport['firebase-export-metadata.json']);
+  assert.equal(r.nativeReceiptRetained,true);assert.equal(r.launches[1].resumed,true);
+  assert.equal(r.acknowledgedAdditionalDocuments,4096);
+  for(const key of ['acknowledgedWriteRecovered','allAdditionalAcknowledgedDocumentsRecovered',
+    'acknowledgedAuthAndStorageRecovered','writesResumeAfterRecovery','recoveryLocatorRemoved',
+    'recoveryPortsClosed','completedRecoveryExport','ownedSuiteExited'])assert.equal(r[key],true,key);
+  assert.deepEqual(r.recoveryExit,[0,null]);
+});
 test('real isolated ENOSPC preserves acknowledged state and fences ambiguous writes',async()=>{
   const first=await receipt('export-enospc-r1.json','c1f9d0970e6977df15c58fb3460838f75d572f1452397f7beac71a36a31f261f');
   const exported=await receipt('export-enospc-r2.json','441e2d523ef5ece9b49dc02827962030c94a1fb0dc16e7af0e387a99e2c6a0e5');

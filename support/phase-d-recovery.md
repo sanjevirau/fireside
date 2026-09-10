@@ -83,3 +83,25 @@ normal unmount after confirmed suite exit, never a force-unmount or process kill
 and retains the image, result and logs. A missing exit receipt leaves the mount
 intact for diagnosis. Linux qualification requires the actual CI result; the local
 HFS+ receipt must not be presented as Linux evidence.
+
+## Process crash during export staging
+
+The [predeclared interruption contract](../benchmarks/phase-d-interrupted-export.json)
+was exercised on the same native binary. A completed portable export was captured
+first; 4,096 further documents were then acknowledged. The driver observed the
+new hidden staging directory, stopped only its detached native child, confirmed
+the OS stopped state and incomplete export, then killed only that test-owned
+process group. It does not inject faults into an existing application workload.
+
+The [exact local receipt](../benchmarks/results/phase-d/interrupted-export-r1.json)
+passed: incomplete staging remained, every prior portable-export file was
+byte-identical, and all owned ports closed. SIGKILL cannot drain Functions or
+remove the locator, so those are honestly recorded as false/remaining after the
+crash. Same-directory recovery preserved all 4,097 acknowledged documents, the
+Auth account and Storage bytes; a fresh write and export succeeded. Normal
+recovery shutdown removed the stale locator and closed all ports.
+
+Linux CI repeats this short process-crash check. A missed staging observation is
+a test failure, not a silent retry or pass. This case does not simulate power
+loss or interruption in the separate final rename window. Native state remains
+the recovery source; hidden staging directories are not completed backups.
