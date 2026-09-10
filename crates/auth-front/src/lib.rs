@@ -1506,6 +1506,7 @@ mod password_tests;
 
 #[cfg(test)]
 mod tests {
+    mod developer_tools;
     mod oauth;
     mod refresh_reuse;
 
