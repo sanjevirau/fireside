@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "syntheticOnly": true,
+  "target": "official-functions-and-pubsub",
+  "firebaseTools": "15.22.0",
+  "firebaseFunctions": "7.2.5",
+  "node": "v24.20.0",
+  "projectId": "demo-fireside-topic-reload",
+  "capturedAt": "2026-09-10T21:05:51.221Z",
+  "captureSha256": "6f35266ba3853b819823430d92e758eb6a2b55a6bb93773696053f89d7730a83",
+  "functionsSourceSha256": "0c16fe813bc5a034e43a9218c0099ae2c75628e14078d40b86708630cf402406",
+  "pubsubSourceSha256": "edaa1585b0a3c71ea46d782bf715c9aae9afb6d6b82a8873371a120dd088d564",
+  "observations": [
+    {
+      "stage": "initial",
+      "topic": "alpha-topic",
+      "messageId": "1",
+      "delivered": {
+        "handler": "alpha",
+        "version": 1,
+        "id": "922aea19-c8dd-4fa0-9bc1-98ae6f3426db",
+        "data": {
+          "synthetic": true,
+          "stage": "initial",
+          "unicode": "火🔥"
+        }
+      },
+      "registeredIds": [
+        "us-central1-alpha"
+      ],
+      "registeredTopics": [
+        "alpha-topic"
+      ]
+    },
+    {
+      "stage": "added-handler",
+      "topic": "beta-topic",
+      "messageId": "2",
+      "delivered": {
+        "handler": "beta",
+        "version": 2,
+        "id": "05c41cd1-8a6e-4e6d-b0a0-8040f694f667",
+        "data": {
+          "synthetic": true,
+          "stage": "added-handler",
+          "unicode": "火🔥"
+        }
+      },
+      "registeredIds": [
+        "us-central1-alpha",
+        "us-central1-beta"
+      ],
+      "registeredTopics": [
+        "alpha-topic",
+        "beta-topic"
+      ]
+    },
+    {
+      "stage": "updated-handler",
+      "topic": "alpha-topic",
+      "messageId": "3",
+      "delivered": {
+        "handler": "alpha",
+        "version": 2,
+        "id": "1d7d7519-a435-46a6-a33d-3bf1312253b3",
+        "data": {
+          "synthetic": true,
+          "stage": "updated-handler",
+          "unicode": "火🔥"
+        }
+      },
+      "registeredIds": [
+        "us-central1-alpha",
+        "us-central1-beta"
+      ],
+      "registeredTopics": [
+        "alpha-topic",
+        "beta-topic"
+      ]
+    }
+  ],
+  "passed": true
+}

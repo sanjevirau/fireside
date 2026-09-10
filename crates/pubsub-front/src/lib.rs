@@ -134,6 +134,40 @@ impl PubsubRuntime {
     pub fn start_scheduler(&self) -> Result<SchedulerRuntime, PubsubError> {
         SchedulerRuntime::start(&self.state, &self.schedules)
     }
+
+    /// Reconciles function targets after completed source registration. Explicit
+    /// topics, subscriptions, message IDs and already queued deliveries survive.
+    pub async fn refresh_inventory(
+        &mut self,
+        project: &str,
+        inventory: &FunctionsInventory,
+        scheduler: &mut SchedulerRuntime,
+    ) -> Result<(), PubsubError> {
+        let candidate = Self::new(
+            project,
+            inventory,
+            self.state.queue.clone(),
+            self.state.background.clone(),
+        );
+        // Validate the entire replacement before stopping any current schedule.
+        for schedule in &candidate.schedules {
+            Cadence::parse(schedule)?;
+        }
+        scheduler.stop().await;
+        let topics = std::mem::take(&mut lock(&candidate.state.inner).topics);
+        {
+            let mut current = lock(&self.state.inner);
+            for topic in current.topics.values_mut() {
+                topic.targets.clear();
+            }
+            for (key, topic) in topics {
+                current.topics.entry(key).or_default().targets = topic.targets;
+            }
+        }
+        self.schedules = candidate.schedules;
+        *scheduler = self.start_scheduler()?;
+        Ok(())
+    }
 }
 
 #[derive(Clone)]
@@ -475,9 +509,13 @@ impl SchedulerRuntime {
     }
 
     /// Stops every schedule without firing an extra tick.
-    pub async fn shutdown(self) {
+    pub async fn shutdown(mut self) {
+        self.stop().await;
+    }
+
+    async fn stop(&mut self) {
         let _ = self.shutdown.send(true);
-        for task in self.tasks {
+        for task in std::mem::take(&mut self.tasks) {
             let _ = task.await;
         }
     }
@@ -797,6 +835,114 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(json_response(response).await, json!({"messageIds": ["3"]}));
         assert!(deliveries.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn refreshed_function_targets_preserve_topics_ids_and_queued_work() {
+        let project = "demo-fireside-phase4-suite-oracle";
+        let background = TriggerRegistry::default();
+        let (observer, mut deliveries) = TriggerObserver::channel(background.clone());
+        let mut current = inventory();
+        let mut runtime = router(project, &current, observer.queue(), background);
+        let mut scheduler = runtime.start_scheduler().unwrap();
+        let request = |topic: &str| {
+            Request::post(format!("/v1/projects/{project}/topics/{topic}:publish"))
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"messages":[{"data":"e30="}]}"#))
+                .unwrap()
+        };
+        let response = runtime
+            .application()
+            .oneshot(request("phase4-topic"))
+            .await
+            .unwrap();
+        assert_eq!(json_response(response).await["messageIds"], json!(["1"]));
+
+        let original = current
+            .functions()
+            .find(|function| function.name == "topicEcho")
+            .unwrap()
+            .clone();
+        let mut added = original;
+        added.id = "us-central1-added".to_owned();
+        added.name = "added".to_owned();
+        added.event_trigger.as_mut().unwrap().resource =
+            format!("projects/{project}/topics/added-topic");
+        current.backends[0].function_triggers.push(added);
+        runtime
+            .refresh_inventory(project, &current, &mut scheduler)
+            .await
+            .unwrap();
+        // Repeated inventory notifications must not duplicate dispatch targets.
+        runtime
+            .refresh_inventory(project, &current, &mut scheduler)
+            .await
+            .unwrap();
+        let response = runtime
+            .application()
+            .oneshot(request("added-topic"))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(json_response(response).await["messageIds"], json!(["2"]));
+        assert!(
+            deliveries
+                .recv()
+                .await
+                .unwrap()
+                .path
+                .ends_with("/us-central1-topicEcho-0")
+        );
+        assert!(
+            deliveries
+                .recv()
+                .await
+                .unwrap()
+                .path
+                .ends_with("/us-central1-added-0")
+        );
+        assert!(deliveries.try_recv().is_err());
+
+        let empty = FunctionsInventory {
+            backends: Vec::new(),
+        };
+        runtime
+            .refresh_inventory(project, &empty, &mut scheduler)
+            .await
+            .unwrap();
+        assert!(runtime.schedules().is_empty());
+        let response = runtime
+            .application()
+            .oneshot(request("added-topic"))
+            .await
+            .unwrap();
+        assert_eq!(json_response(response).await["messageIds"], json!(["3"]));
+        assert!(deliveries.try_recv().is_err());
+        scheduler.shutdown().await;
+    }
+
+    #[tokio::test]
+    async fn invalid_reloaded_schedule_preserves_the_previous_inventory() {
+        let project = "demo-fireside-phase4-suite-oracle";
+        let background = TriggerRegistry::default();
+        let (observer, _) = TriggerObserver::channel(background.clone());
+        let mut runtime = router(project, &inventory(), observer.queue(), background);
+        let mut scheduler = runtime.start_scheduler().unwrap();
+        let before = runtime.schedules().to_vec();
+        let mut invalid = inventory();
+        for function in &mut invalid.backends[0].function_triggers {
+            if let Some(schedule) = &mut function.schedule {
+                schedule.schedule = "not a schedule".to_owned();
+            }
+        }
+        assert!(
+            runtime
+                .refresh_inventory(project, &invalid, &mut scheduler)
+                .await
+                .is_err()
+        );
+        assert_eq!(runtime.schedules(), before);
+        scheduler.shutdown().await;
     }
 
     #[test]

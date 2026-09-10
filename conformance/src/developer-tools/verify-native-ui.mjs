@@ -10,9 +10,10 @@ import {resolve,dirname,join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import {observeDeveloperUi} from './observe-ui.mjs';
 
-assert.equal(process.argv.length,7,'binary toolsRoot sdkRoot emulator-cache fresh-output');
+const topicReload=process.argv[7]==='--topic-reload';
+assert(process.argv.length===7||(process.argv.length===8&&topicReload),'binary toolsRoot sdkRoot emulator-cache fresh-output [--topic-reload]');
 assert.equal(process.versions.node,'24.20.0');
-const [binary,tools,sdk,cache,output]=process.argv.slice(2).map(path=>resolve(path));
+const [binary,tools,sdk,cache,output]=process.argv.slice(2,7).map(path=>resolve(path));
 assert.equal(JSON.parse(await readFile(join(tools,'package.json'))).version,'15.22.0');
 assert.equal(JSON.parse(await readFile(join(sdk,'package.json'))).version,'7.2.5');
 const fixture=JSON.parse(await readFile(new URL('../../fixtures/developer-tools-v1/fixture.json',import.meta.url)));
@@ -30,7 +31,9 @@ for(const [name,expected] of [
 await mkdir(join(output,'functions/node_modules'),{recursive:true});
 await symlink(sdk,join(output,'functions/node_modules/firebase-functions'),'dir');
 await json('functions/package.json',{name:'developer-tools-fixture',version:'1.0.0',main:'index.js',engines:{node:'24'}});
-await writeFile(join(output,'functions/index.js'),"const {onRequest}=require('firebase-functions/v2/https');exports.ping=onRequest((req,res)=>res.json({synthetic:true}));\n");
+const pingSource="const {onRequest}=require('firebase-functions/v2/https');exports.ping=onRequest((req,res)=>res.json({synthetic:true}));\n";
+const topicSource=version=>pingSource+`const {onMessagePublished}=require('firebase-functions/v2/pubsub');const fs=require('node:fs');\nexports.alpha=onMessagePublished('alpha-topic',event=>fs.appendFileSync(${JSON.stringify(join(output,'events.jsonl'))},JSON.stringify({handler:'alpha',version:${version},data:event.data.message.json})+'\\n'));\n${version===2?`exports.beta=onMessagePublished('beta-topic',event=>fs.appendFileSync(${JSON.stringify(join(output,'events.jsonl'))},JSON.stringify({handler:'beta',version:2,data:event.data.message.json})+'\\n'));\n`:''}`;
+await writeFile(join(output,'functions/index.js'),topicReload?topicSource(1):pingSource);
 await writeFile(join(output,'firestore.rules'),rules);
 await writeFile(join(output,'storage.rules'),"rules_version = '2'; service firebase.storage { match /b/{bucket}/o { match /{object=**} { allow read, write: if true; } } }\n");
 await json('firebase.json',{firestore:{rules:'firestore.rules'},storage:[{target:'default',rules:'storage.rules'}],functions:[{source:'functions',codebase:'synthetic'}]});
@@ -85,6 +88,32 @@ try{
   record.browser=await observeDeveloperUi({origin,project,work:output,output,requestId:denied.requestId,readyLog:'All emulators ready;'});
   const ping=await fetch(`${origin('functions')}/${project}/us-central1/ping`,{signal:AbortSignal.timeout(15000)});
   assert.equal(ping.status,200);assert.deepEqual(await ping.json(),{synthetic:true});
+  if(topicReload){
+    const observations=[];
+    const publish=async(stage,topic,handler,version)=>{
+      const data={synthetic:true,stage,unicode:'火🔥'};
+      const response=await fetch(`${origin('pubsub')}/v1/projects/${project}/topics/${topic}:publish`,{
+        method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({messages:[{data:Buffer.from(JSON.stringify(data)).toString('base64')}]}),signal:AbortSignal.timeout(5000)});
+      const body=await response.json();observations.push({stage,status:response.status,response:body});
+      record.topicReload=observations;assert.equal(response.status,200,JSON.stringify(observations));
+      const deadline=Date.now()+20000;let delivered;
+      while(!delivered){
+        let events=[];try{events=(await readFile(join(output,'events.jsonl'),'utf8')).trim().split('\n').filter(Boolean).map(JSON.parse);}catch(error){if(error.code!=='ENOENT')throw error;}
+        delivered=events.find(event=>event.data?.stage===stage);assert(Date.now()<deadline,`topic delivery ${stage}`);if(!delivered)await delay(100);
+      }
+      assert.deepEqual(delivered,{handler,version,data});observations.at(-1).delivered=delivered;
+    };
+    await publish('initial','alpha-topic','alpha',1);
+    await delay(1200);await writeFile(join(output,'functions/index.js'),topicSource(2));
+    const deadline=Date.now()+30000;
+    while(true){
+      const response=await fetch(origin('functions')+'/backends',{signal:AbortSignal.timeout(5000)});const backends=await response.json();
+      if(backends.backends?.some(backend=>backend.functionTriggers?.some(def=>def.id==='us-central1-beta')))break;
+      assert(Date.now()<deadline,'native Functions watcher inventory timeout');await delay(100);
+    }
+    await publish('added-handler','beta-topic','beta',2);
+    await publish('updated-handler','alpha-topic','alpha',2);
+  }
   record.functionsPing=true;record.browserAndFunctionPassed=true;
 }catch(error){await json('failure.json',{message:error.message,stack:error.stack});throw error;}
 finally{

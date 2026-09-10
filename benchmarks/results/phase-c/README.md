@@ -35,3 +35,23 @@ and retains a failing exit code.
 Required exact-head CI and native package checks remain merge prerequisites.
 The remaining Phase C service contracts and later D–F work are not completed by
 these receipts.
+
+## Native topic reload: retained failure and corrected run
+
+The unchanged short driver first reproduced a native routing gap: initial
+delivery and all 14 browser checkpoints passed, but the new handler's topic
+returned 404 after Functions inventory contained it. That attempt remains
+`topic-reload-native-r1-failure.json`, `passed: false`, with clean owned shutdown.
+Its binary SHA-256 is
+`b9b10746640d9ee8559eabc02dba844eb6d1f85115d68778970942d277415b19`.
+
+The corrected `topic-reload-native-r3.json` covers runtime `18c73e0` and binary
+`806262a14db42431f924fa13212224adbcc73567f2621a87a26ee9eb2a94d866`.
+All 14 browser checks, initial delivery, newly added handler delivery, updated
+handler delivery and clean shutdown pass. Both attempts use identical driver
+SHA-256 `3053603e48736f0c1cadf70a239c63be37f74e9f11ee6b497ffe03e9f9bb5667`.
+The official source-watcher/delivery capture precedes the native correction in
+`functions-topic-reload-v1`; dynamic event IDs are not fabricated to match it.
+This is short generic functional evidence, not an endurance/performance win or
+full Pub/Sub/Events/Tasks parity. Final exact-head CI/package checks remain
+required before merge; the private consumer runner was not changed.

@@ -61,6 +61,7 @@ jobs:
           node --test conformance/test/functions-readiness-receipts.test.mjs
           node --test conformance/test/rest-read-options-fixture.test.mjs
           node --test conformance/test/rule-bindings-fixture.test.mjs
+          node --test conformance/test/functions-topic-reload-fixture.test.mjs
       - name: Verify package and publication safety contracts
         run: node --test packaging/*.test.mjs
 
@@ -110,6 +111,7 @@ jobs:
           "$RUNNER_TEMP/fireside-devtools/node_modules/firebase-functions"
           "$HOME/.cache/firebase/emulators"
           "$RUNNER_TEMP/fireside-developer-ui-evidence"
+          --topic-reload
       - name: Verify owned admission against real pinned Functions discovery
         run: >-
           node conformance/src/suite/capture-functions-readiness.mjs

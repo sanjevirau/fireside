@@ -19,10 +19,18 @@ pub(crate) struct Receipt {
 
 impl Receipt {
     pub(crate) fn parse(json: &str) -> Result<Self, String> {
+        Self::parse_inner(json, false)
+    }
+
+    pub(crate) fn parse_update(json: &str) -> Result<Self, String> {
+        Self::parse_inner(json, true)
+    }
+
+    fn parse_inner(json: &str, allow_empty: bool) -> Result<Self, String> {
         let receipt: Self = serde_json::from_str(json)
             .map_err(|error| format!("Invalid Functions readiness receipt: {error}"))?;
         if receipt.firebase_tools_version != "15.22.0"
-            || receipt.inventory_count == 0
+            || (!allow_empty && receipt.inventory_count == 0)
             || receipt.inventory_sha256.len() != 64
             || !receipt
                 .inventory_sha256
@@ -166,6 +174,20 @@ mod tests {
         ] {
             assert!(Receipt::parse(body).is_err());
         }
+    }
+
+    #[test]
+    fn empty_reload_is_valid_but_cannot_satisfy_initial_readiness() {
+        let inventory = FunctionsInventory {
+            backends: Vec::new(),
+        };
+        let json = json!({"firebaseToolsVersion":"15.22.0","inventoryCount":0,
+            "inventorySha256":fingerprint(&inventory).unwrap()})
+        .to_string();
+        assert!(Receipt::parse(&json).is_err());
+        let update = Receipt::parse_update(&json).unwrap();
+        update.verify(&inventory, 0).unwrap();
+        assert!(update.verify(&inventory, 1).is_err());
     }
 
     #[tokio::test]

@@ -281,18 +281,18 @@ pub async fn run(config: SuiteConfig) -> Result<SuiteOutcome, SuiteRuntimeError>
         Arc::clone(&auth),
         Arc::clone(&storage),
     );
-    let (mut functions, functions_ready) = spawn_functions_host(&config, &logging).await?;
+    let (mut functions, mut functions_ready) = spawn_functions_host(&config, &logging).await?;
     let inventory = wait_for_functions(
         &mut functions,
-        functions_ready,
+        &mut functions_ready,
         &functions_endpoint,
         config.minimum_functions,
     )
     .await?;
     let function_count = inventory.functions().count();
-    let pubsub = pubsub_router(&config.project_id, &inventory, delivery.queue(), triggers);
+    let mut pubsub = pubsub_router(&config.project_id, &inventory, delivery.queue(), triggers);
     let schedule_count = pubsub.schedules().len();
-    let scheduler = pubsub
+    let mut scheduler = pubsub
         .start_scheduler()
         .map_err(|error| failure(format!("scheduler failed to start: {error}")))?;
     servers.push(spawn_axum(
@@ -318,6 +318,10 @@ pub async fn run(config: SuiteConfig) -> Result<SuiteOutcome, SuiteRuntimeError>
         failed = failed_server.recv() => {
             Some(failed.unwrap_or_else(|| "service monitor closed".to_owned()))
         }
+        error = follow_functions_inventory(
+            &mut functions_ready, &functions_endpoint, &config.project_id,
+            &mut pubsub, &mut scheduler, &logging,
+        ) => Some(error),
     };
     functions.stdin = functions_control;
 
@@ -349,6 +353,49 @@ fn announce_ready(logging: &LoggingRuntime, function_count: usize) {
         format!("All emulators ready; {function_count} functions discovered"),
     );
     println!("All emulators ready");
+}
+
+async fn follow_functions_inventory(
+    updates: &mut watch::Receiver<functions_readiness::Signal>,
+    endpoint: &str,
+    project: &str,
+    pubsub: &mut fireside_pubsub_front::PubsubRuntime,
+    scheduler: &mut SchedulerRuntime,
+    logging: &LoggingRuntime,
+) -> String {
+    while updates.changed().await.is_ok() {
+        let Some(receipt) = updates.borrow_and_update().clone() else {
+            continue;
+        };
+        let receipt = match receipt {
+            Ok(receipt) => receipt,
+            Err(error) => return error,
+        };
+        let inventory = match functions_readiness::discover(endpoint, &receipt, 0).await {
+            Ok(inventory) => inventory,
+            // A newer registration may supersede the receipt while HTTP is in
+            // flight. Consume its queued notification, not an old mixed view.
+            Err(_) if updates.has_changed().unwrap_or(false) => continue,
+            Err(error) => {
+                return format!("Functions reload inventory verification failed: {error}");
+            }
+        };
+        if let Err(error) = pubsub
+            .refresh_inventory(project, &inventory, scheduler)
+            .await
+        {
+            return format!("Functions reload schedule rejected: {error}");
+        }
+        logging.record(
+            "INFO",
+            Some("functions"),
+            format!(
+                "Functions routing refreshed; {} registered functions",
+                inventory.functions().count(),
+            ),
+        );
+    }
+    "Functions inventory stream closed".to_owned()
 }
 
 async fn prepare_native_suite(
@@ -973,6 +1020,10 @@ async fn spawn_functions_host(
             while let Ok(Some(line)) = log_input::next(&mut lines).await {
                 if let Some(receipt) = line.strip_prefix("FIRESIDE_FUNCTIONS_HOST_READY ") {
                     let _ = ready_sender.send(Some(functions_readiness::Receipt::parse(receipt)));
+                } else if let Some(receipt) = line.strip_prefix("FIRESIDE_FUNCTIONS_HOST_UPDATED ")
+                {
+                    let _ = ready_sender
+                        .send(Some(functions_readiness::Receipt::parse_update(receipt)));
                 }
                 println!("{line}");
                 logging.record("INFO", Some("functions"), line);
@@ -994,7 +1045,7 @@ async fn spawn_functions_host(
 
 async fn wait_for_functions(
     child: &mut Child,
-    ready: watch::Receiver<functions_readiness::Signal>,
+    ready: &mut watch::Receiver<functions_readiness::Signal>,
     endpoint: &str,
     minimum: usize,
 ) -> Result<FunctionsInventory, SuiteRuntimeError> {
@@ -1008,7 +1059,9 @@ async fn wait_for_functions(
                 "Functions host exited before readiness: {status}"
             )));
         }
-        let receipt = ready.borrow().clone();
+        // Mark only the receipt being verified. A registration arriving during
+        // the HTTP check stays pending for the running-suite refresh loop.
+        let receipt = ready.borrow_and_update().clone();
         if let Some(receipt) = receipt {
             let receipt = receipt.map_err(failure)?;
             return tokio::time::timeout_at(
