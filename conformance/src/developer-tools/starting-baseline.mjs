@@ -11,9 +11,12 @@ import { setTimeout as delay } from 'node:timers/promises';
 const manifestBytes=await readFile(new URL('../../../benchmarks/phase-a-developer-tools.json',import.meta.url));
 const manifest=JSON.parse(manifestBytes);
 const config=manifest.baseline;
-const candidateEngine=process.argv[3]==='--candidate-engine'?process.argv[4]:undefined;
-assert(process.argv.length===3||(process.argv.length===5&&candidateEngine),
-  'fresh-output [--candidate-engine FULL_LOCAL_ENGINE_REVISION]');
+const args=process.argv.slice(2);
+const omitListProbe=args.at(-1)==='--omit-list-probe';
+if(omitListProbe)args.pop();
+const candidateEngine=args[1]==='--candidate-engine'?args[2]:undefined;
+assert(args.length===1||(args.length===3&&candidateEngine),
+  'fresh-output [--candidate-engine FULL_LOCAL_ENGINE_REVISION] [--omit-list-probe]');
 if(candidateEngine)assert.match(candidateEngine,/^[a-f0-9]{40}$/);
 const expectedVersion=candidateEngine?`0.1.0-local.g${candidateEngine.slice(0,12)}`:manifest.npmBaseline;
 const expectedEngine=candidateEngine??manifest.engineBaseline;
@@ -38,6 +41,10 @@ const receipt={schemaVersion:1,manifestSha256:createHash('sha256').update(manife
   qualificationMode:candidateEngine?'explicit-local-candidate':'original-published-baseline',
   platform:platform(),arch:arch(),osRelease:release(),cpu:cpus()[0].model,node:process.versions.node,
   hostQuiescent:false,scope:config.measurementScope,limitations:config.claims,cycles:[]};
+if(omitListProbe){
+  receipt.listProbeOmittedForComparability=true;
+  receipt.comparisonContractSha256=createHash('sha256').update(await readFile(new URL('../../../benchmarks/phase-e-equivalent-queries.json',import.meta.url))).digest('hex');
+}
 for (let cycle=0;cycle<=config.nativeReopens;cycle++) {
   const socket=createServer();socket.listen(0,'127.0.0.1');await once(socket,'listening');const port=socket.address().port;await new Promise(r=>socket.close(r));
   const row={mode:cycle===0?'empty-native-store':'native-reopen',rssSamples:[],operations:[]};receipt.cycles.push(row);
@@ -64,8 +71,10 @@ for (let cycle=0;cycle<=config.nativeReopens;cycle++) {
     for(let i=0;i<config.sequentialGets;i++){
       const doc=await request('get',`/collection-${i%config.collections}/document-${i}`);assert.equal(doc.fields.index.integerValue,String(i));
     }
-    const unsupported=await fetch(base+'/collection-0?pageSize=1000');
-    row.restListDocumentsProbe={status:unsupported.status,body:await unsupported.json()};
+    if(!omitListProbe){
+      const unsupported=await fetch(base+'/collection-0?pageSize=1000');
+      row.restListDocumentsProbe={status:unsupported.status,body:await unsupported.json()};
+    }
     const before=performance.now();
     const counts=await Promise.all(Array.from({length:config.parallelCollectionReads},async(_,i)=>{
       const result=await request('collection-query',':runQuery',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:`collection-${i}`}]}})});
