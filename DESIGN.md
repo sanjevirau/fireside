@@ -374,6 +374,13 @@ documents through the official emulator.
 
 ## Distribution and trust boundaries
 
+The pinned Functions workload host drains/stops its upstream emulator before
+exiting. A served request leaves an upstream socket-discovery timer referenced
+for thirty seconds even after worker/server shutdown. Like the captured official
+CLI, the owned wrapper exits after the awaited stop completes; it does not wait
+for unused dependency timers. Stop failures exit nonzero. This is not permission
+to bypass the upstream work queue or kill an active handler before drain.
+
 The CLI and its five native optional dependencies have exact version/source
 identities. Packing and publication audit actual tar bytes: fixed file lists,
 regular entries only, checksums, no credential markers, no lifecycle installer.

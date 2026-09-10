@@ -18,3 +18,21 @@ test('REST listing fixture preserves pinned oracle identity, success, denial and
   for(const kind of ['list','ids'])assert.equal(row(`${kind}-page-2`).previousToken,`${kind}-page-1`);
   assert.ok(!/Bearer |\/Users\/|\/var\/folders\//.test(bytes.toString()));
 });
+
+test('UI bucket and Functions lifecycle observations retain exact checksums and pinned peers',async()=>{
+  for(const name of ['developer-tools-buckets-v1','developer-tools-functions-lifecycle-v1']){
+    const root=new URL(`../fixtures/${name}/`,import.meta.url);
+    const bytes=await readFile(new URL('fixture.json',root)),fixture=JSON.parse(bytes);
+    assert.equal(await readFile(new URL('SHA256SUMS',root),'utf8'),createHash('sha256').update(bytes).digest('hex')+'  fixture.json\n');
+    assert.equal(fixture.oracle.firebaseTools,'15.22.0');
+    if(name==='developer-tools-buckets-v1'){
+      assert.equal(fixture.oracle.ui,'1.15.0');assert.equal(fixture.exchanges.length,2);
+      for(const row of fixture.exchanges){assert.equal(row.path,'/b');assert.equal(row.status,200);assert.equal(row.response.items[0].name,'demo-fireside-developer-tools.appspot.com');}
+    }else{
+      assert.equal(fixture.oracle.firebaseFunctions,'7.2.5');assert.equal(fixture.passed,true);
+      assert.equal(fixture.exchange.status,200);assert.deepEqual(fixture.exchange.body,{synthetic:true});assert.deepEqual(fixture.exit,[0,null]);
+      assert.equal(createHash('sha256').update(fixture.source).digest('hex'),fixture.sourceSha256);
+    }
+    assert.ok(!/Bearer |\/Users\/|\/var\/folders\//.test(bytes.toString()));
+  }
+});

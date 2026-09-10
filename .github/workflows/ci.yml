@@ -91,6 +91,29 @@ jobs:
         run: node --test conformance/test/auth-popup.test.mjs
       - name: Verify native coverage reports in a real browser
         run: node --test conformance/test/developer-coverage-browser.test.mjs
+      - name: Prepare pinned official developer UI compatibility peers
+        run: |
+          npm install --prefix "$RUNNER_TEMP/fireside-devtools" --ignore-scripts --no-audit --no-fund firebase-tools@15.22.0 firebase-functions@7.2.5
+          node conformance/src/developer-tools/prepare-ui.mjs "$RUNNER_TEMP/fireside-devtools/node_modules/firebase-tools"
+      - name: Verify complete synthetic suite data controls, diagnostics and shutdown
+        run: >-
+          node conformance/src/developer-tools/verify-native-ui.mjs
+          target/debug/fireside
+          "$RUNNER_TEMP/fireside-devtools/node_modules/firebase-tools"
+          "$RUNNER_TEMP/fireside-devtools/node_modules/firebase-functions"
+          "$HOME/.cache/firebase/emulators"
+          "$RUNNER_TEMP/fireside-developer-ui-evidence"
+      - name: Preserve synthetic developer UI evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: synthetic-developer-ui
+          path: |
+            ${{ runner.temp }}/fireside-developer-ui-evidence/result.json
+            ${{ runner.temp }}/fireside-developer-ui-evidence/failure.json
+            ${{ runner.temp }}/fireside-developer-ui-evidence/browser-failure.json
+            ${{ runner.temp }}/fireside-developer-ui-evidence/*.png
+          if-no-files-found: ignore
       - name: Verify query rules oracle fixtures
         run: npm run test:rules:query-fixtures --prefix conformance
       - name: Verify document-map serialization oracle fixtures
