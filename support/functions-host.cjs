@@ -160,7 +160,7 @@ let functionsEmulator;
 let extensionEmulator;
 let stopping = false;
 
-async function stop(signal) {
+async function stop(signal, exitCode = 0) {
   if (stopping) return;
   stopping = true;
   process.stderr.write(`fireside functions host: stopping after ${signal}\n`);
@@ -171,7 +171,7 @@ async function stop(signal) {
     // The upstream runtime leaves its 30-second socket-discovery timer alive
     // even after a successful invocation. Like the official CLI, terminate this
     // owned host only after its work queue, workers and HTTP server have stopped.
-    process.exit(0);
+    process.exit(exitCode);
   } catch (error) {
     process.stderr.write(`fireside functions host shutdown failed: ${String(error)}\n`);
     process.exit(1);
@@ -317,4 +317,7 @@ async function main() {
   );
 }
 
-main().catch((error) => fail(String(error?.stack ?? error)));
+main().catch(async (error) => {
+  process.stderr.write(`fireside functions host startup failed: ${String(error?.stack ?? error)}\n`);
+  await stop("startup failure", 1);
+});
