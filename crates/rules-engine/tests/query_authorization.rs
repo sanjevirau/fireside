@@ -133,6 +133,12 @@ fn replays_both_official_query_oracles_without_any_result_rows() {
             let request = request(case);
             assert!(request.resource.is_none());
             let actual = rules.evaluate(&request, &Permissions);
+            assert_eq!(
+                actual,
+                rules.evaluate_with_trace(&request, &Permissions).0,
+                "query proof and accounting must not change when tracing is enabled: {}",
+                case["id"]
+            );
             let expected = oracle["observations"]
                 .as_array()
                 .expect("observations")

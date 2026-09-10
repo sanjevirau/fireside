@@ -5,6 +5,7 @@
 use std::collections::BTreeMap;
 
 mod query;
+pub mod request_history;
 pub use query::{query_candidate, query_policy};
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};

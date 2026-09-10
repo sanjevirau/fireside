@@ -10,6 +10,11 @@ mod evaluator;
 mod lexer;
 mod model;
 mod parser;
+mod trace;
+
+pub use trace::{
+    AllowDecision, AllowLocation, AllowOutcome, EvaluationTrace, MAXIMUM_TRACE_OUTCOMES,
+};
 
 pub use model::{
     AtomicEvaluationResult, Auth, ConstraintOperator, DocumentAccess, DocumentAccessError,
@@ -73,9 +78,39 @@ pub struct RulesetStatistics {
 #[derive(Clone, Debug)]
 pub struct Ruleset {
     program: Arc<Program>,
+    source: Arc<str>,
 }
 
 impl Ruleset {
+    /// Exact immutable source associated with this ruleset's trace locations.
+    #[must_use]
+    pub fn source(&self) -> &str {
+        &self.source
+    }
+
+    /// Evaluates once, with bounded allow-decision diagnostics. This follows the
+    /// same evaluation path and access budgets as `evaluate`; it does not replay
+    /// expressions or issue additional document reads for diagnostics.
+    #[must_use]
+    pub fn evaluate_with_trace<A: DocumentAccess + ?Sized>(
+        &self,
+        request: &EvaluationRequest,
+        access: &A,
+    ) -> (EvaluationResult, EvaluationTrace) {
+        evaluator::evaluate_with_trace(&self.program, request, access)
+    }
+
+    /// Evaluates an atomic request with one trace per operation, in request order.
+    /// Document-access accounting and caching remain shared across the batch.
+    #[must_use]
+    pub fn evaluate_atomic_with_trace<A: DocumentAccess + ?Sized>(
+        &self,
+        requests: &[EvaluationRequest],
+        access: &A,
+    ) -> (AtomicEvaluationResult, Vec<EvaluationTrace>) {
+        evaluator::evaluate_atomic_with_trace(&self.program, requests, access)
+    }
+
     /// Returns stable structural counts for diagnostics and gate evidence.
     #[must_use]
     pub fn statistics(&self) -> RulesetStatistics {
@@ -140,6 +175,7 @@ pub fn compile(source: &str) -> Result<Ruleset, Vec<Diagnostic>> {
     if validation.is_empty() {
         Ok(Ruleset {
             program: Arc::new(program),
+            source: Arc::from(source),
         })
     } else {
         Err(validation)

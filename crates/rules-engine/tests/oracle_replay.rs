@@ -30,6 +30,12 @@ fn replays_all_1024_production_expression_cases() {
         for (case, expected) in cases.iter().zip(results) {
             let request = evaluation_request(&case["request"], None);
             let actual = rules.evaluate(&request, &EmptyDocumentAccess);
+            assert_eq!(
+                actual,
+                rules.evaluate_with_trace(&request, &EmptyDocumentAccess).0,
+                "tracing must preserve the complete verdict and accounting for {}",
+                case["id"]
+            );
             let expected_allowed = expected["state"] == "SUCCESS";
             assert_eq!(
                 actual.allowed,
@@ -150,6 +156,7 @@ fn enforces_access_limits_cache_and_atomic_accounting() {
             Timestamp::new(0, 0),
         );
         let result = rules.evaluate(&request, &access);
+        assert_eq!(result, rules.evaluate_with_trace(&request, &access).0);
         assert_eq!(result.allowed, expected_allowed, "{id}: {result:?}");
         assert_eq!(result.document_accesses, expected_accesses, "{id}");
         assert_eq!(result.document_cache_hits, expected_hits, "{id}");
@@ -157,11 +164,19 @@ fn enforces_access_limits_cache_and_atomic_accounting() {
 
     let batch_20 = batch_requests(20);
     let result = rules.evaluate_atomic(&batch_20, &access);
+    assert_eq!(
+        result,
+        rules.evaluate_atomic_with_trace(&batch_20, &access).0
+    );
     assert!(result.allowed, "{result:?}");
     assert_eq!(result.document_accesses, 20);
 
     let batch_21 = batch_requests(21);
     let result = rules.evaluate_atomic(&batch_21, &access);
+    assert_eq!(
+        result,
+        rules.evaluate_atomic_with_trace(&batch_21, &access).0
+    );
     assert!(!result.allowed, "{result:?}");
     assert_eq!(result.document_accesses, 20);
     assert!(result.operations[20].error.is_some());

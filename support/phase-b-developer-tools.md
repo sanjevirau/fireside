@@ -1,0 +1,64 @@
+# Phase B: developer tools implementation
+
+Status: in progress. This is not a completed phase or release qualification.
+
+The committed [Phase A oracle](phase-a-developer-tools.md) and
+[predeclared resource/overhead checks](../benchmarks/phase-a-developer-tools.json)
+remain the contract. No private consumer inputs are required.
+
+## First increment: real allow-decision instrumentation
+
+- Preserve the immutable rules source and exact allow declaration locations.
+- Add opt-in single-operation and atomic tracing without a second evaluation.
+- Retain actual allow/deny/error outcomes, including errors masked by a later allow.
+- Bound each internal operation trace to 1,000 fixed-size outcomes, explicitly
+  counting omissions. Do not copy documents or tokens into this trace.
+- Leave existing serving paths unchanged until the bounded transport is ready.
+
+Tests compare the captured ten evaluation contexts with their actual outcomes and
+source lines. They distinguish the jar's accumulated history from a single
+evaluation; they do not claim identical counts of live WebSocket messages.
+Constructed regressions cover short-circuiting, method filtering, empty matches,
+non-ASCII/CRLF source offsets, trace-cap overflow, atomic ordering and actual store
+access counts. Existing oracle regressions compare complete traced/untraced
+verdicts, including all 1,024 expression cases, query proofs and access limits.
+
+Local validation for this increment: rules-engine/rules-runtime tests (31 test
+functions, including parameterized oracle corpora), seven Phase A integrity
+checks, strict rules-engine Clippy, formatting and whitespace checks. Full
+seven-job exact-candidate CI is still required before merge. The endpoint/UI
+and paired-overhead checks have not yet run against an integrated candidate.
+
+## Second increment: bounded history and delivery queues
+
+The internal Requests buffer implements the predeclared history/event/byte/age
+limits and four-client admission. Tests replay the committed oracle event objects
+without mutating them, exercise an atomic snapshot/live boundary, and verify
+count/byte eviction, expiry, slow readers, completed versus in-flight sends,
+slot reclamation, oversized/invalid events and contended nonblocking admission.
+Its constants are checked directly against the frozen Phase A manifest.
+
+The buffer is not yet connected to a producer or WebSocket transport. Its idle
+maintenance hook, omission reporting, disabled-state handling and per-send deadline
+must be wired and tested together with the real evaluator before UI qualification.
+Eleven additional buffer tests are local unit-model evidence, not live endpoint
+or browser evidence; all prior Phase A recordings remain unchanged.
+
+Pre-merge review added a twelfth buffer regression: producer timestamps can be
+admitted out of order after thread preemption. The regression first reproduced
+an expired entry retained behind a newer entry. Expiry now examines all of the
+at-most-256 entries while preserving replay order and exact byte accounting.
+The correction requires fresh CI; the earlier candidate's checks do not cover it.
+
+## Remaining before Phase B completion
+
+1. Feed the real traces into bounded Requests history and subscriber queues;
+   qualify reconnect, TTL, slow readers, disabled diagnostics and cleanup.
+2. Add source-positioned expression coverage, JSON and rendered HTML reports.
+3. Verify the supported UI controls, request details, discovery/status and logs
+   in a real browser against Fireside, fixing demonstrated gaps oracle-first.
+4. Measure paired diagnostics overhead against every predeclared limit, then
+   require exact-candidate CI and review. Prior baseline CI is not product CI.
+
+No two-hour acceptance, npm release, tag, consumer switch or application-stack
+restart is part of this increment. Public compatibility limitations stay in place.
