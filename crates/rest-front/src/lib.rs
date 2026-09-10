@@ -32,9 +32,7 @@ use fireside_query_engine::{
     aggregate, execute,
 };
 use fireside_rules_runtime::RequestOperation;
-use fireside_rules_runtime::{
-    Authorization, RulesQuery, RulesRuntime, SnapshotAccess, evaluation_request,
-};
+use fireside_rules_runtime::{Authorization, RulesRuntime, SnapshotAccess, evaluation_request};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value as JsonValue, json};
 use time::OffsetDateTime;
@@ -56,6 +54,7 @@ const JSON_CONTENT_TYPE: HeaderValue = HeaderValue::from_static("application/jso
 
 mod coverage;
 mod listing;
+mod read_options;
 #[cfg(test)]
 mod read_options_tests;
 
@@ -146,6 +145,14 @@ pub fn router_with_shared_service(
         )
         .route(COMMIT_ROUTE, axum::routing::post(commit))
         .route(BATCH_GET_ROUTE, axum::routing::post(batch_get))
+        .route(
+            "/v1/projects/{project}/databases/{database}/documents:beginTransaction",
+            axum::routing::post(read_options::begin),
+        )
+        .route(
+            "/v1/projects/{project}/databases/{database}/documents:rollback",
+            axum::routing::post(read_options::rollback),
+        )
         .route(
             "/v1/projects/{project}/databases/{database}/documents:listCollectionIds",
             axum::routing::post(listing::root_ids),
@@ -429,30 +436,7 @@ async fn get_document(
     if path.document.split('/').count() % 2 == 1 {
         return listing::documents(&state, path, parameters, headers).await;
     }
-    let project = path.project.clone();
-    let key = document_key(path)?;
-    let authorization = request_authorization(&headers, &project)?;
-    let snapshot = state.store.snapshot();
-    let current = snapshot.get(&key);
-    let request = evaluation_request(
-        RequestOperation::Get,
-        &key,
-        now_timestamp(),
-        current.as_deref(),
-        None,
-        RulesQuery::default(),
-    );
-    let verdict = state.rules.evaluate(
-        &project,
-        &authorization,
-        &request,
-        &SnapshotAccess::current(snapshot.clone(), &project),
-    );
-    require_allowed(verdict)?;
-    let document = snapshot
-        .get(&key)
-        .ok_or_else(|| RestError::not_found(format!("document not found: {key}")))?;
-    Ok(Json(encode_document(&key, &document)?))
+    read_options::get(&state, path, parameters, headers).await
 }
 
 async fn patch_document(
@@ -702,6 +686,9 @@ async fn commit(
     headers: HeaderMap,
     Json(body): Json<JsonValue>,
 ) -> Result<Json<JsonValue>, RestError> {
+    if body.get("transaction").is_some() {
+        return read_options::commit(&state, path, headers, body).await;
+    }
     let project = path.project.clone();
     let database = database_name(path)?;
     let writes = body
@@ -770,54 +757,7 @@ async fn batch_get(
     headers: HeaderMap,
     Json(body): Json<JsonValue>,
 ) -> Result<Json<JsonValue>, RestError> {
-    let project = path.project.clone();
-    let database = database_name(path)?;
-    let names = body
-        .get("documents")
-        .and_then(JsonValue::as_array)
-        .ok_or_else(|| RestError::invalid("batchGet documents must be an array"))?;
-    let snapshot = state.store.snapshot();
-    let authorization = request_authorization(&headers, &project)?;
-    let request_time = now_timestamp();
-    let read_time = format_timestamp(request_time)?;
-    let mut responses = Vec::with_capacity(names.len());
-    let mut evaluations = Vec::with_capacity(names.len());
-    for name in names {
-        let name = name
-            .as_str()
-            .ok_or_else(|| RestError::invalid("batchGet document name must be a string"))?;
-        let key = document_key_from_name(name)?;
-        if key.database() != &database {
-            return Err(RestError::invalid(
-                "batchGet document belongs to a different database",
-            ));
-        }
-        evaluations.push(evaluation_request(
-            RequestOperation::Get,
-            &key,
-            request_time,
-            snapshot.get(&key).as_deref(),
-            None,
-            RulesQuery::default(),
-        ));
-        let response = if let Some(document) = snapshot.get(&key) {
-            json!({
-                "found": encode_document(&key, &document)?,
-                "readTime": read_time,
-            })
-        } else {
-            json!({ "missing": name, "readTime": read_time })
-        };
-        responses.push(response);
-    }
-    let verdict = state.rules.evaluate_atomic(
-        &project,
-        &authorization,
-        &evaluations,
-        &SnapshotAccess::current(snapshot, &project),
-    );
-    require_atomic_allowed(verdict)?;
-    Ok(Json(JsonValue::Array(responses)))
+    read_options::batch(&state, path, headers, body).await
 }
 
 async fn run_query_at_root(

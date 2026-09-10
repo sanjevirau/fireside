@@ -75,6 +75,88 @@ fn query_value(value: &str) -> String {
     })
 }
 
+async fn transaction(router: &Router, read_only: bool) -> String {
+    let options = if read_only {
+        json!({"readOnly":{}})
+    } else {
+        json!({"readWrite":{}})
+    };
+    let (status, result) = request(
+        router,
+        ":beginTransaction",
+        "POST",
+        json!({"options":options}),
+        true,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    result["transaction"].as_str().unwrap().to_owned()
+}
+
+fn transaction_write(token: &str) -> JsonValue {
+    json!({"transaction":token,"writes":[{"update":{
+        "name":format!("{}/notes/a", &ROOT[4..]),
+        "fields":{"title":{"stringValue":"committed"}}
+    }}]})
+}
+
+#[tokio::test]
+async fn rest_transaction_commits_preserve_native_read_conflicts_and_rules() {
+    let (router, _) = seeded().await;
+    let token = transaction(&router, false).await;
+    let path = format!("/notes/a?transaction={}", query_value(&token));
+    assert_eq!(
+        request(&router, &path, "GET", JsonValue::Null, true)
+            .await
+            .0,
+        StatusCode::OK
+    );
+    request(
+        &router,
+        "/notes/a",
+        "PATCH",
+        json!({"fields":{"title":{"stringValue":"changed"}}}),
+        true,
+    )
+    .await;
+    let (status, result) =
+        request(&router, ":commit", "POST", transaction_write(&token), true).await;
+    assert_eq!(status, StatusCode::CONFLICT);
+    assert_eq!(result["error"]["status"], "ABORTED");
+    assert_eq!(
+        request(&router, "/notes/a", "GET", JsonValue::Null, true)
+            .await
+            .1["fields"]["title"]["stringValue"],
+        "changed"
+    );
+
+    let token = transaction(&router, false).await;
+    assert_eq!(
+        request(&router, ":commit", "POST", transaction_write(&token), false)
+            .await
+            .0,
+        StatusCode::FORBIDDEN
+    );
+    let token = transaction(&router, true).await;
+    let (status, result) =
+        request(&router, ":commit", "POST", transaction_write(&token), true).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(result["error"]["status"], "FAILED_PRECONDITION");
+    let token = transaction(&router, false).await;
+    assert_eq!(
+        request(&router, ":commit", "POST", transaction_write(&token), true)
+            .await
+            .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        request(&router, "/notes/a", "GET", JsonValue::Null, true)
+            .await
+            .1["fields"]["title"]["stringValue"],
+        "committed"
+    );
+}
+
 #[tokio::test]
 async fn rest_get_masks_and_denials_match_captured_observations() {
     let (router, _) = seeded().await;

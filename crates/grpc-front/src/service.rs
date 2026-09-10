@@ -168,6 +168,45 @@ impl FirestoreService {
         self.list_documents(request).await.map(Response::into_inner)
     }
 
+    /// REST read with explicit client authentication, never implicit gRPC owner.
+    pub async fn get_document_for_client(
+        &self,
+        message: GetDocumentRequest,
+        authorization_header: Option<String>,
+    ) -> Result<proto::Document, Status> {
+        self.get_document(client_request(message, authorization_header))
+            .await
+            .map(Response::into_inner)
+    }
+
+    /// REST batch reads share snapshot selection, projection and atomic rules.
+    pub async fn batch_get_documents_for_client(
+        &self,
+        message: BatchGetDocumentsRequest,
+        authorization_header: Option<String>,
+    ) -> Result<Vec<BatchGetDocumentsResponse>, Status> {
+        let mut stream = self
+            .batch_get_documents(client_request(message, authorization_header))
+            .await?
+            .into_inner();
+        let mut results = Vec::new();
+        while let Some(result) = stream.next().await {
+            results.push(result?);
+        }
+        Ok(results)
+    }
+
+    /// Explicit REST transaction commits use the same read-set validation.
+    pub async fn commit_for_client(
+        &self,
+        message: CommitRequest,
+        authorization_header: Option<String>,
+    ) -> Result<CommitResponse, Status> {
+        self.commit(client_request(message, authorization_header))
+            .await
+            .map(Response::into_inner)
+    }
+
     /// Opens an in-process Listen channel backed by the same engine as the
     /// public gRPC streaming RPC.
     #[must_use]
@@ -657,13 +696,28 @@ struct TransactionState {
     accounting: TransactionMemoryRegistration,
 }
 
+fn client_request<T>(message: T, header: Option<String>) -> Request<T> {
+    let mut request = Request::new(message);
+    request
+        .extensions_mut()
+        .insert(AuthorizationSource::ClientHeader(header));
+    request
+}
+
+fn client_or_grpc_authorization<T>(request: &Request<T>) -> Result<AuthorizationSource, Status> {
+    match request.extensions().get::<AuthorizationSource>() {
+        Some(source) => Ok(source.clone()),
+        None => grpc_authorization_source(request.metadata()),
+    }
+}
+
 #[tonic::async_trait]
 impl Firestore for FirestoreService {
     async fn get_document(
         &self,
         request: Request<GetDocumentRequest>,
     ) -> Result<Response<proto::Document>, Status> {
-        let authorization_source = grpc_authorization_source(request.metadata())?;
+        let authorization_source = client_or_grpc_authorization(&request)?;
         let request = request.into_inner();
         let key = decode_document_name(&request.name)?;
         let authorization = authorization_source.resolve(key.database().project_id())?;
@@ -918,7 +972,7 @@ impl Firestore for FirestoreService {
         &self,
         request: Request<BatchGetDocumentsRequest>,
     ) -> Result<Response<Self::BatchGetDocumentsStream>, Status> {
-        let authorization_source = grpc_authorization_source(request.metadata())?;
+        let authorization_source = client_or_grpc_authorization(&request)?;
         let request = request.into_inner();
         let database = decode_database_name(&request.database)?;
         let authorization = authorization_source.resolve(database.project_id())?;
@@ -1028,7 +1082,7 @@ impl Firestore for FirestoreService {
         &self,
         request: Request<CommitRequest>,
     ) -> Result<Response<CommitResponse>, Status> {
-        let authorization_source = grpc_authorization_source(request.metadata())?;
+        let authorization_source = client_or_grpc_authorization(&request)?;
         let request = request.into_inner();
         let database = decode_database_name(&request.database)?;
         let authorization = authorization_source.resolve(database.project_id())?;
