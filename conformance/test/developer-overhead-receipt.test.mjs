@@ -26,6 +26,7 @@ test('native suite receipt includes all browser controls, a real Function and cl
 for(const recorded of [
   {name:'diagnostics-overhead-20260911.json.gz',sha:'64f69dc6c5d90141553fe6f1c29219d7d1c191d8870a5635cf606dfd5d3f7171',binary:'50bf6063bbfc2c4c147691537bce6de03ab1b2074bafc4a9fad8d76ab51caa79'},
   {name:'diagnostics-overhead-20260911-r2.json.gz',sha:'967d5cdca4b119739c8eb22e9f981e29ec762ab5a86eb32b6bd720fc780f7305',binary:'5a54dd47c72b3865506d8fe18a88abc1a0734c4b35b34967111eea60f15ad91e'},
+  {name:'diagnostics-overhead-20260911-r3.json.gz',sha:'3e0479284c27ec6f82b4ad1a3389c5c6790d3eda0982d1fc7824ec64c226ec70',binary:'63df176389dd697c9057777d570eecde7ef46ae9215d1538b4c454f4b5b91145'},
 ])test('Phase B diagnostic receipt retains all samples and unchanged limits: '+recorded.name,async()=>{
   const root=new URL('../../',import.meta.url);
   const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
