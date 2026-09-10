@@ -114,3 +114,56 @@ profile commit and corrected commit on the same host. Set
 `FIRESIDE_ENCODING_PROFILE_OUTPUT` to a fresh path for exact output hashing.
 Preserve both executables and interleave repetitions; do not compare different
 hardware or count compilation time as encoder time.
+
+## Pinned SDK Storage and native lifecycle repeat
+
+The [Storage measurement contract](../benchmarks/phase-e-storage-profile.json)
+was committed before the optional probe was added to the existing native lifecycle
+driver. It reuses the committed official `15.22.0` gzip metadata/download oracle,
+with `@google-cloud/storage` 7.22.0. No product change follows from this probe.
+
+Three pairs ran sequentially on the same non-quiescent M2 Pro host, reversing
+the order for pair two. Each process imports a separate tiny seed, performs the
+probe before opening Chromium, verifies both browser listener modes across
+native reopen, closes Chromium, and repeats the probe. Each payload has five
+warmups and twenty measured upload/metadata/download/delete cycles per phase.
+All six complete lifecycle runs passed: 600 total Storage cycles, of which 480
+are measured, with exact decoded JSON and verified object cleanup. All browser
+targets reconnect, Auth and acknowledged documents persist, and every suite
+shutdown exits zero. Original and corrected binaries are the exact identities
+recorded above; this is not an official-Java comparison.
+
+| Median of three run medians, complete SDK cycle | Published next.3 | Corrected 7f9a0f3 |
+| --- | ---: | ---: |
+| After import, 1,101-byte decoded JSON | 35.059 ms | 36.756 ms |
+| After import, 68,637-byte decoded JSON | 36.793 ms | 37.110 ms |
+| After native reopen, 1,101-byte decoded JSON | 34.682 ms | 34.895 ms |
+| After native reopen, 68,637-byte decoded JSON | 37.109 ms | 36.941 ms |
+
+These are sorted sample index 10 of twenty measurements, then the middle of
+three runs. They include client compression, SDK and loopback transport costs.
+Uploads account for approximately 22–25 ms of the cycle; decoded downloads are
+approximately 2.4–3.3 ms. That observation alone does not identify a server-side
+allocation or justify speculative Storage changes. Results overlap and do not
+show a general speed or memory win.
+
+Native-only sampled peaks span 17.25–19.50 MiB published and 17.52–20.00 MiB
+corrected. Samples are 100 ms apart and cannot guarantee continuous peaks. Java,
+Functions, Node's SDK/client and Chromium memory are deliberately not counted
+as Fireside memory. This tiny dataset does not establish full-data retention.
+
+All warmup and measured operations, decoded hashes, native RSS samples and
+unchanged lifecycle assertions are retained in `storage-pair*.json.gz` with
+[checksums](../benchmarks/results/phase-e/SHA256SUMS). The permanent receipt test
+recomputes input bytes, checks every cycle and verifies both identities and run
+order. The first attempted published run stopped before measurement because
+the SDK does not export its `package.json` subpath (`ERR_PACKAGE_PATH_NOT_EXPORTED`).
+Its failure and clean shutdown remain in the original private diagnostic output;
+the corrected run resolves the SDK's actual entry point to read its manifest.
+Neither the workload nor a product behavior was changed to pass that attempt.
+
+Reproduce with Node 24 and the existing dependency root containing the pinned
+Functions/Storage SDK and Firebase web SDK: `node
+conformance/src/suite/verify-native-resume.mjs BINARY DEPENDENCIES EMULATOR_CACHE
+FRESH_OUTPUT --profile-storage`. Repeat both immutable binaries in the frozen
+order. Do not reuse an output directory or run concurrent stacks.

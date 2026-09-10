@@ -10,9 +10,13 @@ import {resolve,dirname} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import {build} from 'esbuild';
 import {chromium} from 'playwright';
+import {profileStorage} from './profile-storage.mjs';
 
-assert([6,7].includes(process.argv.length),'binary dependency-root emulator-cache output [previous-binary]');
-const [binary,dependencies,cache,output,previous]=process.argv.slice(2).map(value=>resolve(value));
+const positional=process.argv.slice(2);
+const storageProfile=positional.at(-1)==='--profile-storage';
+if(storageProfile)positional.pop();
+assert([4,5].includes(positional.length),'binary dependency-root emulator-cache output [previous-binary] [--profile-storage]');
+const [binary,dependencies,cache,output,previous]=positional.map(value=>resolve(value));
 const project='demo-native-resume',bucket=project+'.appspot.com';
 await mkdir(output,{mode:0o700});
 const json=async(name,value)=>writeFile(output+'/'+name,JSON.stringify(value,null,2)+'\n');
@@ -50,6 +54,13 @@ const shared=['suite','--host','127.0.0.1','--project-dir',output,'--project-id'
 for(const [service,port] of Object.entries(ports))shared.push('--'+service+'-port',String(port));
 for(const server of reservations)await new Promise(resolve=>server.close(resolve));
 let active=null,browser=null,web=null;const launches=[],pageErrors=[];
+const storageProfiles=[];
+const measureStorage=async phase=>{
+  if(!storageProfile)return;
+  storageProfiles.push(await profileStorage({pid:active.child.pid,
+    binary:phase==='first-import'?(previous??binary):binary,dependencies,
+    origin:`http://127.0.0.1:${ports.storage}`,project,bucket,output:output+'/'+phase+'-storage-profile.json',phase}));
+};
 const request=async(service,path,method='GET',body)=>{
   const response=await fetch(`http://127.0.0.1:${ports[service]}${path}`,{method,headers:{authorization:'Bearer owner','content-type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(10000)});
   assert.equal(response.status,200,`${service} ${method} ${path}: ${await response.clone().text()}`);return response.json();
@@ -82,6 +93,7 @@ try{
   await put(0);await stop();
   const args=['--state-dir',output+'/working','--resume-state','--import',output+'/seed','--export-on-exit',output+'/export'];
   await launch('first-import',args,previous??binary);
+  await measureStorage('first-import');
   const {outputFiles}=await build({stdin:{contents:`
     import {initializeApp} from 'firebase/app';
     import {initializeFirestore,connectFirestoreEmulator,collection,onSnapshot} from 'firebase/firestore';
@@ -117,7 +129,7 @@ try{
   assert.equal(launches[1].imported,true);assert.equal(launches[2].imported,false);assert.equal(launches[2].resumed,true);
   const events=await page.evaluate(()=>({seen:window.seen,listenerErrors:window.listenerErrors}));
   assert.deepEqual(events.listenerErrors,[]);assert.deepEqual(pageErrors,[]);
-  await browser.close();browser=null;await stop();
+  await browser.close();browser=null;await measureStorage('native-reopen');await stop();
   let portableRollback=false;
   if(previous){
     assert.notEqual(launches[1].binarySha256,launches[2].binarySha256,'upgrade must actually use distinct binaries');
@@ -130,5 +142,6 @@ try{
   }
   await json('result.json',{passed:true,acceptance:false,binarySha256:sha(await readFile(binary)),driverSha256:sha(await readFile(new URL(import.meta.url))),contractSha256:sha(contractBytes),nativeFormat:contract.nativeFormat,nativeReceiptUnchanged:true,node:process.version,launches,previousReceipt,nativeUpgrade:previous!==undefined,portableRollback,authUsersAfterReopen:1,storageBytesExact:true,localWritesPreserved:true,liveBrowserReconnected:true,modes:['long-poll','stream'],targets:['items','other'],events,pageErrors,seedSeparateFromExport:true});
   console.log('Native resume live test passed: import, local writes, clean stop, reopen, both browser modes and two targets.');
+  if(storageProfile)await json('storage-profiles.json',{passed:true,acceptance:false,storageProfiles});
 }catch(error){await json('failure.json',{error:String(error),stack:error.stack,launches,pageErrors});throw error;}
 finally{if(browser)await browser.close();if(active)await stop();if(web)await new Promise(resolve=>web.close(resolve));}

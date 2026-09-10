@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "acceptance": false,
+  "packageEngineRevision": "5cb2437112039a91f1389c70545f97fb030e79c8",
+  "packageScope": "Package workflows at each reviewed head build the release-pinned engine, not new Rust source. Final combined-source platform qualification remains required.",
+  "checkedAt": "2026-09-10T22:16:00Z",
+  "pullRequests": [
+    {
+      "pr": 19,
+      "head": "f6b25ddcddf93cfb0f800030ac809d994b46af52",
+      "merge": "403189ed75095b1ac76102b9ff0ae19e9388112d",
+      "reviewed": true,
+      "checks": [
+        {
+          "url": "https://github.com/sanjevirau/fireside/actions/runs/34534123193",
+          "headSha": "f6b25ddcddf93cfb0f800030ac809d994b46af52",
+          "conclusion": "success",
+          "jobs": [
+            {
+              "name": "Differential harness",
+              "conclusion": "success"
+            },
+            {
+              "name": "Firebase JS SDK browser integration (memory, client memory)",
+              "conclusion": "success"
+            },
+            {
+              "name": "Firebase JS SDK browser integration (disk-wal, client memory)",
+              "conclusion": "success"
+            },
+            {
+              "name": "Firebase JS SDK browser integration (disk-wal, client persistence)",
+              "conclusion": "success"
+            },
+            {
+              "name": "Public fixture and package checks",
+              "conclusion": "success"
+            },
+            {
+              "name": "Rust quality gate",
+              "conclusion": "success"
+            },
+            {
+              "name": "Firebase JS SDK browser integration (memory, client persistence)",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "url": "https://github.com/sanjevirau/fireside/actions/runs/34534123371",
+          "headSha": "f6b25ddcddf93cfb0f800030ac809d994b46af52",
+          "conclusion": "success",
+          "jobs": [
+            {
+              "name": "Packed install (darwin-arm64)",
+              "conclusion": "success"
+            },
+            {
+              "name": "Packed install (darwin-x64)",
+              "conclusion": "success"
+            },
+            {
+              "name": "Packed install (linux-x64)",
+              "conclusion": "success"
+            },
+            {
+              "name": "Packed install (win32-x64)",
+              "conclusion": "success"
+            },
+            {
+              "name": "Packed install (linux-arm64)",
+              "conclusion": "success"
+            },
+            {
+              "name": "verify",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "pr": 20,
+      "head": "ead342f821950111bb93709f2b925679f75f383e",
+      "merge": "0d6eaca7321e96575033cb4a644ebc7eb7cd0613",
+      "reviewed": true,
+      "checks": [
+        {
+          "url": "https://github.com/sanjevirau/fireside/actions/runs/34534157043",
+          "headSha": "ead342f821950111bb93709f2b925679f75f383e",
+          "conclusion": "success",
+          "jobs": [
+            {
+              "name": "Public fixture and package checks",
+              "conclusion": "success"
+            },
+            {
+              "name": "Firebase JS SDK browser integration (memory, client memory)",
+              "conclusion": "success"
+            },
+            {
+              "name": "Firebase JS SDK browser integration (memory, client persistence)",
+              "conclusion": "success"
+            },
+            {
+              "name": "Rust quality gate",
+              "conclusion": "success"
+            },
+            {
+              "name": "Firebase JS SDK browser integration (disk-wal, client persistence)",
+              "conclusion": "success"
+            },
+            {
+              "name": "Firebase JS SDK browser integration (disk-wal, client memory)",
+              "conclusion": "success"
+            },
+            {
+              "name": "Differential harness",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "url": "https://github.com/sanjevirau/fireside/actions/runs/34534156971",
+          "headSha": "ead342f821950111bb93709f2b925679f75f383e",
+          "conclusion": "success",
+          "jobs": [
+            {
+              "name": "Packed install (linux-x64)",
+              "conclusion": "success"
+            },
+            {
+              "name": "Packed install (darwin-arm64)",
+              "conclusion": "success"
+            },
+            {
+              "name": "Packed install (win32-x64)",
+              "conclusion": "success"
+            },
+            {
+              "name": "Packed install (linux-arm64)",
+              "conclusion": "success"
+            },
+            {
+              "name": "Packed install (darwin-x64)",
+              "conclusion": "success"
+            },
+            {
+              "name": "verify",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
