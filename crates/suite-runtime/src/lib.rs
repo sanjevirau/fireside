@@ -386,14 +386,17 @@ async fn follow_functions_inventory(
         {
             return format!("Functions reload schedule rejected: {error}");
         }
+        let count = inventory.functions().count();
         logging.record(
             "INFO",
             Some("functions"),
-            format!(
-                "Functions routing refreshed; {} registered functions",
-                inventory.functions().count(),
-            ),
+            format!("Functions routing refreshed; {count} registered functions"),
         );
+        // Upstream's /backends lists a handler as soon as it is registered,
+        // before this native refresh finishes. Announce completion on stdout
+        // so a supervisor or harness can wait for native delivery readiness
+        // instead of racing the upstream inventory.
+        println!("fireside functions routing refreshed: {count} registered functions");
     }
     "Functions inventory stream closed".to_owned()
 }

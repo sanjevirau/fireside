@@ -524,6 +524,13 @@ The existing supported schedule semantics are unchanged. This is function-orient
 reload support, not general Pub/Sub subscribers or a promise to repair every
 upstream removal/disabled-handler behavior. The full synthetic native UI check
 adds a separate topic-reload scenario; private consumer runners are unchanged.
+Upstream `/backends` lists a new handler at registration, before the native
+routing refresh finishes; the official emulator creates the topic during that
+registration instead. A publish in that short window returns 404 on Fireside.
+The coordinator therefore announces each completed refresh on stdout
+(`fireside functions routing refreshed: N registered functions`), and the
+topic-reload check waits for that line rather than only for the upstream
+inventory. This is an ordering disclosure, not a delivery guarantee.
 
 The pinned Functions workload host drains/stops its upstream emulator before
 exiting. A served request leaves an upstream socket-discovery timer referenced
