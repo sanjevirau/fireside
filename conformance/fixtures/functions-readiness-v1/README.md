@@ -39,6 +39,16 @@ therefore match the discovered backend, not just a function ID or global hash.
 This collision is rejected by the owned adapter instead of silently shadowing
 one configured backend.
 
+A sixth startup uses a second local predefined Extension-shaped backend whose
+two resources pass through the pinned host's own `extension.yaml` normalizer.
+One declares `httpsTrigger: {}`; the other declares only `taskQueueTrigger: {}`,
+the shape published extensions use for full-reindex work. firebase-tools
+15.22.0 does not carry that trigger into its emulated definition, so upstream
+discovers a handler with no trigger at all, warns that it is unsupported, and
+registers it `ignored: true` while still listing it in `/backends`. The
+official emulator starts normally in that state. This pins upstream's own
+limitation, not task-queue delivery, and downloads no extension.
+
 `--verify-owned-adapter` runs the actual native host's admission function against
 the same real pinned Functions class and auxiliary peers. Those receipts use a
 different target label and are verification results, not replacement oracle
@@ -48,4 +58,7 @@ Only the fresh synthetic workspace directory in inventory fields is replaced by
 `<workspace>`. Loopback ports, source text, upstream errors and proxy-recorded
 bytes are unchanged. Capture and upstream source hashes are recorded. Reproduce
 with `conformance/src/suite/capture-functions-readiness.mjs` and the pinned tools;
-the output directory must be fresh. This fixture precedes Phase C changes.
+the output directory must be fresh. The fixture was first captured before the
+Phase C changes and recaptured in full, with the same pinned tools, after the
+release of `0.1.0-next.4` to add the sixth scenario; that release's host
+rejected the upstream-ignored shape at startup.

@@ -34,6 +34,21 @@ test('short admission and native browser receipts retain their separate exact id
     if(['healthy','predefined-backend'].includes(row.mode))assert.equal(row.connectError,null);
     else assert.match(row.connectError,/discovery did not complete|not admitted|another backend/);
   }
+  const corrected=records['functions-admission-20260912.json'];
+  assert.equal(corrected.syntheticOnly,true);assert.equal(corrected.passed,true);
+  assert.equal(corrected.target,'fireside-owned-admission-with-official-peers');
+  assert.equal(corrected.targetVersion,'15.22.0');assert.equal(corrected.sdkVersion,'7.2.5');
+  assert.equal(corrected.ownedAdapterSha256,'6fa995519ef9c63d00853cd8a1ef3f82513340b96eb7ecb0a3c0acecf9d73f14');
+  assert.deepEqual(corrected.observations.map(row=>row.mode),[...admission.observations.map(row=>row.mode),'unsupported-predefined']);
+  for(const row of corrected.observations){
+    if(['healthy','predefined-backend','unsupported-predefined'].includes(row.mode)){
+      assert.equal(row.connectError,null);
+      assert.deepEqual(row.admission.ignored.map(item=>item.id),row.mode==='unsupported-predefined'?['us-central1-full']:[]);
+    }else{
+      assert.equal(row.admission,null);
+      assert.match(row.connectError,/discovery did not complete|not admitted \(registration with this suite failed\)|another backend/);
+    }
+  }
   const browser=records['native-suite-ui-20260911-r11.json'];
   assert.equal(browser.passed,true);assert.equal(browser.syntheticOnly,true);assert.equal(browser.acceptance,false);
   assert.equal(browser.binarySha256,'0ee545e596aebbe9380c4852a7a9d24a17050362ff64e6a4cca81655ca0875fc');

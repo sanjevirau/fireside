@@ -33,6 +33,15 @@ test('Functions readiness capture preserves partial discovery and real auxiliary
   assert.deepEqual(collision.calls.map(row=>row.ids),[collision.calls[0].ids,collision.calls[0].ids]);
   assert.deepEqual(collision.inventory.backends.map(row=>row.functionTriggers.length),[0,2]);
   assert(collision.triggerRecords.every(row=>row.recordBackend==='collision'));
+  // Upstream's own extension.yaml normalizer drops taskQueueTrigger: the
+  // official host discovers, lists and ignores a trigger-less handler, and starts.
+  const unsupported=fixture.observations.find(row=>row.mode==='unsupported-predefined');
+  assert.equal(unsupported.connectError,null);assert.equal(unsupported.status,200);
+  assert.deepEqual(unsupported.calls[0].ids,['us-central1-alpha','us-central1-full']);
+  const full=unsupported.calls[0].definitions.find(def=>def.id==='us-central1-full');
+  assert.deepEqual(Object.keys(full).filter(key=>key.endsWith('Trigger')),[]);
+  assert.deepEqual(unsupported.inventory.backends[0].functionTriggers.map(row=>row.name),['alpha','full']);
+  assert.deepEqual(unsupported.triggerRecords.map(row=>[row.id,row.ignored,row.enabled]),[['us-central1-alpha',false,true],['us-central1-full',true,true]]);
   for(const auxiliary of fixture.auxiliary){
     assert.equal(auxiliary.fixture.exchanges.length,1);
     const exchange=auxiliary.fixture.exchanges[0];

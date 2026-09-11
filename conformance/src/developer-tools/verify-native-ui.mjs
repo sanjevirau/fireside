@@ -111,6 +111,11 @@ try{
       if(backends.backends?.some(backend=>backend.functionTriggers?.some(def=>def.id==='us-central1-beta')))break;
       assert(Date.now()<deadline,'native Functions watcher inventory timeout');await delay(100);
     }
+    // Upstream lists the handler at registration; native topic routing follows
+    // its own refresh. Wait for that announced completion before publishing.
+    while(!log.includes('fireside functions routing refreshed: 3 registered functions')){
+      assert(Date.now()<deadline,'native routing refresh timeout');await delay(50);
+    }
     await publish('added-handler','beta-topic','beta',2);
     await publish('updated-handler','alpha-topic','alpha',2);
   }

@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "syntheticOnly": true,
-  "target": "official-firebase-tools",
+  "target": "fireside-owned-admission-with-official-peers",
   "targetVersion": "15.22.0",
   "sdkVersion": "7.2.5",
   "node": "v24.20.0",
-  "capturedAt": "2026-09-11T17:12:17.786Z",
+  "capturedAt": "2026-09-11T17:10:51.810Z",
   "projectId": "demo-fireside-readiness-oracle",
   "sources": {
     "http": "const {onRequest,onCall}=require('firebase-functions/v2/https');exports.alpha=onRequest((req,res)=>res.json({synthetic:true}));exports.echo=onCall(req=>({echo:req.data}));\n",
@@ -240,7 +240,11 @@
           "ignored": false,
           "enabled": true
         }
-      ]
+      ],
+      "admission": {
+        "customFunctionCount": 4,
+        "ignored": []
+      }
     },
     {
       "mode": "failed-codebase",
@@ -290,7 +294,7 @@
           "error": "FirebaseError: Functions codebase could not be analyzed successfully. It may have a syntax or runtime error"
         }
       ],
-      "connectError": null,
+      "connectError": "Error: Functions source <workspace>/broken discovery did not complete",
       "status": 200,
       "inventory": {
         "backends": [
@@ -353,7 +357,8 @@
           "ignored": false,
           "enabled": true
         }
-      ]
+      ],
+      "admission": null
     },
     {
       "mode": "missing-auxiliary",
@@ -455,7 +460,7 @@
           ]
         }
       ],
-      "connectError": null,
+      "connectError": "Error: Function us-central1-task was discovered but not admitted (registration with this suite failed)",
       "status": 200,
       "inventory": {
         "backends": [
@@ -580,7 +585,8 @@
           "ignored": true,
           "enabled": true
         }
-      ]
+      ],
+      "admission": null
     },
     {
       "mode": "predefined-backend",
@@ -635,7 +641,11 @@
           "ignored": false,
           "enabled": true
         }
-      ]
+      ],
+      "admission": {
+        "customFunctionCount": 1,
+        "ignored": []
+      }
     },
     {
       "mode": "colliding-backends",
@@ -721,7 +731,7 @@
           ]
         }
       ],
-      "connectError": null,
+      "connectError": "Error: Function us-central1-alpha was registered by another backend",
       "status": 200,
       "inventory": {
         "backends": [
@@ -784,7 +794,8 @@
           "ignored": false,
           "enabled": true
         }
-      ]
+      ],
+      "admission": null
     },
     {
       "mode": "unsupported-predefined",
@@ -865,7 +876,16 @@
           "ignored": true,
           "enabled": true
         }
-      ]
+      ],
+      "admission": {
+        "customFunctionCount": 2,
+        "ignored": [
+          {
+            "id": "us-central1-full",
+            "reason": "upstream found no httpsTrigger, eventTrigger or blockingTrigger"
+          }
+        ]
+      }
     }
   ],
   "auxiliary": [
@@ -878,7 +898,7 @@
           "target": "official",
           "targetVersion": "15.22.0",
           "sdk": "firebase-functions/7.2.5",
-          "recordedAt": "2026-09-11T17:12:17.786Z",
+          "recordedAt": "2026-09-11T17:10:51.810Z",
           "transport": "http1"
         },
         "exchanges": [
@@ -936,7 +956,7 @@
                 },
                 {
                   "name": "date",
-                  "value": "Fri, 11 Sep 2026 17:12:26 GMT"
+                  "value": "Fri, 11 Sep 2026 17:11:00 GMT"
                 },
                 {
                   "name": "connection",
@@ -965,7 +985,7 @@
           "target": "official",
           "targetVersion": "15.22.0",
           "sdk": "firebase-functions/7.2.5",
-          "recordedAt": "2026-09-11T17:12:17.786Z",
+          "recordedAt": "2026-09-11T17:10:51.810Z",
           "transport": "http1"
         },
         "exchanges": [
@@ -1000,7 +1020,7 @@
                   "value": "gzip,deflate"
                 }
               ],
-              "bodyBase64": "eyJyZXRyeUNvbmZpZyI6eyJtYXhBdHRlbXB0cyI6bnVsbCwibWF4UmV0cnlTZWNvbmRzIjpudWxsLCJtYXhCYWNrb2ZmU2Vjb25kcyI6bnVsbCwibWF4RG91YmxpbmdzIjpudWxsLCJtaW5CYWNrb2ZmU2Vjb25kcyI6bnVsbH0sInJhdGVMaW1pdHMiOnsibWF4Q29uY3VycmVudERpc3BhdGNoZXMiOm51bGwsIm1heERpc3BhdGNoZXNQZXJTZWNvbmQiOm51bGx9LCJkZWZhdWx0VXJpIjoiaHR0cDovLzEyNy4wLjAuMTo1NjA2MS9kZW1vLWZpcmVzaWRlLXJlYWRpbmVzcy1vcmFjbGUvdXMtY2VudHJhbDEvdGFzayJ9"
+              "bodyBase64": "eyJyZXRyeUNvbmZpZyI6eyJtYXhBdHRlbXB0cyI6bnVsbCwibWF4UmV0cnlTZWNvbmRzIjpudWxsLCJtYXhCYWNrb2ZmU2Vjb25kcyI6bnVsbCwibWF4RG91YmxpbmdzIjpudWxsLCJtaW5CYWNrb2ZmU2Vjb25kcyI6bnVsbH0sInJhdGVMaW1pdHMiOnsibWF4Q29uY3VycmVudERpc3BhdGNoZXMiOm51bGwsIm1heERpc3BhdGNoZXNQZXJTZWNvbmQiOm51bGx9LCJkZWZhdWx0VXJpIjoiaHR0cDovLzEyNy4wLjAuMTo1MDM5OC9kZW1vLWZpcmVzaWRlLXJlYWRpbmVzcy1vcmFjbGUvdXMtY2VudHJhbDEvdGFzayJ9"
             },
             "response": {
               "status": 200,
@@ -1019,11 +1039,11 @@
                 },
                 {
                   "name": "etag",
-                  "value": "W/\"152-qPUvTfT2Dy6x4xrLRZ243P7KCCg\""
+                  "value": "W/\"152-SBYaXlLYFqhFa6+XNp39bONQFSo\""
                 },
                 {
                   "name": "date",
-                  "value": "Fri, 11 Sep 2026 17:12:26 GMT"
+                  "value": "Fri, 11 Sep 2026 17:11:00 GMT"
                 },
                 {
                   "name": "connection",
@@ -1034,9 +1054,9 @@
                   "value": "timeout=5"
                 }
               ],
-              "bodyBase64": "eyJ0YXNrUXVldWVDb25maWciOnsicmV0cnlDb25maWciOnsibWF4QXR0ZW1wdHMiOjMsIm1heFJldHJ5U2Vjb25kcyI6bnVsbCwibWF4QmFja29mZlNlY29uZHMiOjM2MDAsIm1heERvdWJsaW5ncyI6MTYsIm1pbkJhY2tvZmZTZWNvbmRzIjowLjF9LCJyYXRlTGltaXRzIjp7Im1heENvbmN1cnJlbnREaXNwYXRjaGVzIjoxMDAwLCJtYXhEaXNwYXRjaGVzUGVyU2Vjb25kIjo1MDB9LCJ0aW1lb3V0U2Vjb25kcyI6MTAsInJldHJ5IjpmYWxzZSwiZGVmYXVsdFVyaSI6Imh0dHA6Ly8xMjcuMC4wLjE6NTYwNjEvZGVtby1maXJlc2lkZS1yZWFkaW5lc3Mtb3JhY2xlL3VzLWNlbnRyYWwxL3Rhc2sifX0=",
+              "bodyBase64": "eyJ0YXNrUXVldWVDb25maWciOnsicmV0cnlDb25maWciOnsibWF4QXR0ZW1wdHMiOjMsIm1heFJldHJ5U2Vjb25kcyI6bnVsbCwibWF4QmFja29mZlNlY29uZHMiOjM2MDAsIm1heERvdWJsaW5ncyI6MTYsIm1pbkJhY2tvZmZTZWNvbmRzIjowLjF9LCJyYXRlTGltaXRzIjp7Im1heENvbmN1cnJlbnREaXNwYXRjaGVzIjoxMDAwLCJtYXhEaXNwYXRjaGVzUGVyU2Vjb25kIjo1MDB9LCJ0aW1lb3V0U2Vjb25kcyI6MTAsInJldHJ5IjpmYWxzZSwiZGVmYXVsdFVyaSI6Imh0dHA6Ly8xMjcuMC4wLjE6NTAzOTgvZGVtby1maXJlc2lkZS1yZWFkaW5lc3Mtb3JhY2xlL3VzLWNlbnRyYWwxL3Rhc2sifX0=",
               "bodyChunksBase64": [
-                "eyJ0YXNrUXVldWVDb25maWciOnsicmV0cnlDb25maWciOnsibWF4QXR0ZW1wdHMiOjMsIm1heFJldHJ5U2Vjb25kcyI6bnVsbCwibWF4QmFja29mZlNlY29uZHMiOjM2MDAsIm1heERvdWJsaW5ncyI6MTYsIm1pbkJhY2tvZmZTZWNvbmRzIjowLjF9LCJyYXRlTGltaXRzIjp7Im1heENvbmN1cnJlbnREaXNwYXRjaGVzIjoxMDAwLCJtYXhEaXNwYXRjaGVzUGVyU2Vjb25kIjo1MDB9LCJ0aW1lb3V0U2Vjb25kcyI6MTAsInJldHJ5IjpmYWxzZSwiZGVmYXVsdFVyaSI6Imh0dHA6Ly8xMjcuMC4wLjE6NTYwNjEvZGVtby1maXJlc2lkZS1yZWFkaW5lc3Mtb3JhY2xlL3VzLWNlbnRyYWwxL3Rhc2sifX0="
+                "eyJ0YXNrUXVldWVDb25maWciOnsicmV0cnlDb25maWciOnsibWF4QXR0ZW1wdHMiOjMsIm1heFJldHJ5U2Vjb25kcyI6bnVsbCwibWF4QmFja29mZlNlY29uZHMiOjM2MDAsIm1heERvdWJsaW5ncyI6MTYsIm1pbkJhY2tvZmZTZWNvbmRzIjowLjF9LCJyYXRlTGltaXRzIjp7Im1heENvbmN1cnJlbnREaXNwYXRjaGVzIjoxMDAwLCJtYXhEaXNwYXRjaGVzUGVyU2Vjb25kIjo1MDB9LCJ0aW1lb3V0U2Vjb25kcyI6MTAsInJldHJ5IjpmYWxzZSwiZGVmYXVsdFVyaSI6Imh0dHA6Ly8xMjcuMC4wLjE6NTAzOTgvZGVtby1maXJlc2lkZS1yZWFkaW5lc3Mtb3JhY2xlL3VzLWNlbnRyYWwxL3Rhc2sifX0="
               ]
             }
           }
@@ -1044,5 +1064,6 @@
       }
     }
   ],
-  "passed": true
+  "passed": true,
+  "ownedAdapterSha256": "6fa995519ef9c63d00853cd8a1ef3f82513340b96eb7ecb0a3c0acecf9d73f14"
 }

@@ -7,7 +7,25 @@ import {createHash} from 'node:crypto';
 const source=await readFile(new URL('../support/functions-host.cjs',import.meta.url),'utf8');
 const declaration=source.match(/^async function startFunctionsOnce\([^]*?^\}/m)?.[0];
 assert(declaration,'actual workload-host discovery adapter');
-const start=runInNewContext('('+declaration+')');
+const classifier=source.match(/^function upstreamIgnoreReason\([^]*?^\}/m)?.[0];
+assert(classifier,'actual ignored-record classifier');
+// Pinned firebase-tools 15.22.0 getFunctionService, reduced to the captured
+// definition shapes; the conformance capture verifies the adapter with the real one.
+function getFunctionService(def){
+  if(def.eventTrigger){
+    if(def.eventTrigger.channel)return 'eventarc.googleapis.com';
+    if(def.eventTrigger.service)return def.eventTrigger.service;
+    const type=def.eventTrigger.eventType;
+    if(type.includes('firestore'))return 'firestore.googleapis.com';
+    if(type.includes('database'))return 'firebaseio.com';
+    if(type.includes('pubsub'))return 'pubsub.googleapis.com';
+    return '';
+  }
+  if(def.blockingTrigger)return def.blockingTrigger.eventType;
+  if(def.httpsTrigger)return 'https';
+  return 'unknown';
+}
+const start=runInNewContext(classifier+';('+declaration+')',{getFunctionService});
 const fixture=JSON.parse(await readFile(new URL('../conformance/fixtures/functions-readiness-v1/fixture.json',import.meta.url)));
 
 test('reload notifications follow completed registration without rediscovery',async()=>{
@@ -51,11 +69,34 @@ function replay(mode,omitId){
   };
   return {run:()=>start(emulator,{start:async()=>{}},backends),calls};
 }
+const plain=value=>JSON.parse(JSON.stringify(value));
 test('complete healthy discovery is admitted exactly once per backend',async()=>{
-  const host=replay('healthy');assert.equal(await host.run(),4);assert.deepEqual(host.calls,['http','auxiliary']);
+  const host=replay('healthy');assert.deepEqual(plain(await host.run()),{customFunctionCount:4,ignored:[]});assert.deepEqual(host.calls,['http','auxiliary']);
 });
-test('an ignored function must not produce ready even when upstream inventory lists it',async()=>{
-  await assert.rejects(replay('missing-auxiliary').run(),/ignored|not registered|not admitted/i);
+test('a function ignored after a failed registration with this suite must not produce ready',async()=>{
+  await assert.rejects(replay('missing-auxiliary').run(),/us-central1-task was discovered but not admitted \(registration with this suite failed\)/);
+});
+test('a function upstream itself cannot type is reported as ignored and does not block ready',async()=>{
+  const host=replay('unsupported-predefined');
+  assert.deepEqual(plain(await host.run()),{customFunctionCount:2,ignored:[{id:'us-central1-full',reason:'upstream found no httpsTrigger, eventTrigger or blockingTrigger'}]});
+  assert.match(source,/ignoredCount: ignored\.length/);
+  assert.match(source,/discovered but ignored by firebase-tools: \$\{handler\.reason\}/);
+});
+test('an ignored event trigger outside the suite service profile is reported, inside it is fatal',async()=>{
+  const outside={id:'us-central1-rtdb',eventTrigger:{eventType:'providers/google.firebase.database/eventTypes/ref.write',resource:'projects/_/instances/x/refs/y'}};
+  const inside={id:'us-central1-doc',eventTrigger:{eventType:'providers/cloud.firestore/eventTypes/document.write',resource:'projects/p/databases/(default)/documents/x/{id}'}};
+  const disabled={id:'us-central1-off',httpsTrigger:{}};
+  const backend={codebase:'synthetic',functionsDir:'synthetic'};
+  const emulator=definitions=>({
+    async discoverTriggers(){return definitions;},
+    async connect(){await this.discoverTriggers(backend);},
+    getTriggerKey:def=>def.id,
+    getTriggerRecordByKey:key=>({def:definitions.find(def=>def.id===key),backend,enabled:key!=='us-central1-off',ignored:key!=='us-central1-off'}),
+  });
+  const registry={start:async()=>{}};
+  assert.deepEqual(plain(await start(emulator([outside]),registry,[backend])),{customFunctionCount:1,ignored:[{id:'us-central1-rtdb',reason:"firebaseio.com event triggers are outside this suite's service profile"}]});
+  await assert.rejects(start(emulator([inside]),registry,[backend]),/us-central1-doc was discovered but not admitted \(registration with this suite failed\)/);
+  await assert.rejects(start(emulator([disabled]),registry,[backend]),/us-central1-off was discovered but not admitted \(disabled\)/);
 });
 test('a missing registered definition must not be hidden behind a successful discovery count',async()=>{
   await assert.rejects(replay('healthy','us-central1-echo').run(),/missing|not registered|not admitted/i);
@@ -64,7 +105,7 @@ test('a broken configured codebase cannot borrow healthy functions from another 
   await assert.rejects(replay('failed-codebase').run(),/discovery did not complete/);
 });
 test('predefined backends use the admitted regional definition',async()=>{
-  assert.equal(await replay('predefined-backend').run(),1);
+  assert.equal((await replay('predefined-backend').run()).customFunctionCount,1);
 });
 test('colliding codebases cannot borrow another backends registered function identity',async()=>{
   await assert.rejects(replay('colliding-backends').run(),/another backend|not registered/);
