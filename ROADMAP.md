@@ -158,8 +158,10 @@ cache-notification assertion gap; a short supplemental check outside the
 protected runner then verified the invalidation path on both backends, so the
 audit is closed without a product change. Slower catalogue-query, Storage-cycle
 and startup measurements are recorded as known limitations of this release with
-component attribution, not hidden. Publication and registry-installed
-verification are still pending.
+component attribution, not hidden. `0.1.0-next.4` was published through the
+protected release workflow on 2026-09-11 and verified from the registry; see
+the qualification status for the receipt. Phase F is complete for this scoped
+release. Stable promotion (`latest`) remains a separate reviewed decision.
 
 - [x] Batch fixes with short targeted tests, then run the required exact-candidate
   quality, SDK, native-package and representative consumer acceptance checks.
@@ -170,7 +172,7 @@ verification are still pending.
   acceptance once the combined candidate passes its cheap prerequisites. A
   previous official comparison may be reused only when comparability and
   authorization still hold; label reused evidence as banked. No silent long retry.
-- [ ] Verify the registry-installed release, publish generic compatibility and
+- [x] Verify the registry-installed release, publish generic compatibility and
   performance evidence, and document remaining out-of-scope features. Private
   consumer acceptance evidence stays private.
 
