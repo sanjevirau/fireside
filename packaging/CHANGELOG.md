@@ -1,3 +1,23 @@
+# 0.1.0-next.4 — Phase A–F qualified engine
+
+- Pin the engine to `fc54e341a6da4fc6ca26849287f92f335a6184ce`, the candidate
+  that passed exact-source CI, all five platform install cells and a
+  representative private consumer's full-data endurance, restart, parity and
+  fresh-setup acceptance. See `support/phase-f-qualification.md`.
+- Engine changes since next.3 cover the Phase A–E work: developer-tool
+  inspection and request tracing, rules coverage, Functions readiness and
+  reload contracts, state upgrade, low-disk and interrupted-export recovery,
+  REST read projection/transaction semantics, canonical REST value/timestamp
+  encoding, and cheaper nested-value serialization.
+- Known limitations recorded with this release: under one consumer's
+  concurrent two-hour workload, a limit-1 collection query and a 64 KiB
+  Storage cycle had higher medians than the official emulator, while idle and
+  light-load medians were at parity or better; Storage mutations pay an fsync
+  by design; fresh-start import of a large dataset is slower than the Java
+  in-memory import. Persistent-dataset resume was not measured in that run.
+- No dependency version, toolchain or package layout change. Prerelease on
+  `next`; no stable or universal-compatibility claim.
+
 # 0.1.0-next.3 — independent source identity
 
 - Replace the remaining consumer-shaped serialization inputs with independently

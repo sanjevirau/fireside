@@ -6,12 +6,12 @@ Storage, Functions, a limited Pub/Sub adapter and supporting hub/UI services. It
 universal replacement for every Firebase product or arbitrary service subsets.
 
 Install the scoped package, not the unrelated unscoped `fireside` package.
-The following exact-version command is for this `0.1.0-next.3` preview package
+The following exact-version command is for this `0.1.0-next.4` preview package
 once published. Repository development may precede registry availability; check
 the root project README for the currently published version.
 
 ```sh
-npm install --save-dev --save-exact @fireside-dev/cli@0.1.0-next.3
+npm install --save-dev --save-exact @fireside-dev/cli@0.1.0-next.4
 npx fireside setup
 npx fireside doctor --project demo-my-app
 npx fireside emulators:start --project demo-my-app
