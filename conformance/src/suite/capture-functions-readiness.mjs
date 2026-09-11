@@ -27,6 +27,8 @@ for(const key of ['FIREBASE_TOKEN','CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE','NOD
 Object.assign(process.env,{PATH:dirname(process.execPath)+':'+process.env.PATH,
   GOOGLE_APPLICATION_CREDENTIALS:join(output,'adc.json'),CLOUDSDK_CONFIG:join(output,'gcloud'),GCLOUD_PROJECT:projectId,GOOGLE_CLOUD_PROJECT:projectId});
 const {FunctionsEmulator}=require(join(tools,'lib/emulator/functionsEmulator.js'));
+const {getFunctionService}=require(join(tools,'lib/emulator/functionsEmulatorShared.js'));
+const {functionResourceToEmulatedTriggerDefintion}=require(join(tools,'lib/extensions/emulator/triggerHelper.js'));
 const {EventarcEmulator}=require(join(tools,'lib/emulator/eventarcEmulator.js'));
 const {TasksEmulator}=require(join(tools,'lib/emulator/tasksEmulator.js'));
 const {EmulatorRegistry}=require(join(tools,'lib/emulator/registry.js'));
@@ -49,7 +51,9 @@ let ownedStart;
 if(verifyAdapter){
   const source=await readFile(new URL('../../../support/functions-host.cjs',import.meta.url),'utf8');
   const declaration=source.match(/^async function startFunctionsOnce\([^]*?^\}/m)?.[0];assert(declaration);
-  ownedStart=runInNewContext('('+declaration+')');
+  const classifier=source.match(/^function upstreamIgnoreReason\([^]*?^\}/m)?.[0];assert(classifier);
+  // The owned adapter classifies ignored records with the real pinned service resolver.
+  ownedStart=runInNewContext(classifier+';('+declaration+')',{getFunctionService});
   record.target='fireside-owned-admission-with-official-peers';record.ownedAdapterSha256=hash(source);
 }
 const normalize=value=>JSON.parse(JSON.stringify(value).replaceAll(output,'<workspace>'));
@@ -83,7 +87,16 @@ try{
   // normalizer without downloading an extension or contacting its registry.
   const predefined={...http,codebase:'extension',extensionInstanceId:'synthetic-extension',
     predefinedTriggers:[{name:'alpha',entryPoint:'alpha',platform:'gcfv1',regions:['us-central1'],httpsTrigger:{}}]};
-  for(const [mode,backends] of [['healthy',[http,auxiliary]],['failed-codebase',[http,broken]],['missing-auxiliary',[http,auxiliary]],['predefined-backend',[predefined]],['colliding-backends',[http,{...http,codebase:'collision'}]]]){
+  // The pinned host's own extension.yaml normalizer drops a resource whose only
+  // trigger is taskQueueTrigger, leaving a definition with no trigger at all.
+  // Published extensions ship such resources; no extension is downloaded here.
+  const unsupported={...http,codebase:'unsupported-extension',extensionInstanceId:'synthetic-unsupported-extension',
+    predefinedTriggers:[
+      {name:'alpha',type:'firebaseextensions.v1beta.function',properties:{location:'us-central1',runtime:'nodejs20',httpsTrigger:{}}},
+      {name:'full',type:'firebaseextensions.v1beta.function',properties:{location:'us-central1',runtime:'nodejs20',taskQueueTrigger:{}}},
+    ].map(resource=>functionResourceToEmulatedTriggerDefintion(resource))};
+  assert.deepEqual(Object.keys(unsupported.predefinedTriggers[1]).filter(key=>key.endsWith('Trigger')),[]);
+  for(const [mode,backends] of [['healthy',[http,auxiliary]],['failed-codebase',[http,broken]],['missing-auxiliary',[http,auxiliary]],['predefined-backend',[predefined]],['colliding-backends',[http,{...http,codebase:'collision'}]],['unsupported-predefined',[unsupported]]]){
     if(mode==='missing-auxiliary'){
       EmulatorRegistry.clear(Emulators.EVENTARC);EmulatorRegistry.clear(Emulators.TASKS);
     }
@@ -96,25 +109,30 @@ try{
       catch(error){call.error=String(error);throw error;}
     };
     try{
-      let connectError;
+      let connectError,admission=null;
       try{
-        if(ownedStart)await ownedStart(emulator,EmulatorRegistry,backends);
+        if(ownedStart)admission=await ownedStart(emulator,EmulatorRegistry,backends);
         else{await EmulatorRegistry.start(emulator);await emulator.connect();}
       }catch(error){connectError=String(error);}
       const response=await fetch(`http://127.0.0.1:${ports[0]}/backends`,{signal:AbortSignal.timeout(5000)});
       const inventory=await response.json();assert.equal(response.status,200);
       const triggerRecords=Object.values(emulator.triggers).map(({def,ignored,enabled,backend})=>({id:def.id,codebase:def.codebase,recordBackend:backend.codebase,ignored,enabled}));
-      record.observations.push(normalize({mode,calls,connectError:connectError??null,status:response.status,inventory,triggerRecords}));
+      record.observations.push(normalize({mode,calls,connectError:connectError??null,status:response.status,inventory,triggerRecords,...(verifyAdapter?{admission}:{})}));
       if(verifyAdapter){
         if(mode==='failed-codebase')assert.match(connectError,/discovery did not complete/);
-        else if(mode==='missing-auxiliary')assert.match(connectError,/not admitted/);
+        else if(mode==='missing-auxiliary')assert.match(connectError,/not admitted \(registration with this suite failed\)/);
         else if(mode==='colliding-backends')assert.match(connectError,/another backend|not registered/);
-        else assert.equal(connectError,undefined);
+        else{
+          assert.equal(connectError,undefined);
+          // Array.from copies the vm-realm result into this realm for a strict comparison.
+          assert.deepEqual(Array.from(admission.ignored,row=>row.id),mode==='unsupported-predefined'?['us-central1-full']:[]);
+          assert.equal(admission.customFunctionCount,mode==='predefined-backend'?1:mode==='unsupported-predefined'?2:4);
+        }
       }
       if(mode==='failed-codebase')assert(calls.some(call=>call.codebase==='broken'&&call.error),'preserve swallowed discovery failure');
       else {
-        assert.equal(emulator.getTriggerDefinitions().length,mode==='predefined-backend'?1:mode==='colliding-backends'?2:4);
-        assert.equal(triggerRecords.filter(row=>row.ignored).length,mode==='missing-auxiliary'?2:0);
+        assert.equal(emulator.getTriggerDefinitions().length,mode==='predefined-backend'?1:['colliding-backends','unsupported-predefined'].includes(mode)?2:4);
+        assert.equal(triggerRecords.filter(row=>row.ignored).length,mode==='missing-auxiliary'?2:mode==='unsupported-predefined'?1:0);
       }
     }finally{await emulator.stop();EmulatorRegistry.clear(Emulators.FUNCTIONS);}
   }

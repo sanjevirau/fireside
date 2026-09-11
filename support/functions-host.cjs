@@ -69,6 +69,7 @@ const { getProjectDefaultAccount, setActiveAccount } = fromTools("auth.js");
 const { Constants } = fromTools("emulator/constants.js");
 const { ExtensionsEmulator } = fromTools("emulator/extensionsEmulator.js");
 const { FunctionsEmulator } = fromTools("emulator/functionsEmulator.js");
+const { getFunctionService } = fromTools("emulator/functionsEmulatorShared.js");
 const { EmulatorRegistry } = fromTools("emulator/registry.js");
 const { Emulators } = fromTools("emulator/types.js");
 const { requireAuth } = fromTools("requireAuth.js");
@@ -199,6 +200,32 @@ if (process.platform === "win32") {
   process.stdin.once("end", () => void stop("launcher disconnected"));
 }
 
+// Mirrors pinned FunctionsEmulator.loadTriggers: a definition is admitted
+// only when upstream registers its trigger with a running peer. Every peer it
+// can register with here is a remote Fireside service, so an ignored record
+// for one of these trigger shapes means this suite failed a registration.
+// Upstream marks the remaining shapes ignored on the official emulator as well
+// and continues: an event service outside the suite's profile, or a definition
+// that ends with no trigger at all, such as an Extension function whose
+// extension.yaml trigger (for example taskQueueTrigger) firebase-tools 15.22.0
+// does not carry into its emulated definition. Those are reported, not fatal.
+function upstreamIgnoreReason(definition, service) {
+  if (definition.httpsTrigger || definition.blockingTrigger) return undefined;
+  if (definition.eventTrigger) {
+    const registered = [
+      "firestore.googleapis.com",
+      "pubsub.googleapis.com",
+      "eventarc.googleapis.com",
+      "firebaseauth.googleapis.com",
+      "storage.googleapis.com",
+      "firebasealerts.googleapis.com",
+    ];
+    if (registered.includes(service)) return undefined;
+    return `${service || "unknown"} event triggers are outside this suite's service profile`;
+  }
+  return "upstream found no httpsTrigger, eventTrigger or blockingTrigger";
+}
+
 async function startFunctionsOnce(emulator, registry, configuredBackends, customBackends = configuredBackends) {
   const discovered = new Map(configuredBackends.map((backend) => [backend, undefined]));
   const discover = emulator.discoverTriggers;
@@ -215,7 +242,8 @@ async function startFunctionsOnce(emulator, registry, configuredBackends, custom
   } finally {
     emulator.discoverTriggers = discover;
   }
-  let total = 0;
+  let customFunctionCount = 0;
+  const ignored = [];
   for (const [backend, definitions] of discovered) {
     // firebase-tools can log discovery failures without rejecting connect().
     // Missing results must not produce a false READY signal.
@@ -241,13 +269,22 @@ async function startFunctionsOnce(emulator, registry, configuredBackends, custom
       if (record.backend !== backend) {
         throw new Error(`Function ${definition.id} was registered by another backend`);
       }
-      if (!record.enabled || record.ignored) {
-        throw new Error(`Function ${definition.id} was discovered but not admitted (disabled or ignored)`);
+      if (!record.enabled) {
+        throw new Error(`Function ${definition.id} was discovered but not admitted (disabled)`);
+      }
+      if (record.ignored) {
+        const reason = upstreamIgnoreReason(definition, getFunctionService(definition));
+        if (!reason) {
+          throw new Error(`Function ${definition.id} was discovered but not admitted (registration with this suite failed)`);
+        }
+        // The upstream record, inventory and identity receipt keep the handler;
+        // only delivery is absent, exactly as on the official emulator.
+        ignored.push({ id: definition.id, reason });
       }
     }
-    if (customBackends.includes(backend)) total += definitions.length;
+    if (customBackends.includes(backend)) customFunctionCount += definitions.length;
   }
-  return total;
+  return { customFunctionCount, ignored };
 }
 
 function watchFunctionInventory(emulator, onReload) {
@@ -317,7 +354,13 @@ async function main() {
       storageBucket: required(args, "default-bucket"),
     },
   });
-  const customFunctionCount = await startFunctionsOnce(functionsEmulator, EmulatorRegistry, emulatableBackends, custom);
+  const { customFunctionCount, ignored } = await startFunctionsOnce(functionsEmulator, EmulatorRegistry, emulatableBackends, custom);
+  for (const handler of ignored) {
+    // firebase-tools logs this only through its own transports, which this
+    // host does not attach. Name the handler here so the suite log shows why
+    // a discovered function never receives deliveries.
+    process.stderr.write(`fireside functions host: ${handler.id} discovered but ignored by firebase-tools: ${handler.reason}\n`);
+  }
   watchFunctionInventory(functionsEmulator, definitions => {
     const inventory = inventoryFingerprint(definitions);
     process.stdout.write(`FIRESIDE_FUNCTIONS_HOST_UPDATED ${JSON.stringify({
@@ -332,6 +375,7 @@ async function main() {
       firebaseToolsVersion: packageJson.version,
       backendCount: emulatableBackends.length,
       customFunctionCount,
+      ignoredCount: ignored.length,
       inventoryCount: inventory.count,
       inventorySha256: inventory.sha256,
       functionsPort,

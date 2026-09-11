@@ -466,13 +466,26 @@ not prove registration. The independent `functions-readiness-v1` capture shows
 that missing auxiliary peers leave discovered handlers in the inventory with
 `ignored: true`, and failed codebase discovery can be swallowed by `connect()`.
 Initial configured-backend readiness now checks each discovered definition against
-the upstream registered record, requiring enabled and not ignored. It observes
-the single discovery owned by `connect()`, not a second execution of user code.
-Missing registration fails with the handler identifier before READY. This
-also verifies record ownership: a later codebase cannot silently shadow an
-earlier codebase with the same function identity. Startup rejection awaits the
-owned host's drain/stop and exits nonzero.
-This
+the upstream registered record, requiring it to be enabled and, when upstream
+marked it ignored, classifying why. It observes the single discovery owned by
+`connect()`, not a second execution of user code. An ignored record whose
+trigger shape upstream would have registered with one of this suite's remote
+peers (HTTP/task-queue, Firestore, Pub/Sub, Eventarc, Auth, Storage, alerts)
+means a registration with Fireside failed and fails with the handler
+identifier before READY. An ignored record that the pinned host itself cannot
+type is a different case: an event service outside the suite's profile, or a
+definition with no trigger at all, which is what firebase-tools 15.22.0
+produces for a published Extension function whose `extension.yaml` declares
+only `taskQueueTrigger`. The official emulator logs those and continues, so
+the host does the same: it names each such handler and its reason on stderr,
+counts them in the READY receipt, and keeps them in the inventory identity.
+The `unsupported-predefined` oracle observation captures that upstream shape
+through the pinned normalizer without downloading an extension. The earlier
+rule failed startup for every ignored record, which made a consumer's normal
+extension set unstartable although the same set starts on the official
+emulator. Readiness also verifies record ownership: a later codebase cannot
+silently shadow an earlier codebase with the same function identity. Startup
+rejection awaits the owned host's drain/stop and exits nonzero. This
 includes predefined Extension backends; the local fixture qualifies their
 regional identity normalization, not downloading/installing every extension.
 The host emits a compact count and SHA-256 of admitted `[id,name,region,platform]`

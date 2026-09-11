@@ -13,6 +13,16 @@ No consumer application, schema, credentials or data is included.
   This receipt covers host source through `c866321`, with its exact adapter and
   driver SHA-256 values embedded. It does not claim general task/event delivery
   or installation of a real extension.
+- `functions-admission-20260912.json` repeats that verification after the
+  `0.1.0-next.4` host was found to reject a published extension's
+  `taskQueueTrigger` function, which firebase-tools 15.22.0 itself discovers
+  without a trigger and ignores. The corrected adapter still rejects broken
+  discovery, a registration that failed with this suite's own peers and
+  identity collisions, and now admits the added `unsupported-predefined`
+  scenario while reporting the ignored handler by identity and reason in its
+  `admission` field. Same pinned tools and Node; the adapter SHA-256 is
+  embedded. It is verification evidence, not a delivery or extension
+  installation claim.
 - `native-suite-ui-20260911-r11.json` preserves all 14 Chromium UI checks,
   Requests replay, the real Functions invocation and clean owned shutdown.
   It covers the built runtime through `aee6de3`, before the later collision
