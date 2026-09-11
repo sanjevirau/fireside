@@ -152,12 +152,21 @@ not permission for speculative refactoring or an unsupported speed claim.
 
 ## Phase F — Combined release qualification
 
-- [ ] Batch fixes with short targeted tests, then run the required exact-candidate
+The [qualification status](support/phase-f-qualification.md) records exact-source
+CI/platform success and the completed private run. Final audit found a consumer
+cache-notification assertion gap; a short supplemental check outside the
+protected runner then verified the invalidation path on both backends, so the
+audit is closed without a product change. Slower catalogue-query, Storage-cycle
+and startup measurements are recorded as known limitations of this release with
+component attribution, not hidden. Publication and registry-installed
+verification are still pending.
+
+- [x] Batch fixes with short targeted tests, then run the required exact-candidate
   quality, SDK, native-package and representative consumer acceptance checks.
-- [ ] Freeze any added qualification details before measurement. Do not weaken
+- [x] Freeze any added qualification details before measurement. Do not weaken
   existing thresholds or silently reinterpret earlier results. A roadmap update
   neither starts a workload nor retroactively passes an old candidate.
-- [ ] Complete the scoped full-data/endurance, restart, parity and clean-setup
+- [x] Complete the scoped full-data/endurance, restart, parity and clean-setup
   acceptance once the combined candidate passes its cheap prerequisites. A
   previous official comparison may be reused only when comparability and
   authorization still hold; label reused evidence as banked. No silent long retry.
