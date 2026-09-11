@@ -45,6 +45,30 @@ the official main emulator process on the same run, and write-commit and
 listener-delivery p99 were several times lower. Those figures describe one
 host and one workload, not a universal guarantee.
 
+## Publication and registry-installed verification
+
+`@fireside-dev/cli@0.1.0-next.4` and its five platform packages, pinned to
+engine `fc54e341a6da4fc6ca26849287f92f335a6184ce`, were published on 2026-09-11
+by [release run 34599776222](https://github.com/sanjevirau/fireside/actions/runs/34599776222)
+from tag `npm-v0.1.0-next.4` at main commit `178dc0181f57df7d375f13bd29d385c3558150b1`.
+All seven quality jobs, five fresh native platform builds with npm/Bun/suite
+smokes, and the combined artifact verifier passed inside that run before the
+protected `npm-release` environment was approved. Publication used OIDC trusted
+publishing; the registry carries SLSA v1 provenance for each package.
+
+Registry-installed verification, performed on macOS arm64 with `npm install
+--save-exact --ignore-scripts` from the public registry into an empty project:
+all six exact versions resolve; the registry `dist.integrity` of the CLI and
+platform tarballs equals the SHA-512 of the reviewed release assets attached to
+the [GitHub prerelease](https://github.com/sanjevirau/fireside/releases/tag/npm-v0.1.0-next.4);
+`fireside binary-path` verifies the packaged native hash and exits 0; `npm
+audit signatures` reports verified attestations. The `next` dist-tag points at
+`0.1.0-next.4`; `latest` was not moved and remains a separate reviewed step.
+
+The representative private consumer updated its exact pin to `0.1.0-next.4`
+through its own reviewed dependency change. Node/firebase-tools for Functions
+and Java for Storage rules remain explicit compatibility dependencies.
+
 Candidate `fc54e341a6da4fc6ca26849287f92f335a6184ce` passed all seven jobs in
 [CI 34538321458](https://github.com/sanjevirau/fireside/actions/runs/34538321458)
 and all five native build/install jobs plus the combined verifier in
