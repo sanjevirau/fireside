@@ -1,3 +1,32 @@
+# 0.1.0-next.5 — Functions admission parity for upstream-ignored handlers
+
+- Pin the engine to `40c9f3f4fd32e9cc4409b14bee5ba390b1bf3c12`, the merge of
+  [PR #30](https://github.com/sanjevirau/fireside/pull/30) on the next.4
+  engine.
+- Fix a startup regression in next.4: the Functions host rejected every
+  handler that firebase-tools 15.22.0 itself marks ignored. A published
+  Extension function whose `extension.yaml` declares only `taskQueueTrigger`
+  (for example `algolia/firestore-algolia-search`'s full reindex) is
+  discovered by upstream without a trigger and ignored; the official emulator
+  logs it and starts, next.4 failed with `discovered but not admitted`. The
+  host now fails readiness only when upstream ignored a handler after a
+  registration with this suite's own peers, and reports upstream-untypable
+  handlers by identity and reason on stderr with an `ignoredCount` in the
+  READY receipt. Those handlers still receive no deliveries, as on the
+  official emulator.
+- Announce each completed native routing refresh on stdout after a Functions
+  source reload (`fireside functions routing refreshed: N registered
+  functions`); upstream `/backends` lists a new handler slightly before the
+  native topic table is replaced.
+- Recaptured the `functions-readiness-v1` oracle with the upstream-ignored
+  scenario and archived the owned-adapter verification receipt. No dependency
+  version, toolchain or package layout change. Prerelease on `next`; no stable
+  or universal-compatibility claim. Private consumer acceptance evidence for
+  the next.4 engine is not re-run for this host-level correction; the
+  representative consumer's real configuration (three extensions, full
+  dataset) reached readiness with a private local build of the fix before
+  publication.
+
 # 0.1.0-next.4 — Phase A–F qualified engine
 
 - Pin the engine to `fc54e341a6da4fc6ca26849287f92f335a6184ce`, the candidate
